@@ -48,6 +48,9 @@ ARCHIVES = {
     ("Linux", "x86_64"): ("linux_amd64", "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"),
     ("Linux", "aarch64"): ("linux_arm64", "325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6"),
 }
+GITHUB_RELEASE_PUBLICATION_SCRIPT_SHA256 = (
+    "dea46fa0fe054ca1319e4500f57d4d47bc0e4e0b55aeee391708236ce30a8012"
+)
 ROOT = Path(__file__).resolve().parent.parent
 PINNED_ACTION_RE = re.compile(
     r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^@\s]+)?@[0-9a-f]{40}\Z"
@@ -579,6 +582,71 @@ def reviewed_step_control_violations(
     return violations
 
 
+def github_release_publication_script_violations(script: str) -> list[str]:
+    """Require retry-safe draft publication and immutable release checks."""
+
+    normalized_script = textwrap.dedent(script).strip()
+    script_digest = hashlib.sha256(normalized_script.encode("utf-8")).hexdigest()
+    if script_digest != GITHUB_RELEASE_PUBLICATION_SCRIPT_SHA256:
+        violations = [
+            "github-release recovery script differs from the reviewed command set"
+        ]
+    else:
+        violations = []
+
+    required = (
+        'release_endpoint="repos/$repo/releases/tags/$tag"',
+        "HTTP 404([^0-9]|$)",
+        '--rawfile body "$expected_body"',
+        '[[ "$VERIFIED_TAG_COMMIT" == "$GITHUB_SHA" ]] || {',
+        ".tag_name == $tag",
+        ".name == $title",
+        ".body == $body",
+        ".prerelease == true",
+        'gh release download "$tag"',
+        "cmp -s --",
+        'gh release upload "$tag"',
+        'gh release edit "$tag" --repo "$repo" --draft=false',
+        '[[ "$tag_commit" == "$GITHUB_SHA" && "$tag_commit" == "$VERIFIED_TAG_COMMIT" ]]',
+        'image-slash-star-release tag=%s commit=%s crate-sha256=%s checksums-sha256=%s',
+        '([.assets[].name] | sort) == ([$crate, "SHA256SUMS"] | sort)',
+    )
+    violations.extend(
+        f"github-release recovery script is missing required check: {marker}"
+        for marker in required
+        if marker not in normalized_script
+    )
+
+    create_index = script.find('gh release create "$tag"')
+    create_end = script.find("--notes-file", create_index)
+    if create_index < 0 or create_end < 0 or "--draft" not in script[create_index:create_end]:
+        violations.append("github-release must create a draft before uploading assets")
+
+    published_check = script.find('if [[ "$(jq -r \'.draft\' "$release_file")" == false ]]')
+    upload_index = script.find('gh release upload "$tag"')
+    edit_index = script.find('gh release edit "$tag" --repo "$repo" --draft=false')
+    tag_recheck = script.rfind("verify_tag_commit\n")
+    if not (0 <= published_check < upload_index < tag_recheck < edit_index):
+        violations.append(
+            "github-release must leave published releases untouched and recheck the tag before publishing a draft"
+        )
+
+    forbidden = (
+        "--clobber",
+        "gh release delete",
+        "gh release delete-asset",
+        "curl ",
+        "wget ",
+        "git push",
+    )
+    violations.extend(
+        f"github-release must not use {marker.strip()}"
+        for marker in forbidden
+        if marker in script
+    )
+    return violations
+
+
 def release_oidc_isolation_violations(contents: str) -> list[str]:
     """Keep repository code outside release jobs with OIDC permissions."""
 
@@ -838,6 +906,7 @@ tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
 [[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
 tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
 [[ "$tag_commit" == "$GITHUB_SHA" ]]
+echo "tag_commit=$tag_commit" >> "$GITHUB_OUTPUT"
 echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}\"""",
             "Upload the verified archive to crates.io": """\
 set -euo pipefail
@@ -981,6 +1050,8 @@ fi""",
         elif tag_check_index is None or tag_check_index >= attest_index:
             violations.append("github-release must recheck the tag before attestation")
         elif tag_check_index is not None:
+            if re.search(r"(?m)^ {8}id:\s*verify-tag\s*$", steps[tag_check_index]) is None:
+                violations.append("github-release tag check must expose the verified commit output")
             tag_script = run_script(steps[tag_check_index])
             if tag_script is None or not all(
                 marker in tag_script
@@ -1025,15 +1096,12 @@ tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
 [[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
 tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
 [[ "$tag_commit" == "$GITHUB_SHA" ]]
+echo "tag_commit=$tag_commit" >> "$GITHUB_OUTPUT"
 echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}\"""",
-            "Create GitHub prerelease": """\
-gh release create "$GITHUB_REF_NAME" \\
-  --verify-tag \\
-  --prerelease \\
-  --title "image-slash-star ${GITHUB_REF_NAME#v}" \\
-  --notes-file registry-bundle/release-notes.md \\
-  registry-bundle/image-slash-star-*.crate registry-bundle/SHA256SUMS""",
         }
+        expected_release_scripts["Create GitHub prerelease"] = (
+            ROOT / "scripts" / "github_release_publish.sh"
+        ).read_text(encoding="utf-8").strip()
         for step in steps[1:]:
             step_name = re.search(r"(?m)^name:\s*(.+)$", step)
             script = run_script(step)
@@ -1058,9 +1126,11 @@ gh release create "$GITHUB_REF_NAME" \\
                     expected_script
                 ).strip():
                     violations.append(
-                        "github-release shell steps must match the reviewed static command set"
+                        "github-release shell steps must match the reviewed commands and publication script"
                     )
                     break
+                if step_name.group(1) == "Create GitHub prerelease":
+                    violations.extend(github_release_publication_script_violations(script))
             elif script is not None:
                 violations.append(
                     "github-release shell steps must have a reviewed name and command"
@@ -1073,6 +1143,7 @@ gh release create "$GITHUB_REF_NAME" \\
                 "Create GitHub prerelease": {
                     "GH_TOKEN": "${{ github.token }}",
                     "GH_REPO": "${{ github.repository }}",
+                    "VERIFIED_TAG_COMMIT": "${{ steps.verify-tag.outputs.tag_commit }}",
                 },
             }.get(step_name.group(1) if step_name is not None else "")
             if yaml_mapping(step, "env", 8) != expected_env:

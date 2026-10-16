@@ -751,6 +751,419 @@ jobs:
         )
 
 
+class GitHubReleaseRecoveryTests(unittest.TestCase):
+    TAG = "v0.1.3"
+    REPOSITORY = "appunni-m/image-slash-star"
+    COMMIT = "a" * 40
+    TAG_OBJECT = "b" * 40
+    GH_STUB = """#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+import sys
+
+state_path = Path(os.environ["GH_STATE"])
+state = json.loads(state_path.read_text(encoding="utf-8"))
+args = sys.argv[1:]
+state.setdefault("calls", []).append(args)
+
+def save():
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+def fail(message):
+    save()
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+if args[:1] == ["api"]:
+    endpoint = args[1]
+    if "/git/ref/tags/" in endpoint:
+        print(json.dumps({"object": {"type": "tag", "sha": os.environ["TAG_OBJECT"]}}))
+    elif "/git/tags/" in endpoint:
+        print(json.dumps({
+            "object": {"type": "commit", "sha": state.get("tag_commit", os.environ["GITHUB_SHA"])}
+        }))
+    elif "/releases/tags/" in endpoint:
+        if state.get("api_failure"):
+            fail("gh: Forbidden (HTTP 403)")
+        if state.get("release") is None:
+            fail("gh: Not Found (HTTP 404)")
+        print(json.dumps(state["release"]))
+    else:
+        fail("unexpected API endpoint")
+    save()
+elif args[:2] == ["release", "create"]:
+    tag = args[2]
+    def option(flag):
+        return args[args.index(flag) + 1]
+    release = {
+        "tag_name": tag,
+        "name": option("--title"),
+        "body": Path(option("--notes-file")).read_text(encoding="utf-8"),
+        "draft": "--draft" in args,
+        "prerelease": "--prerelease" in args,
+        "assets": [],
+    }
+    if state.get("create_mode") != "fail-before":
+        state["release"] = release
+        state.setdefault("asset_data", {})
+    save()
+    if state.get("create_mode") in {"ambiguous", "fail-before"}:
+        fail("simulated release-create response loss")
+elif args[:2] == ["release", "upload"]:
+    paths = []
+    skip_repo = False
+    for value in args[3:]:
+        if skip_repo:
+            skip_repo = False
+        elif value == "--repo":
+            skip_repo = True
+        elif not value.startswith("--"):
+            paths.append(value)
+    for index, path in enumerate(paths):
+        asset_path = Path(path)
+        name = asset_path.name
+        state["release"].setdefault("assets", []).append({
+            "name": name,
+            "state": "uploaded",
+        })
+        state.setdefault("asset_data", {})[name] = asset_path.read_bytes().hex()
+        save()
+        if state.get("upload_mode") == "partial" and index == 0:
+            fail("simulated partial asset upload")
+    if state.get("upload_mode") == "ambiguous":
+        fail("simulated upload response loss")
+elif args[:2] == ["release", "download"]:
+    tag = args[2]
+    directory = Path(args[args.index("--dir") + 1])
+    patterns = [
+        args[index + 1]
+        for index, value in enumerate(args)
+        if value == "--pattern"
+    ]
+    for name in patterns:
+        if name not in state.get("asset_data", {}):
+            fail(f"missing mock asset data for {name}")
+        (directory / name).write_bytes(bytes.fromhex(state["asset_data"][name]))
+    save()
+elif args[:2] == ["release", "edit"]:
+    if "--draft=false" not in args:
+        fail("unexpected release edit")
+    state["release"]["draft"] = False
+    save()
+    if state.get("publish_mode") == "ambiguous":
+        fail("simulated release-publish response loss")
+else:
+    fail("unexpected gh command: " + repr(args))
+"""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.runner_temp = self.root / "runner-temp"
+        self.runner_temp.mkdir()
+        self.bin_dir = self.root / "bin"
+        self.bin_dir.mkdir()
+        stub = self.bin_dir / "gh"
+        stub.write_text(self.GH_STUB, encoding="utf-8")
+        stub.chmod(0o755)
+
+        bundle = self.root / "registry-bundle"
+        bundle.mkdir()
+        self.crate_name = "image-slash-star-0.1.3.crate"
+        crate_path = bundle / self.crate_name
+        crate_path.write_bytes(b"canonical registry crate bytes")
+        crate_digest = hashlib.sha256(crate_path.read_bytes()).hexdigest()
+        (bundle / "SHA256SUMS").write_text(
+            f"{crate_digest}  {self.crate_name}\n",
+            encoding="utf-8",
+        )
+        (bundle / "release-notes.md").write_text(
+            "Release notes for the verified candidate.\n",
+            encoding="utf-8",
+        )
+        checksums_digest = hashlib.sha256(
+            (bundle / "SHA256SUMS").read_bytes()
+        ).hexdigest()
+        self.expected_body = (
+            (bundle / "release-notes.md").read_text(encoding="utf-8")
+            + "\n"
+            + f"<!-- image-slash-star-release tag={self.TAG} commit={self.COMMIT} "
+            + f"crate-sha256={crate_digest} checksums-sha256={checksums_digest} -->\n"
+        )
+        self.bundle_assets = {
+            self.crate_name: crate_path.read_bytes(),
+            "SHA256SUMS": (bundle / "SHA256SUMS").read_bytes(),
+        }
+        self.publish_script = self.workflow_publish_script()
+        self.state_path = self.root / "gh-state.json"
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    @classmethod
+    def workflow_publish_script(cls) -> str:
+        root = Path(__file__).resolve().parent.parent
+        workflow = (root / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+        job = check_workflows.workflow_jobs(workflow)["github-release"]
+        step = next(
+            item
+            for item in re.split(r"(?m)^      - ", job)
+            if item.startswith("name: Create GitHub prerelease")
+        )
+        script = check_workflows.run_script(step)
+        if script is None:
+            raise AssertionError("GitHub release step has no inline script")
+        return script
+
+    def make_release(
+        self,
+        *,
+        draft: bool,
+        assets: tuple[str, ...] = (),
+        overrides: dict[str, object] | None = None,
+        asset_bytes: dict[str, bytes] | None = None,
+    ) -> dict[str, object]:
+        release: dict[str, object] = {
+            "tag_name": self.TAG,
+            "name": "image-slash-star 0.1.3",
+            "body": self.expected_body,
+            "draft": draft,
+            "prerelease": True,
+            "assets": [{"name": name, "state": "uploaded"} for name in assets],
+        }
+        if overrides:
+            release.update(overrides)
+        available_bytes = asset_bytes if asset_bytes is not None else self.bundle_assets
+        return {
+            "release": release,
+            "asset_data": {
+                name: available_bytes[name].hex()
+                for name in assets
+                if name in available_bytes
+            },
+        }
+
+    def run_script(
+        self,
+        state: dict[str, object],
+        *,
+        tag_commit: str | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        self.state_path.write_text(json.dumps(state), encoding="utf-8")
+        env = os.environ.copy()
+        env.update(
+            {
+                "GH_STATE": str(self.state_path),
+                "GH_REPO": self.REPOSITORY,
+                "GH_TOKEN": "test-token",
+                "GITHUB_REPOSITORY": self.REPOSITORY,
+                "GITHUB_REF_NAME": self.TAG,
+                "GITHUB_SHA": self.COMMIT,
+                "VERIFIED_TAG_COMMIT": tag_commit or self.COMMIT,
+                "TAG_OBJECT": self.TAG_OBJECT,
+                "GITHUB_RUN_ID": "42",
+                "GITHUB_RUN_ATTEMPT": "1",
+                "RUNNER_TEMP": str(self.runner_temp),
+                "PATH": str(self.bin_dir) + os.pathsep + env["PATH"],
+            }
+        )
+        result = subprocess.run(
+            ["bash", "-c", self.publish_script],
+            cwd=self.root,
+            env=env,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        final_state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        return result, final_state
+
+    def test_absent_release_is_created_as_draft_then_verified_and_published(self) -> None:
+        result, state = self.run_script({"release": None})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        release = state["release"]
+        self.assertFalse(release["draft"])
+        self.assertEqual(release["body"], self.expected_body)
+        self.assertEqual(
+            sorted(asset["name"] for asset in release["assets"]),
+            sorted(self.bundle_assets),
+        )
+        commands = state["calls"]
+        create = next(call for call in commands if call[:2] == ["release", "create"])
+        self.assertIn("--draft", create)
+        self.assertTrue(any(call[:2] == ["release", "upload"] for call in commands))
+        self.assertTrue(any(call[:2] == ["release", "edit"] for call in commands))
+        self.assertFalse(any("--clobber" in call or "delete" in call for call in commands))
+
+    def test_ambiguous_create_response_recovers_from_the_matching_draft(self) -> None:
+        result, state = self.run_script(
+            {"release": None, "create_mode": "ambiguous"}
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(state["release"]["draft"])
+        self.assertIn("checking whether GitHub accepted it", result.stderr)
+
+    def test_pre_attestation_commit_mismatch_fails_before_release_mutation(self) -> None:
+        result, state = self.run_script(
+            {"release": None},
+            tag_commit="c" * 40,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("pre-attestation tag check did not resolve", result.stderr)
+        self.assertIsNone(state["release"])
+        self.assertEqual(state.get("calls", []), [])
+
+    def test_matching_published_release_is_verified_without_mutation(self) -> None:
+        state = self.make_release(draft=False, assets=tuple(self.bundle_assets))
+        result, final_state = self.run_script(state)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = final_state["calls"]
+        self.assertFalse(any(call[:2] == ["release", "create"] for call in commands))
+        self.assertFalse(any(call[:2] == ["release", "upload"] for call in commands))
+        self.assertFalse(any(call[:2] == ["release", "edit"] for call in commands))
+
+    def test_matching_partial_draft_uploads_only_missing_asset_then_publishes(self) -> None:
+        state = self.make_release(draft=True, assets=(self.crate_name,))
+        result, final_state = self.run_script(state)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(final_state["release"]["draft"])
+        upload = next(
+            call for call in final_state["calls"] if call[:2] == ["release", "upload"]
+        )
+        self.assertIn("registry-bundle/SHA256SUMS", upload)
+        self.assertNotIn(f"registry-bundle/{self.crate_name}", upload)
+
+    def test_partial_upload_is_safe_to_retry(self) -> None:
+        state = {"release": None, "upload_mode": "partial"}
+        first, partial_state = self.run_script(state)
+
+        self.assertNotEqual(first.returncode, 0)
+        self.assertTrue(partial_state["release"]["draft"])
+        self.assertFalse(any(call[:2] == ["release", "edit"] for call in partial_state["calls"]))
+
+        partial_state["upload_mode"] = "success"
+        second, complete_state = self.run_script(partial_state)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertFalse(complete_state["release"]["draft"])
+
+    def test_ambiguous_upload_response_verifies_assets_without_duplicate_upload(self) -> None:
+        result, state = self.run_script(
+            {"release": None, "upload_mode": "ambiguous"}
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(state["release"]["draft"])
+        upload_calls = [
+            call for call in state["calls"] if call[:2] == ["release", "upload"]
+        ]
+        self.assertEqual(len(upload_calls), 1)
+        self.assertEqual(
+            sorted(asset["name"] for asset in state["release"]["assets"]),
+            sorted(self.bundle_assets),
+        )
+
+    def test_ambiguous_publish_response_is_confirmed_by_reading_release_state(self) -> None:
+        state = self.make_release(
+            draft=True,
+            assets=tuple(self.bundle_assets),
+        )
+        state["publish_mode"] = "ambiguous"
+        result, final_state = self.run_script(state)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(final_state["release"]["draft"])
+        self.assertIn("checking whether GitHub published it", result.stderr)
+
+    def test_mismatched_existing_release_fails_closed(self) -> None:
+        cases = [
+            ("wrong tag", {"tag_name": "v0.1.2"}, tuple(self.bundle_assets), None, None),
+            ("wrong title", {"name": "unrelated"}, tuple(self.bundle_assets), None, None),
+            ("wrong notes or commit marker", {"body": "old release notes"}, tuple(self.bundle_assets), None, None),
+            ("wrong release type", {"prerelease": False}, tuple(self.bundle_assets), None, None),
+            ("extra asset", {}, tuple(self.bundle_assets) + ("unexpected.txt",), None, None),
+            ("wrong asset bytes", {}, tuple(self.bundle_assets), {self.crate_name: b"wrong crate bytes"}, None),
+            ("wrong tag commit", {}, tuple(self.bundle_assets), None, "c" * 40),
+        ]
+        for label, overrides, assets, asset_bytes, tag_commit in cases:
+            with self.subTest(case=label):
+                state = self.make_release(
+                    draft=True,
+                    assets=assets,
+                    overrides=overrides,
+                    asset_bytes=asset_bytes,
+                )
+                if tag_commit is not None:
+                    state["tag_commit"] = tag_commit
+                result, final_state = self.run_script(state)
+
+                self.assertNotEqual(result.returncode, 0)
+                self.assertTrue(final_state["release"]["draft"])
+                if label == "wrong tag commit":
+                    self.assertTrue(
+                        any(
+                            call[:1] == ["api"] and "/git/tags/" in call[1]
+                            for call in final_state["calls"]
+                        )
+                    )
+                self.assertFalse(any(call[:2] == ["release", "upload"] for call in final_state["calls"]))
+                self.assertFalse(any(call[:2] == ["release", "edit"] for call in final_state["calls"]))
+
+    def test_api_errors_other_than_not_found_do_not_create_a_release(self) -> None:
+        result, state = self.run_script({"release": None, "api_failure": True})
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIsNone(state["release"])
+        self.assertFalse(any(call[:2] == ["release", "create"] for call in state["calls"]))
+
+    def test_publication_policy_requires_pre_attestation_commit_guard(self) -> None:
+        mutated = self.publish_script.replace(
+            '[[ "$VERIFIED_TAG_COMMIT" == "$GITHUB_SHA" ]] || {',
+            "true || {",
+            1,
+        )
+
+        violations = check_workflows.github_release_publication_script_violations(
+            mutated
+        )
+        self.assertTrue(
+            any("VERIFIED_TAG_COMMIT" in violation for violation in violations),
+            violations,
+        )
+
+    def test_publication_policy_rejects_unreviewed_command(self) -> None:
+        mutated = self.publish_script.replace(
+            'release_endpoint="repos/$repo/releases/tags/$tag"',
+            'gh api "repos/$repo/releases/tags/$tag" >/dev/null\n'
+            'release_endpoint="repos/$repo/releases/tags/$tag"',
+            1,
+        )
+
+        violations = check_workflows.github_release_publication_script_violations(
+            mutated
+        )
+        self.assertTrue(
+            any("reviewed command set" in violation for violation in violations),
+            violations,
+        )
+
+    def test_failed_create_without_a_persisted_release_fails_for_retry(self) -> None:
+        result, state = self.run_script(
+            {"release": None, "create_mode": "fail-before"}
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIsNone(state["release"])
+        self.assertIn("did not create a draft release", result.stderr)
+
+
 class WorkflowDownloadTests(unittest.TestCase):
     def test_only_tls_eof_is_retried(self) -> None:
         self.assertTrue(
@@ -1249,10 +1662,10 @@ class WorkflowDownloadTests(unittest.TestCase):
                     / ".github" / "workflows" / "release.yml").read_text(
                         encoding="utf-8"
                     )
+        safe_command = '          if ! gh release create "$tag" --repo "$repo" \\\n'
         unsafe = workflow.replace(
-            "          gh release create \"$GITHUB_REF_NAME\" \\\n",
-            "          python3 scripts/verify_release_tag.py\n"
-            "          gh release create \"$GITHUB_REF_NAME\" \\\n",
+            safe_command,
+            "          python3 scripts/verify_release_tag.py\n" + safe_command,
             1,
         )
 
