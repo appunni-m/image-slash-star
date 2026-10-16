@@ -7,6 +7,7 @@ import hashlib
 import http.client
 import io
 import os
+from collections.abc import Callable
 from pathlib import Path
 import platform
 import re
@@ -134,12 +135,12 @@ def make_coverage_command_lines(script: str) -> list[str]:
     ]
 
 
-def release_coverage_gate_violations(contents: str) -> list[str]:
-    """Require tag coverage to pass before the release publish job can run."""
+def workflow_jobs(contents: str) -> dict[str, str] | None:
+    """Return job bodies from a workflow without depending on a YAML package."""
 
     jobs_match = re.search(r"(?m)^jobs:\s*$", contents)
     if jobs_match is None:
-        return ["release workflow has no jobs section"]
+        return None
 
     jobs_body = contents[jobs_match.end():]
     headers = list(re.finditer(r"(?m)^  ([A-Za-z0-9_-]+):\s*$", jobs_body))
@@ -147,6 +148,229 @@ def release_coverage_gate_violations(contents: str) -> list[str]:
     for index, header in enumerate(headers):
         end = headers[index + 1].start() if index + 1 < len(headers) else len(jobs_body)
         jobs[header.group(1)] = jobs_body[header.end():end]
+    return jobs
+
+
+def workflow_job_condition(job: str) -> str | None:
+    """Return a job-level `if` expression, unfolding a YAML block scalar."""
+
+    lines = job.splitlines()
+    for index, line in enumerate(lines):
+        if not line.startswith("    if:"):
+            continue
+        value = line.split(":", maxsplit=1)[1].strip()
+        if value not in {">", ">-", "|", "|-", "|+", ">+"}:
+            return value
+
+        expression = []
+        for continuation in lines[index + 1:]:
+            if not continuation.strip():
+                continue
+            indentation = len(continuation) - len(continuation.lstrip())
+            if indentation < 6:
+                break
+            expression.append(continuation.strip())
+        return " ".join(expression)
+    return None
+
+
+def normalized_expression(expression: str) -> str:
+    """Collapse YAML line wrapping while preserving expression tokens."""
+
+    return " ".join(expression.split())
+
+
+CI_COVERAGE_CONDITION = (
+    "github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch'"
+)
+
+
+def coverage_event_is_allowed(event_name: str) -> bool:
+    """Allow aggregate CI coverage only on scheduled or manual runs."""
+
+    return event_name in {"schedule", "workflow_dispatch"}
+
+
+def ci_coverage_gate_violations(contents: str) -> list[str]:
+    """Keep the expensive aggregate CI coverage lane opt-in or scheduled."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["CI workflow has no jobs section"]
+
+    violations = []
+    for event_name in ("schedule", "workflow_dispatch"):
+        if not re.search(rf"(?m)^  {re.escape(event_name)}:\s*$", contents):
+            violations.append(f"CI workflow must declare the {event_name} trigger")
+
+    coverage_job = jobs.get("coverage")
+    if coverage_job is None:
+        return [*violations, "CI workflow has no aggregate coverage job"]
+
+    condition = workflow_job_condition(coverage_job)
+    if condition is None or normalized_expression(condition) != normalized_expression(
+        CI_COVERAGE_CONDITION
+    ):
+        violations.append(
+            "CI aggregate coverage must run only on schedule or workflow_dispatch"
+        )
+
+    coverage_commands = []
+    for step in re.split(r"(?m)^      - ", coverage_job):
+        script = run_script(step)
+        if script is not None:
+            coverage_commands.extend(make_coverage_command_lines(script))
+    if not coverage_commands:
+        violations.append("CI aggregate coverage job must execute make coverage")
+    return violations
+
+
+DOCS_TRUSTED_WORKFLOW_RUN_GATE = (
+    "github.event.workflow_run.conclusion == 'success' && "
+    "github.event.workflow_run.head_repository.full_name == github.repository && "
+    "((github.event.workflow_run.name == 'Benchmark' && "
+    "github.event.workflow_run.head_branch == 'main' && "
+    "(github.event.workflow_run.event == 'push' || "
+    "github.event.workflow_run.event == 'schedule' || "
+    "github.event.workflow_run.event == 'workflow_dispatch')) || "
+    "(github.event.workflow_run.name == 'Release' && "
+    "github.event.workflow_run.event == 'push' && "
+    "startsWith(github.event.workflow_run.head_branch, 'v')))"
+)
+DOCS_WORKFLOW_RUN_GUARD = (
+    "github.event_name != 'workflow_run' || "
+    f"({DOCS_TRUSTED_WORKFLOW_RUN_GATE})"
+)
+DOCS_INELIGIBLE_RUN_CONCURRENCY_GUARD = (
+    "github.event_name == 'workflow_run' && "
+    f"!({DOCS_TRUSTED_WORKFLOW_RUN_GATE}) && "
+    "format('ineligible-workflow-run-{0}', github.run_id)"
+)
+DOCS_JOB_CONDITIONS = {
+    "benchmark-data": (
+        "github.event_name != 'pull_request' && "
+        f"({DOCS_WORKFLOW_RUN_GUARD})"
+    ),
+    "build": (
+        "always() && "
+        "(needs.benchmark-data.result == 'success' || "
+        "github.event_name == 'pull_request') && "
+        f"({DOCS_WORKFLOW_RUN_GUARD})"
+    ),
+    "examples": DOCS_WORKFLOW_RUN_GUARD,
+    "deploy": (
+        "github.ref == 'refs/heads/main' && "
+        "github.event_name != 'pull_request' && "
+        f"({DOCS_WORKFLOW_RUN_GUARD})"
+    ),
+}
+
+
+def docs_workflow_run_is_publishable(
+    event_name: str, workflow_run: dict, repository: str
+) -> bool:
+    """Model the trusted workflow_run sources that may publish documentation."""
+
+    head_repository = workflow_run.get("head_repository")
+    if (
+        event_name != "workflow_run"
+        or workflow_run.get("status") != "completed"
+        or workflow_run.get("conclusion") != "success"
+        or not isinstance(head_repository, dict)
+        or head_repository.get("full_name") != repository
+    ):
+        return False
+
+    name = workflow_run.get("name")
+    branch = workflow_run.get("head_branch")
+    event = workflow_run.get("event")
+    if name == "Benchmark":
+        return branch == "main" and event in {
+            "push",
+            "schedule",
+            "workflow_dispatch",
+        }
+    if name == "Release":
+        return isinstance(branch, str) and branch.startswith("v") and event == "push"
+    return False
+
+
+def docs_workflow_run_publication_violations(contents: str) -> list[str]:
+    """Require every docs workflow_run publication path to use trusted sources."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["documentation workflow has no jobs section"]
+
+    violations = []
+    if not re.search(
+        r"(?m)^  workflow_run:\s*$", contents
+    ) or not re.search(
+        r"(?m)^    workflows:\s*\[Benchmark, Release\]\s*$", contents
+    ) or not re.search(
+        r"(?m)^    types:\s*\[completed\]\s*$", contents
+    ):
+        violations.append(
+            "documentation workflow_run trigger must watch completed Benchmark and Release runs"
+        )
+
+    concurrency = re.search(
+        r"(?ms)^concurrency:\s*\n(?P<body>.*?)(?=^jobs:\s*$)", contents
+    )
+    if concurrency is None or normalized_expression(
+        DOCS_INELIGIBLE_RUN_CONCURRENCY_GUARD
+    ) not in normalized_expression(concurrency.group("body")):
+        violations.append(
+            "documentation concurrency must isolate untrusted workflow_run events"
+        )
+
+    for job_name in ("benchmark-data", "build", "examples", "deploy"):
+        job = jobs.get(job_name)
+        if job is None:
+            violations.append(f"documentation workflow has no {job_name} job")
+            continue
+        condition = normalized_expression(workflow_job_condition(job) or "")
+        expected_condition = normalized_expression(DOCS_JOB_CONDITIONS[job_name])
+        if condition != expected_condition:
+            violations.append(
+                f"documentation {job_name} job must gate workflow_run on trusted producers"
+            )
+
+    deploy_job = jobs.get("deploy", "")
+    needs_match = re.search(
+        r"(?m)^    needs:\s*\[(?P<list>[^\]]*)\]", deploy_job
+    )
+    dependencies = (
+        set()
+        if needs_match is None
+        else {item.strip() for item in needs_match.group("list").split(",")}
+    )
+    if not {"build", "examples"}.issubset(dependencies):
+        violations.append("documentation deploy must require the build and examples jobs")
+    return violations
+
+
+def verify_workflow_policy(
+    workflow: Path, violations_for: Callable[[str], list[str]], label: str
+) -> bool:
+    """Print policy failures for one workflow and return whether it passed."""
+
+    violations = violations_for(workflow.read_text(encoding="utf-8"))
+    if not violations:
+        return True
+    print(f"{label} workflow policy validation failed:", file=sys.stderr)
+    for violation in violations:
+        print(f"  {workflow.relative_to(ROOT)}: {violation}", file=sys.stderr)
+    return False
+
+
+def release_coverage_gate_violations(contents: str) -> list[str]:
+    """Require tag coverage to pass before the release publish job can run."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["release workflow has no jobs section"]
     violations = []
 
     coverage_job = jobs.get("release-coverage")
@@ -242,6 +466,99 @@ def verify_release_coverage_gate(workflow: Path) -> bool:
     for violation in violations:
         print(f"  {workflow.relative_to(ROOT)}: {violation}", file=sys.stderr)
     return False
+
+
+def release_candidate_fallback_violations(contents: str) -> list[str]:
+    """Require a verified source rebuild when the retained CI artifact is absent."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["release workflow has no jobs section"]
+    preflight = jobs.get("preflight")
+    if preflight is None:
+        return ["release workflow has no preflight job"]
+
+    steps = re.split(r"(?m)^      - ", preflight)
+    violations = []
+
+    def step_index(marker: str) -> int | None:
+        return next(
+            (index for index, step in enumerate(steps) if marker in step),
+            None,
+        )
+
+    ci_index = step_index("Require successful main CI for this commit")
+    download_index = step_index("actions/download-artifact@")
+    fallback_index = step_index("Rebuild and verify the candidate when the CI artifact is unavailable")
+    checksum_index = step_index("Verify candidate bundle")
+    upload_index = step_index("Retain verified candidate bundle")
+
+    if ci_index is None:
+        violations.append("release preflight must require successful main CI")
+    else:
+        ci_step = steps[ci_index]
+        if (
+            "head_sha=${GITHUB_SHA}" not in ci_step
+            or 'select(.event == "push" and .head_branch == "main"' not in ci_step
+            or '.status == "completed" and .conclusion == "success"' not in ci_step
+            or 'test -n "$run_id"' not in ci_step
+        ):
+            violations.append(
+                "release preflight must select successful main CI for the exact tagged commit"
+            )
+
+    if download_index is None:
+        violations.append("release preflight must download the exact main CI candidate")
+    else:
+        download_step = steps[download_index]
+        if "id: candidate-artifact" not in download_step:
+            violations.append("candidate download must expose its step outcome")
+        if not re.search(r"(?m)^        continue-on-error:\s*true\s*$", download_step):
+            violations.append("candidate download failure must enable the verified rebuild")
+        if "run-id: ${{ steps.ci-run.outputs.run-id }}" not in download_step:
+            violations.append("candidate download must use the successful main CI run")
+
+    if fallback_index is None:
+        violations.append("release preflight must rebuild a missing candidate")
+    else:
+        fallback_step = steps[fallback_index]
+        if "if: steps.candidate-artifact.outcome == 'failure'" not in fallback_step:
+            violations.append("candidate rebuild must run only when artifact download fails")
+        script = run_script(fallback_step) or ""
+        if 'rm -rf target/release-artifacts' not in script:
+            violations.append("candidate rebuild must clear partial artifact contents")
+        if 'RELEASE_TAG="$GITHUB_REF_NAME" make package-verify PYTHON=python3' not in script:
+            violations.append("candidate rebuild must run tagged package verification")
+        if re.search(r"(?m)^        continue-on-error:\s*true\s*$", fallback_step):
+            violations.append("candidate rebuild must not ignore verification failures")
+
+    if checksum_index is None:
+        violations.append("release preflight must verify the candidate checksum")
+    else:
+        checksum_step = steps[checksum_index]
+        script = run_script(checksum_step) or ""
+        if "sha256sum --check SHA256SUMS" not in script:
+            violations.append("release candidate checksum must be checked")
+        if re.search(r"(?m)^        continue-on-error:\s*true\s*$", checksum_step):
+            violations.append("release candidate checksum failures must block publication")
+        if re.search(r"(?m)^        if:", checksum_step):
+            violations.append("release candidate checksum must not be conditionally skipped")
+
+    if upload_index is None:
+        violations.append("release preflight must retain a tag-specific candidate")
+    if (
+        download_index is not None
+        and fallback_index is not None
+        and checksum_index is not None
+        and not download_index < fallback_index < checksum_index
+    ):
+        violations.append("candidate checksum must run after the download/rebuild paths")
+    if checksum_index is not None and upload_index is not None and checksum_index >= upload_index:
+        violations.append("candidate must pass checksum verification before retention")
+    if ci_index is not None and download_index is not None and ci_index >= download_index:
+        violations.append("successful main CI must be checked before candidate download")
+
+    return violations
 
 
 def artifact_upload_rerun_violations(contents: str) -> list[str]:
@@ -399,8 +716,26 @@ def main() -> int:
         raise SystemExit("No GitHub workflows found")
     if not verify_action_pins(workflows):
         return 1
+    ci_workflow = ROOT / ".github" / "workflows" / "ci.yml"
+    if not verify_workflow_policy(
+        ci_workflow, ci_coverage_gate_violations, "CI coverage"
+    ):
+        return 1
+    docs_workflow = ROOT / ".github" / "workflows" / "docs.yml"
+    if not verify_workflow_policy(
+        docs_workflow,
+        docs_workflow_run_publication_violations,
+        "Documentation publication",
+    ):
+        return 1
     release_workflow = ROOT / ".github" / "workflows" / "release.yml"
     if not verify_release_coverage_gate(release_workflow):
+        return 1
+    if not verify_workflow_policy(
+        release_workflow,
+        release_candidate_fallback_violations,
+        "Release candidate fallback",
+    ):
         return 1
     if not verify_artifact_upload_rerun_safety(workflows):
         return 1

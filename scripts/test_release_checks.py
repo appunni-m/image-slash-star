@@ -361,6 +361,232 @@ jobs:
             check_workflows.release_coverage_gate_violations(workflow),
         )
 
+    def test_ci_aggregate_coverage_runs_only_on_allowed_triggers(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(check_workflows.ci_coverage_gate_violations(workflow), [])
+        for event in ("schedule", "workflow_dispatch"):
+            with self.subTest(event=event):
+                self.assertTrue(check_workflows.coverage_event_is_allowed(event))
+        for event in ("push", "pull_request", "workflow_run"):
+            with self.subTest(event=event):
+                self.assertFalse(check_workflows.coverage_event_is_allowed(event))
+
+        widened = workflow.replace(
+            "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'",
+            "always()",
+        )
+        self.assertIn(
+            "CI aggregate coverage must run only on schedule or workflow_dispatch",
+            check_workflows.ci_coverage_gate_violations(widened),
+        )
+        missing_manual_trigger = workflow.replace("  workflow_dispatch:\n", "")
+        self.assertIn(
+            "CI workflow must declare the workflow_dispatch trigger",
+            check_workflows.ci_coverage_gate_violations(missing_manual_trigger),
+        )
+        skipped_coverage = workflow.replace(
+            '          make coverage 2>&1 | tee "$log_file"',
+            '          echo make coverage 2>&1 | tee "$log_file"',
+        )
+        self.assertIn(
+            "CI aggregate coverage job must execute make coverage",
+            check_workflows.ci_coverage_gate_violations(skipped_coverage),
+        )
+
+    def test_documentation_publication_uses_the_trusted_workflow_run_gate(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        workflow = (root / ".github" / "workflows" / "docs.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            check_workflows.docs_workflow_run_publication_violations(workflow), []
+        )
+
+        trusted_benchmark = {
+            "name": "Benchmark",
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "head_branch": "main",
+            "head_repository": {"full_name": "appunni-m/image-slash-star"},
+        }
+        trusted_release = {
+            **trusted_benchmark,
+            "name": "Release",
+            "event": "push",
+            "head_branch": "v0.1.0",
+        }
+        self.assertTrue(
+            check_workflows.docs_workflow_run_is_publishable(
+                "workflow_run", trusted_benchmark, "appunni-m/image-slash-star"
+            )
+        )
+        self.assertTrue(
+            check_workflows.docs_workflow_run_is_publishable(
+                "workflow_run", trusted_release, "appunni-m/image-slash-star"
+            )
+        )
+
+        rejected_runs = [
+            ("push", trusted_benchmark),
+            ("workflow_run", {**trusted_benchmark, "status": "in_progress"}),
+            ("workflow_run", {**trusted_benchmark, "conclusion": "failure"}),
+            (
+                "workflow_run",
+                {
+                    **trusted_benchmark,
+                    "head_repository": {"full_name": "fork/image-slash-star"},
+                },
+            ),
+            ("workflow_run", {**trusted_benchmark, "head_branch": "feature/docs"}),
+            ("workflow_run", {**trusted_release, "event": "workflow_dispatch"}),
+            ("workflow_run", {**trusted_release, "head_branch": "main"}),
+            ("workflow_run", {**trusted_benchmark, "name": "Other workflow"}),
+        ]
+        for event_name, run in rejected_runs:
+            with self.subTest(event_name=event_name, run=run):
+                self.assertFalse(
+                    check_workflows.docs_workflow_run_is_publishable(
+                        event_name, run, "appunni-m/image-slash-star"
+                    )
+                )
+
+    def test_documentation_gate_rejects_policy_broadening(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        workflow = (root / ".github" / "workflows" / "docs.yml").read_text(
+            encoding="utf-8"
+        )
+        mutations = (
+            (
+                "github.event.workflow_run.conclusion == 'success'",
+                "github.event.workflow_run.conclusion == 'failure'",
+            ),
+            (
+                "github.event.workflow_run.head_repository.full_name == github.repository",
+                "github.event.workflow_run.head_repository.full_name != github.repository",
+            ),
+            (
+                "github.event.workflow_run.head_branch == 'main'",
+                "github.event.workflow_run.head_branch == 'preview'",
+            ),
+            (
+                "startsWith(github.event.workflow_run.head_branch, 'v')",
+                "startsWith(github.event.workflow_run.head_branch, 'release-')",
+            ),
+        )
+        for before, after in mutations:
+            with self.subTest(mutation=before):
+                self.assertIn(before, workflow)
+                broadened = workflow.replace(before, after)
+                self.assertTrue(
+                    check_workflows.docs_workflow_run_publication_violations(
+                        broadened
+                    )
+                )
+
+        concurrency_start = workflow.index("concurrency:\n")
+        jobs_start = workflow.index("jobs:\n", concurrency_start)
+        concurrency = workflow[concurrency_start:jobs_start]
+        broadened_concurrency = concurrency.replace(
+            "github.event_name == 'workflow_run' &&",
+            "github.event_name == 'push' &&",
+            1,
+        )
+        broadened_workflow = (
+            workflow[:concurrency_start]
+            + broadened_concurrency
+            + workflow[jobs_start:]
+        )
+        self.assertTrue(
+            check_workflows.docs_workflow_run_publication_violations(
+                broadened_workflow
+            )
+        )
+
+        deploy_start = workflow.index("  deploy:\n")
+        examples_start = workflow.index("  examples:\n", deploy_start)
+        deploy_job = workflow[deploy_start:examples_start]
+        bypassed = deploy_job.replace(
+            "github.event_name != 'workflow_run' ||", "always() ||"
+        )
+        self.assertNotEqual(deploy_job, bypassed)
+        bypassed_workflow = workflow[:deploy_start] + bypassed + workflow[examples_start:]
+        self.assertTrue(
+            check_workflows.docs_workflow_run_publication_violations(
+                bypassed_workflow
+            )
+        )
+
+    def test_release_preflight_rebuilds_only_after_candidate_download_failure(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        workflow = (root / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            check_workflows.release_candidate_fallback_violations(workflow), []
+        )
+
+        missing_run_guard = workflow.replace('          test -n "$run_id"\n', "")
+        self.assertIn(
+            "release preflight must select successful main CI for the exact tagged commit",
+            check_workflows.release_candidate_fallback_violations(missing_run_guard),
+        )
+        missing_download_recovery = workflow.replace(
+            "        continue-on-error: true\n        uses: actions/download-artifact@",
+            "        uses: actions/download-artifact@",
+        )
+        self.assertIn(
+            "candidate download failure must enable the verified rebuild",
+            check_workflows.release_candidate_fallback_violations(
+                missing_download_recovery
+            ),
+        )
+        wrong_fallback = workflow.replace(
+            "if: steps.candidate-artifact.outcome == 'failure'",
+            "if: always()",
+        )
+        self.assertIn(
+            "candidate rebuild must run only when artifact download fails",
+            check_workflows.release_candidate_fallback_violations(wrong_fallback),
+        )
+        unverified_fallback = workflow.replace(
+            "RELEASE_TAG=\"$GITHUB_REF_NAME\" make package-verify PYTHON=python3",
+            "make package-verify PYTHON=python3",
+        )
+        self.assertIn(
+            "candidate rebuild must run tagged package verification",
+            check_workflows.release_candidate_fallback_violations(unverified_fallback),
+        )
+        wrong_download_source = workflow.replace(
+            "run-id: ${{ steps.ci-run.outputs.run-id }}",
+            "run-id: ${{ github.run_id }}",
+        )
+        self.assertIn(
+            "candidate download must use the successful main CI run",
+            check_workflows.release_candidate_fallback_violations(wrong_download_source),
+        )
+
+        fallback_start = workflow.index(
+            "      - name: Rebuild and verify the candidate when the CI artifact is unavailable\n"
+        )
+        checksum_start = workflow.index("      - name: Verify candidate bundle\n")
+        upload_start = workflow.index("      - name: Retain verified candidate bundle\n")
+        fallback_step = workflow[fallback_start:checksum_start]
+        checksum_step = workflow[checksum_start:upload_start]
+        reordered = (
+            workflow[:fallback_start]
+            + checksum_step
+            + fallback_step
+            + workflow[upload_start:]
+        )
+        self.assertIn(
+            "candidate checksum must run after the download/rebuild paths",
+            check_workflows.release_candidate_fallback_violations(reordered),
+        )
+
 
 class WorkflowDownloadTests(unittest.TestCase):
     def test_only_tls_eof_is_retried(self) -> None:
