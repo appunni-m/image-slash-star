@@ -8452,6 +8452,11 @@ formats:
       test_assets:
       - iinf_entry_count_zero_with_child.avif
       expect_error: true
+    - id: error_iinf_child_not_infe
+      description: AVIF iinf declares one entry whose child box is not an infe item-information box
+      test_assets:
+      - iinf_child_not_infe.avif
+      expect_error: true
     - id: error_meta_missing_item_properties
       description: AVIF meta omits the required item-property table
       test_assets:

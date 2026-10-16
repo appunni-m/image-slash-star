@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `db76dd20d602d44aa3c97121626b9b9f9e4f271f7544bff41ff85184df7f0b45`; matrix `0f8b1a93f9f9ea82fce100c3bcf4a2941364757099066c50b1f1317cf35158d6`.
+- Current fixture integrity only: manifest `802bf6258635abbf0b551131118efd681b4af165a20e00204c8932b337043293`; matrix `07a4cba2fe32e92841308c514d7eb4e47a533676053288e65e735816822ba999`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7064,3 +7064,39 @@ with the saved local baseline is incomparable because branch detail is
 incomplete; the reports also lack source/build receipts and test attribution.
 No aggregate coverage gain or full-suite coverage result is claimed, and no
 full coverage campaign was run.
+
+### AVIF `iinf` wrong-child-kind parity — 2026-10-16
+
+The active row `decode:avif:error_iinf_child_not_infe` adds a complete-file
+malformed-input case for the `parse_iinf` child-kind rejection. The deterministic
+generator `scripts/generate_avif_iinf_child_kind_fixture.py` checks the pinned
+3,077-byte `baseline.avif` source
+(`d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2`), verifies
+the sole version-zero `iinf` entry is an `infe` box, and changes only its type
+to `free`. The output hash is
+`ee95c49866ddcf2bf1fd4f2f3a0e4c1d2c768bb5ccbf8f675555691298225d76`. Pinned
+Pillow 12.2.0/libavif 1.4.1 rejects the complete input as
+`PIL.UnidentifiedImageError: cannot identify image file <bytes>`; the public
+matrix records successful format detection and that normalized error for
+inspection, verification, decode, and sequence decode.
+
+The current fixture matrix contains 2,245 total rows: 1,764 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,764 decode rows and
+449 encode rows are active.
+
+The selected parity test passed 1/1. Coverage MCP's focused branch query at
+`src/codecs/avif/samples.rs:590` lists only the `false` arm of
+`child.kind != infe` as unobserved, so the selected report records the
+wrong-child rejection arm. The report
+`target/release-evidence/coverage-avif-iinf-child-wrong-kind.json` has SHA-256
+`1c852014db08a06b706a2bffed3ec63230c032c6070a0fb86616dc6e26412edb` and
+records 77/31,278 observed branch outcomes. Coverage MCP's incremental
+comparison with `.coverage-mcp/local-evidence/20261013/avif-iinf-zero-count/coverage.json`
+is incomparable because branch detail is incomplete and the inventories differ
+(31,278 versus 31,306). Both reports lack source/build receipts and test
+attribution. No aggregate coverage gain or full-suite result is claimed; no
+full coverage campaign was run.
+
+`make verify` now includes the generator's hash-only `--check` and passes;
+the refreshed malformed-input ledger contains 609 classes across eight
+formats.

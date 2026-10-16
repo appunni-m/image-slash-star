@@ -681,6 +681,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "iinf_child_not_infe.avif",
+        "class": "error_iinf_child_not_infe",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "AVIF iinf declares one entry whose child box is not an infe item-information box",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "iinf_entry_count_exceeds_children.avif",
         "class": "error_iinf_entry_count_exceeds_children",
         "contracts": {
@@ -25712,7 +25761,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 58,
+      "avif": 59,
       "bmp": 65,
       "gif": 47,
       "ico": 30,
@@ -25722,17 +25771,17 @@
       "webp": 132
     },
     "by_origin": {
-      "pillow_fixture": 608,
-      "specification_reference": 58
+      "pillow_fixture": 609,
+      "specification_reference": 59
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 344,
+      "spec_violation": 345,
       "tolerated": 0,
       "truncated": 190
     },
-    "classes": 608,
+    "classes": 609,
     "formats": 8
   }
 }
