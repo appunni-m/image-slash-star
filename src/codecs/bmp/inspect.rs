@@ -32,7 +32,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                 0,
                 3usize,
             )
-        } else if header_size >= INFO_HEADER_SIZE {
+        } else if super::is_supported_info_dib_header_size(header_size) {
             let width = le_i32(data, 18)?;
             if width <= 0 {
                 return Err(

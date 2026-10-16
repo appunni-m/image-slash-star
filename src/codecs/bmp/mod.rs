@@ -6,6 +6,12 @@ pub mod decode;
 pub mod encode;
 pub mod inspect;
 
+// Match Pillow's recognized Windows INFO-family variants instead of accepting
+// arbitrary extension lengths as a known header layout.
+pub(super) const fn is_supported_info_dib_header_size(header_size: u32) -> bool {
+    matches!(header_size, 40 | 52 | 56 | 64 | 108 | 124)
+}
+
 /// Reject compressed payload families before either caller reads a palette or
 /// treats the payload as raw scanlines. Both callers validate pixel depth first.
 fn validate_compression(

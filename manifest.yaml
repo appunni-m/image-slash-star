@@ -3502,6 +3502,19 @@ formats:
       test_assets:
       - core_header_invalid_depth.bmp
       expect_error: true
+    - id: error_unsupported_dib_header_41
+      description: Pillow rejects an unknown 41-byte INFO-family DIB header
+      test_assets:
+      - unknown_dib_header_41.bmp
+      expect_error: true
+    - id: info_header_52
+      description: Windows BITMAPV2INFOHEADER DIB size 52
+      test_assets:
+      - info_header_52.bmp
+    - id: info_header_56
+      description: Windows BITMAPV3INFOHEADER DIB size 56
+      test_assets:
+      - info_header_56.bmp
     - id: error_malformed
       description: Malformed BMP headers, palettes, and pixel payloads
       test_assets:

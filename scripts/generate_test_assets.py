@@ -4926,6 +4926,31 @@ def bmp_file_header(file_size=14, pixel_offset=54):
     return b"BM" + struct.pack("<IHHI", file_size, 0, 0, pixel_offset)
 
 
+def bmp_dib_header_variant(data, header_size):
+    """Resize a 40-byte DIB header while keeping the BMP file offsets valid."""
+    if len(data) < 54 or data[:2] != b"BM":
+        raise ValueError("expected a complete BMP with a 40-byte INFO header")
+    current_size = struct.unpack_from("<I", data, 14)[0]
+    pixel_offset = struct.unpack_from("<I", data, 10)[0]
+    if (
+        current_size != 40
+        or pixel_offset < 14 + current_size
+        or pixel_offset > len(data)
+    ):
+        raise ValueError("expected a complete BMP with a 40-byte INFO header")
+    extension_size = header_size - current_size
+    if extension_size < 0:
+        raise ValueError("target DIB header size is smaller than the source header")
+
+    extended = bytearray(
+        data[:pixel_offset] + bytes(extension_size) + data[pixel_offset:]
+    )
+    struct.pack_into("<I", extended, 2, len(extended))
+    struct.pack_into("<I", extended, 10, pixel_offset + extension_size)
+    struct.pack_into("<I", extended, 14, header_size)
+    return bytes(extended)
+
+
 def write_bmp_prefix(path, dib_prefix, pixel_offset=54):
     path.write_bytes(bmp_file_header(14 + len(dib_prefix), pixel_offset) + dib_prefix)
 
@@ -5287,7 +5312,16 @@ def gen_bmp():
         rle4_absolute_truncated,
         bmp_palette(16),
     )
-    Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.bmp")
+    Image.new("RGB", (1, 1), (128, 0, 0)).save(d / "1x1.bmp")
+    one_pixel_bmp = (d / "1x1.bmp").read_bytes()
+    for asset_name, header_size in (
+        ("unknown_dib_header_41.bmp", 41),
+        ("info_header_52.bmp", 52),
+        ("info_header_56.bmp", 56),
+    ):
+        (d / asset_name).write_bytes(
+            bmp_dib_header_variant(one_pixel_bmp, header_size)
+        )
     Image.new("RGB", (17,17), (128,0,0)).save(d / "odd_width.bmp")
     pattern_img("RGB", (2, 5)).save(d / "width2.bmp")
     pattern_img("RGB", (3, 5)).save(d / "width3.bmp")

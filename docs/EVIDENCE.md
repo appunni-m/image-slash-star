@@ -6575,7 +6575,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `7caa516290f8c2f13d95d5ebab78853bf7bc98585f449a64b21f7581286a0b4d`; matrix `53a91deeb5778dea79a94346bddd59166d05d13cc7f69c97c54ccd8808f49e50`.
+- Current fixture integrity only: manifest `31ba003fbc5676702a769f97d77587b248ec11470d103b43fb265f3b5b50ab14`; matrix `c6b64c23c5f042eb620e0ae4e4a9c172ba6d22af9f7e8821ecd87a737a8ac381`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7541,8 +7541,8 @@ because the baseline branch detail does not reconcile with its totals. Both
 reports lack source/build receipts and test attribution, so no aggregate
 coverage gain is claimed.
 
-The current fixture matrix contains 2,270 total rows: 1,787 decode /
-inspect / verify rows and 483 encode rows. Of those, 1,787 decode rows and
+The current fixture matrix contains 2,273 total rows: 1,790 decode /
+inspect / verify rows and 483 encode rows. Of those, 1,790 decode rows and
 451 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 47 rows.
 
@@ -7564,3 +7564,25 @@ test attribution are absent, and comparison with the historical full report
 is incomparable because the baseline detail does not reconcile with its
 totals. This is selected-run evidence only; it does not establish aggregate
 coverage change.
+
+### BMP DIB header parity — 2026-10-17
+
+Added three full-file BMP parity cases: reject unknown DIB size 41 and retain
+Pillow-supported INFO-family sizes 52 and 56. The fixtures derive from a
+1×1, 24-bit BMP and adjust the DIB size, pixel offset, and file size together.
+Pillow 12.2.0 reports `Unsupported BMP header type (41)` for the 41-byte
+fixture; the successful 52- and 56-byte references decode to the same
+1×1 RGB pixel with SHA-256
+`25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e`.
+The 41-byte input SHA-256 is
+`331c249550844cee20e0230baaceecbe2f8b58f2ddacbfefe5c8bf9b0f680295`.
+
+Decoder and inspector now share an explicit check for Pillow's supported
+Windows INFO-family DIB sizes (40, 52, 56, 64, 108, and 124). This check runs
+once while reading the header; pixel loops are unchanged. The selected matrix
+run passed all three rows. Coverage MCP reports 95/31,392 observed branch
+outcomes in
+`target/release-evidence/coverage-bmp-dib-variants-selected.json`. Source and
+test receipts are absent, and the comparison with the historical full report
+is incomparable because its branch detail does not reconcile with totals.
+No aggregate coverage gain is claimed.

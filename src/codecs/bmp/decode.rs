@@ -393,7 +393,7 @@ pub fn decode(
             let _planes = read_u16_le(&mut r)?;
             let bit_depth = read_u16_le(&mut r)?;
             (width, height, bit_depth, 0, 0, 3usize)
-        } else if header_size >= 40 {
+        } else if super::is_supported_info_dib_header_size(header_size) {
             let width = read_i32_le(&mut r)?;
             let height = read_i32_le(&mut r)?;
             let _planes = read_u16_le(&mut r)?;
