@@ -35,6 +35,8 @@ pub(crate) fn require_some<T>(value: Option<T>, context: &str) -> T {
 /// outcomes without adding controls to normal library builds.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CoverageFaultPoint {
+    /// Force AV1 segment-map allocation to fail during segmented frame setup.
+    Av1SegmentMapReservation,
     /// Report the AV1 display-plane copy allocation failure before reserving
     /// its output sample buffer.
     Av1DisplayPlaneCopyAllocation,

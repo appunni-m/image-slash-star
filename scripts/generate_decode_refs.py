@@ -2678,6 +2678,9 @@ def sync_encode_rows(manifest, matrix, target_format=None):
 def sync_fault_contract_rows(manifest, matrix):
     """Keep target-only injected-fault cases in the shared case index."""
     allowed_faults = {
+        "av1.segment_map.reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.display_plane.reconstructed_copy_allocation": {
             "decode_error_then_retry_succeeds"
         },

@@ -1045,6 +1045,12 @@ fn execute_fault_contract(
     }
     let (fault_point, sequence_decode, expected_format, expected_stage) =
         match (row.fault.point.as_str(), row.fault.contract.as_str()) {
+            ("av1.segment_map.reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1SegmentMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "av1.display_plane.reconstructed_copy_allocation",
                 "decode_error_then_retry_succeeds",
@@ -1355,6 +1361,9 @@ fn execute_fault_contract(
             }
         };
     let expected_message = match row.fault.point.as_str() {
+        "av1.segment_map.reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 segment map")
+        }
         "av1.film_grain.output_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate film-grain output")
         }
@@ -1517,9 +1526,12 @@ fn execute_fault_contract(
             format: Some(actual_format),
             message,
             stage: Some(stage),
-            ..
+            offset,
+            identity,
         }) if actual_format == expected_format
             && stage == expected_stage
+            && (row.fault.point != "av1.segment_map.reservation"
+                || (offset.is_none() && identity.is_none()))
             && expected_message.is_none_or(|expected| message == expected) => {}
         Err(error) => {
             return Err(format!(

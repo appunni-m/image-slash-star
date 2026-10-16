@@ -851,8 +851,18 @@ impl SegmentMap {
             .checked_mul(padded_height)
             .ok_or_else(|| malformed("segment-map allocation overflows"))?;
         let mut cells = Vec::new();
+        #[cfg(coverage)]
+        let reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1SegmentMapReservation,
+        ) {
+            usize::MAX
+        } else {
+            count
+        };
+        #[cfg(not(coverage))]
+        let reservation_count = count;
         cells
-            .try_reserve_exact(count)
+            .try_reserve_exact(reservation_count)
             .map_err(|_| CodecError::Dimensions("unable to allocate AV1 segment map".to_owned()))?;
         cells.resize(count, 0);
         Ok(Self {

@@ -41,6 +41,14 @@ CATEGORY_KEYS = {
 EVIDENCE_KEYS = {"kind", "path", "fixture", "tests", "command"}
 FAULT_CONTRACT_CASE_KEYS = {"id", "category", "selector", "test"}
 FAULT_CONTRACTS = {
+    "avif_segment_map_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_segment_map_reservation_failure",
+        "source_case": "decode:avif:mixed_lossless_clipped_b32_i420_60x60",
+        "point": "av1.segment_map.reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_display_plane_copy_allocation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

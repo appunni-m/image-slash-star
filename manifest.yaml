@@ -54,6 +54,20 @@ reference_oracles:
       pillow_feature: avif
       pillow_feature_version: 1.4.1
 fault_contracts:
+  - id: avif_segment_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:mixed_lossless_clipped_b32_i420_60x60
+    fault:
+      point: av1.segment_map.reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: bmp_palette_reservation_failure
     type: fault-contract
     operation: decode
@@ -6094,6 +6108,11 @@ formats:
       description: Baseline AVIF (8-bit, 4:2:0)
       test_assets:
       - baseline.avif
+      status: active
+    - id: mixed_lossless_clipped_b32_i420_60x60
+      description: Still AVIF key frame enables segmentation and exercises clipped 32x32 segment-map edges
+      test_assets:
+      - mixed_lossless_clipped_b32_i420_60x60.avif
       status: active
     - id: av1c_profile_disagreement
       description: Pillow uses the in-band AV1 profile despite a differing redundant av1C profile
