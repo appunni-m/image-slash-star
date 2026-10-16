@@ -1785,6 +1785,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_rgb_median_cut_tie_boundary",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
+      "ref_bytes": 126,
+      "ref_mode": "P",
+      "ref_size": [
+        126,
+        1
+      ],
+      "ref_sha256": "ac295c5bf12ca7d06e0cf752ea95317f39a3d610102548bf9031068449176742",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
+      "encoded_ref_bytes": 69,
+      "encoded_ref_sha256": "12d504aeda9997c207857c1738038f376a6016b268422c51e3ea42dbe6850a4c",
+      "source_mode": "Rgb8",
+      "source_sha256": "0dbfd723ca95fd3c965b46cdc64b304e2f3201b598134f854e4c18fdf82d9fba",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_rgb_257_color_low_green_dominant",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_257_color_low_green_dominant.bin",
       "ref_bytes": 640,

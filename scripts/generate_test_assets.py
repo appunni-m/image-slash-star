@@ -3330,6 +3330,14 @@ def gen_png():
     skewed_median_cut = Image.new("RGB", (32, 41))
     skewed_median_cut.putdata(skewed_colors + [dominant_color] * 1_055)
     skewed_median_cut.save(d / "gif_rgb_skewed_high_color_split.png")
+    median_cut_tie_boundary = Image.new("RGB", (126, 1))
+    median_cut_tie_boundary.putdata(
+        [(0, 255, 0)]
+        + [(0, 0, 0)] * 62
+        + [(20, 0, 0)] * 62
+        + [(40, 0, 0)]
+    )
+    median_cut_tie_boundary.save(d / "gif_rgb_median_cut_tie_boundary.png")
     # Skew a distinct 257-color palette toward the low-green endpoint.
     endpoint_colors = [(0, green, 0) for green in range(1, 256)]
     endpoint_colors.extend([(0, 0, 0), (1, 0, 0)])

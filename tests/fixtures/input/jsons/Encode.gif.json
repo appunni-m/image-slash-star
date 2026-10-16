@@ -2243,6 +2243,56 @@
       }
     },
     {
+      "id": "enc_rgb_median_cut_tie_boundary",
+      "source_asset": "gif_rgb_median_cut_tie_boundary.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "0dbfd723ca95fd3c965b46cdc64b304e2f3201b598134f854e4c18fdf82d9fba",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_median_cut_tie_boundary.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_rgb_257_color_low_green_dominant",
       "source_asset": "gif_rgb_257_color_low_green_dominant.png",
       "source_format": "png",

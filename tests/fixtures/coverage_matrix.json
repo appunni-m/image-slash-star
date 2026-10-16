@@ -76366,6 +76366,59 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_rgb_median_cut_tie_boundary",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgb",
+          "description": "Four-color RGB input reaches the end of a weighted green median tie in ordinary and token-aware encodes",
+          "params": {
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgb_median_cut_tie_boundary.png",
+          "source_sha256": "0dbfd723ca95fd3c965b46cdc64b304e2f3201b598134f854e4c18fdf82d9fba",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
+          "encoded_ref_bytes": 69,
+          "encoded_ref_sha256": "12d504aeda9997c207857c1738038f376a6016b268422c51e3ea42dbe6850a4c",
+          "ref_sha256": "ac295c5bf12ca7d06e0cf752ea95317f39a3d610102548bf9031068449176742",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
+          "ref_bytes": 126,
+          "ref_mode": "P",
+          "ref_size": [
+            126,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_rgb_257_color_low_green_dominant",
           "type": "encode",
           "format": "gif",
@@ -190590,9 +190643,9 @@
     }
   },
   "summary": {
-    "total_rows": 2256,
+    "total_rows": 2257,
     "decode_rows": 1774,
-    "encode_rows": 482,
+    "encode_rows": 483,
     "formats": 8,
     "assets_available": 1771,
     "decode_active": 1774,

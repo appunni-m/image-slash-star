@@ -3160,6 +3160,11 @@ formats:
       source_format: png
       source_asset: gif_rgb_skewed_high_color_split.png
       params: {rust_encode_with_token: true}
+    - id: enc_rgb_median_cut_tie_boundary
+      description: Four-color RGB input reaches the end of a weighted green median tie in ordinary and token-aware encodes
+      source_format: png
+      source_asset: gif_rgb_median_cut_tie_boundary.png
+      params: {rust_encode_with_token: true}
     - id: enc_rgb_257_color_low_green_dominant
       description: Skewed 257-color RGB input with a low-green dominant endpoint exercises token-aware palette quantization and exact public GIF parity
       source_format: png
