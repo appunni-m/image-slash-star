@@ -81,6 +81,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "asset": "mixed_lossless_clipped_b32_i420_60x60.avif",
+          "category": "mixed_segments",
+          "description": "Deterministic 60x60 full-range 8-bit I420 still with a qindex-zero lossless segment in the clipped bottom-right B32x32 leaf; the frame remains lossy in transform mode 1",
+          "expect_error": false,
+          "format": "avif",
+          "id": "mixed_lossless_clipped_b32_i420_60x60",
+          "status": "active",
+          "type": "decode",
+          "oracle_status": "ok",
+          "oracle_detects_format": true,
+          "expect_sequence_error": false,
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "verification_scope": "header_only",
+          "inspect_container_format": "AVIF",
+          "inspect_cursor_hotspot": null,
+          "asset_sha256": "ea8d484e1cde6819d1c98a64ff58db1bec7937fd929a835cf9c13c2da8430d1b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "ref_sha256": "a3b4b27575bef66a5eb058529aee5cac545d4d43a9bace07421cea066b4d59b8",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_mixed_lossless_clipped_b32_i420_60x60_avif.bin",
+          "ref_bytes": 10800,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            60,
+            60
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "decoded_source_color": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null
+        },
+        {
           "id": "av1c_profile_disagreement",
           "type": "decode",
           "format": "avif",
@@ -190029,12 +190107,12 @@
     }
   },
   "summary": {
-    "total_rows": 2250,
-    "decode_rows": 1769,
+    "total_rows": 2251,
+    "decode_rows": 1770,
     "encode_rows": 481,
     "formats": 8,
-    "assets_available": 1766,
-    "decode_active": 1769,
+    "assets_available": 1767,
+    "decode_active": 1770,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

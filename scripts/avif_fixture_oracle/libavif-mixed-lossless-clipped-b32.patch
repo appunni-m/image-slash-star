@@ -1,0 +1,73 @@
+diff --git a/src/codec_aom.c b/src/codec_aom.c
+index d17bd2f..4a3ece0 100644
+--- a/src/codec_aom.c
++++ b/src/codec_aom.c
+@@ -488,7 +488,7 @@ static const struct aomOptionDef aomOptionDefs[] = {
+ };
+ #endif // !defined(HAVE_AOM_CODEC_SET_OPTION)
+-
++
+-static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha)
++static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha, const avifImage * image)
+ {
+     for (uint32_t i = 0; i < codec->csOptions->count; ++i) {
+         const avifCodecSpecificOption * entry = &codec->csOptions->entries[i];
+@@ -501,6 +501,40 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha)
+             continue;
+         }
+-
++
++        if (avifKeyEqualsName(entry->key, "fixture-roi-lossless-clipped-b32", alpha)) {
++            if (alpha || strcmp(entry->value, "1") || (image->width != 60) || (image->height != 60)) {
++                return AVIF_FALSE;
++            }
++            const unsigned int rows = 16;
++            const unsigned int cols = 16;
++            uint8_t * const map = (uint8_t *)calloc(rows * cols, sizeof(*map));
++            if (map == NULL) {
++                return AVIF_FALSE;
++            }
++            for (unsigned int row = 8; row < rows; ++row) {
++                for (unsigned int col = 8; col < cols; ++col) {
++                    map[row * cols + col] = 1;
++                }
++            }
++            aom_roi_map_t roi = { 0 };
++            roi.roi_map = map;
++            roi.rows = rows;
++            roi.cols = cols;
++            roi.delta_q[1] = -63;
++            for (int i = 0; i < AOM_MAX_SEGMENTS; ++i) {
++                roi.ref_frame[i] = -1;
++            }
++            const aom_codec_err_t roiResult =
++                aom_codec_control(&codec->internal->encoder, AOME_SET_ROI_MAP, &roi);
++            free(map);
++            if (roiResult != AOM_CODEC_OK) {
++                avifDiagnosticsPrintf(codec->diag, "AOME_SET_ROI_MAP %u x %u failed: %s", rows, cols,
++                                      aom_codec_error(&codec->internal->encoder));
++                return AVIF_FALSE;
++            }
++            continue;
++        }
++
+         // Skip options processed by avifProcessAOMOptionsPreInit.
+         if (avifKeyEqualsName(entry->key, "end-usage", alpha)) {
+             continue;
+@@ -1080,6 +1114,6 @@ static avifResult aomCodecEncodeImage(avifCodec * codec,
+             aom_codec_control(&codec->internal->encoder, AOME_SET_TUNING, libavifDefaultTuneMetric) != AOM_CODEC_OK) {
+             return AVIF_RESULT_UNKNOWN_ERROR;
+         }
+-        if (!avifProcessAOMOptionsPostInit(codec, alpha)) {
++        if (!avifProcessAOMOptionsPostInit(codec, alpha, image)) {
+             return AVIF_RESULT_INVALID_CODEC_SPECIFIC_OPTION;
+         }
+@@ -1161,7 +1195,7 @@ static avifResult aomCodecEncodeImage(avifCodec * codec,
+         if (encoderChanges & AVIF_ENCODER_CHANGE_CODEC_SPECIFIC) {
+             // Do not apply libavifDefaultTuneMetric even if useLibavifDefaultTuneMetric is true:
+             // codec-specific settings persist on the libaom side, so keep the same behavior for tune.
+-            if (!avifProcessAOMOptionsPostInit(codec, alpha)) {
++            if (!avifProcessAOMOptionsPostInit(codec, alpha, image)) {
+                 return AVIF_RESULT_INVALID_CODEC_SPECIFIC_OPTION;
+             }
+         }

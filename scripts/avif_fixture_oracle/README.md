@@ -117,3 +117,63 @@ The generator's original no-argument behavior still creates
 `multitile_color_split_groups.avif`; `--profile color-split` selects it
 explicitly. `--output PATH` redirects either fixture for an independent
 reproduction check.
+
+## Mixed lossless segment in a clipped B32 block
+
+The public still
+`mixed_lossless_clipped_b32_i420_60x60.avif` uses a fixture-only ROI map to
+assign qindex zero to the bottom-right B32x32 block. The other segments retain
+the lossy frame qindex. At 60x60, the B32 leaf at MI origin (8, 8) exposes
+28x28 pixels. The encoder trace patch requires libaom to report that exact
+B32x32 as an unsplit leaf in segment 1 at qindex zero. The generator also
+checks the serialized frame header, byte-for-byte re-encoding, and exact
+Pillow pixels before writing either fixture.
+
+Build separate work copies of the pinned sources so the clean oracle
+checkouts remain unchanged:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-mixed-lossless-clipped-b32
+git -C target/oracle-staging/libaom-mixed-lossless-clipped-b32 checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-mixed-lossless-clipped-b32 apply "$PWD/scripts/avif_fixture_oracle/libaom-mixed-lossless-clipped-b32.patch"
+cmake -S target/oracle-staging/libaom-mixed-lossless-clipped-b32 -B target/oracle-staging/libaom-mixed-lossless-clipped-b32-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix"
+cmake --build target/oracle-staging/libaom-mixed-lossless-clipped-b32-build -j 4
+cmake --install target/oracle-staging/libaom-mixed-lossless-clipped-b32-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-mixed-lossless-clipped-b32
+git -C target/oracle-staging/libavif-mixed-lossless-clipped-b32 checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-mixed-lossless-clipped-b32 apply "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+git -C target/oracle-staging/libavif-mixed-lossless-clipped-b32 apply "$PWD/scripts/avif_fixture_oracle/libavif-mixed-lossless-clipped-b32.patch"
+cmake -S target/oracle-staging/libavif-mixed-lossless-clipped-b32 -B target/oracle-staging/libavif-mixed-lossless-clipped-b32-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix/include"
+cmake --build target/oracle-staging/libavif-mixed-lossless-clipped-b32-build --target avif_static -j 4
+cc -O2 \
+  -I target/oracle-staging/libavif-mixed-lossless-clipped-b32/include \
+  -I target/oracle-staging/libavif-mixed-lossless-clipped-b32-build/include \
+  -I target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix/include \
+  scripts/avif_fixture_oracle/encode_mixed_lossless_clipped_b32.c \
+  target/oracle-staging/libavif-mixed-lossless-clipped-b32-build/libavif.a \
+  target/oracle-staging/libaom-mixed-lossless-clipped-b32-prefix/lib/libaom.a \
+  -lz -lm -lpthread \
+  -o target/oracle-staging/encode-avif-mixed-lossless-clipped-b32
+```
+
+Run the pinned generator and Pillow reference check:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_mixed_lossless_clipped_b32.py \
+  --encoder target/oracle-staging/encode-avif-mixed-lossless-clipped-b32
+```
+
+The patches are fixture-generation controls only. They do not modify the
+runtime codec or the clean pinned source checkouts.

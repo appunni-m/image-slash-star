@@ -1,0 +1,59 @@
+diff --git a/av1/encoder/encoder_utils.c b/av1/encoder/encoder_utils.c
+index 89ba731..96e2694 100644
+--- a/av1/encoder/encoder_utils.c
++++ b/av1/encoder/encoder_utils.c
+@@ -472,8 +472,9 @@ void av1_apply_roi_map(AV1_COMP *cpi) {
+     // Clamp to allowed best/worst quality. For best quality clamp to 1
+     // to avoid qindex = 0 case (lossless segment) which can happen for
+     // best_quality = 0.
+-    if (qindex + internal_delta_q[i] <= cpi->rc.best_quality)
+-      internal_delta_q[i] = AOMMAX(1, cpi->rc.best_quality) - qindex;
++    // Fixture-only ROI maps can select qindex zero in a mixed lossy frame.
++    if (qindex + internal_delta_q[i] < 0)
++      internal_delta_q[i] = -qindex;
+     if (qindex + internal_delta_q[i] > cpi->rc.worst_quality)
+       internal_delta_q[i] =
+           cpi->rc.worst_quality - cm->quant_params.base_qindex;
+diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
+index 81ac00b..fd9e025 100644
+--- a/av1/encoder/partition_search.c
++++ b/av1/encoder/partition_search.c
+@@ -9,6 +9,8 @@
+  * PATENTS file, you can obtain it at www.aomedia.org/license/patent.
+  */
+-
++
++#include <stdio.h>
++
+ #include <float.h>
+-
++
+ #include "config/aom_config.h"
+@@ -3001,6 +3003,12 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
+   }
+-
++
+   pc_tree->partitioning = partition;
++  if (mi_row == 8 && mi_col == 8 && bsize == BLOCK_32X32) {
++    fprintf(stderr,
++            "AVIF_FIXTURE_NONRD row=%d col=%d width=%d height=%d partition=%d\n",
++            mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
++            partition);
++  }
+-
++
+   switch (partition) {
+     case PARTITION_NONE:
+@@ -3014,6 +3022,12 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
+       }
+       pick_sb_modes_nonrd(cpi, tile_data, x, mi_row, mi_col, &dummy_cost, bsize,
+                           pc_tree->none);
++      if (mi_row == 8 && mi_col == 8 && bsize == BLOCK_32X32) {
++        fprintf(stderr,
++                "AVIF_FIXTURE_LEAF row=%d col=%d width=%d height=%d segment=%d qindex=%d\n",
++                mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
++                mib[0]->segment_id, mib[0]->current_qindex);
++      }
+       encode_b_nonrd(cpi, tile_data, td, tp, mi_row, mi_col, 0, bsize,
+                      partition, pc_tree->none, NULL);
+       break;
