@@ -693,6 +693,10 @@ formats:
       description: 4:4:4 multiscan reserved zero-size AC symbol exercises Pillow's EOB behavior in the scalar decoder
       test_assets:
       - baseline_multiscan_reserved_ac_zero_size_eob.jpg
+    - id: baseline_multiscan_ac_pair_tail
+      description: 4:4:4 multiscan scalar AC run overrun consumes its amplitude and stores it at the final coefficient
+      test_assets:
+      - baseline_multiscan_ac_pair_tail.jpg
     - id: color_ycbcr
       description: YCbCr color space (standard)
       test_assets:

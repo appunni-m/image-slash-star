@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `802bf6258635abbf0b551131118efd681b4af165a20e00204c8932b337043293`; matrix `07a4cba2fe32e92841308c514d7eb4e47a533676053288e65e735816822ba999`.
+- Current fixture integrity only: manifest `1b813b8e42d3154e7e0c22c9ca59e62d17d78aa816b7c64f8c8f14833625d61c`; matrix `32bc5c54c9ab90a152c0d838bcbca07e4d1b29036d2ed6190d4887eb25ff64fd`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7100,3 +7100,37 @@ full coverage campaign was run.
 `make verify` now includes the generator's hash-only `--check` and passes;
 the refreshed malformed-input ledger contains 609 classes across eight
 formats.
+
+
+### JPEG multiscan positive-size AC tail overrun parity — 2026-10-16
+
+The active input-only row `baseline_multiscan_ac_pair_tail` adds a 172-byte
+SOF0 4:4:4 JPEG with three single-component scans. Its Y scan places a positive
+size-eight AC symbol after a run that advances past coefficient 63; the scalar
+multiscan decoder consumes its amplitude and stores the value at the final
+coefficient. The pinned Pillow 12.2.0 oracle verifies the input as 8×8 RGB. The input SHA-256 is
+`ab2f907a724ae03917b169c72868ae43dfc9e6d38dece1c5521039bebc5f26f6`; the exact
+192-byte RGB reference SHA-256 is
+`ef3e84f55ebfea3a4470bedbe9341f5145b718d560f870428ab76bb6dc9f43dc`.
+
+The focused public matrix test passed 1/1. It exercises detection, inspection,
+verification, still decode and sequence decode against Pillow references. The
+fresh GitHub [x86 CI artifact](https://github.com/appunni-m/image-slash-star/actions/runs/38834683027)
+for source commit `7c32909e` recorded zero hits for the `k >= 64` true arm at
+`src/codecs/jpeg/decode/decode.rs:89`; Coverage MCP groups that arm as missing.
+The extracted CI report is
+`target/release-evidence/coverage-jpeg-x86_64-ci.json` (SHA-256
+`f8423fa474f19658377965edcb1ca63e3b69bf973389e06e34399f11105b6208`). The
+selected local LLVM report records four true-arm and four false-arm hits, and
+Coverage MCP finds no remaining gap at that location. Its report is
+`target/release-evidence/coverage-jpeg-multiscan-ac-pair-tail.json` (SHA-256
+`0cd67a75fadaa4237422b8a448b72274fcc781fd10b6f690507d2041ce86be07`). The
+baseline and selected reports have different branch inventories (302 and 308),
+and both lack source/build receipts and test attribution, so their incremental
+comparison is incomparable. This is bounded selected-path evidence, not an
+aggregate coverage gain or a full coverage result. No Rust decoder or SIMD code
+changed.
+
+The current fixture matrix contains 2,246 total rows: 1,765 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,765 decode rows and
+449 encode rows are active. No full coverage campaign was run.

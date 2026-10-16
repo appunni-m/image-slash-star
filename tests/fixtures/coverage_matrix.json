@@ -84987,6 +84987,84 @@
           "error_contracts": {}
         },
         {
+          "id": "baseline_multiscan_ac_pair_tail",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "4:4:4 multiscan scalar AC run overrun consumes its amplitude and stores it at the final coefficient",
+          "asset": "baseline_multiscan_ac_pair_tail.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ab2f907a724ae03917b169c72868ae43dfc9e6d38dece1c5521039bebc5f26f6",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ef3e84f55ebfea3a4470bedbe9341f5145b718d560f870428ab76bb6dc9f43dc",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_multiscan_ac_pair_tail_jpg.bin",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "baseline_ycbcr.jpg",
           "category": "color",
           "description": "YCbCr color space (standard)",
@@ -189559,12 +189637,12 @@
     }
   },
   "summary": {
-    "total_rows": 2245,
-    "decode_rows": 1764,
+    "total_rows": 2246,
+    "decode_rows": 1765,
     "encode_rows": 481,
     "formats": 8,
-    "assets_available": 1761,
-    "decode_active": 1764,
+    "assets_available": 1762,
+    "decode_active": 1765,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

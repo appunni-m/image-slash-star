@@ -1828,6 +1828,79 @@ def build_baseline_multiscan_reserved_ac_zero_size_eob_jpeg():
     return data
 
 
+def build_baseline_multiscan_ac_pair_tail_jpeg():
+    """Build a Pillow-tolerated multiscan scalar AC run-overrun JPEG."""
+    def marker_segment(marker, payload):
+        return (
+            b"\xff"
+            + bytes([marker])
+            + struct.pack(">H", len(payload) + 2)
+            + payload
+        )
+
+    def entropy_bytes(bits):
+        bits += "1" * ((-len(bits)) % 8)
+        entropy = bytearray(
+            int(bits[offset : offset + 8], 2)
+            for offset in range(0, len(bits), 8)
+        )
+        stuffed = bytearray()
+        for byte in entropy:
+            stuffed.append(byte)
+            if byte == 0xFF:
+                stuffed.append(0)
+        return bytes(stuffed)
+
+    quantization = bytes([0]) + bytes([1]) * 64
+    frame = bytes([8]) + struct.pack(">HH", 8, 8) + bytes(
+        [3, 1, 0x11, 0, 2, 0x11, 0, 3, 0x11, 0]
+    )
+    dc_huffman = bytes([0]) + bytes([1] + [0] * 15) + bytes([0])
+    ac_symbols = bytes([0x00, 0xF0, 0xD1, 0x18, 0x01])
+    ac_huffman = bytes([0x10]) + bytes([0, 0, 5] + [0] * 13) + ac_symbols
+
+    data = bytearray(b"\xff\xd8")
+    data += marker_segment(0xDB, quantization)
+    data += marker_segment(0xC0, frame)
+    data += marker_segment(0xC4, dc_huffman + ac_huffman)
+    for component in (1, 2, 3):
+        data += marker_segment(0xDA, bytes([1, component, 0, 0, 63, 0]))
+        if component == 1:
+            # Three ZRLs and D1 store at coefficient 62, leaving the next AC at
+            # coefficient 63. The positive-size 0x18 symbol's run advances
+            # beyond the block; Pillow consumes its amplitude and stores it at
+            # coefficient 63. Retain a size-one symbol and EOB after the overrun.
+            bits = "0" + "001" * 3 + "010" + "1"
+            bits += "011" + format(127, "08b")
+            bits += "100" + "1" + "000"
+        else:
+            bits = "0" + "000"
+        data += entropy_bytes(bits)
+    data += b"\xff\xd9"
+    data = bytes(data)
+
+    expected_sha256 = (
+        "ab2f907a724ae03917b169c72868ae43dfc9e6d38dece1c5521039bebc5f26f6"
+    )
+    if hashlib.sha256(data).hexdigest() != expected_sha256:
+        raise RuntimeError("multiscan AC pair-tail fixture bytes differ")
+    with Image.open(BytesIO(data)) as decoded:
+        if (
+            decoded.format != "JPEG"
+            or decoded.mode != "RGB"
+            or decoded.size != (8, 8)
+        ):
+            raise RuntimeError("Pillow changed the multiscan AC pair-tail fixture layout")
+        decoded.verify()
+    with Image.open(BytesIO(data)) as decoded:
+        decoded.load()
+        if hashlib.sha256(decoded.tobytes()).hexdigest() != (
+            "ef3e84f55ebfea3a4470bedbe9341f5145b718d560f870428ab76bb6dc9f43dc"
+        ):
+            raise RuntimeError("Pillow changed the multiscan AC pair-tail fixture pixels")
+    return data
+
+
 def gen_jpeg():
     d = OUT / "jpeg"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
@@ -2149,6 +2222,10 @@ def gen_jpeg():
     multiscan_reserved_ac_eob_path = d / "baseline_multiscan_reserved_ac_zero_size_eob.jpg"
     multiscan_reserved_ac_eob_path.write_bytes(
         build_baseline_multiscan_reserved_ac_zero_size_eob_jpeg()
+    )
+    multiscan_ac_pair_tail_path = d / "baseline_multiscan_ac_pair_tail.jpg"
+    multiscan_ac_pair_tail_path.write_bytes(
+        build_baseline_multiscan_ac_pair_tail_jpeg()
     )
     pattern_img("L", (13, 9)).save(d / "baseline_gray_13x9.jpg", quality=85)
     gray_sampling_2x1 = mutate_jpeg_payload(
