@@ -7883,6 +7883,12 @@ formats:
       - high_bitdepth_still_12bit_444_lossless.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_12bit_444_alpha_9x9
+      description: Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF with an auxiliary 12-bit alpha plane, exercising a vector batch and scalar tail
+      test_assets:
+      - high_bitdepth_still_12bit_444_alpha_9x9.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: profile2_identity_12bit_444
       description: Single-frame profile-2 12-bit full-range 4:4:4 AVIF with identity CICP matrix 0 decoded to Pillow RGB8 output
       test_assets:

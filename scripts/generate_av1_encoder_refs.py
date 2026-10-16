@@ -64,6 +64,7 @@ CASES = [
     ("high10_444_alpha_16x16", 16, 16, 10, 1, 1, 75, 6, 0),
     ("high12_422", 9, 7, 12, 2, 0, 75, 6, 0),
     ("high12_444", 9, 7, 12, 1, 0, 75, 6, 0),
+    ("high12_444_alpha_9x9", 9, 9, 12, 1, 1, 100, 6, 0),
     ("alpha", 8, 8, 8, 1, 1, 75, 6, 0),
     ("two_tiles", 128, 64, 8, 4, 0, 75, 6, 1),
 ]
@@ -239,11 +240,18 @@ def planes(case):
         for y in range(h):
             for x in range(w):
                 # Two flat but distinct tiles avoid enormous per-symbol buffer histories.
-                value = (47 if x < 64 else 193) if name == "two_tiles" else (
-                    29 + x * 37 + y * 61 + channel * 73 + x * y * 7) % 256
+                if name == "high12_444_alpha_9x9":
+                    # Keep this 81-sample edge case in one leaf so the
+                    # decoder reaches both its vector batches and scalar tail.
+                    value = 29 + channel * 73
+                    low_bits = channel
+                else:
+                    value = (47 if x < 64 else 193) if name == "two_tiles" else (
+                        29 + x * 37 + y * 61 + channel * 73 + x * y * 7) % 256
+                    low_bits = (x * 3 + y * 5 + channel)
                 if not full_range and fmt == 4 and channel == 0:
                     value = 16 + value * 219 // 255
-                value = (value << (depth - 8)) | ((x * 3 + y * 5 + channel) & ((1 << (depth - 8)) - 1))
+                value = (value << (depth - 8)) | (low_bits & ((1 << (depth - 8)) - 1))
                 output.extend(struct.pack("<H", value))
     return output, descriptions
 

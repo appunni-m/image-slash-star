@@ -129,6 +129,7 @@
             "error_resilient_mode": true,
             "existing_frame_idx": null,
             "film_grain": null,
+            "film_grain_start_bit": 90,
             "force_integer_mv": true,
             "frame_height": 7,
             "frame_id": 0,

@@ -6,6 +6,46 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## AVIF 12-bit I444 auxiliary-alpha parity — 2026-10-17
+
+Added the public `high_bitdepth_still_12bit_444_alpha_9x9` decode row. The
+deterministic 9x9 full-range profile-2 fixture contains 12-bit I444 color and a
+monochrome 12-bit auxiliary alpha item. Pinned libavif 1.4.1/libaom 3.13.2
+produce two all-lossless one-tile frames; Pillow 12.2.0 verifies and loads the
+input as one RGBA8 frame. The 484-byte input SHA-256 is
+`f7eb5b9edfdd7b11d00094aadb91320e7cc6cc01961470e3c2040d91e68610aa`; the
+exact 324-byte Pillow reference SHA-256 is
+`4a644e661e4cc9eb2ab3b4548d7f2275061b058e14a9370cffb63826f5c7a014`.
+
+The selected `test_decode_matrix_avif` parity run passed. A selected
+`cargo +nightly-2026-07-16 llvm-cov` report at
+`target/release-evidence/coverage-avif-12bit-444-alpha-9x9.json` was queried
+with Coverage MCP. Its report contains 1,829/31,302 observed branches overall;
+the source and build are unverified and test attribution is unknown. The
+report shows the new case reaches both the eight-lane converter batches and
+the scalar tail. Coverage MCP also reports ten unobserved branch outcomes in
+the separate 10-bit alpha converter and eight in the full-resolution RGB
+shape checks. These are observations from the selected report, not claims
+about the full suite. An incremental union with the saved 2026-10-16 full
+baseline is unavailable: its detailed observations do not reconcile with its
+reported totals, so Coverage MCP returns `incomparable`. No aggregate gain or
+full-suite regression conclusion is claimed.
+
+## Selected 10-bit I444 alpha coverage — 2026-10-17
+
+The existing `high_bitdepth_still_10bit_444_alpha_lossy_16x16` Pillow parity
+row also passed alone under `cargo +nightly-2026-07-16 llvm-cov`. Its report is
+`target/release-evidence/coverage-avif-10bit-444-alpha-16x16.json` and records
+2,426/31,302 observed branches. Coverage MCP's `selected_tests` comparison
+with the selected 12-bit I444 alpha report found five branch arms newly
+observed at coordinates in `convert_full_resolution_rgb_10bit_alpha`, with
+five outcomes still unobserved there. The comparison is limited because both
+reports have unverified source/build identities and unknown test attribution;
+it describes report-coordinate differences, not a verified gain. The
+incremental union was incomparable because the baseline's detailed
+observations do not reconcile with its totals. No aggregate coverage claim is
+made.
+
 ## Latest full all-feature coverage — 2026-10-16
 
 One complete local `make coverage` run on source commit
@@ -6504,7 +6544,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e48f575911839ef0a3b77c3a29bd60f6f5eb235995aca5629e1f111da8a1d58d`; matrix `882d099e9c20f62970d13510fad22a178842605accb7ddba83a01f36a2989d93`.
+- Current fixture integrity only: manifest `4ddd85ac624d59e5460baa7cf0f9e818c986d44e5f4507b5f16e4ae7af0f52ea`; matrix `b329aaac33bdead9ab880b3dd78f3ba47f513efe4287d5890e6cb27b86612d81`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7381,7 +7421,7 @@ claimed and no broad codec or full-coverage campaign was run. Report:
 `target/release-evidence/coverage-avif-segment-map-fault-current.json`.
 The static coverage-origin inventory now records 156 exact `cfg(coverage)`
 guards across 26 Rust files.
-The current fixture matrix contains 2,263 total rows: 1,780 decode /
-inspect / verify rows and 483 encode rows. Of those, 1,780 decode rows and
+The current fixture matrix contains 2,264 total rows: 1,781 decode /
+inspect / verify rows and 483 encode rows. Of those, 1,781 decode rows and
 451 encode rows are active; 32 planned encode rows remain. The
 separate target-only fault lane contains 41 rows.

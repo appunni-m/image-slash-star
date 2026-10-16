@@ -31118,6 +31118,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "high_bitdepth_still_12bit_444_alpha_9x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "high",
+          "description": "Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF with an auxiliary 12-bit alpha plane, exercising a vector batch and scalar tail",
+          "asset": "high_bitdepth_still_12bit_444_alpha_9x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f7eb5b9edfdd7b11d00094aadb91320e7cc6cc01961470e3c2040d91e68610aa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "4a644e661e4cc9eb2ab3b4548d7f2275061b058e14a9370cffb63826f5c7a014",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_high_bitdepth_still_12bit_444_alpha_9x9_avif.bin",
+          "ref_bytes": 324,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            9,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "profile2_identity_12bit_444",
           "type": "decode",
           "format": "avif",
@@ -191369,12 +191447,12 @@
     }
   },
   "summary": {
-    "total_rows": 2263,
-    "decode_rows": 1780,
+    "total_rows": 2264,
+    "decode_rows": 1781,
     "encode_rows": 483,
     "formats": 8,
-    "assets_available": 1777,
-    "decode_active": 1780,
+    "assets_available": 1778,
+    "decode_active": 1781,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
