@@ -138369,6 +138369,396 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "ycbcr_subsampled_lzw_2x2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip",
+          "asset": "ycbcr_subsampled_lzw_2x2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "af15457a9372a158dd276ced4109b650b99def573093a49f70dbb469c2262668",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_tiff.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_2x2_odd_edge",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Default 2-by-2 YCbCr clumps clipped at odd image edges",
+          "asset": "ycbcr_subsampled_lzw_2x2_odd_edge.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "027f5f35676c24314a2fefac2bb3fb6e8b06b144a96fd3f55b5c4b057473e673",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_odd_edge_tiff.bin",
+          "ref_bytes": 27,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            3,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_2x2_two_strips",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Default 2-by-2 YCbCr clumps split across aligned LZW strips",
+          "asset": "ycbcr_subsampled_lzw_2x2_two_strips.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_two_strips_tiff.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_full_resolution_lzw_1x1",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Full-resolution 1-by-1 YCbCr samples in an LZW strip",
+          "asset": "ycbcr_full_resolution_lzw_1x1.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "c3ebf5fdd35da227f9ef92cf45b81d726c908a0be1fe3e52c1bd3abfe699f9b6",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "a9ef8ac10e78a041a3b442685d6a85cc153d136972866ebd10fb03804bd13a7e",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_full_resolution_lzw_1x1_tiff.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_2x2_checkpoint_32x32",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "32-by-32 subsampled YCbCr LZW pixels reach the conversion checkpoint",
+          "asset": "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "c5fc0bdafed814b597605fb7d00ce7510c60e1b45e774d0c71c4850ec39b4ded",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_checkpoint_32x32_tiff.bin",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "1bit.tiff",
           "category": "depth",
           "description": "1-bit",
@@ -191447,12 +191837,12 @@
     }
   },
   "summary": {
-    "total_rows": 2264,
-    "decode_rows": 1781,
+    "total_rows": 2269,
+    "decode_rows": 1786,
     "encode_rows": 483,
     "formats": 8,
-    "assets_available": 1778,
-    "decode_active": 1781,
+    "assets_available": 1783,
+    "decode_active": 1786,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -191586,6 +191976,44 @@
       },
       "fault": {
         "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_clump_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_full_resolution_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_full_resolution_lzw_1x1"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.full_resolution_length_mismatch",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

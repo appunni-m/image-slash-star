@@ -1,6 +1,6 @@
 //! Baseline decoder for classic TIFF IFD payloads.
 
-use super::inspect::TiffLayout;
+use super::inspect::{TiffLayout, TiffLayoutParameters};
 use crate::SequenceDecodeBudget;
 use crate::codecs::compression::deflate::{
     decompress_zlib_prefix, decompress_zlib_prefix_with_status_and_token,
@@ -212,6 +212,11 @@ fn decode_ifd(
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
     let sample_format = directory.one_or(339, 1);
+    let ycbcr_subsampling = if photometric == 6 && compression != COMPRESSION_NONE {
+        Some(super::inspect::ycbcr_subsampling(&directory)?)
+    } else {
+        None
+    };
     let color_map = directory.values(320);
     if rows_per_strip == 0 {
         return Err(CodecError::Dimensions(
@@ -225,15 +230,17 @@ fn decode_ifd(
     }
     let separate_planar = planar == 2 && samples_per_pixel > 1;
     let extra_samples = directory.values(338);
-    let (layout, palette) = super::inspect::layout_and_palette(
+    let (layout, palette) = super::inspect::layout_and_palette(TiffLayoutParameters {
         photometric,
-        samples_per_pixel,
-        usize::from(bits_per_sample),
+        samples: samples_per_pixel,
+        bits: usize::from(bits_per_sample),
         sample_format,
-        color_map.as_deref(),
-        extra_samples.as_deref().unwrap_or_default(),
+        compression,
+        color_map: color_map.as_deref(),
+        extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar,
-    )?;
+        ycbcr_subsampling,
+    })?;
     if fill_order == 2
         && compression == COMPRESSION_NONE
         && matches!(layout, TiffLayout::Palette { bits: 4 })
@@ -285,6 +292,28 @@ fn decode_ifd(
 
     let width_usize = width as usize;
     let height_usize = height as usize;
+    if matches!(
+        layout,
+        TiffLayout::YcbcrFull8 | TiffLayout::YcbcrSubsampled8
+    ) && planar != 1
+    {
+        return Err(CodecError::Malformed(
+            "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
+        ));
+    }
+    if layout == TiffLayout::YcbcrSubsampled8 {
+        let tiled = directory.field_type(324).is_some() || directory.field_type(325).is_some();
+        if predictor != 1 || tiled {
+            return Err(CodecError::Malformed(
+                "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
+            ));
+        }
+        if height_usize > rows_per_strip && !rows_per_strip.is_multiple_of(2) {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr strip boundaries must align to subsampled rows".to_owned(),
+            ));
+        }
+    }
     // Pillow's baseline YCbCr TIFF raw mode is RGBX: the IFD declares three
     // samples, but each stored pixel occupies four bytes.
     let stored_samples = if layout == TiffLayout::Ycbcr8 {
@@ -305,12 +334,25 @@ fn decode_ifd(
         reason = "Validated dimensions, sample count, and bit depth bound this row-bit product."
     )]
     let row_bits = row_samples * usize::from(bits_per_sample);
-    let row_bytes = row_bits.div_ceil(8);
+    let row_bytes = if layout == TiffLayout::YcbcrSubsampled8 {
+        width_usize
+            .div_ceil(2)
+            .checked_mul(6)
+            .dimensions("TIFF YCbCr clump row byte size overflows")?
+    } else {
+        row_bits.div_ceil(8)
+    };
     #[allow(
         clippy::arithmetic_side_effects,
         reason = "The validated raster ceiling bounds the row-byte and height product."
     )]
-    let expected_total = row_bytes * height_usize;
+    let expected_total = if layout == TiffLayout::YcbcrSubsampled8 {
+        row_bytes
+            .checked_mul(height_usize.div_ceil(2))
+            .dimensions("TIFF YCbCr clump buffer size overflows")?
+    } else {
+        row_bytes * height_usize
+    };
 
     let tile_offsets = directory.values(324);
     let tile_byte_counts = directory.values(325);
@@ -617,7 +659,12 @@ fn decode_ifd(
             .map(|strip_index| {
                 let first_row = strip_index.wrapping_mul(rows_per_strip);
                 let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
-                row_bytes.wrapping_mul(strip_rows)
+                let stored_rows = if layout == TiffLayout::YcbcrSubsampled8 {
+                    strip_rows.div_ceil(2)
+                } else {
+                    strip_rows
+                };
+                row_bytes.wrapping_mul(stored_rows)
             })
             .collect::<Vec<_>>()
     } else {
@@ -676,7 +723,12 @@ fn decode_ifd(
         };
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
-        let expected = row_bytes.wrapping_mul(strip_rows);
+        let stored_rows = if layout == TiffLayout::YcbcrSubsampled8 {
+            strip_rows.div_ceil(2)
+        } else {
+            strip_rows
+        };
+        let expected = row_bytes.wrapping_mul(stored_rows);
         // The geometry check above rejects extra strips except for LZW;
         // those declared, bounded payloads do not contribute image rows.
         if strip_rows == 0 {
@@ -1556,6 +1608,16 @@ fn convert_pixels(
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
+        TiffLayout::YcbcrFull8 => {
+            convert_ycbcr_full_resolution(&mut pixels, (width, height), None)?;
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
+        TiffLayout::YcbcrSubsampled8 => DecodedImage::new(
+            width,
+            height,
+            convert_ycbcr_subsampled_2x2((width, height), &pixels, None)?,
+            ColorType::Rgb8,
+        ),
     };
     let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
     if let Some(alpha) = alpha.source {
@@ -1780,12 +1842,198 @@ fn convert_pixels_with_token(
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
+        TiffLayout::YcbcrFull8 => {
+            convert_ycbcr_full_resolution(&mut pixels, (width, height), Some(token))?;
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
+        TiffLayout::YcbcrSubsampled8 => DecodedImage::new(
+            width,
+            height,
+            convert_ycbcr_subsampled_2x2((width, height), &pixels, Some(token))?,
+            ColorType::Rgb8,
+        ),
     };
     let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
     Ok(image.with_source_descriptor(descriptor))
+}
+
+/// Expand contiguous TIFF YCbCr 2-by-2 clumps using Pillow/libtiff's RGB path.
+///
+/// Each clump stores four luma samples followed by one Cb and one Cr sample.
+/// Libtiff applies the clump chroma pair to each luma sample and uses its
+/// 16-bit fixed-point default YCbCr conversion coefficients.
+fn convert_ycbcr_subsampled_2x2(
+    dimensions: (u32, u32),
+    samples: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    let (width, height) = dimensions;
+    let width = width as usize;
+    let height = height as usize;
+    let clump_columns = width.div_ceil(2);
+    let clump_rows = height.div_ceil(2);
+    let clump_count = clump_columns
+        .checked_mul(clump_rows)
+        .dimensions("TIFF YCbCr clump count overflows")?;
+    #[cfg(coverage)]
+    let fault_injected = crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrClumpLengthMismatch,
+    );
+    #[cfg(not(coverage))]
+    let fault_injected = false;
+    let available_len = if fault_injected {
+        samples.len().saturating_sub(1)
+    } else {
+        samples.len()
+    };
+    let (available_samples, _) = samples.split_at(available_len);
+    let expected_sample_len = clump_count
+        .checked_mul(6)
+        .dimensions("TIFF YCbCr clump buffer size overflows")?;
+    if available_samples.len() != expected_sample_len {
+        return Err(CodecError::Malformed(
+            "TIFF YCbCr clump buffer has an invalid length".to_owned(),
+        ));
+    }
+    let (clumps, _) = available_samples.as_chunks::<6>();
+    let output_len = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(3))
+        .dimensions("TIFF YCbCr RGB buffer size overflows")?;
+    let mut rgb = Vec::new();
+    rgb.try_reserve_exact(output_len).map_err(|_| {
+        CodecError::Dimensions("unable to allocate TIFF YCbCr RGB buffer".to_owned())
+    })?;
+    rgb.resize(output_len, 0);
+
+    let mut processed = 0usize;
+    for clump_y in 0..clump_rows {
+        crate::codecs::error::check_cancelled(token)?;
+        let first_y = clump_y
+            .checked_mul(2)
+            .dimensions("TIFF YCbCr row offset overflows")?;
+        for clump_x in 0..clump_columns {
+            let clump_index = clump_y
+                .checked_mul(clump_columns)
+                .and_then(|row| row.checked_add(clump_x))
+                .dimensions("TIFF YCbCr clump offset overflows")?;
+            let clump = clumps
+                .get(clump_index)
+                .ok_or_else(|| CodecError::Malformed("TIFF YCbCr clump is missing".to_owned()))?;
+            let first_x = clump_x
+                .checked_mul(2)
+                .dimensions("TIFF YCbCr column offset overflows")?;
+            let cb = clump[4];
+            let cr = clump[5];
+            let y_samples = [[clump[0], clump[1]], [clump[2], clump[3]]];
+            for (local_y, row) in y_samples.iter().enumerate() {
+                let y = first_y
+                    .checked_add(local_y)
+                    .dimensions("TIFF YCbCr row offset overflows")?;
+                if y >= height {
+                    continue;
+                }
+                for (local_x, &y_sample) in row.iter().enumerate() {
+                    let x = first_x
+                        .checked_add(local_x)
+                        .dimensions("TIFF YCbCr column offset overflows")?;
+                    if x >= width {
+                        continue;
+                    }
+                    let pixel = ycbcr_to_rgb_pixel(y_sample, cb, cr);
+                    let pixel_index = y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(x))
+                        .and_then(|pixel| pixel.checked_mul(3))
+                        .dimensions("TIFF YCbCr RGB offset overflows")?;
+                    let output_end = pixel_index
+                        .checked_add(3)
+                        .dimensions("TIFF YCbCr RGB offset overflows")?;
+                    let output = rgb.get_mut(pixel_index..output_end).ok_or_else(|| {
+                        CodecError::Malformed("TIFF YCbCr RGB pixel is out of bounds".to_owned())
+                    })?;
+                    output.copy_from_slice(&pixel);
+                    processed = processed.saturating_add(1);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(token)?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(rgb)
+}
+
+/// Convert full-resolution YCbCr triples into RGB in place.
+fn convert_ycbcr_full_resolution(
+    samples: &mut [u8],
+    dimensions: (u32, u32),
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let (width, height) = dimensions;
+    let pixel_count = (width as usize)
+        .checked_mul(height as usize)
+        .dimensions("TIFF YCbCr pixel count overflows")?;
+    let expected_len = pixel_count
+        .checked_mul(3)
+        .dimensions("TIFF YCbCr sample buffer size overflows")?;
+    #[cfg(coverage)]
+    let fault_injected = crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrFullResolutionLengthMismatch,
+    );
+    #[cfg(not(coverage))]
+    let fault_injected = false;
+    let available_len = if fault_injected {
+        samples.len().saturating_sub(1)
+    } else {
+        samples.len()
+    };
+    let (samples, _) = samples.split_at_mut(available_len);
+    if samples.len() != expected_len {
+        return Err(CodecError::Malformed(
+            "TIFF YCbCr sample buffer has an invalid length".to_owned(),
+        ));
+    }
+
+    for (index, pixel) in samples.chunks_exact_mut(3).enumerate() {
+        if index.is_multiple_of(1_024) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
+        let [y, cb, cr] = [pixel[0], pixel[1], pixel[2]];
+        pixel.copy_from_slice(&ycbcr_to_rgb_pixel(y, cb, cr));
+    }
+    Ok(())
+}
+
+/// Apply libtiff's bounded 16-bit fixed-point conversion to one 8-bit sample.
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "8-bit samples bound the fixed-point products and sums well within i32."
+)]
+fn ycbcr_to_rgb_pixel(y: u8, cb: u8, cr: u8) -> [u8; 3] {
+    const RED_FROM_CR: i32 = 91_881;
+    const GREEN_FROM_CR: i32 = -46_802;
+    const BLUE_FROM_CB: i32 = 116_130;
+    const GREEN_FROM_CB: i32 = -22_553;
+    const ROUNDING: i32 = 1 << 15;
+    const SHIFT: u32 = 16;
+
+    let luma = i32::from(y);
+    let blue_difference = i32::from(cb) - 128;
+    let red_difference = i32::from(cr) - 128;
+    let red = (luma + ((RED_FROM_CR * red_difference + ROUNDING) >> SHIFT)).clamp(0, 255);
+    let green = (luma
+        + ((GREEN_FROM_CB * blue_difference + ROUNDING + GREEN_FROM_CR * red_difference) >> SHIFT))
+        .clamp(0, 255);
+    let blue = (luma + ((BLUE_FROM_CB * blue_difference + ROUNDING) >> SHIFT)).clamp(0, 255);
+    [
+        red.to_le_bytes()[0],
+        green.to_le_bytes()[0],
+        blue.to_le_bytes()[0],
+    ]
 }
 
 /// Map TIFF tag 338 (`ExtraSamples`) to the declared source alpha semantics.
@@ -2417,6 +2665,7 @@ pub(super) struct Directory<'a> {
     endian: Endian,
     fields: Vec<Field>,
     entries: Vec<Entry>,
+    rationals: Vec<RationalEntry>,
     fill_order_rational: (usize, (u32, u32)),
     next_offset: usize,
     pub(super) opaque_blocks: Vec<crate::types::OpaqueBlock>,
@@ -2427,6 +2676,13 @@ pub(super) struct Directory<'a> {
 struct Field {
     tag: u16,
     field_type: u16,
+    count: usize,
+}
+
+struct RationalEntry {
+    tag: u16,
+    count: usize,
+    value_position: usize,
 }
 
 struct Entry {
@@ -2553,6 +2809,7 @@ impl<'a> Directory<'a> {
         let entries_start = offset.saturating_add(2);
         let mut fields = Vec::with_capacity(count);
         let mut entries = Vec::with_capacity(count);
+        let mut rationals = Vec::new();
         let mut fill_order_rational = None;
         let mut opaque_blocks = Vec::new();
         let mut metadata = Vec::new();
@@ -2568,7 +2825,11 @@ impl<'a> Directory<'a> {
             let field_type = endian.u16_exact([bytes[2], bytes[3]]);
             validate_baseline_field_type(tag, field_type)?;
             let value_count = endian.u32_exact([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
-            fields.push(Field { tag, field_type });
+            fields.push(Field {
+                tag,
+                field_type,
+                count: value_count,
+            });
             let numeric_kind = match field_type {
                 1 => Some(NumericKind::Bytes),
                 3 => Some(NumericKind::Shorts),
@@ -2613,6 +2874,13 @@ impl<'a> Directory<'a> {
                 "TIFF directory value is out of bounds",
             )?;
             let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
+            if field_type == 5 {
+                rationals.push(RationalEntry {
+                    tag,
+                    count: value_count,
+                    value_position,
+                });
+            }
             if tag == 266 && field_type == 5 {
                 let rational = if value_count == 0 {
                     (0, 0)
@@ -2671,16 +2939,27 @@ impl<'a> Directory<'a> {
             next_position.saturating_add(4),
             "TIFF next-directory offset is truncated",
         )?;
-        Ok(Self {
+        let mut directory = Self {
             data,
             endian,
             fields,
             entries,
+            rationals,
             fill_order_rational: fill_order_rational.unwrap_or_default(),
             next_offset: endian.u32_exact([next[0], next[1], next[2], next[3]]) as usize,
             opaque_blocks,
             metadata,
-        })
+        };
+        if directory.one_or(262, 1) == 6 && directory.one_or(259, 1) != COMPRESSION_NONE {
+            directory.opaque_blocks.retain(|block| {
+                let Some(tag_bytes) = block.kind.get(..2) else {
+                    return true;
+                };
+                let tag = endian.u16_exact([tag_bytes[0], tag_bytes[1]]);
+                !matches!(tag, 529..=532)
+            });
+        }
+        Ok(directory)
     }
 
     pub(super) fn next_offset(&self) -> usize {
@@ -2723,10 +3002,14 @@ impl<'a> Directory<'a> {
     }
 
     pub(super) fn value_count(&self, tag: u16) -> Option<usize> {
-        self.entries
-            .iter()
-            .find(|entry| entry.tag == tag)
-            .map(|entry| entry.count)
+        let field = self.fields.iter().find(|field| field.tag == tag)?;
+        if matches!(field.field_type, 1 | 3 | 4)
+            || (matches!(tag, 529 | 532) && field.field_type == 5)
+        {
+            Some(field.count)
+        } else {
+            None
+        }
     }
 
     pub(super) fn values(&self, tag: u16) -> Option<Vec<usize>> {
@@ -2763,5 +3046,21 @@ impl<'a> Directory<'a> {
             .iter()
             .find(|field| field.tag == tag)
             .map(|field| field.field_type)
+    }
+
+    pub(super) fn rational(&self, tag: u16, index: usize) -> Option<(u32, u32)> {
+        let entry = self.rationals.iter().find(|entry| entry.tag == tag)?;
+        if index >= entry.count {
+            return None;
+        }
+        let position = entry.value_position.checked_add(index.checked_mul(8)?)?;
+        let value_end = position.checked_add(8)?;
+        let value = self.data.get(position..value_end)?;
+        Some((
+            self.endian
+                .u32_exact([value[0], value[1], value[2], value[3]]),
+            self.endian
+                .u32_exact([value[4], value[5], value[6], value[7]]),
+        ))
     }
 }

@@ -50,6 +50,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "tiff_ycbcr_clump_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_clump_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_full_resolution_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "png_decoded_sample_buffer_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:png:png_decoded_sample_buffer_reservation_failure",

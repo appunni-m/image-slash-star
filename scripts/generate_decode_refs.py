@@ -1186,6 +1186,36 @@ def validate_tiff_claim(case_id, asset_name, data):
             image.tag_v2.get(262) != 6 or image.tag_v2.get(530) != (1, 1)
         ):
             raise RuntimeError("TIFF is not un-sub-sampled baseline YCbCr")
+        ycbcr_lzw_claims = {
+            "ycbcr_subsampled_lzw_2x2": ((4, 4), 4, (2, 2), 1, 1),
+            "ycbcr_subsampled_lzw_2x2_odd_edge": ((3, 3), 4, None, None, 1),
+            "ycbcr_subsampled_lzw_2x2_two_strips": ((4, 4), 2, (2, 2), 2, 2),
+            "ycbcr_full_resolution_lzw_1x1": ((4, 4), 4, (1, 1), None, 1),
+            "ycbcr_subsampled_lzw_2x2_checkpoint_32x32": (
+                (32, 32),
+                32,
+                (2, 2),
+                1,
+                1,
+            ),
+        }
+        ycbcr_lzw_claim = ycbcr_lzw_claims.get(case_id)
+        if ycbcr_lzw_claim is not None:
+            size, rows_per_strip, subsampling, positioning, strip_count = ycbcr_lzw_claim
+            actual_strips = image.tag_v2.get(273, ())
+            if (
+                image.size != size
+                or image.tag_v2.get(259, 1) != 5
+                or image.tag_v2.get(262) != 6
+                or image.tag_v2.get(258) != (8, 8, 8)
+                or image.tag_v2.get(277, 1) != 3
+                or image.tag_v2.get(278) != rows_per_strip
+                or image.tag_v2.get(284, 1) != 1
+                or image.tag_v2.get(530) != subsampling
+                or image.tag_v2.get(531) != positioning
+                or len(actual_strips) != strip_count
+            ):
+                raise RuntimeError("TIFF YCbCr LZW fixture tags differ from its claim")
         if case_id in ("tiled", "tiled_predictor") and not all(
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):
@@ -2742,6 +2772,12 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "tiff.strip_assembly.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.clump_length_mismatch": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.full_resolution_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
         "png.scanline.sample_buffer_reservation": {

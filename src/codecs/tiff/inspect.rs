@@ -35,19 +35,27 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         ));
     }
     let bit_depth = bits[0];
+    let compression = directory.one_or(259, 1);
     let photometric = directory.one_or(262, 1);
     let sample_format = directory.one_or(339, 1);
     let color_map = directory.values(320);
     let extra_samples = directory.values(338);
-    let (layout, palette) = layout_and_palette(
+    let ycbcr_subsampling = if photometric == 6 && compression != 1 {
+        Some(ycbcr_subsampling(&directory)?)
+    } else {
+        None
+    };
+    let (layout, palette) = layout_and_palette(TiffLayoutParameters {
         photometric,
         samples,
-        bit_depth,
+        bits: bit_depth,
         sample_format,
-        color_map.as_deref(),
-        extra_samples.as_deref().unwrap_or_default(),
-        directory.one_or(284, 1),
-    )?;
+        compression,
+        color_map: color_map.as_deref(),
+        extra_samples: extra_samples.as_deref().unwrap_or_default(),
+        planar: directory.one_or(284, 1),
+        ycbcr_subsampling,
+    })?;
     verify_ignored_raw_band_count(&directory, width, height, layout)?;
     let (frame_count, complete_chain) = if basic {
         (1u32, directory.next_offset() == 0)
@@ -247,6 +255,8 @@ pub(super) enum TiffLayout {
     Palette { bits: u8 },
     Cmyk8,
     Ycbcr8,
+    YcbcrFull8,
+    YcbcrSubsampled8,
 }
 
 impl TiffLayout {
@@ -260,7 +270,11 @@ impl TiffLayout {
             Self::GrayAlpha8 => ImageMode::La8,
             Self::I32 => ImageMode::I32,
             Self::F32 => ImageMode::F32,
-            Self::Rgb8 | Self::RgbIgnored8 | Self::Ycbcr8 => ImageMode::Rgb8,
+            Self::Rgb8
+            | Self::RgbIgnored8
+            | Self::Ycbcr8
+            | Self::YcbcrFull8
+            | Self::YcbcrSubsampled8 => ImageMode::Rgb8,
             Self::Rgba8 => ImageMode::Rgba8,
             Self::Palette { .. } => ImageMode::P8,
             Self::Cmyk8 => ImageMode::Cmyk8,
@@ -268,15 +282,32 @@ impl TiffLayout {
     }
 }
 
+pub(super) struct TiffLayoutParameters<'a> {
+    pub(super) photometric: usize,
+    pub(super) samples: usize,
+    pub(super) bits: usize,
+    pub(super) sample_format: usize,
+    pub(super) compression: usize,
+    pub(super) color_map: Option<&'a [usize]>,
+    pub(super) extra_samples: &'a [usize],
+    pub(super) planar: usize,
+    pub(super) ycbcr_subsampling: Option<(usize, usize)>,
+}
+
 pub(super) fn layout_and_palette(
-    photometric: usize,
-    samples: usize,
-    bits: usize,
-    sample_format: usize,
-    color_map: Option<&[usize]>,
-    extra_samples: &[usize],
-    planar: usize,
+    parameters: TiffLayoutParameters<'_>,
 ) -> CodecResult<(TiffLayout, Option<ImagePalette>)> {
+    let TiffLayoutParameters {
+        photometric,
+        samples,
+        bits,
+        sample_format,
+        compression,
+        color_map,
+        extra_samples,
+        planar,
+        ycbcr_subsampling,
+    } = parameters;
     let invert = photometric == 0;
     let layout = match (photometric, samples, bits) {
         (0 | 1, 1, 1) => TiffLayout::Bilevel { invert },
@@ -302,7 +333,16 @@ pub(super) fn layout_and_palette(
             bits: bits.to_le_bytes()[0],
         },
         (5, 4, 8) => TiffLayout::Cmyk8,
-        (6, 3, 8) => TiffLayout::Ycbcr8,
+        (6, 3, 8) if compression == 1 => TiffLayout::Ycbcr8,
+        (6, 3, 8) => match ycbcr_subsampling.unwrap_or((2, 2)) {
+            (1, 1) => TiffLayout::YcbcrFull8,
+            (2, 2) => TiffLayout::YcbcrSubsampled8,
+            _ => {
+                return Err(CodecError::Malformed(
+                    "unsupported TIFF YCbCr subsampling".to_owned(),
+                ));
+            }
+        },
         _ => {
             return Err(CodecError::Malformed(
                 "unsupported TIFF photometric/sample layout".to_owned(),
@@ -340,6 +380,102 @@ pub(super) fn layout_and_palette(
         None
     };
     Ok((layout, palette))
+}
+
+/// Read the YCbCr subsampling and positioning tags used by Pillow's TIFF path.
+///
+/// Compressed TIFF YCbCr data is converted using default 1-by-1 triples or
+/// default 2-by-2 clumps. Uncompressed files retain Pillow's legacy RGBX raw
+/// interpretation. Libtiff's RGBA conversion uses one chroma pair for each
+/// clump for either valid positioning value.
+pub(super) fn ycbcr_subsampling(directory: &Directory<'_>) -> CodecResult<(usize, usize)> {
+    validate_default_ycbcr_rationals(directory, 529, &[(299, 1000), (587, 1000), (114, 1000)])?;
+    validate_default_ycbcr_rationals(
+        directory,
+        532,
+        &[(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)],
+    )?;
+
+    let subsampling = match directory.field_type(530) {
+        None => (2, 2),
+        Some(3) if directory.value_count(530) == Some(2) => {
+            let values = directory.values(530).ok_or_else(|| {
+                CodecError::Malformed("TIFF YCbCr subsampling is malformed".to_owned())
+            })?;
+            match values.as_slice() {
+                [1, 1] => (1, 1),
+                [2, 2] => (2, 2),
+                _ => {
+                    return Err(CodecError::Malformed(
+                        "unsupported TIFF YCbCr subsampling".to_owned(),
+                    ));
+                }
+            }
+        }
+        Some(_) => {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr subsampling must contain two SHORT values".to_owned(),
+            ));
+        }
+    };
+
+    match directory.field_type(531) {
+        None => {}
+        Some(3) if directory.value_count(531) == Some(1) => {
+            let positioning = directory.one(531).ok_or_else(|| {
+                CodecError::Malformed("TIFF YCbCr positioning is malformed".to_owned())
+            })?;
+            if !matches!(positioning, 1 | 2) {
+                return Err(CodecError::Malformed(
+                    "unsupported TIFF YCbCr positioning".to_owned(),
+                ));
+            }
+        }
+        Some(_) => {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr positioning must contain one SHORT value".to_owned(),
+            ));
+        }
+    }
+
+    Ok(subsampling)
+}
+
+fn validate_default_ycbcr_rationals(
+    directory: &Directory<'_>,
+    tag: u16,
+    expected: &[(u32, u32)],
+) -> CodecResult<()> {
+    let Some(field_type) = directory.field_type(tag) else {
+        return Ok(());
+    };
+    if field_type != 5 || directory.value_count(tag) != Some(expected.len()) {
+        return Err(CodecError::Malformed(format!(
+            "TIFF YCbCr tag {tag} has an unsupported field type or count"
+        )));
+    }
+    for (index, &(expected_numerator, expected_denominator)) in expected.iter().enumerate() {
+        let (numerator, denominator) = directory
+            .rational(tag, index)
+            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated")))?;
+        if denominator == 0 {
+            return Err(CodecError::Malformed(format!(
+                "TIFF YCbCr tag {tag} has a zero rational denominator"
+            )));
+        }
+        let actual_scaled = u64::from(numerator)
+            .checked_mul(u64::from(expected_denominator))
+            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} overflows")))?;
+        let expected_scaled = u64::from(expected_numerator)
+            .checked_mul(u64::from(denominator))
+            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} overflows")))?;
+        if actual_scaled != expected_scaled {
+            return Err(CodecError::Malformed(format!(
+                "custom TIFF YCbCr tag {tag} values are unsupported"
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn count_directories(data: &[u8], first_offset: usize, endian: Endian) -> (u32, bool) {

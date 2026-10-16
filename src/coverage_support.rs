@@ -80,6 +80,10 @@ pub enum CoverageFaultPoint {
     ApngSequenceCounterExhaustion,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
+    /// Report a TIFF 2-by-2 YCbCr clump-buffer length mismatch.
+    TiffYcbcrClumpLengthMismatch,
+    /// Report a TIFF full-resolution YCbCr sample-buffer length mismatch.
+    TiffYcbcrFullResolutionLengthMismatch,
     /// Force AV1 partial monochrome tile-state retention to fail.
     Av1MonochromeTileReservation,
     /// Force AV1 complete monochrome tile buffering to fail.

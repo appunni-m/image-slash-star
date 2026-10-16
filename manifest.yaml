@@ -152,6 +152,34 @@ fault_contracts:
       point: tiff.strip_assembly.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_2x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_full_resolution_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_full_resolution_lzw_1x1
+    fault:
+      point: tiff.ycbcr.full_resolution_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: png_decoded_sample_buffer_reservation_failure
     type: fault-contract
     operation: decode
@@ -4866,6 +4894,26 @@ formats:
       test_assets:
       - ycbcr.tiff
       - ycbcr_checkpoint_32x32.tiff
+    - id: ycbcr_subsampled_lzw_2x2
+      description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_odd_edge
+      description: Default 2-by-2 YCbCr clumps clipped at odd image edges
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_odd_edge.tiff
+    - id: ycbcr_subsampled_lzw_2x2_two_strips
+      description: Default 2-by-2 YCbCr clumps split across aligned LZW strips
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_two_strips.tiff
+    - id: ycbcr_full_resolution_lzw_1x1
+      description: Full-resolution 1-by-1 YCbCr samples in an LZW strip
+      test_assets:
+      - ycbcr_full_resolution_lzw_1x1.tiff
+    - id: ycbcr_subsampled_lzw_2x2_checkpoint_32x32
+      description: 32-by-32 subsampled YCbCr LZW pixels reach the conversion checkpoint
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff
     - id: depth_1
       description: 1-bit
       test_assets:

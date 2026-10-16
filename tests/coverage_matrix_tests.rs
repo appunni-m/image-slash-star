@@ -1386,6 +1386,18 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.ycbcr.clump_length_mismatch", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrClumpLengthMismatch,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.ycbcr.full_resolution_length_mismatch", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrFullResolutionLengthMismatch,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             _ => {
                 return Err(format!(
                     "{}: fault point or public contract is not allow-listed",
@@ -1500,6 +1512,12 @@ fn execute_fault_contract(
         "png.apng.sequence_counter_exhaustion" => {
             Some("decode sequence: APNG sequence number overflows")
         }
+        "tiff.ycbcr.clump_length_mismatch" => {
+            Some("decode: TIFF YCbCr clump buffer has an invalid length")
+        }
+        "tiff.ycbcr.full_resolution_length_mismatch" => {
+            Some("decode: TIFF YCbCr sample buffer has an invalid length")
+        }
         _ => None,
     };
 
@@ -1561,6 +1579,17 @@ fn execute_fault_contract(
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}
+        Err(img::ImageError::Malformed {
+            format: actual_format,
+            message,
+            stage: Some(stage),
+            ..
+        }) if matches!(
+            row.fault.point.as_str(),
+            "tiff.ycbcr.clump_length_mismatch" | "tiff.ycbcr.full_resolution_length_mismatch"
+        ) && actual_format == expected_format
+            && stage == expected_stage
+            && expected_message.is_some_and(|expected| message == expected) => {}
         Err(img::ImageError::Dimensions {
             format: Some(actual_format),
             message,
