@@ -6577,7 +6577,7 @@
       "inspect_cursor_hotspot": null,
       "inspect_source_byte_order": "little",
       "inspect_source_byte_order_origin": "pillow_fixture",
-      "asset_sha256": "c3ebf5fdd35da227f9ef92cf45b81d726c908a0be1fe3e52c1bd3abfe699f9b6",
+      "asset_sha256": "7a90e875697e13f98b23500bf9b4c9d5b83064b572daa102784bb84503cc167a",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
