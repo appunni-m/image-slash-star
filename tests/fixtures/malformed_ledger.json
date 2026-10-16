@@ -5377,6 +5377,54 @@
         "verify_status": "error"
       },
       {
+        "asset": "unknown_dib_header_41.bmp",
+        "class": "error_unsupported_dib_header_41",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP header type (41)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP header type (41)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP header type (41)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP header type (41)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects an unknown 41-byte INFO-family DIB header",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP header type (41)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "os2_depth1_compression3.bmp",
         "class": "error_unsupported_os2_huffman",
         "contracts": {
@@ -25891,7 +25939,7 @@
   "summary": {
     "by_format": {
       "avif": 60,
-      "bmp": 65,
+      "bmp": 66,
       "gif": 47,
       "ico": 30,
       "jpeg": 100,
@@ -25900,17 +25948,17 @@
       "webp": 132
     },
     "by_origin": {
-      "pillow_fixture": 613,
+      "pillow_fixture": 614,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 349,
+      "spec_violation": 350,
       "tolerated": 0,
       "truncated": 190
     },
-    "classes": 613,
+    "classes": 614,
     "formats": 8
   }
 }
