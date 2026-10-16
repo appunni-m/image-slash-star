@@ -6575,7 +6575,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `84241f6ea4e87d632c8e11cab4457142cf8cb17ebaba28638302d34da26d7f94`; matrix `98423c6e98dba302b03c2570b3532d23507fd550e3f3aa7bc0d3be7ea69f026f`.
+- Current fixture integrity only: manifest `7caa516290f8c2f13d95d5ebab78853bf7bc98585f449a64b21f7581286a0b4d`; matrix `53a91deeb5778dea79a94346bddd59166d05d13cc7f69c97c54ccd8808f49e50`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7513,3 +7513,35 @@ The output-length guard at `decode.rs:1004` remains a coverage limitation:
 the helper reserves exactly four bytes per sample and emits one RGB triplet
 plus one alpha byte for each sample. Injecting a shortened local output would
 test an artificial private state rather than a reachable decode contract.
+
+### JPEG baseline post-scan COM parity — 2026-10-17
+
+Added `decode:jpeg:baseline_444_single_scan_trailing_com`, a Pillow 12.2.0
+parity row using the deterministic 8×8 baseline 4:4:4 input with a valid COM
+segment inserted between the entropy scan and EOI. The fixture SHA-256 is
+`cf8e4443dcff4df7858b6573664aa3fe73dd401827aa293d0eca84eb0667f666`; its
+192-byte RGB reference SHA-256 is
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+
+The first focused run exposed a public decode failure: the single-scan fast
+boundary check rejected COM as a non-DQT marker, then generic entropy
+extraction treated COM as entropy and returned no segment. The parser had
+already recorded the validated end of scan entropy. The decoder now reuses
+that boundary for a single baseline scan when any parsed marker precedes EOI.
+This keeps entropy extraction bounded at the scan and avoids additional pixel
+processing. The selected matrix row passes.
+
+The selected LLVM report is
+`target/release-evidence/coverage-jpeg-postscan-com-selected.json`. Coverage
+MCP reports 271/31,378 selected branch outcomes; its function query shows only
+the input-rejection arms of the helper remain unobserved for this selection.
+The incremental comparison with
+`target/release-evidence/coverage-main-full-20261016.json` is incomparable
+because the baseline branch detail does not reconcile with its totals. Both
+reports lack source/build receipts and test attribution, so no aggregate
+coverage gain is claimed.
+
+The current fixture matrix contains 2,270 total rows: 1,787 decode /
+inspect / verify rows and 483 encode rows. Of those, 1,787 decode rows and
+451 encode rows are active; 32 planned encode rows remain. The separate
+target-only fault lane contains 47 rows.

@@ -809,6 +809,20 @@ def append_empty_dqt_after_single_scan(data):
     return data[:eoi_start] + b"\xff\xdb\x00\x02" + data[eoi_start:]
 
 
+def append_comment_after_single_scan(data, comment=b"ok"):
+    """Append a valid COM segment after a complete one-scan JPEG."""
+    scans, eoi_start = jpeg_scan_segments(data)
+    if len(scans) != 1:
+        raise ValueError("expected one baseline entropy scan")
+    if data[eoi_start:] != b"\xff\xd9":
+        raise ValueError("expected a final EOI marker after the entropy scan")
+    segment_length = len(comment) + 2
+    if segment_length > 0xFFFF:
+        raise ValueError("JPEG COM payload exceeds the 16-bit segment limit")
+    marker = b"\xff\xfe" + struct.pack(">H", segment_length) + comment
+    return data[:eoi_start] + marker + data[eoi_start:]
+
+
 def add_fill_byte_before_trailing_dqt(data):
     """Insert an extra FF byte before a trailing DQT marker."""
     scans, _ = jpeg_scan_segments(data)
@@ -1938,6 +1952,9 @@ def gen_jpeg():
     (d / "baseline_444_single_scan_trailing_dqt.jpg").write_bytes(trailing_dqt)
     (d / "baseline_444_single_scan_empty_trailing_dqt.jpg").write_bytes(
         append_empty_dqt_after_single_scan(single_scan_jpeg)
+    )
+    (d / "baseline_444_single_scan_trailing_com.jpg").write_bytes(
+        append_comment_after_single_scan(single_scan_jpeg)
     )
     (d / "baseline_444_single_scan_dqt_marker_fill.jpg").write_bytes(
         add_fill_byte_before_trailing_dqt(trailing_dqt)

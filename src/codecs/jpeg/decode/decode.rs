@@ -11,7 +11,7 @@ use super::huffman::HuffTable;
 #[cfg(target_arch = "aarch64")]
 use super::huffman::HuffTableStorage;
 use super::idct::{self, YccColorConverter, extend, jpeg_idct_islow};
-use super::parser::{JpegInfo, M_DQT, M_EOI, parse_jpeg};
+use super::parser::{JpegInfo, M_EOI, parse_jpeg};
 use super::progressive::progressive_reconstruct;
 use super::upsample::{crop_component, fancy_upsample};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -2549,31 +2549,15 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
     let eoi_marker = M_EOI.to_be_bytes();
     if info.scans.len() != 1
         || scan.entropy_start != info.entropy_start
-        || scan.entropy_end > data.len()
+        || scan.entropy_end > info.eoi_pos
         || data.get(info.eoi_pos..info.eoi_pos.checked_add(2)?) != Some(eoi_marker.as_slice())
     {
         return None;
     }
-    if scan.entropy_end == info.eoi_pos {
-        return Some(scan.entropy_end);
-    }
-
-    let mut marker_code_position = scan.entropy_end;
-    while data.get(marker_code_position) == Some(&0xFF) {
-        marker_code_position = marker_code_position.checked_add(1)?;
-    }
-    if marker_code_position == scan.entropy_end
-        || data.get(marker_code_position.checked_sub(1)?..marker_code_position.checked_add(1)?)
-            != Some(M_DQT.to_be_bytes().as_slice())
-    {
-        return None;
-    }
-    let length_start = marker_code_position.checked_add(1)?;
-    let length_end = length_start.checked_add(2)?;
-    let length_bytes = data.get(length_start..length_end)?;
-    let segment_length = u16::from_be_bytes(length_bytes.try_into().ok()?);
-    let segment_end = length_start.checked_add(usize::from(segment_length))?;
-    (segment_end == info.eoi_pos).then_some(scan.entropy_end)
+    // The parser already validated markers between this scan and EOI. Keep
+    // extraction bounded at the scan boundary even when a valid COM, DQT, or
+    // other marker follows the entropy data.
+    Some(scan.entropy_end)
 }
 
 // ── Public API ────────────────────────────────────────────────────────────

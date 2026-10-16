@@ -756,6 +756,10 @@ formats:
       description: Baseline 4:4:4 JPEG has an empty trailing DQT segment accepted by Pillow
       test_assets:
       - baseline_444_single_scan_empty_trailing_dqt.jpg
+    - id: baseline_444_single_scan_trailing_com
+      description: Baseline 4:4:4 JPEG has a valid COM segment after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_com.jpg
     - id: baseline_444_single_scan_dqt_marker_fill
       description: Baseline 4:4:4 JPEG adds a fill byte before its trailing DQT marker
       test_assets:
