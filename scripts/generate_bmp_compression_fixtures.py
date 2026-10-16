@@ -33,6 +33,7 @@ SOURCE_SHA256 = {
     "16bit.bmp": "291e550a35a111edec21233115d238e8386358f02da5c4850bec6dc0807ddcde",
     "4bit.bmp": "d0ce444f15c20bac76357c9f0f495ad44c36fc0775aab52f7016bf8b603c8d9b",
     "rle4.bmp": "9e7c9a58b2fba11db20e1f24f31772d03c875dc94ee9a77d5696d4bb543b0882",
+    "rle8_delta.bmp": "b5d7634544adb779b8b0a8b329b5c470ec762645be23e11d01733b84e1f14a5c",
 }
 EXISTING_CONTROLS = {"control_core_rgb", "control_info_rgb"}
 PENDING_RUST = "Not executed by this native recipe; requires final Rust fixture verification."
@@ -155,6 +156,9 @@ def build_inputs() -> list[tuple[dict, bytes]]:
          "BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream",
          raster=bytes.fromhex("00 03 12 00 00") * 16 + bytes.fromhex("00 01"),
          raster_prefix=b"\x00")
+    emit("rle8_delta_row_boundary", "rle8_delta.bmp",
+         "BI_RLE8 delta advances beyond the current scanline before EOL and a row run",
+         raster=bytes.fromhex("00 02 05 00 00 00 04 07 00 01"))
     for depth in (0, 3):
         for code in (4, 5):
             emit(f"info_depth{depth}_compression{code}", "1x1.bmp",
@@ -262,9 +266,9 @@ def build_report(manifest: dict, inputs: list[tuple[dict, bytes]]) -> dict:
             {"scope": "OS/2 BITMAPINFOHEADER2 Huffman/RLE24 header namespace",
              "url": "https://www.bitsavers.org/pdf/ibm/pc/os2/OS2_3.x/G25H-7191-00_OS2_WARP_V3_Presentation_Manager_Programming_Reference_Volume_2_Oct94.pdf"},
         ],
-        "summary": {"observations": len(rows), "new_full_files": 55,
-                    "existing_controls": 2, "new_successful_controls": 5,
-                    "classification_and_control_rows": 49, "unresolved_precedence_rows": 4,
+        "summary": {"observations": len(rows), "new_full_files": 56,
+                    "existing_controls": 2, "new_successful_controls": 6,
+                    "classification_and_control_rows": 50, "unresolved_precedence_rows": 4,
                     "pillow_successes": sum(row["pillow_decode"]["status"] == "ok" for row in rows),
                     "pillow_errors": sum(row["pillow_decode"]["status"] == "error" for row in rows)},
         "pillow_cases": rows,

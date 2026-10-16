@@ -3226,6 +3226,7 @@ formats:
       - rle8_mixed.bmp
       - rle8_top_down.bmp
       - rle8_delta.bmp
+      - rle8_delta_row_boundary.bmp
       - rle8_absolute_odd.bmp
     - id: compression_rle4
       description: BI_RLE4 (4-bit RLE)

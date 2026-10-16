@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `bf6e62d245e0bc2bd5e91a683b2c737ea362cfe57fb9b87038f76e7dc1bf1e27`; matrix `594d675a82ee91456d485dbe0a4cd6e22b97c715216a4ef630111e80e4227db6`.
+- Current fixture integrity only: manifest `a3f6aad85cf1ee836253bafdf215a42da9598cb17214792a93d5bd864d68e465`; matrix `237c4bef75c0d98c60d51e5a08e71170f08f9067e7cb1bebccde3d95205c6087`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6872,8 +6872,8 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,242 total rows: 1,761 decode /
-inspect / verify rows and 481 encode rows. Of those, 1,761 decode rows and
+The current fixture matrix contains 2,243 total rows: 1,762 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,762 decode rows and
 449 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
@@ -7016,3 +7016,22 @@ Adam7 path. No aggregate coverage gain or full-suite coverage result is
 claimed, and no full coverage campaign was run. Reports:
 `target/release-evidence/coverage-png-sample-buffer-baseline.json` and
 `target/release-evidence/coverage-png-sample-buffer-reservation.json`.
+
+### BMP RLE8 delta crossing the row boundary — 2026-10-16
+
+`compression_rle8_rle8_delta_row_boundary` adds an input-only Pillow parity
+case based on the existing 4×2 RLE8 fixture. Its compressed payload contains a
+delta `(dx=5, dy=0)`, end-of-line, a four-pixel run, and end-of-bitmap; the
+complete file declares its 1,088-byte size and 10-byte compressed payload. The
+pinned Pillow 12.2.0 oracle opens and verifies it as a 4×2 palette image and
+decodes eight zero indices. The selected matrix test passed 1/1.
+The active matrix now contains 2,243 rows: 1,762 decode and 481 encode rows.
+
+The selected branch report is
+`target/release-evidence/coverage-bmp-rle8-delta-boundary.json`. Coverage MCP
+reports 115/31,278 branch outcomes observed and groups 16 missing branches in
+`decode_rle`. Its incremental comparison against
+`.coverage-mcp/local-evidence/20261014/github-ci-613ac4e0/coverage.json` is
+incomparable: both reports are source-unverified, test attribution is unknown,
+and the baseline branch detail is incomplete. No aggregate coverage gain is
+claimed; no full coverage campaign was run.

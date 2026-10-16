@@ -27,13 +27,13 @@
     }
   ],
   "summary": {
-    "observations": 57,
-    "new_full_files": 55,
+    "observations": 58,
+    "new_full_files": 56,
     "existing_controls": 2,
-    "new_successful_controls": 5,
-    "classification_and_control_rows": 49,
+    "new_successful_controls": 6,
+    "classification_and_control_rows": 50,
     "unresolved_precedence_rows": 4,
-    "pillow_successes": 7,
+    "pillow_successes": 8,
     "pillow_errors": 50
   },
   "pillow_cases": [
@@ -1959,6 +1959,57 @@
         "mode": "P",
         "pixel_bytes": 256,
         "pixel_sha256": "fd4f4975bf12c1586e4e190e7cedb76b32a52599975390644c584b5f4a5ef468"
+      },
+      "pillow_verify": {
+        "status": "ok"
+      }
+    },
+    {
+      "id": "rle8_delta_row_boundary",
+      "description": "BI_RLE8 delta advances beyond the current scanline before EOL and a row run",
+      "asset": "rle8_delta_row_boundary.bmp",
+      "asset_sha256": "aaa3c97cf08441e1bfb574f44b52c9fc8b4de216f4126b4f474740c507e2ac0e",
+      "bytes": 1088,
+      "source": "tests/fixtures/input/images/bmp/rle8_delta.bmp",
+      "source_sha256": "b5d7634544adb779b8b0a8b329b5c470ec762645be23e11d01733b84e1f14a5c",
+      "mutations": [
+        {
+          "operation": "replace_compressed_pixels",
+          "offset": 1078,
+          "prefix_hex": "",
+          "pixel_offset": 1078,
+          "length": 10,
+          "sha256": "b63a87d6eb1335b56187ea24fac5ad95cf7ce41b45c1c43a53362fd39a712a91",
+          "file_size": 1088,
+          "image_size": 10
+        }
+      ],
+      "header_size": 40,
+      "compression": 1,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          4,
+          2
+        ],
+        "mode": "P",
+        "compression": 1
+      },
+      "pillow_decode": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          4,
+          2
+        ],
+        "mode": "P",
+        "pixel_bytes": 8,
+        "pixel_sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
       },
       "pillow_verify": {
         "status": "ok"
