@@ -7912,6 +7912,11 @@ formats:
       test_assets:
       - animated_co64_chunk_offsets.avif
       status: active
+    - id: animated_stsc_two_chunk_mapping
+      description: Five-frame AVIF with two sample-to-chunk mappings and exact frame parity
+      test_assets:
+      - animated_stsc_two_chunk_mapping.avif
+      status: active
     - id: animated_stts_zero_delta
       description: Five-frame AVIF with zero stts sample_delta preserves exact pixels and zero-duration timing
       test_assets:

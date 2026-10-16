@@ -44,6 +44,10 @@ FIXTURES = {
         "animated_co64_chunk_offsets.avif",
         "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021",
     ),
+    "animated_stsc_two_chunk_mapping": (
+        "animated_stsc_two_chunk_mapping.avif",
+        "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c",
+    ),
     "animated_primary_item_irot": (
         "animated_primary_item_irot.avif",
         "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",

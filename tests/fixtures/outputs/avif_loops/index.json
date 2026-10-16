@@ -471,9 +471,9 @@
   ],
   "artifacts": [
     {
-      "bytes": 13187,
+      "bytes": 13414,
       "path": "README.md",
-      "sha256": "47305f78c3701756c45f5e63dc642f5f200afec7d77a8adaddd113c4566138ae"
+      "sha256": "caf0d3b0373a1782c8689c9be3fa3b2efb3a033cc4182c26366d2bca81ca896e"
     },
     {
       "bytes": 2267,
@@ -494,6 +494,11 @@
       "bytes": 1245,
       "path": "inputs/animated_primary_item_irot.avif",
       "sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe"
+    },
+    {
+      "bytes": 1251,
+      "path": "inputs/animated_stsc_two_chunk_mapping.avif",
+      "sha256": "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c"
     },
     {
       "bytes": 2267,
@@ -1068,6 +1073,31 @@
     {
       "bytes": 67500,
       "path": "pixels/animated_primary_item_irot/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_stsc_two_chunk_mapping/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_stsc_two_chunk_mapping/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_stsc_two_chunk_mapping/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_stsc_two_chunk_mapping/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_stsc_two_chunk_mapping/frame_4.bin",
       "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
     },
     {
@@ -2071,7 +2101,7 @@
       "-o",
       "<work>/observer.so"
     ],
-    "binary_sha256": "b2d2cf7f9d20fcd2d0d129cde0354785bc1936d60ab95a5c11579b6d43697a98",
+    "binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
     "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
   },
   "cases": [
@@ -2236,6 +2266,87 @@
       "repeat_equal": true,
       "source": "animated_co64_chunk_offsets",
       "source_sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021"
+    },
+    {
+      "input_bytes": 1251,
+      "input_path": "inputs/animated_stsc_two_chunk_mapping.avif",
+      "input_sha256": "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_stsc_two_chunk_mapping",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_stsc_two_chunk_mapping",
+      "source_sha256": "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c"
     },
     {
       "input_bytes": 1235,

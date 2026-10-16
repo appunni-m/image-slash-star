@@ -565,6 +565,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     let expected_names = [
         "animated",
         "animated_co64_chunk_offsets",
+        "animated_stsc_two_chunk_mapping",
         "opidc_0x101",
         "error_resilient",
         "filmgrain_reference_reuse_i444_64x64",
@@ -708,6 +709,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         let mut expected = match field::<String>(case, "source").as_str() {
             "animated" => animated(),
             "animated_co64_chunk_offsets" => matrix_sequence_case("animated_co64_chunk_offsets"),
+            "animated_stsc_two_chunk_mapping" => {
+                matrix_sequence_case("animated_stsc_two_chunk_mapping")
+            }
             "animated_primary_item_irot" => matrix_sequence_case("animated_primary_item_irot"),
             "tkhd_version_zero" => matrix_sequence_case("animated_tkhd_version_zero"),
             "tkhd_version_zero_unknown_duration" => {

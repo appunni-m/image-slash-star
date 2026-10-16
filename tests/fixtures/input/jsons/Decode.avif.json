@@ -21723,6 +21723,61 @@
       ]
     },
     {
+      "id": "animated_stsc_two_chunk_mapping",
+      "asset": "animated_stsc_two_chunk_mapping.avif",
+      "asset_sha256": "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_stsc_two_chunk_mapping.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_stts_zero_delta",
       "asset": "animated_stts_zero_delta.avif",
       "asset_sha256": "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105",
