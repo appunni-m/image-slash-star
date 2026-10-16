@@ -2712,6 +2712,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.metadata.item_location_table_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "avif.metadata.item_extent_span_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation": {
             "decode_error_then_retry_succeeds"
         },

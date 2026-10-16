@@ -52,6 +52,8 @@ pub enum CoverageFaultPoint {
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.
     AvifItemLocationTableReservation,
+    /// Force AVIF item-extent span reservation to fail during parsing.
+    AvifItemExtentSpanReservation,
     /// Force AV1 super-resolution position reservation to fail while resizing a frame.
     Av1SuperResolutionPositionReservation,
     /// Force AV1 super-resolution output-plane reservation to fail.

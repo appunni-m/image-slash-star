@@ -1139,7 +1139,22 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
         let base_offset = reader.uint(base_offset_size)?;
         let extent_count = usize::from(reader.u16()?);
         budget.records_seen(extent_count)?;
-        let mut extents = Vec::with_capacity(extent_count);
+        let mut extents = Vec::new();
+        #[cfg(coverage)]
+        let extent_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifItemExtentSpanReservation,
+        ) {
+            usize::MAX
+        } else {
+            extent_count
+        };
+        #[cfg(not(coverage))]
+        let extent_reservation_count = extent_count;
+        extents
+            .try_reserve_exact(extent_reservation_count)
+            .map_err(|_| {
+                CodecError::Dimensions("unable to reserve AVIF item extent spans".to_owned())
+            })?;
         let mut declared_extents = Vec::with_capacity(extent_count);
         for _ in 0..extent_count {
             if index_size != 0 {

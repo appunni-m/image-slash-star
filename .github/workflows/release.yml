@@ -60,8 +60,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           run_id="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&per_page=50" \
-            --jq '[.workflow_runs[] | select(.event == "push" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | sort_by(.updated_at) | last | .id // empty')"
+            --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&per_page=100" \
+            --jq '[.[] | .workflow_runs[] | select(.event == "push" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | sort_by(.updated_at) | last | .id // empty')"
           test -n "$run_id"
           echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
       - name: Download the candidate verified by exact main CI

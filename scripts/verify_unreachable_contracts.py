@@ -169,6 +169,14 @@ FAULT_CONTRACTS = {
         "point": "avif.metadata.item_location_table_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_item_extent_span_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_item_extent_span_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "avif.metadata.item_extent_span_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "jpeg_multiscan_coefficient_reservation_failure": {
         "format": "jpeg",
         "category": "structured-diagnostics",

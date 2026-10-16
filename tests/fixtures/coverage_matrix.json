@@ -190411,6 +190411,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_item_extent_span_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:baseline"
+      },
+      "fault": {
+        "point": "avif.metadata.item_extent_span_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_tile_group_temporal_sample_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

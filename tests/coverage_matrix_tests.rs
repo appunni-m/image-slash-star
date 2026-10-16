@@ -1208,6 +1208,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.metadata.item_extent_span_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifItemExtentSpanReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "av1.frame.assembled_monochrome_loop_filter_metadata_reservation",
                 "decode_error_then_retry_succeeds",
@@ -1375,6 +1381,9 @@ fn execute_fault_contract(
         "avif.metadata.item_location_table_reservation" => {
             Some("decode: AVIF container validation failed: unable to reserve AVIF item locations")
         }
+        "avif.metadata.item_extent_span_reservation" => Some(
+            "decode: AVIF container validation failed: unable to reserve AVIF item extent spans",
+        ),
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome loop-filter metadata",
         ),

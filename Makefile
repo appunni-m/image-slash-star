@@ -31,6 +31,7 @@ help:
 	@printf "  make bench            Run the complete JPEG comparison (BENCH_OUTPUT, BENCH_TARGET_DIR, BENCH_ROUNDS)\n"
 	@printf "  make fmt              Check formatting\n"
 	@printf "  make verify           Run generated, claim, roadmap, and legal checks\n"
+	@printf "  make refresh-fixture-integrity Refresh current fixture receipts, then verify them\n"
 	@printf "  make lint             Run strict Clippy for debug/release, coverage hooks, and benchmark code\n"
 	@printf "  make lint-x86-simd    Lint the x86-64 SSE2 baseline and AVX2 builds\n"
 	@printf "  make test             Run docs, tests, target feature lanes, and WASI Clippy\n"
@@ -58,6 +59,11 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
 	$(PYTHON) scripts/verify_roadmap.py
 	$(PYTHON) scripts/generate_capability_docs.py --check
+
+.PHONY: refresh-fixture-integrity
+refresh-fixture-integrity:
+	$(PYTHON) scripts/refresh_fixture_integrity.py
+	$(MAKE) verify-fixture-integrity
 
 .PHONY: verify
 verify: release-tools-test docs-lint docs-test verify-fixture-integrity
