@@ -12,8 +12,7 @@ import hashlib
 from pathlib import Path
 import struct
 
-from generate_avif_container_edge_fixtures import rewrite_boxes
-from generate_avif_zero_width_clap_fixture import pack_box, read_boxes
+from avif_bmff_boxes import pack_box, read_boxes, rewrite_boxes
 
 
 ROOT = Path(__file__).resolve().parent.parent
