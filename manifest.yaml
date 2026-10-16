@@ -5380,6 +5380,18 @@ formats:
       description: Pillow-accepted 9-pixel tile width shifts clipped 4-bit palette samples off byte boundaries
       test_assets:
       - tiled_palette4_unaligned_edge.tiff
+    - id: tiled_palette4_fillorder2_unaligned_error
+      description: Pillow opens and verifies but rejects unaligned 4-bit palette tiles with FillOrder 2
+      test_assets:
+      - tiled_palette4_fillorder2_unaligned_error.tiff
+      expect_error: true
+      status: active
+    - id: palette4_fillorder2_strip_error
+      description: Pillow opens and verifies but rejects uncompressed 4-bit palette strips with FillOrder 2
+      test_assets:
+      - palette4_fillorder2_strip_error.tiff
+      expect_error: true
+      status: active
     - id: tiled_rgb1_packed_multisample_rejected
       description: Pillow rejects a packed 1-bit three-sample RGB tile as an unknown pixel mode
       test_assets:

@@ -234,6 +234,14 @@ fn decode_ifd(
         extra_samples.as_deref().unwrap_or_default(),
         planar,
     )?;
+    if fill_order == 2
+        && compression == COMPRESSION_NONE
+        && matches!(layout, TiffLayout::Palette { bits: 4 })
+    {
+        return Err(CodecError::Malformed(
+            "TIFF packed 4-bit palette has no supported FillOrder 2 raw mode".to_owned(),
+        ));
+    }
     let reverse_packed_fill_order = compression == COMPRESSION_NONE
         && fill_order == 2
         && matches!(

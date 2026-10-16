@@ -149492,6 +149492,160 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "tiled_palette4_fillorder2_unaligned_error",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "Pillow opens and verifies but rejects unaligned 4-bit palette tiles with FillOrder 2",
+          "asset": "tiled_palette4_fillorder2_unaligned_error.tiff",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "54e20e9873b64062800c6ba886b8583b14376fae74c40c133b317b02118c5094",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 4,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "unknown raw mode for given image mode",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "palette4_fillorder2_strip_error",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette4",
+          "description": "Pillow opens and verifies but rejects uncompressed 4-bit palette strips with FillOrder 2",
+          "asset": "palette4_fillorder2_strip_error.tiff",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "10698d4758ae4ce8b18614377e817da971115286f4a766daf49efe289164cdf8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 4,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "unknown raw mode for given image mode",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "tiled_rgb1_packed_multisample_rejected",
           "type": "decode",
           "format": "tiff",
@@ -191053,12 +191207,12 @@
     }
   },
   "summary": {
-    "total_rows": 2259,
-    "decode_rows": 1776,
+    "total_rows": 2261,
+    "decode_rows": 1778,
     "encode_rows": 483,
     "formats": 8,
-    "assets_available": 1773,
-    "decode_active": 1776,
+    "assets_available": 1775,
+    "decode_active": 1778,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
