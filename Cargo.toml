@@ -34,9 +34,14 @@ include = [
 [lib]
 test = false
 
+[[bin]]
+name = "jpeg-runtime"
+path = "src/bin/jpeg-runtime.rs"
+test = false
+
 # The public parity and coverage suites execute real codec work, including the
-# intentionally expensive GIF/WebP cases. Keep the private library unit-test
-# target disabled so coverage comes from observable codec inputs.
+# intentionally expensive GIF/WebP cases. Keep private library and benchmark-bin
+# unit-test targets disabled so coverage comes from observable codec inputs.
 [profile.test]
 opt-level = 2
 

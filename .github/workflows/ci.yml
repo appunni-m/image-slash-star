@@ -124,6 +124,9 @@ jobs:
           cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
             --output-path target/release-evidence/coverage-avif-encode-x86_64.json \
             --test coverage_matrix_tests test_encode_matrix_avif
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-fault-contract-x86_64.json \
+            --test coverage_matrix_tests test_fault_contract_matrix
       - name: Run AVX2 public JPEG and AVIF parity with branch coverage
         env:
           CARGO_TARGET_DIR: target/x86_64-avx2-coverage
@@ -146,7 +149,25 @@ jobs:
           cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
             --output-path target/release-evidence/coverage-avif-encode-x86_64-avx2.json \
             --test coverage_matrix_tests test_encode_matrix_avif
+      - name: Verify all x86 coverage reports were produced
+        run: |
+          for report in \
+            target/release-evidence/coverage-jpeg-x86_64.json \
+            target/release-evidence/coverage-jpeg-encode-x86_64.json \
+            target/release-evidence/coverage-avif-x86_64.json \
+            target/release-evidence/coverage-avif-encode-x86_64.json \
+            target/release-evidence/coverage-fault-contract-x86_64.json \
+            target/release-evidence/coverage-jpeg-x86_64-avx2.json \
+            target/release-evidence/coverage-jpeg-encode-x86_64-avx2.json \
+            target/release-evidence/coverage-avif-x86_64-avx2.json \
+            target/release-evidence/coverage-avif-encode-x86_64-avx2.json; do
+            test -s "$report" || {
+              echo "Missing or empty coverage report: $report" >&2
+              exit 1
+            }
+          done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
         with:
           name: x86-codec-simd-coverage
           overwrite: true
@@ -157,9 +178,10 @@ jobs:
             target/release-evidence/coverage-jpeg-encode-x86_64-avx2.json
             target/release-evidence/coverage-avif-x86_64.json
             target/release-evidence/coverage-avif-encode-x86_64.json
+            target/release-evidence/coverage-fault-contract-x86_64.json
             target/release-evidence/coverage-avif-x86_64-avx2.json
             target/release-evidence/coverage-avif-encode-x86_64-avx2.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90
 
   windows-msvc:

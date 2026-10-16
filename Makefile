@@ -61,6 +61,7 @@ verify-fixture-integrity:
 
 .PHONY: verify
 verify: release-tools-test docs-lint docs-test verify-fixture-integrity
+	$(PYTHON) scripts/verify_no_source_unit_tests.py
 	$(PYTHON) scripts/verify_third_party_licenses.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/generate_png_srgb_intent_fixtures.py --check
