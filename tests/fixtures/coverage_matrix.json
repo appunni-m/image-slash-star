@@ -2364,7 +2364,6 @@
           "ref_bit_depth_origin": "independent_implementation",
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
-          "avif_mirror_axis": "top_bottom",
           "inspect_cursor_hotspot": null,
           "inspect_status": "ok",
           "verify_status": "ok",
@@ -2405,7 +2404,8 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "avif_mirror_axis": "top_bottom"
         },
         {
           "id": "primary_item_pasp_4x3",
@@ -191352,6 +191352,25 @@
       },
       "fault": {
         "point": "av1.frame.assembled_cdef_region_map_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_tile_cdef_region_map_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:multitile_color_split_groups"
+      },
+      "fault": {
+        "point": "av1.tile.cdef_region_map_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
