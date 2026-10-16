@@ -603,7 +603,6 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossy_wide_i444_b128x128",
         "lossy_wide_i444_mode2_unsplit_b128x128",
         "lossy_wide_i444_mode2_split32_b128x128",
-        "lossy_wide_i444_mode2_mixed_b128x128",
         "lossy_global_rotzoom_compound_i444_b128x128",
         "lossy_global_halfblend_spatial_i444_b256x256",
         "motion_chroma",
@@ -658,6 +657,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
         "animated_primary_item_irot",
         "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
+        "lossy_wide_i444_mode2_mixed_b128x128",
     ];
     // STTS parser cases in the shared index are exercised by matrix parity;
     // this test stays focused on complete native repetition witnesses.
