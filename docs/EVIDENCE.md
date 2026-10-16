@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `04389267c9038ae1c0776c2cb2a73015e95bb8aff03bfc149cfd788d49dbb43c`; matrix `ffecdb42525b3e514cdf65bb9511635471417207e180241ebcdd4039ae5ddfd0`.
+- Current fixture integrity only: manifest `a5c7d6eff2c9e904dd7c6909457dbba84f6847d57d6d7cda308af1ff204c7cd2`; matrix `764a0fe66070bd7732256ff3ac1ef9624e92af980e46b4ae3223bb44ad921c03`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7189,3 +7189,6 @@ because exact branch details differ; neither report has source/build receipts
 or test attribution. No aggregate coverage gain or full-suite result is
 claimed, and no full coverage campaign was run. Report:
 `target/release-evidence/coverage-apng-sequence-counter-exhaustion.json`.
+The static coverage-origin inventory now records 151 exact `cfg(coverage)`
+guards across 26 Rust files; this does not change the historical full-coverage
+baseline.
