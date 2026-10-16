@@ -147349,6 +147349,84 @@
           "error_contracts": {}
         },
         {
+          "id": "tiled_gray2_byte_aligned_edge",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "Raw 2-bit grayscale copied from complete byte-aligned tiles",
+          "asset": "tiled_gray2_byte_aligned_edge.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f3fcb7652e0eda354ec21bee46fbfedbc4c0a47476d5ae9d5147ca382c3cbce7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 2,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "d6591e2f9c5c4f4156323d28bb19ac453d1ac5f4d0ede89805b7ce5316e6fc2e",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_gray2_byte_aligned_edge_tiff.bin",
+          "ref_bytes": 16,
+          "ref_mode": "L8",
+          "ref_size": [
+            16,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "tiled_minisblack_1bit_unaligned_edge",
           "type": "decode",
           "format": "tiff",
@@ -189388,12 +189466,12 @@
     }
   },
   "summary": {
-    "total_rows": 2243,
-    "decode_rows": 1762,
+    "total_rows": 2244,
+    "decode_rows": 1763,
     "encode_rows": 481,
     "formats": 8,
-    "assets_available": 1759,
-    "decode_active": 1762,
+    "assets_available": 1760,
+    "decode_active": 1763,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

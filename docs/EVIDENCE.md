@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a3f6aad85cf1ee836253bafdf215a42da9598cb17214792a93d5bd864d68e465`; matrix `237c4bef75c0d98c60d51e5a08e71170f08f9067e7cb1bebccde3d95205c6087`.
+- Current fixture integrity only: manifest `db76dd20d602d44aa3c97121626b9b9f9e4f271f7544bff41ff85184df7f0b45`; matrix `0f8b1a93f9f9ea82fce100c3bcf4a2941364757099066c50b1f1317cf35158d6`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7035,3 +7035,32 @@ reports 115/31,278 branch outcomes observed and groups 16 missing branches in
 incomparable: both reports are source-unverified, test attribution is unknown,
 and the baseline branch detail is incomplete. No aggregate coverage gain is
 claimed; no full coverage campaign was run.
+
+### TIFF normal-order byte-aligned 2-bit tile parity — 2026-10-16
+
+The active row `decode:tiff:tiled_gray2_byte_aligned_edge` adds a normal-order
+companion to the existing FillOrder=2 tiled 2-bit grayscale case. The pinned
+input `tiled_gray2_byte_aligned_edge.tiff` has SHA-256
+`f3fcb7652e0eda354ec21bee46fbfedbc4c0a47476d5ae9d5147ca382c3cbce7`. Pinned
+Pillow 12.2.0 decodes it as a 16×1 L8 image; its 16-byte pixel reference has
+SHA-256 `d6591e2f9c5c4f4156323d28bb19ac453d1ac5f4d0ede89805b7ce5316e6fc2e`.
+The existing `scripts/generate_test_assets.py` generator builds it with
+`write_low_depth_tiled_tiff` as two 8×1 tiles and checks equal Pillow pixels
+against the FillOrder=2 counterpart.
+The input-only parity row passed 1/1 across its selected matrix operations;
+Rust implementation code is unchanged.
+
+The current fixture matrix contains 2,244 total rows: 1,763 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,763 decode rows and
+449 encode rows are active.
+
+The selected branch report is
+`target/release-evidence/coverage-tiff-gray2-byte-aligned.json` and records
+156/31,278 observed branch outcomes. At `decode.rs:1339`, Coverage MCP reports
+the `tail_bits != 0` arm as unobserved for `copy_packed_tile_row::<false>`, so
+the byte-aligned false arm is present in this selected report. Both arms of
+the `<true>` specialization remain unobserved under this selection. Comparison
+with the saved local baseline is incomparable because branch detail is
+incomplete; the reports also lack source/build receipts and test attribution.
+No aggregate coverage gain or full-suite coverage result is claimed, and no
+full coverage campaign was run.
