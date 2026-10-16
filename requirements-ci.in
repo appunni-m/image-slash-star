@@ -1,0 +1,2 @@
+# Pinned Python dependency for CI fixture verification scripts.
+PyYAML==6.0.3
