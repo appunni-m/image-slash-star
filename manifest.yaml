@@ -68,6 +68,20 @@ fault_contracts:
       point: av1.segment_map.reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_10bit_i444_alpha_invalid_sample
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_10bit_444_alpha_lossy_16x16
+    fault:
+      point: avif.i444_10bit_alpha.invalid_sample
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_10bit_i444_alpha_plane_length_mismatch
     type: fault-contract
     operation: decode
@@ -80,6 +94,34 @@ fault_contracts:
       source_case: decode:avif:high_bitdepth_still_10bit_444_alpha_lossy_16x16
     fault:
       point: avif.i444_10bit_alpha.plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_10bit_i444_u_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_10bit_444_alpha_lossy_16x16
+    fault:
+      point: avif.i444_10bit_alpha.u_plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_10bit_i444_v_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_10bit_444_alpha_lossy_16x16
+    fault:
+      point: avif.i444_10bit_alpha.v_plane_length_mismatch
       contract: decode_unsupported_then_retry_succeeds
     oracle_status: not_applicable
   - id: bmp_palette_reservation_failure

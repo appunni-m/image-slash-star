@@ -932,8 +932,26 @@ fn convert_full_resolution_rgb_10bit_alpha(
     alpha_plane: &[u16],
 ) -> Option<Vec<u8>> {
     let sample_count = y_plane.len();
-    // Public AVIF parsing keeps full-resolution planes aligned. This fault is
-    // coverage-only and exercises the defensive alpha-length check below.
+    // Public AVIF parsing keeps full-resolution planes aligned. These faults
+    // are coverage-only and exercise the defensive plane-length checks below.
+    #[cfg(coverage)]
+    let u_plane = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Avif10BitI444UPlaneLengthMismatch,
+    ) {
+        let (_, u_plane) = u_plane.split_last()?;
+        u_plane
+    } else {
+        u_plane
+    };
+    #[cfg(coverage)]
+    let v_plane = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Avif10BitI444VPlaneLengthMismatch,
+    ) {
+        let (_, v_plane) = v_plane.split_last()?;
+        v_plane
+    } else {
+        v_plane
+    };
     #[cfg(coverage)]
     let alpha_plane = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::Avif10BitI444AlphaPlaneLengthMismatch,
@@ -950,13 +968,28 @@ fn convert_full_resolution_rgb_10bit_alpha(
         return None;
     }
     let sample_depth = super::av1::sample_depth::SampleDepth::new(10)?;
-    if y_plane
+    #[cfg(coverage)]
+    let injected_invalid_samples: &[u16] = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Avif10BitI444InvalidSample,
+    ) {
+        &[u16::MAX]
+    } else {
+        &[]
+    };
+    #[cfg(coverage)]
+    let mut samples = y_plane
         .iter()
         .chain(u_plane)
         .chain(v_plane)
         .chain(alpha_plane)
-        .any(|&sample| sample_depth.validate(sample).is_none())
-    {
+        .chain(injected_invalid_samples.iter());
+    #[cfg(not(coverage))]
+    let mut samples = y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane);
+    if samples.any(|&sample| sample_depth.validate(sample).is_none()) {
         return None;
     }
     let output_length = sample_count.checked_mul(4)?;

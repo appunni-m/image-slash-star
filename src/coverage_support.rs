@@ -52,6 +52,12 @@ pub enum CoverageFaultPoint {
     AvifSequenceFrameReservation,
     /// Shorten a valid AVIF 10-bit I444 alpha plane to test its length guard.
     Avif10BitI444AlphaPlaneLengthMismatch,
+    /// Shorten a valid AVIF 10-bit I444 U plane to test its length guard.
+    Avif10BitI444UPlaneLengthMismatch,
+    /// Shorten a valid AVIF 10-bit I444 V plane to test its length guard.
+    Avif10BitI444VPlaneLengthMismatch,
+    /// Inject an out-of-range AVIF 10-bit I444 sample before validation.
+    Avif10BitI444InvalidSample,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.

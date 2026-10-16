@@ -1105,6 +1105,30 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "avif.i444_10bit_alpha.u_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif10BitI444UPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.i444_10bit_alpha.v_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif10BitI444VPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.i444_10bit_alpha.invalid_sample", "decode_unsupported_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Avif10BitI444InvalidSample,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -1385,7 +1409,10 @@ fn execute_fault_contract(
         "av1.temporal_projection.field_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 projected temporal field",
         ),
-        "avif.i444_10bit_alpha.plane_length_mismatch" => {
+        "avif.i444_10bit_alpha.plane_length_mismatch"
+        | "avif.i444_10bit_alpha.u_plane_length_mismatch"
+        | "avif.i444_10bit_alpha.v_plane_length_mismatch"
+        | "avif.i444_10bit_alpha.invalid_sample" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
         }
         "av1.frame.color_tile_state_reservation" => Some(
@@ -1552,8 +1579,13 @@ fn execute_fault_contract(
             reason: Some(img::UnsupportedReason::NotImplemented),
             offset: None,
             identity: None,
-        }) if row.fault.point == "avif.i444_10bit_alpha.plane_length_mismatch"
-            && actual_format == expected_format
+        }) if matches!(
+            row.fault.point.as_str(),
+            "avif.i444_10bit_alpha.plane_length_mismatch"
+                | "avif.i444_10bit_alpha.u_plane_length_mismatch"
+                | "avif.i444_10bit_alpha.v_plane_length_mismatch"
+                | "avif.i444_10bit_alpha.invalid_sample"
+        ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}
         Err(error) => {
