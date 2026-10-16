@@ -6504,7 +6504,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `59f2483e75e9e4bb5c9e414079dca6c3f2c1f43f6c55a175b037d0aba958838c`; matrix `fc48aa4637f17667b3bfeeda46a4665a861f79d1fafd7a26f2cf0bd9ee75c66c`.
+- Current fixture integrity only: manifest `aec1bec4cc30a979de0d4d43135263fdfaf0165f9a2c00378c52a83c7134c504`; matrix `07e932850e965fe617694ca0479c8dbd72b7a35f1c3293d1be6a6f00be630387`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7346,6 +7346,6 @@ not an aggregate coverage gain or full-suite result. Report:
 `target/release-evidence/coverage-avif-mode2-mixed-selected-20261016.json`.
 No full coverage campaign or SIMD change was made.
 
-The current fixture matrix contains 2,261 total rows: 1,778 decode /
-inspect / verify rows and 483 encode rows. Of those, 1,778 decode rows and
+The current fixture matrix contains 2,262 total rows: 1,779 decode /
+inspect / verify rows and 483 encode rows. Of those, 1,779 decode rows and
 451 encode rows are active; 32 planned encode rows remain.

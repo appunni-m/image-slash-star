@@ -1158,6 +1158,58 @@
       ]
     },
     {
+      "id": "rle4_delta_odd_x_encoded_run",
+      "asset": "rle4_delta_odd_x_encoded_run.bmp",
+      "asset_sha256": "f6e380c739a9880782a72e2ba279685ef7a80c72d26516c588f7814fe52b840f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/rle4_delta_odd_x_encoded_run.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "compression_bitfields",
       "asset": "bitfields.bmp",
       "asset_sha256": "5f88f08e85e3a34deee38754452de1a275d92ae2e40bb516d3d37425fe4691b0",

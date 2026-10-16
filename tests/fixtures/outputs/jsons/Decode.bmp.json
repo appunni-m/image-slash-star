@@ -1869,6 +1869,92 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "rle4_delta_odd_x_encoded_run",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "BMP",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "f6e380c739a9880782a72e2ba279685ef7a80c72d26516c588f7814fe52b840f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 4,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_delta_odd_x_encoded_run_bmp.bin",
+      "ref_bytes": 8,
+      "ref_sha256": "49531f6f79e490fa2548e0f6d59c287a7efc824cb31572a6182b5b6d14fc9dce",
+      "ref_mode": "P",
+      "ref_size": [
+        4,
+        2
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "table",
+        "origin": "pillow_fixture",
+        "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_delta_odd_x_encoded_run_bmp.inspect-palette.rgb.bin",
+        "rgb_bytes": 48,
+        "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+      },
+      "decoded_palette": {
+        "state": "table",
+        "origin": "pillow_fixture",
+        "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_delta_odd_x_encoded_run_bmp.decoded-palette.rgb.bin",
+        "rgb_bytes": 48,
+        "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "compression_bitfields",
       "status": "ok",
       "error_type": null,

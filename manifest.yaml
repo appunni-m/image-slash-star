@@ -3325,6 +3325,10 @@ formats:
       description: BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream
       test_assets:
       - rle4_odd_pixel_offset.bmp
+    - id: rle4_delta_odd_x_encoded_run
+      description: BI_RLE4 diagonal delta to odd x followed by an encoded alternating-nibble run
+      test_assets:
+      - rle4_delta_odd_x_encoded_run.bmp
     - id: compression_bitfields
       description: BI_BITFIELDS (16/32 bit with masks)
       test_assets:

@@ -27,13 +27,13 @@
     }
   ],
   "summary": {
-    "observations": 58,
-    "new_full_files": 56,
+    "observations": 59,
+    "new_full_files": 57,
     "existing_controls": 2,
-    "new_successful_controls": 6,
+    "new_successful_controls": 7,
     "classification_and_control_rows": 50,
     "unresolved_precedence_rows": 4,
-    "pillow_successes": 8,
+    "pillow_successes": 9,
     "pillow_errors": 50
   },
   "pillow_cases": [
@@ -1959,6 +1959,72 @@
         "mode": "P",
         "pixel_bytes": 256,
         "pixel_sha256": "fd4f4975bf12c1586e4e190e7cedb76b32a52599975390644c584b5f4a5ef468"
+      },
+      "pillow_verify": {
+        "status": "ok"
+      }
+    },
+    {
+      "id": "rle4_delta_odd_x_encoded_run",
+      "description": "BI_RLE4 diagonal delta to odd x followed by an encoded alternating-nibble run",
+      "asset": "rle4_delta_odd_x_encoded_run.bmp",
+      "asset_sha256": "f6e380c739a9880782a72e2ba279685ef7a80c72d26516c588f7814fe52b840f",
+      "bytes": 128,
+      "source": "tests/fixtures/input/images/bmp/rle4_mixed.bmp",
+      "source_sha256": "ada740d59aa55a0c6c49aa94f6c958213d3b23c84dbeed60e63ba810072a6495",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 2
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 4
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 22,
+          "value": 2
+        },
+        {
+          "operation": "replace_compressed_pixels",
+          "offset": 118,
+          "prefix_hex": "",
+          "pixel_offset": 118,
+          "length": 10,
+          "sha256": "9559f5d4d022a5168320d76ace9b5c0d92de9eec1b82313ebe644df53d7e026d",
+          "file_size": 128,
+          "image_size": 10
+        }
+      ],
+      "header_size": 40,
+      "compression": 2,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          4,
+          2
+        ],
+        "mode": "P",
+        "compression": 2
+      },
+      "pillow_decode": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          4,
+          2
+        ],
+        "mode": "P",
+        "pixel_bytes": 8,
+        "pixel_sha256": "49531f6f79e490fa2548e0f6d59c287a7efc824cb31572a6182b5b6d14fc9dce"
       },
       "pillow_verify": {
         "status": "ok"
