@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `39fd1f875d4d999519f0832d0f5a96ff3633c35cd006ef362bc6cb324608c38d`.
+- Active fixture source SHA-256: `5c89e491a59ebd9d8f3c3915cf40ffc163ae9616d4b4ff954f6ea9f763091e68`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 2,223 (1,774 decode; 449 encode).
+- Active fixture rows: 2,224 (1,774 decode; 450 encode).
 - Planned fixture rows excluded: 32 (0 decode; 32 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 128.
 
@@ -366,14 +366,14 @@ Verification scope is a format-level property derived from active decode rows. I
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | BMP | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `bmp:enc_1bit` |
 | BMP | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 1: `bmp:enc_grayscale` |
-| BMP | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 1: `bmp:enc_8bit` |
+| BMP | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 2: `bmp:enc_8bit`, `bmp:enc_indexed_missing_palette` |
 | BMP | sequence_encode | accepted | Rgb8 | 1 frame | Rgb8 | SingleFrame | — | 15: `bmp:enc_16bit`, `bmp:enc_1x1`, `bmp:enc_24bit`, `bmp:enc_4bit`, `bmp:enc_bi_bitfields`, `bmp:enc_bi_rgb`, `bmp:enc_bi_rle4`, `bmp:enc_bi_rle8`, `bmp:enc_bottom_up`, `bmp:enc_odd_width`, `bmp:enc_top_down`, `bmp:enc_v3_header`, `bmp:enc_v4_header`, `bmp:enc_v5_header`, `bmp:enc_wide_scanline_checkpoint` |
 | BMP | sequence_encode | accepted | Rgba8 | 1 frame | Rgb8 | SingleFrame | — | 1: `bmp:enc_32bit` |
 | BMP | sequence_encode | rejected | La8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `bmp:enc_error_grayscale_alpha` |
 | BMP | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `bmp:enc_error_retained_sequence_geometry` |
 | BMP | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `bmp:enc_1bit` |
 | BMP | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 1: `bmp:enc_grayscale` |
-| BMP | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 1: `bmp:enc_8bit` |
+| BMP | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 2: `bmp:enc_8bit`, `bmp:enc_indexed_missing_palette` |
 | BMP | still_encode | accepted | Rgb8 | 1 frame | Rgb8 | — (still result) | — | 15: `bmp:enc_16bit`, `bmp:enc_1x1`, `bmp:enc_24bit`, `bmp:enc_4bit`, `bmp:enc_bi_bitfields`, `bmp:enc_bi_rgb`, `bmp:enc_bi_rle4`, `bmp:enc_bi_rle8`, `bmp:enc_bottom_up`, `bmp:enc_odd_width`, `bmp:enc_top_down`, `bmp:enc_v3_header`, `bmp:enc_v4_header`, `bmp:enc_v5_header`, `bmp:enc_wide_scanline_checkpoint` |
 | BMP | still_encode | accepted | Rgba8 | 1 frame | Rgb8 | — (still result) | — | 1: `bmp:enc_32bit` |
 | BMP | still_encode | rejected | L1 | 1 frame | — (no Rust output) | — (no result) | dimensions | 1: `bmp:enc_error_oversized_dimensions` |

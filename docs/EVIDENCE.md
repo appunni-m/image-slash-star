@@ -6481,7 +6481,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f36881be426cb8951037ed1dbe72f27639cf44f77313647ad91472e7dd45f7d3`; matrix `39fd1f875d4d999519f0832d0f5a96ff3633c35cd006ef362bc6cb324608c38d`.
+- Current fixture integrity only: manifest `cd995edf218bfacfa0445fcc45a1458c3e20b4a5972956941c63d8d083bdc0de`; matrix `5c89e491a59ebd9d8f3c3915cf40ffc163ae9616d4b4ff954f6ea9f763091e68`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7267,3 +7267,39 @@ for Coverage MCP inspection. No aggregate coverage gain is attributed to this
 individual case. A later full all-feature local run and its attribution
 limits are recorded above. The exact coverage-origin inventory now records
 152 `cfg(coverage)` guards across 26 Rust files.
+
+### BMP palette-less indexed encoding parity — 2026-10-16
+
+`encode:bmp:enc_indexed_missing_palette` reuses the 67-byte PNG asset
+`palette_missing_plte.png` (SHA-256
+`6e78b381ae98aa9a5bdb1e50179a74073cdb0d567b2d55c6e48e4b6c8faeb7c3`). Pinned
+Pillow 12.2.0 loads it with `PIL.ImageFile.LOAD_TRUNCATED_IMAGES` enabled as a
+1×1 P image without a palette and preserves sample `00`. It saves a 58-byte
+8-bit BI_RGB BMP with offset 54, both palette counts zero, and four zero
+raster/padding bytes; the encoded SHA-256 is
+`64850622123ceb124c80eca8ee8c8f4a3ec3026580501d9ba44a7c256e5ba747`. Pillow
+reopens the file under the same load setting and preserves the P-mode sample.
+
+The new public row first reproduced a Rust/Pillow mismatch (1,082 bytes versus
+58). The BMP encoder now omits the absent palette table and copies indexes
+unchanged. The decoder admits the corresponding 8-bit BI_RGB layout only for
+INFO-or-later headers whose pixel offset equals the end of the DIB header;
+other indexed BMP files retain their existing palette requirements. The
+reference generator records and restores the row-scoped Pillow load setting
+for both source and roundtrip images.
+
+The selected all-feature matrix run passed seven rows: BMP decode `depth_8`,
+`os2_v1`, and `error_malformed`, plus encode `enc_indexed_missing_palette`,
+`enc_8bit`, `enc_grayscale`, and `enc_24bit`. Formatting and strict workspace
+Clippy passed. Coverage MCP's selected report is
+`target/release-evidence/coverage-bmp-no-palette-controls-20261016.json`; its
+queries report no unobserved branch outcomes at the new palette omission
+predicate and the encoder's optional-palette branch. The report has no source
+or test receipt, and its incremental comparison with the saved historical
+full report is incomparable because that report's branch detail is incomplete.
+No aggregate coverage gain or full-suite claim is made; no full coverage
+campaign or SIMD change was made.
+
+The current fixture matrix contains 2,256 total rows: 1,774 decode /
+inspect / verify rows and 482 encode rows. Of those, 1,774 decode rows and
+450 encode rows are active; 32 planned encode rows remain.

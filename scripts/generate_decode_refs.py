@@ -53,13 +53,39 @@ ALL_CODEC_FEATURES = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"
 MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH = 65_534
 
 
-def pillow_open_asset(path):
-    """Open fixture bytes with a stable name for deterministic Pillow errors."""
+def pillow_open_asset(path, *, load_truncated_images=False):
+    """Open fixture bytes with stable errors and an optional truncated-load policy."""
     from PIL import Image
 
     stream = io.BytesIO(path.read_bytes())
     stream.name = path.relative_to(ROOT).as_posix()
-    return Image.open(stream)
+    image = Image.open(stream)
+    if not load_truncated_images:
+        return image
+
+    try:
+        return pillow_load_image(image, load_truncated_images=True)
+    except Exception:
+        image.close()
+        stream.close()
+        raise
+
+
+def pillow_load_image(image, *, load_truncated_images=False):
+    """Load a Pillow image, restoring its process-wide truncation policy."""
+    if not load_truncated_images:
+        image.load()
+        return image
+
+    from PIL import ImageFile
+
+    previous_setting = ImageFile.LOAD_TRUNCATED_IMAGES
+    try:
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        image.load()
+        return image
+    finally:
+        ImageFile.LOAD_TRUNCATED_IMAGES = previous_setting
 
 
 def stable_error_message(error):
@@ -439,6 +465,7 @@ def encode_params(fmt, params):
         "oversized_palette",
         "palette_on_nonindexed",
         "detach_source",
+        "load_truncated_images",
         "rust_unsupported_modes",
         "rust_invalid_color_mode",
         "rust_encode_with_token",
@@ -2510,6 +2537,13 @@ def describe_encode_call(fmt_name, row):
         call["source_transform"] = (
             "PIL.Image.frombytes(source.mode, source.size, source.tobytes())"
         )
+    if row.get("params", {}).get("load_truncated_images"):
+        call["source_load_settings"] = {
+            "PIL.ImageFile.LOAD_TRUNCATED_IMAGES": True
+        }
+        call["roundtrip_load_settings"] = {
+            "PIL.ImageFile.LOAD_TRUNCATED_IMAGES": True
+        }
     if row.get("params", {}).get("rust_unsupported_modes"):
         call["rust_source_transform"] = (
             "construct one valid zero-filled DecodedImage for every named mode"
@@ -4953,13 +4987,19 @@ def generate_encode(manifest, matrix, target_format=None):
                 continue
 
             try:
-                img = pillow_open_asset(src_path)
+                params = row.get("params", {})
+                load_truncated_images = params.get("load_truncated_images", False)
+                if type(load_truncated_images) is not bool:
+                    raise RuntimeError("load_truncated_images must be a boolean")
+                img = pillow_open_asset(
+                    src_path,
+                    load_truncated_images=load_truncated_images,
+                )
                 source_bytes = src_path.read_bytes()
                 row["source_sha256"] = sha256(source_bytes)
                 row["execution"] = execution_contract()
                 row["source_mode"] = mode_name(img)
                 row["source_frame_count"] = int(getattr(img, "n_frames", 1))
-                params = row.get("params", {})
                 validate_source_params(img, params, fmt_name)
                 kwargs = encode_params(fmt_name, dict(params))
                 if params.get("detach_source"):
@@ -4995,6 +5035,8 @@ def generate_encode(manifest, matrix, target_format=None):
                 row["encoded_ref_sha256"] = sha256(encoded)
                 buf.seek(0)
                 rt = Image.open(buf)
+                if params.get("load_truncated_images"):
+                    pillow_load_image(rt, load_truncated_images=True)
                 if exact_encode_parity_supported(fmt_name, row):
                     ref_name = f"Encode.{fmt_name}_{row['id']}.bin"
                     write_pixel_ref(row, rt, ref_name)

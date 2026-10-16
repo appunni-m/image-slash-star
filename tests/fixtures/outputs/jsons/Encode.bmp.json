@@ -121,6 +121,46 @@
       "rust_error_reason": "BMP directly accepts only L1, P8, L8, Rgb8, and Rgba8"
     },
     {
+      "id": "enc_indexed_missing_palette",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_indexed_missing_palette.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_indexed_missing_palette.bin",
+      "encoded_ref_bytes": 58,
+      "encoded_ref_sha256": "64850622123ceb124c80eca8ee8c8f4a3ec3026580501d9ba44a7c256e5ba747",
+      "source_mode": "P",
+      "source_sha256": "6e78b381ae98aa9a5bdb1e50179a74073cdb0d567b2d55c6e48e4b6c8faeb7c3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_1bit",
       "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1bit.bin",
       "ref_bytes": 2048,

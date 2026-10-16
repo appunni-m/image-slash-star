@@ -492,9 +492,17 @@ pub fn decode(
     }
 
     // --- Palette (color table) ---
+    // Pillow permits palette-less 8-bit BI_RGB files when the pixel offset is
+    // exactly the end of the DIB header. In that layout, zero `colors_used`
+    // means the table is absent instead of implying 256 default entries.
+    let palette_omitted = header_size >= 40
+        && bit_depth == BmpBitDepth::Eight
+        && compression == 0
+        && colors_used == 0
+        && u64::from(data_offset) == r.position();
     let pal_count = if colors_used > 0 {
         colors_used
-    } else if bit_depth.is_indexed() {
+    } else if bit_depth.is_indexed() && !palette_omitted {
         1u32 << bit_depth.bits_per_pixel()
     } else {
         0
@@ -777,7 +785,7 @@ pub fn decode(
         BmpBitDepth::Sixteen | BmpBitDepth::TwentyFour | BmpBitDepth::ThirtyTwo => color.into(),
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);
-    if mode == ImageMode::P8 {
+    if mode == ImageMode::P8 && !palette.is_empty() {
         let mut rgb = Vec::with_capacity(palette.len().saturating_mul(3));
         for entry in palette {
             rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);

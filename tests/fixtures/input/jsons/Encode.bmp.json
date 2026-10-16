@@ -164,6 +164,57 @@
       }
     },
     {
+      "id": "enc_indexed_missing_palette",
+      "source_asset": "palette_missing_plte.png",
+      "source_format": "png",
+      "source_mode": "P",
+      "source_sha256": "6e78b381ae98aa9a5bdb1e50179a74073cdb0d567b2d55c6e48e4b6c8faeb7c3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "load_truncated_images": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/palette_missing_plte.png",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_load_settings": {
+          "PIL.ImageFile.LOAD_TRUNCATED_IMAGES": true
+        },
+        "roundtrip_load_settings": {
+          "PIL.ImageFile.LOAD_TRUNCATED_IMAGES": true
+        }
+      }
+    },
+    {
       "id": "enc_1bit",
       "source_asset": "1bit.bmp",
       "source_format": "bmp",

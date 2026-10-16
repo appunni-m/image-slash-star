@@ -3476,6 +3476,11 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: BMP directly accepts only L1, P8, L8, Rgb8, and Rgba8
+    - id: enc_indexed_missing_palette
+      description: With truncated-image loading enabled, Pillow preserves P8 samples and omits the BMP color table for a PNG without PLTE
+      source_format: png
+      source_asset: palette_missing_plte.png
+      params: {'load_truncated_images': true}
     - id: enc_1bit
       description: 
       source_asset: 1bit.bmp

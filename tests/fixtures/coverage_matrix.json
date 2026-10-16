@@ -63331,6 +63331,59 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_indexed_missing_palette",
+          "type": "encode",
+          "format": "bmp",
+          "category": "indexed",
+          "description": "With truncated-image loading enabled, Pillow preserves P8 samples and omits the BMP color table for a PNG without PLTE",
+          "params": {
+            "load_truncated_images": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "palette_missing_plte.png",
+          "source_sha256": "6e78b381ae98aa9a5bdb1e50179a74073cdb0d567b2d55c6e48e4b6c8faeb7c3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "P",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_indexed_missing_palette.bin",
+          "encoded_ref_bytes": 58,
+          "encoded_ref_sha256": "64850622123ceb124c80eca8ee8c8f4a3ec3026580501d9ba44a7c256e5ba747",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_indexed_missing_palette.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "description": "",
           "format": "bmp",
           "id": "enc_1bit",
@@ -190537,9 +190590,9 @@
     }
   },
   "summary": {
-    "total_rows": 2255,
+    "total_rows": 2256,
     "decode_rows": 1774,
-    "encode_rows": 481,
+    "encode_rows": 482,
     "formats": 8,
     "assets_available": 1771,
     "decode_active": 1774,

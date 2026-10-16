@@ -115,10 +115,6 @@ fn write_encoded(
                     for rgb in palette.rgb.as_chunks::<3>().0 {
                         palette_bytes.extend_from_slice(&[rgb[2], rgb[1], rgb[0], 0]);
                     }
-                } else {
-                    for value in 0..=255u8 {
-                        palette_bytes.extend_from_slice(&[value, value, value, 0]);
-                    }
                 }
             } else {
                 for value in 0..=255u8 {
@@ -195,7 +191,8 @@ impl BmpLayout {
             ImageMode::P8 => (
                 BmpKind::Indexed,
                 8,
-                img.palette.as_ref().map_or(256usize, ImagePalette::len),
+                // Pillow omits the color table for P images without a palette.
+                img.palette.as_ref().map_or(0usize, ImagePalette::len),
             ),
             ImageMode::L8 => (BmpKind::Indexed, 8, 256),
             ImageMode::Rgb8 => (BmpKind::Rgb24, 24, 0),
@@ -242,7 +239,7 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
     // checks at every row and header field.
     let (depth, colors) = match img.mode {
         ImageMode::L1 => (1u16, 2usize),
-        ImageMode::P8 => (8, img.palette.as_ref().map_or(256, ImagePalette::len)),
+        ImageMode::P8 => (8, img.palette.as_ref().map_or(0, ImagePalette::len)),
         ImageMode::L8 => (8, 256),
         ImageMode::Rgb8 => (24, 0),
         ImageMode::Rgba8 => (32, 0),
