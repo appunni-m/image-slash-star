@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the pinned 10-bit lossless inter AVIF sequence fixture.
+"""Generate pinned high-bit-depth lossless inter AVIF sequence fixtures.
 
 The Pillow bundled AOM encoder is 8-bit-only. This generator therefore builds
 the repository-pinned libaom and libavif sources into a disposable staging
@@ -49,6 +49,9 @@ ASSET_CLIPPED_B32_28X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "av
 )
 ASSET_CLIPPED_B32_56X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
     "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif"
+)
+ASSET_CLIPPED_B32_12BIT_56X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+    "animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif"
 )
 ENCODER_SOURCE = ROOT / "scripts" / "avif_fixture_oracle" / (
     "encode_lossless_inter_10bit.c"
@@ -115,6 +118,26 @@ FIXTURE_SPECS = {
         "patch_pattern": "texture",
         "expected_file_sha256": (
             "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe"
+        ),
+        "expected_frame_sha256": (
+            "8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100",
+            "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6",
+        ),
+    },
+    "clipped_b32x32_12bit_partition32_56x64": {
+        "asset": ASSET_CLIPPED_B32_12BIT_56X64,
+        "width": 56,
+        "height": 64,
+        "speed": 0,
+        "partition_size": 32,
+        "patch_x": 34,
+        "patch_y": 4,
+        "patch_width": 16,
+        "patch_height": 24,
+        "patch_pattern": "texture",
+        "bit_depth": 12,
+        "expected_file_sha256": (
+            "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87"
         ),
         "expected_frame_sha256": (
             "8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100",
@@ -333,7 +356,9 @@ def validate_timestamp_repeatability(first: bytes, second: bytes) -> None:
         )
 
 
-def validate_bitstream(path: Path, width: int, height: int) -> list[tuple[int, str]]:
+def validate_bitstream(
+    path: Path, width: int, height: int, bit_depth: int = 10
+) -> list[tuple[int, str]]:
     container = inspect_container(path)
     if container["ftyp"]["major"] != "avis":
         raise RuntimeError("fixture does not declare an AVIF sequence")
@@ -362,7 +387,7 @@ def validate_bitstream(path: Path, width: int, height: int) -> list[tuple[int, s
         if "sequence_header" in obu
     ]
     expected_sequence = {
-        "bit_depth": 10,
+        "bit_depth": bit_depth,
         "max_width": width,
         "max_height": height,
         "monochrome": False,
@@ -377,7 +402,9 @@ def validate_bitstream(path: Path, width: int, height: int) -> list[tuple[int, s
         any(header.get(key) != value for key, value in expected_sequence.items())
         for header in sequence_headers
     ):
-        raise RuntimeError("sequence header differs from the pinned 10-bit full-range I420 shape")
+        raise RuntimeError(
+            f"sequence header differs from the pinned {bit_depth}-bit full-range I420 shape"
+        )
 
     expected_types = ("key", "inter")
     obu_sample_hashes = []
@@ -521,6 +548,8 @@ def generate(args: argparse.Namespace) -> None:
                                 str(spec["patch_pattern"]),
                             ]
                         )
+                        if spec.get("bit_depth", 10) != 10:
+                            command.append(str(spec["bit_depth"]))
                     else:
                         command.extend(
                             [
@@ -535,7 +564,12 @@ def generate(args: argparse.Namespace) -> None:
                 normalized = normalize_sequence_timestamps(raw)
                 normalized_path.write_bytes(normalized)
                 obu_sample_hashes.append(
-                    validate_bitstream(normalized_path, spec["width"], spec["height"])
+                    validate_bitstream(
+                        normalized_path,
+                        spec["width"],
+                        spec["height"],
+                        spec.get("bit_depth", 10),
+                    )
                 )
                 observations.append(
                     pillow_frames(

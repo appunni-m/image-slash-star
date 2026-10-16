@@ -8013,6 +8013,14 @@ formats:
       pure_rust_work_item: AVF-SAMPLE-001
       expect_sequence_error: false
       rust_expect_sequence_error: false
+    - id: animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64
+      description: Two-frame 56x64 12-bit full-range 4:2:0 all-lossless AVIF sequence with fixed 32-pixel partitions and a translated textured patch in the 24-pixel right-edge B32x32 leaf
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: false
+      rust_expect_sequence_error: false
     - id: animated_lossless_inter_420_clipped_b32x32_17x17
       description: Two-frame 17x17 8-bit 4:2:0 all-lossless AVIF sequence with a diagonally translated 4x4 patch and bottom-right edge residual on a B32x32 inter grid clipped to the MI-padded frame edge
       test_assets:

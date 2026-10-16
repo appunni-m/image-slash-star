@@ -26,6 +26,7 @@ generation provenance follow.
 | `animated_lossless_inter_420_b32x32_10bit.avif` | Deterministic two-frame full-range 10-bit I420 lossless sequence with a translated patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif` | Deterministic two-frame 28x64 full-range 10-bit I420 lossless sequence with a translated textured 24x24 patch in the padded left B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif` | Deterministic two-frame 56x64 full-range 10-bit I420 lossless sequence with fixed 32-pixel partitions and a translated textured patch in the clipped 24x32 right-edge B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif` | Deterministic two-frame 56x64 full-range 12-bit I420 lossless sequence with fixed 32-pixel partitions and a translated textured patch in the clipped 24x32 right-edge B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossy_inter_420_superres_sgr_10bit_160x56.avif` | Deterministic two-frame full-range 10-bit I420 lossy sequence; frame 1 uses super-resolution and SGR restoration | `scripts/generate_avif_hi10_superres_restoration.py`; libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossy_inter_420_superres_sgr_8bit_160x56.avif` | Deterministic two-frame full-range 8-bit I420 lossy sequence; frame 1 uses super-resolution and SGR restoration with largest-transform mode and 16x16 partitions | `scripts/generate_avif_8bit_superres_restoration.py`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7` | MIT/Apache-2.0 (repository-generated) |
 | `superres_equal_width_16x16.avif` | Deterministic 16x16 full-range 8-bit I420 lossy still; AV1 signals super-resolution denominator 9 while minimum coded width leaves the coded and upscaled widths equal | `scripts/generate_avif_equal_width_superres.py`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2 | `2de74d720f8863be43049a3df776337c1cde494122a57093ffad532cea19a004` | MIT/Apache-2.0 (repository-generated) |
@@ -119,6 +120,15 @@ The 56x64 companion fixes partitions to 32x32 and places its translated
 visible extent. Its normalized file SHA-256 is
 `a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe`; the
 Pillow frame hashes are
+`8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100` and
+`3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6`.
+
+The 12-bit companion exercises the same clipped right-edge B32x32 inter grid
+with AV1 profile 2. The generator scales the deterministic 10-bit source
+samples by four, verifies the 12-bit sequence header and repeated encoded
+samples, and checks the exact Pillow 12.2.0 RGB frames. Its normalized input
+hash is `cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87`;
+the frame hashes are the same RGB8 outputs as the 10-bit companion:
 `8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100` and
 `3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6`.
 

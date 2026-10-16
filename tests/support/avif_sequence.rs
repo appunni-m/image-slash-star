@@ -655,6 +655,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
         "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
         "animated_primary_item_irot",
+        "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
     ];
     // STTS parser cases in the shared index are exercised by matrix parity;
     // this test stays focused on complete native repetition witnesses.
@@ -779,6 +780,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             ),
             "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64" => matrix_sequence_case(
                 "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
+            ),
+            "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64" => matrix_sequence_case(
+                "animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
             ),
             "lossless_inter_420_clipped_b32x32_17x17" => {
                 matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_17x17")

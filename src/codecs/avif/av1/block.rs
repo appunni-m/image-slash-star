@@ -48133,8 +48133,9 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB16x4I444
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
-        // Mode-0 8-bit and 10-bit I420, I422, and I444 B32 edge blocks use the
-        // same WHT grid as a full block, with terminal syntax limited to the active extent.
+        // Mode-0 8-bit, 10-bit, and 12-bit I420, I422, and I444 B32 edge blocks
+        // use the same WHT grid as a full block, with terminal syntax limited to
+        // the active extent.
         // A lossless grid plan carries the block dimensions and chroma
         // sampling derived from these same decoder inputs, confirming the
         // complete B32x32 geometry and sampling mode.
@@ -48147,7 +48148,7 @@ impl Lossy420Decoder {
                     | ChromaSampling::Subsampled422
                     | ChromaSampling::Full,
             }
-        ) && matches!(tools.sample_depth.bits(), 8 | 10)
+        ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 0
             && quantization.segment_lossless
             && visible_width != 0

@@ -1,4 +1,4 @@
-/* Generate the 10-bit I420 sequence used by the public AVIF decode matrix. */
+/* Generate the 10/12-bit I420 sequence used by the public AVIF decode matrix. */
 #include <avif/avif.h>
 
 #include <errno.h>
@@ -10,7 +10,8 @@
 
 static int fill_frame(avifImage *image, unsigned frame, unsigned patch_origin_x,
                       unsigned patch_origin_y, unsigned patch_width,
-                      unsigned patch_height, int patch_pattern) {
+                      unsigned patch_height, int patch_pattern,
+                      unsigned bit_depth) {
   if (avifImageAllocatePlanes(image, AVIF_PLANES_YUV) != AVIF_RESULT_OK) {
     return 0;
   }
@@ -46,6 +47,7 @@ static int fill_frame(avifImage *image, unsigned frame, unsigned patch_origin_x,
             value = plane == AVIF_CHAN_U ? 350 : 650;
           }
         }
+        value = (uint16_t)(value * (1U << (bit_depth - 10)));
         uint8_t *pixel = data + y * row_bytes + 2 * x;
         pixel[0] = (uint8_t)(value & 0xff);
         pixel[1] = (uint8_t)(value >> 8);
@@ -68,11 +70,11 @@ static int parse_unsigned(const char *text, unsigned *value) {
 
 int main(int argc, char **argv) {
   if (argc != 2 && argc != 5 && argc != 6 && argc != 8 && argc != 10 &&
-      argc != 11) {
+      argc != 11 && argc != 12) {
     fprintf(stderr,
             "usage: %s OUTPUT.avif [DIMENSION SPEED PARTITION_SIZE] "
             "or [WIDTH HEIGHT SPEED PARTITION_SIZE [PATCH_X PATCH_Y "
-            "[PATCH_WIDTH PATCH_HEIGHT [ramp|flat|texture]]]]\n",
+            "[PATCH_WIDTH PATCH_HEIGHT [ramp|flat|texture [10|12]]]]]\n",
             argv[0]);
     return 1;
   }
@@ -85,29 +87,33 @@ int main(int argc, char **argv) {
   unsigned patch_origin_y = 8;
   unsigned patch_width = 8;
   unsigned patch_height = 8;
+  unsigned bit_depth = 10;
   int patch_pattern = 0;
   const int parse_square =
       argc == 5 &&
       (!parse_unsigned(argv[2], &width) || !parse_unsigned(argv[3], &speed) ||
        !parse_unsigned(argv[4], &partition_size));
   const int parse_rectangle =
-      (argc == 6 || argc == 8 || argc == 10 || argc == 11) &&
+      (argc == 6 || argc == 8 || argc == 10 || argc == 11 || argc == 12) &&
       (!parse_unsigned(argv[2], &width) || !parse_unsigned(argv[3], &height) ||
        !parse_unsigned(argv[4], &speed) ||
        !parse_unsigned(argv[5], &partition_size));
   const int parse_patch_origin =
-      (argc == 8 || argc == 10 || argc == 11) &&
+      (argc == 8 || argc == 10 || argc == 11 || argc == 12) &&
       (!parse_unsigned(argv[6], &patch_origin_x) ||
        !parse_unsigned(argv[7], &patch_origin_y));
   const int parse_patch_extent =
-      (argc == 10 || argc == 11) &&
+      (argc == 10 || argc == 11 || argc == 12) &&
       (!parse_unsigned(argv[8], &patch_width) ||
        !parse_unsigned(argv[9], &patch_height));
   const int parse_patch_pattern =
-      argc == 11 && strcmp(argv[10], "flat") != 0 &&
+      (argc == 11 || argc == 12) && strcmp(argv[10], "flat") != 0 &&
       strcmp(argv[10], "ramp") != 0 && strcmp(argv[10], "texture") != 0;
+  const int parse_bit_depth =
+      argc == 12 && !parse_unsigned(argv[11], &bit_depth);
   if (parse_square || parse_rectangle || parse_patch_origin ||
-      parse_patch_extent || parse_patch_pattern || width < 9 ||
+      parse_patch_extent || parse_patch_pattern || parse_bit_depth ||
+      (bit_depth != 10 && bit_depth != 12) || width < 9 ||
       height < 9 || width > 64 || height > 64 || width % 4 != 0 ||
       height % 4 != 0 || speed > 10 || patch_width == 0 ||
       patch_height == 0 || patch_width >= width || patch_height >= height ||
@@ -120,7 +126,7 @@ int main(int argc, char **argv) {
   if (argc == 5) {
     height = width;
   }
-  if (argc == 11) {
+  if (argc == 11 || argc == 12) {
     patch_pattern = strcmp(argv[10], "flat") == 0
                         ? 1
                         : (strcmp(argv[10], "texture") == 0 ? 2 : 0);
@@ -128,7 +134,8 @@ int main(int argc, char **argv) {
 
   int status = 0;
   avifEncoder *encoder = avifEncoderCreate();
-  avifImage *image = avifImageCreate(width, height, 10, AVIF_PIXEL_FORMAT_YUV420);
+  avifImage *image =
+      avifImageCreate(width, height, bit_depth, AVIF_PIXEL_FORMAT_YUV420);
   avifRWData output = AVIF_DATA_EMPTY;
   FILE *file = NULL;
   if (!encoder || !image) {
@@ -168,7 +175,7 @@ int main(int argc, char **argv) {
   image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
   for (unsigned frame = 0; frame < 2; ++frame) {
     if (!fill_frame(image, frame, patch_origin_x, patch_origin_y, patch_width,
-                    patch_height, patch_pattern)) {
+                    patch_height, patch_pattern, bit_depth)) {
       status = 3;
       goto cleanup;
     }

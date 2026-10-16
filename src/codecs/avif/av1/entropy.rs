@@ -5421,7 +5421,7 @@ fn inter_lossless_grid_clipped_b32_geometry_supported(geometry: InterLosslessGri
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
-        && matches!(bit_depth, 8 | 10)
+        && matches!(bit_depth, 8 | 10 | 12)
         && visible_width != 0
         && visible_height != 0
         && visible_width <= 32

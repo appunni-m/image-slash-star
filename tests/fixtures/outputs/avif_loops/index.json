@@ -389,6 +389,32 @@
       "collection_index_sha256": "e3ce44e196bf23c3c4920ec5cd51dcfba1efabd24c50feeeb138ca66f5e02d94",
       "generator_sha256": "96bcc91f54a23b1b962647aabc2472e172570f29d7f69bc61b8144f1d276b052",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "6291625da3ba0511178b5b209a2b8596e2da291155fa8f1b51f5ed6a6392fb01",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64"
+      ],
+      "collection_index_sha256": "4d156fa0dde996af37fec1ccde1e4ff7c75652acd9812e90de7de622a4ee1fdf",
+      "generator_sha256": "32ef5b0fb832586a25d978a37c6cfe70be580f3370a2b2a16824f66acdd45153",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
@@ -1906,6 +1932,21 @@
       "bytes": 12288,
       "path": "pixels/tx64_root_split_inter_420_64x64/frame_2.bin",
       "sha256": "cdcf7ce5c1885c086852bb9ba4119857d54cdbaca2f80cd5c78fb7166977ae5d"
+    },
+    {
+      "bytes": 2779,
+      "path": "inputs/lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif",
+      "sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/lossless_inter_420_clipped_b32x32_12bit_partition32_56x64/frame_0.bin",
+      "sha256": "8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/lossless_inter_420_clipped_b32x32_12bit_partition32_56x64/frame_1.bin",
+      "sha256": "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6"
     }
   ],
   "build": {
@@ -8076,6 +8117,54 @@
       "repeat_equal": true,
       "source": "animated",
       "source_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+    },
+    {
+      "input_bytes": 2779,
+      "input_path": "inputs/lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif",
+      "input_sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100",
+            "size": [
+              56,
+              64
+            ]
+          },
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6",
+            "size": [
+              56,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
+      "source_sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87"
     }
   ],
   "oracle": {

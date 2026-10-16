@@ -142,6 +142,10 @@ FIXTURES = {
         "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif",
         "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
     ),
+    "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64": (
+        "animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif",
+        "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87",
+    ),
     "lossless_inter_420_clipped_b32x32_17x17": (
         "animated_lossless_inter_420_clipped_b32x32_17x17.avif",
         "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
