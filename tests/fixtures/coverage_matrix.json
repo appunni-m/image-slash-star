@@ -190229,6 +190229,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_film_grain_points_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_filmgrain_i444_64x64"
+      },
+      "fault": {
+        "point": "av1.film_grain.points_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_temporal_motion_field_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

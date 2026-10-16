@@ -4334,8 +4334,18 @@ fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u
     let count =
         usize::try_from(count).map_err(|_| malformed("film-grain point count exceeds usize"))?;
     let mut points: Vec<[u32; 2]> = Vec::new();
+    #[cfg(coverage)]
+    let reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1FilmGrainPointsReservation,
+    ) {
+        usize::MAX
+    } else {
+        count
+    };
+    #[cfg(not(coverage))]
+    let reservation_count = count;
     points
-        .try_reserve_exact(count)
+        .try_reserve_exact(reservation_count)
         .map_err(|_| malformed("unable to allocate film-grain points"))?;
     for _ in 0..count {
         let point = [bits.bits(8)?, bits.bits(8)?];

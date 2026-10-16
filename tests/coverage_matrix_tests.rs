@@ -1059,6 +1059,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("av1.film_grain.points_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1FilmGrainPointsReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.temporal_motion_field.reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1TemporalMotionFieldReservation,
                 false,
@@ -1339,6 +1345,9 @@ fn execute_fault_contract(
         "av1.film_grain.output_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate film-grain output")
         }
+        "av1.film_grain.points_reservation" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: unable to allocate film-grain points",
+        ),
         "av1.temporal_motion_field.reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 temporal motion field")
         }
@@ -1479,8 +1488,10 @@ fn execute_fault_contract(
             message,
             stage: Some(stage),
             ..
-        }) if row.fault.point == "png.apng.sequence_counter_exhaustion"
-            && actual_format == expected_format
+        }) if matches!(
+            row.fault.point.as_str(),
+            "png.apng.sequence_counter_exhaustion" | "av1.film_grain.points_reservation"
+        ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}
         Err(img::ImageError::Dimensions {

@@ -2637,6 +2637,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.film_grain.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "av1.film_grain.points_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.temporal_motion_field.reservation": {
             "decode_error_then_retry_succeeds"
         },

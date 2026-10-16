@@ -40,6 +40,8 @@ pub enum CoverageFaultPoint {
     Av1DisplayPlaneCopyAllocation,
     /// Force AV1 film-grain output-plane reservation to fail.
     Av1FilmGrainOutputReservation,
+    /// Force AV1 film-grain point-array reservation to fail while parsing.
+    Av1FilmGrainPointsReservation,
     /// Force AV1 temporal motion-field reservation to fail during frame completion.
     Av1TemporalMotionFieldReservation,
     /// Force AV1 projected temporal-field reservation to fail during frame setup.
