@@ -97,7 +97,8 @@ fn avif_loop_artifact_paths(root: &Path) -> std::collections::HashSet<String> {
                 .collect::<Vec<_>>()
                 .join("/");
 
-            if matches!(normalized.as_str(), "README.md" | "index.json") {
+            // README.md is also listed and hashed by the generated artifact index.
+            if normalized == "index.json" {
                 continue;
             }
 
