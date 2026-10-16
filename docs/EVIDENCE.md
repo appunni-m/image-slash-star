@@ -6481,7 +6481,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `67f4fbfe346360241654d82ac7d2f93a6cb6147a023fa6fa49eba43e4264b9d3`; matrix `0334bee788af3702fe96a66ea41373fb974a0e51c068ca8726e0e5a78617bffe`.
+- Current fixture integrity only: manifest `f36881be426cb8951037ed1dbe72f27639cf44f77313647ad91472e7dd45f7d3`; matrix `39fd1f875d4d999519f0832d0f5a96ff3633c35cd006ef362bc6cb324608c38d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7216,8 +7216,8 @@ incomparable because exact branch detail is incomplete; both reports lack
 source/build receipts and Coverage MCP test attribution. These are selected
 path observations only, not an aggregate coverage gain or full-suite result.
 
-The current fixture matrix contains 2,253 total rows: 1,772 decode /
-inspect / verify rows and 481 encode rows. Of those, 1,772 decode rows and
+The current fixture matrix contains 2,255 total rows: 1,774 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,774 decode rows and
 449 encode rows are active. The regenerated malformed-input ledger contains
 611 classes across eight formats. The Rust AV1 decoder gained the 12-bit clipped
 B32 lossless inter path; no SIMD code changed, and no full coverage campaign

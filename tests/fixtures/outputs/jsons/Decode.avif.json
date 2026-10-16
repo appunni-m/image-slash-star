@@ -1501,6 +1501,86 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "iinf_version_1_entry_count",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "4d5ef8f6f7e8934c2f7ab0ba4e7d6af52b23f250c6f52a78eca6323f97bfea1a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_iinf_version_1_entry_count_avif.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "iloc_idat_primary_item",
       "status": "ok",
       "error_type": null,
@@ -2188,6 +2268,252 @@
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
       "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "primary_item_imir_top_bottom",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "b129f71ceda1490258d8fbdbec9885ab5ea29a82e9a453aa000290e366e8f3df",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "avif_mirror_axis": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_primary_item_imir_top_bottom_avif.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "avif_mirror_axis": "top_bottom",
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "primary_item_imir_left_right",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "5535e699843b31a97921316661e3cacb4826383638f88f0462a55da5aafe5d5d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "avif_mirror_axis": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_primary_item_imir_left_right_avif.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "avif_mirror_axis": "left_right",
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "primary_item_imir_trailing_byte",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "891bd77c35c719432f2632f87c0f5633aa91dacdc3c068cf99d5834c8c5fc9f1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "avif_mirror_axis": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_primary_item_imir_trailing_byte_avif.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "avif_mirror_axis": "top_bottom",
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5162,7 +5488,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "filmgrain_inactive_reference_reuse_i444_64x64",
           "input_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
           "repetition_count": -1
@@ -5404,7 +5730,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "filmgrain_reference_reuse_i444_64x64",
           "input_sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
           "repetition_count": -1
@@ -31112,7 +31438,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "highdepth",
           "input_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
           "repetition_count": -1
@@ -33068,7 +33394,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "animated",
           "input_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
           "repetition_count": 0
@@ -33320,7 +33646,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "animated_co64_chunk_offsets",
           "input_sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021",
           "repetition_count": 0
@@ -33572,7 +33898,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_zero_delta",
           "input_sha256": "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105",
           "repetition_count": 0
@@ -33824,7 +34150,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_empty",
           "input_sha256": "c23b9d465406ba51f46d5fd6c3cf8d7a71dde68110bb0ccc7512d48977208b30",
           "repetition_count": 0
@@ -34076,7 +34402,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_zero_sample_count",
           "input_sha256": "2e7fb956b121ced30abf59cc70a30fd7dc2dd8146484252883553651a86107d6",
           "repetition_count": 0
@@ -34328,7 +34654,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_underfilled",
           "input_sha256": "0c8b7e231c455711581f0eed1272f2be2b32a764fc9eb782c955678ba64e9738",
           "repetition_count": 0
@@ -34580,7 +34906,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_overfilled",
           "input_sha256": "fecedb638aaad110abfa0234edad9850ffaee9452b1633703b2426653d6e0bba",
           "repetition_count": 0
@@ -34832,7 +35158,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "stts_wrapped_sample_count",
           "input_sha256": "877d9aa62c8d5ad750d6f4c60a293a2025fbe6ade96f4b8957301a73c37a4e1b",
           "repetition_count": 0
@@ -35084,7 +35410,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "animated_primary_item_irot",
           "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
           "repetition_count": 0
@@ -35336,7 +35662,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "opidc_0x101",
           "input_sha256": "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be",
           "repetition_count": 0
@@ -35498,7 +35824,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "error_resilient",
           "input_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
           "repetition_count": -1
@@ -35660,7 +35986,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_b16x16",
           "input_sha256": "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
           "repetition_count": -1
@@ -35822,7 +36148,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_b8x16",
           "input_sha256": "9e3fbac5e42c61413ec8c1f7f4f72bc1338fb7cfd21587e30826855732e369c0",
           "repetition_count": -1
@@ -35984,7 +36310,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_intra_i444_b8x8_20x20",
           "input_sha256": "7636f2de4078d5271941e6cf7de85f9c77205acce155c75e529e43fbc1d0acbf",
           "repetition_count": -1
@@ -36146,7 +36472,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "odd_dimensions_inter_intra_boundary_420",
           "input_sha256": "736914091e00473af577a12de9910ce6abe2b038c84d2f580c5f528b0618c422",
           "repetition_count": -1
@@ -36338,7 +36664,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_interintra_420_nowedge_b16x16_64x64",
           "input_sha256": "adc58d72626865406be3d0a048ecf0b9a1670d16a68f48babe4b9167a2dc2dea",
           "repetition_count": -1
@@ -36530,7 +36856,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_interintra_420_nowedge_mode1_b16x16_64x64",
           "input_sha256": "dd4e06e559d83cc0863d65878799d2f7496c8f5d378eaeb639704fe3ac539f2f",
           "repetition_count": -1
@@ -36722,7 +37048,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
           "input_sha256": "08f616c2e14f9abadb6157c425653b5a7fd703f2797f3db04e23b58bc519eda8",
           "repetition_count": -1
@@ -36914,7 +37240,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
           "input_sha256": "7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7",
           "repetition_count": -1
@@ -37106,7 +37432,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_interintra_420_wedge_b16x16_64x64",
           "input_sha256": "1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791",
           "repetition_count": -1
@@ -37298,7 +37624,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_split_inter_420_b16x16",
           "input_sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
           "repetition_count": -1
@@ -37490,7 +37816,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_b16_mixed_topology_inter_420_b16x16",
           "input_sha256": "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74",
           "repetition_count": -1
@@ -37712,7 +38038,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_wide_monochrome_b128x128",
           "input_sha256": "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
           "repetition_count": -1
@@ -37874,7 +38200,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_wide_i444_b128x128",
           "input_sha256": "b4693fd2fb43d1c9406fe4ac8d782d74709bf8eed1b2d36771c0bd80763d84e8",
           "repetition_count": -1
@@ -38036,7 +38362,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_wide_i444_mode2_unsplit_b128x128",
           "input_sha256": "ea87cfc19c427135396b44ea6b287b24e5301437abb5bd6769666d9a24144565",
           "repetition_count": -1
@@ -38198,7 +38524,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_wide_i444_mode2_split32_b128x128",
           "input_sha256": "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
           "repetition_count": -1
@@ -38420,7 +38746,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_global_rotzoom_compound_i444_b128x128",
           "input_sha256": "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
           "repetition_count": -1
@@ -38642,9 +38968,201 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_global_halfblend_spatial_i444_b256x256",
           "input_sha256": "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
+          "repetition_count": -1
+        }
+      }
+    },
+    {
+      "id": "animated_lossy_inter_i444_tx_largest_64x64",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_i444_tx_largest_64x64_avif.bin",
+      "ref_bytes": 12288,
+      "ref_sha256": "a96ff730a3f0be2c2dc4c20528db0eea3839c1f868a0afd274e66e7ff072077d",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_frame_count": 3,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          64,
+          64
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "independent_implementation",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_i444_tx_largest_64x64_avif_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "a96ff730a3f0be2c2dc4c20528db0eea3839c1f868a0afd274e66e7ff072077d",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_i444_tx_largest_64x64_avif_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "17befb70fc9c8f3d64649426f610b397e62d6507ab56c87cd82f67fffd232ca9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 2,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_i444_tx_largest_64x64_avif_frame_2.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "5bef112c430f60a8dfd564bb4dac8dd67e209f9b44d763fbb563de80cae6b23c",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ],
+        "loop_evidence": {
+          "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
+          "case": "lossy_inter_i444_tx_largest_64x64",
+          "input_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
           "repetition_count": -1
         }
       }
@@ -38804,7 +39322,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_b32x32",
           "input_sha256": "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
           "repetition_count": -1
@@ -38966,7 +39484,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_b32x32_10bit",
           "input_sha256": "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
           "repetition_count": -1
@@ -39128,7 +39646,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_b32x32_10bit_64x64",
           "input_sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
           "repetition_count": -1
@@ -39290,7 +39808,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_10bit_28x28",
           "input_sha256": "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
           "repetition_count": -1
@@ -39452,7 +39970,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
           "input_sha256": "8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f",
           "repetition_count": -1
@@ -39614,7 +40132,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
           "input_sha256": "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
           "repetition_count": -1
@@ -39776,7 +40294,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
           "input_sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87",
           "repetition_count": -1
@@ -39938,7 +40456,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_17x17",
           "input_sha256": "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
           "repetition_count": -1
@@ -40110,7 +40628,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i422_clipped_b32x32_49x64",
           "input_sha256": "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1",
           "repetition_count": -1
@@ -40272,7 +40790,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i444_clipped_b32x32_49x64",
           "input_sha256": "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae",
           "repetition_count": -1
@@ -40434,7 +40952,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i422_clipped_b32x32_52x64",
           "input_sha256": "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05",
           "repetition_count": -1
@@ -40596,7 +41114,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i444_clipped_b32x32_64x56",
           "input_sha256": "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23",
           "repetition_count": -1
@@ -40758,7 +41276,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i422_clipped_b32x32_52x60",
           "input_sha256": "53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50",
           "repetition_count": -1
@@ -40920,7 +41438,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i444_clipped_b32x32_52x60",
           "input_sha256": "9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a",
           "repetition_count": -1
@@ -41082,7 +41600,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_60x64",
           "input_sha256": "a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc",
           "repetition_count": -1
@@ -41244,7 +41762,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_64x60",
           "input_sha256": "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6",
           "repetition_count": -1
@@ -41406,7 +41924,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_184x64",
           "input_sha256": "0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d",
           "repetition_count": -1
@@ -41568,7 +42086,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b32x32_185x64",
           "input_sha256": "701d247ebbe2666b1f28f447fa1a086573e7dc6d88b0b29405f9f7a6f9460b59",
           "repetition_count": -1
@@ -41730,7 +42248,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_clipped_b16x16_60x64",
           "input_sha256": "7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f",
           "repetition_count": -1
@@ -41892,7 +42410,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_monochrome_b16x16",
           "input_sha256": "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
           "repetition_count": -1
@@ -42304,7 +42822,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "tkhd_version_zero",
           "input_sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
           "repetition_count": 0
@@ -42556,7 +43074,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "tkhd_version_zero_unknown_duration",
           "input_sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09",
           "repetition_count": 0
@@ -43416,7 +43934,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
           "input_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
           "repetition_count": -1
@@ -43668,7 +44186,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
           "input_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
           "repetition_count": -1
@@ -43920,7 +44438,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
           "input_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
           "repetition_count": -1
@@ -44142,7 +44660,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_motion_multitile",
           "input_sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b",
           "repetition_count": -1
@@ -44364,7 +44882,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossless_motion_multitile_split_groups",
           "input_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596",
           "repetition_count": -1
@@ -44586,7 +45104,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_multitile",
           "input_sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f",
           "repetition_count": -1
@@ -44808,7 +45326,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_multitile_split_groups",
           "input_sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89",
           "repetition_count": -1
@@ -45030,7 +45548,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_chroma",
           "input_sha256": "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535",
           "repetition_count": -1
@@ -45222,7 +45740,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "has_chroma_4x4",
           "input_sha256": "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b",
           "repetition_count": -1
@@ -45444,7 +45962,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_chroma_422",
           "input_sha256": "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a",
           "repetition_count": -1
@@ -45606,7 +46124,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_inter_422_checker_random_b32x32",
           "input_sha256": "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
           "repetition_count": -1
@@ -45768,7 +46286,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lo8_superres_sgr_inter_160x56",
           "input_sha256": "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7",
           "repetition_count": -1
@@ -46250,7 +46768,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "hi10_superres_sgr_inter_160x56",
           "input_sha256": "016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11",
           "repetition_count": -1
@@ -46412,7 +46930,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "hi10_superres_select_inter_160x56",
           "input_sha256": "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
           "repetition_count": -1
@@ -46634,7 +47152,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_chroma_wide",
           "input_sha256": "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311",
           "repetition_count": -1
@@ -46826,7 +47344,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_inter_i444_mode2_b32x32",
           "input_sha256": "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
           "repetition_count": -1
@@ -46988,7 +47506,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_inter_i444_split_b16x32_mode2",
           "input_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
           "repetition_count": -1
@@ -47180,7 +47698,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "lossy_inter_i444_obmc_mixed_b16x32",
           "input_sha256": "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
           "repetition_count": -1
@@ -47402,7 +47920,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_large_420",
           "input_sha256": "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f",
           "repetition_count": -1
@@ -47594,7 +48112,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "tx64_root_split_inter_420_64x64",
           "input_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c",
           "repetition_count": -1
@@ -47816,7 +48334,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_temporal_window_left_512x128",
           "input_sha256": "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399",
           "repetition_count": -1
@@ -48038,7 +48556,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "6c9d345caf912a856ab8e8a4a9eefdb9c9fe7efc2eb4f2b161efec412e9a7ea7",
+          "index_sha256": "ebba60bd35bcd9ecf77ef882f70f4e55c8134359f6e14db32489ce2b5e712c94",
           "case": "motion_temporal_window_right_512x128",
           "input_sha256": "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
           "repetition_count": -1
@@ -53118,86 +53636,6 @@
       "ref_is_animated": null,
       "inspect_palette": null,
       "decoded_palette": null,
-      "decoded_source_byte_order": null,
-      "decoded_source_byte_order_origin": null,
-      "decoded_source_color": null,
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "iinf_version_1_entry_count",
-      "status": "ok",
-      "error_type": null,
-      "error_message": null,
-      "error_kind": null,
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "header_only",
-      "inspect_container_format": "AVIF",
-      "inspect_cursor_hotspot": null,
-      "inspect_source_byte_order": null,
-      "inspect_source_byte_order_origin": null,
-      "asset_sha256": "4d5ef8f6f7e8934c2f7ab0ba4e7d6af52b23f250c6f52a78eca6323f97bfea1a",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "specification_reference",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "ok",
-        "decode_sequence": "ok"
-      },
-      "error_contracts": {},
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "independent_implementation",
-      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_iinf_version_1_entry_count_avif.bin",
-      "ref_bytes": 49152,
-      "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
-      "ref_mode": "Rgb8",
-      "ref_size": [
-        128,
-        128
-      ],
-      "ref_frame_count": 1,
-      "ref_is_animated": false,
-      "inspect_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
-      "decoded_palette": {
-        "state": "absent",
-        "origin": "pillow_fixture"
-      },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
       "decoded_source_color": null,

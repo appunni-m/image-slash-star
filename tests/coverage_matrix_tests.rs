@@ -237,6 +237,7 @@ struct DecodeRow {
     decoded_source_byte_order_origin: Option<String>,
     decoded_source_color: Option<SourceColorParityRef>,
     avif_mdcv: Option<Vec<u32>>,
+    avif_mirror_axis: Option<String>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
     ref_sha256: Option<String>,
@@ -2254,6 +2255,7 @@ impl FromJson for DecodeRow {
             decoded_source_byte_order_origin: object.take("decoded_source_byte_order_origin")?,
             decoded_source_color: object.take("decoded_source_color")?,
             avif_mdcv: object.take("avif_mdcv")?,
+            avif_mirror_axis: object.take("avif_mirror_axis")?,
             ref_path: object.take("ref_path")?,
             ref_bytes: object.take("ref_bytes")?,
             ref_sha256: object.take("ref_sha256")?,
@@ -3970,6 +3972,37 @@ fn assert_avif_mdcv_parity(
     Ok(())
 }
 
+fn assert_avif_mirror_axis_parity(
+    expected: Option<&str>,
+    origin: Option<&str>,
+    source: Option<&img::SourceDescriptor>,
+) -> Result<(), String> {
+    let Some(expected) = expected else {
+        if origin.is_some() {
+            return Err("AVIF mirror-axis origin has no Pillow assertion".to_owned());
+        }
+        return Ok(());
+    };
+    if origin != Some("pillow_fixture") {
+        return Err("AVIF mirror-axis evidence must come from Pillow".to_owned());
+    }
+    let expected = match expected {
+        "top_bottom" => img::AvifMirrorAxis::TopBottom,
+        "left_right" => img::AvifMirrorAxis::LeftRight,
+        other => return Err(format!("unknown Pillow AVIF mirror axis {other:?}")),
+    };
+    let actual = source
+        .and_then(|source| source.avif_transform())
+        .and_then(|transform| transform.mirror())
+        .ok_or_else(|| "AVIF source descriptor has no imir mirror axis".to_owned())?;
+    if actual != expected {
+        return Err(format!(
+            "AVIF mirror axis differs from Pillow: actual {actual:?}, expected {expected:?}"
+        ));
+    }
+    Ok(())
+}
+
 fn load_pixel_reference(
     manifest_dir: &Path,
     id: &str,
@@ -4711,6 +4744,18 @@ fn assert_sequence_base(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Re
                     decoded.format
                 ));
             }
+            let first_frame_source = decoded
+                .content
+                .frames
+                .first()
+                .map(|frame| &frame.image.source);
+            assert_avif_mirror_axis_parity(
+                row.avif_mirror_axis.as_deref(),
+                row.assertion_origins
+                    .get("avif_mirror_axis")
+                    .map(String::as_str),
+                first_frame_source,
+            )?;
             decoded
                 .content
                 .validate()
@@ -4731,6 +4776,18 @@ fn assert_sequence_base(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Re
             decoded.format
         ));
     }
+    let first_frame_source = decoded
+        .content
+        .frames
+        .first()
+        .map(|frame| &frame.image.source);
+    assert_avif_mirror_axis_parity(
+        row.avif_mirror_axis.as_deref(),
+        row.assertion_origins
+            .get("avif_mirror_axis")
+            .map(String::as_str),
+        first_frame_source,
+    )?;
     let actual = decoded.content;
     assert_sequence_reference_parity(
         manifest_dir,
@@ -6066,10 +6123,23 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
+                if let Err(message) = assert_avif_mirror_axis_parity(
+                    row.avif_mirror_axis.as_deref(),
+                    row.assertion_origins
+                        .get("avif_mirror_axis")
+                        .map(String::as_str),
+                    Some(&decoded.source),
+                ) {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
             } else if row.decoded_source_color.is_some()
                 || source_color_origin.is_some()
                 || row.avif_mdcv.is_some()
                 || row.assertion_origins.contains_key("avif_mdcv")
+                || row.avif_mirror_axis.is_some()
+                || row.assertion_origins.contains_key("avif_mirror_axis")
             {
                 eprintln!(
                     "  FAIL [{}]: decoded source-color evidence is invalid for {}",
@@ -6112,6 +6182,17 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                             "  FAIL [{}]: AVIF inspect mdcv origin has no asserted value",
                             row.id
                         );
+                        failed += 1;
+                        continue;
+                    }
+                    if let Err(message) = assert_avif_mirror_axis_parity(
+                        row.avif_mirror_axis.as_deref(),
+                        row.assertion_origins
+                            .get("avif_mirror_axis")
+                            .map(String::as_str),
+                        Some(&info.source),
+                    ) {
+                        eprintln!("  FAIL [{}]: inspect {message}", row.id);
                         failed += 1;
                         continue;
                     }

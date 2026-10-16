@@ -234,6 +234,10 @@ FIXTURES = {
         "animated_lossy_global_halfblend_spatial_i444_b256x256.avif",
         "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
     ),
+    "lossy_inter_i444_tx_largest_64x64": (
+        "animated_lossy_inter_i444_tx_largest_64x64.avif",
+        "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
+    ),
     "motion_chroma": ("animated_motion_chroma.avif", "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535"),
     "has_chroma_4x4": ("animated_has_chroma_4x4.avif", "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b"),
     "motion_chroma_422": ("animated_motion_chroma_422.avif", "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a"),

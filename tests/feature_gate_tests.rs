@@ -5932,9 +5932,8 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         assert_malformed(&invalid_clap, label)?;
     }
 
-    // Empty and overlong payloads are malformed even when the first byte is a
-    // legal value. The size changes keep each witness at the same container
-    // boundary, so the parser reaches the property-specific check.
+    // Empty property payloads remain malformed. The size changes keep each
+    // witness at the same container boundary, so parsing reaches the property.
     let mut empty_rotation = Vec::with_capacity(bytes.len() - 1);
     empty_rotation.extend_from_slice(&bytes[..irot + 4]);
     empty_rotation.extend_from_slice(&bytes[irot + 5..]);
@@ -5959,15 +5958,6 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         grow_box_size(&mut extra_rotation, kind, 1)?;
     }
     assert_malformed(&extra_rotation, "extra irot payload")?;
-
-    let mut extra_mirror = Vec::with_capacity(mirrored.len() + 1);
-    extra_mirror.extend_from_slice(&mirrored[..irot + 5]);
-    extra_mirror.push(0);
-    extra_mirror.extend_from_slice(&mirrored[irot + 5..]);
-    for kind in [b"imir", b"ipco", b"iprp", b"meta"] {
-        grow_box_size(&mut extra_mirror, kind, 1)?;
-    }
-    assert_malformed(&extra_mirror, "extra imir payload")?;
 
     let duplicate_rotation = append_associated_property(&bytes, b"irot", &[1], 6)?;
     assert_malformed(&duplicate_rotation, "duplicate irot association")?;

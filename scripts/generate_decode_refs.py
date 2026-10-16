@@ -2270,8 +2270,17 @@ def write_decoded_source_descriptor(row, image_path, fmt_name, image):
         row["decoded_source_color"] = None
 
 
+def pillow_avif_mirror_axis(image):
+    """Map Pillow's observable EXIF mirror orientations to AVIF axes."""
+    return {
+        4: "top_bottom",
+        2: "left_right",
+    }.get(image.getexif().get(274))
+
+
 def write_inspect_ref(row, image_path, fmt_name):
     """Record Pillow's lazy Image.open outcome without materializing pixels."""
+    row.pop("avif_mirror_axis", None)
     try:
         image = pillow_open_asset(image_path)
     except Exception as error:
@@ -2306,6 +2315,10 @@ def write_inspect_ref(row, image_path, fmt_name):
         else:
             row["inspect_source_byte_order"] = None
             row["inspect_source_byte_order_origin"] = None
+        if fmt_name == "avif":
+            mirror_axis = pillow_avif_mirror_axis(image)
+            if mirror_axis is not None:
+                row["avif_mirror_axis"] = mirror_axis
         if image.format == "CUR":
             data = image_path.read_bytes()
             count = int.from_bytes(data[4:6], "little")
@@ -3123,6 +3136,23 @@ def validate_generated_outputs(matrix, target_format=None):
                 or avif_mdcv_origin != "specification_reference"
             ):
                 failures.append(f"{case_name}: AVIF mdcv evidence is invalid")
+            avif_mirror_axis = row.get("avif_mirror_axis")
+            avif_mirror_axis_origin = (
+                origins.get("avif_mirror_axis") if isinstance(origins, dict) else None
+            )
+            if avif_mirror_axis is None:
+                if avif_mirror_axis_origin is not None:
+                    failures.append(
+                        f"{case_name}: AVIF mirror-axis origin has no asserted value"
+                    )
+            elif (
+                fmt_name != "avif"
+                or row.get("oracle_status") != "ok"
+                or row.get("inspect_status") != "ok"
+                or avif_mirror_axis not in {"top_bottom", "left_right"}
+                or avif_mirror_axis_origin != "pillow_fixture"
+            ):
+                failures.append(f"{case_name}: AVIF mirror-axis evidence is invalid")
             asset_path = ASSETS_DIR / fmt_name / str(row.get("asset", ""))
             if (
                 not asset_path.is_file()
@@ -4739,6 +4769,8 @@ def generate_decode(manifest, matrix, target_format=None):
                 origins["decoded_source_color"] = "pillow_fixture"
             if row.get("avif_mdcv") is not None:
                 origins["avif_mdcv"] = "specification_reference"
+            if row.get("avif_mirror_axis") is not None:
+                origins["avif_mirror_axis"] = "pillow_fixture"
             row["assertion_origins"] = origins
             row["operations"] = decode_operation_expectations(row)
             row["error_contracts"] = decode_error_contracts(row, fmt_name)
@@ -4861,6 +4893,11 @@ def generate_decode(manifest, matrix, target_format=None):
                 ),
                 "decoded_source_color": r.get("decoded_source_color"),
                 **({"avif_mdcv": r["avif_mdcv"]} if r.get("avif_mdcv") is not None else {}),
+                **(
+                    {"avif_mirror_axis": r["avif_mirror_axis"]}
+                    if r.get("avif_mirror_axis") is not None
+                    else {}
+                ),
                 "sequence_status": r.get("sequence_status"),
                 "sequence_error_type": r.get("sequence_error_type"),
                 "sequence_error_message": r.get("sequence_error_message"),

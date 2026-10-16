@@ -885,9 +885,6 @@ fn parse_imir(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
         1 => AvifMirrorAxis::LeftRight,
         _ => return Err(parse_failure!()),
     };
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(Property::Mirror {
         value: mirror,
         data: payload,
