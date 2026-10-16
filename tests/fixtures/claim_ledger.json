@@ -23,8 +23,8 @@
     "webp_property_map": "99948add559b307fea175d08d4373367eb1566bd43e0f6aa1e36f3b89ed0552b"
   },
   "format_version": 2,
-  "manifest_sha256": "957d78f844ef9e880113b52ec38b45281ead6097dde9fca73355dbba0fcf0ae9",
-  "matrix_sha256": "d58eb798edea673c9f928f46b090bb8b4edf21dca1ca35471cf62bab9017282d",
+  "manifest_sha256": "67f4fbfe346360241654d82ac7d2f93a6cb6147a023fa6fa49eba43e4264b9d3",
+  "matrix_sha256": "0334bee788af3702fe96a66ea41373fb974a0e51c068ca8726e0e5a78617bffe",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"
