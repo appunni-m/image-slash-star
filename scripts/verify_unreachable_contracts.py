@@ -329,6 +329,14 @@ FAULT_CONTRACTS = {
         "point": "av1.partition_tree.node_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_partition_context_above_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_partition_context_above_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.partition_context.above_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
 }
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),

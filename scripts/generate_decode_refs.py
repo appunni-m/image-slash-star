@@ -2739,6 +2739,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.partition_tree.node_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "av1.partition_context.above_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
     }
     rows = manifest.get("fault_contracts", [])
     if not isinstance(rows, list):

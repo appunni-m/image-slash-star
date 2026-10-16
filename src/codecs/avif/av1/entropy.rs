@@ -1841,7 +1841,17 @@ impl PartitionContexts {
         let height = usize::try_from(height)
             .map_err(|_| malformed("partition context height exceeds usize"))?;
         let mut above = Vec::new();
-        above.try_reserve_exact(width).map_err(|_| {
+        #[cfg(coverage)]
+        let above_reservation = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1PartitionContextAboveReservation,
+        ) {
+            usize::MAX
+        } else {
+            width
+        };
+        #[cfg(not(coverage))]
+        let above_reservation = width;
+        above.try_reserve_exact(above_reservation).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 partition context".to_owned())
         })?;
         above.resize(width, 0);

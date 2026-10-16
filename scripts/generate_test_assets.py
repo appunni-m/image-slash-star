@@ -5949,6 +5949,7 @@ def gen_webp():
     gen_webp_lossless_copy_out_of_bounds(d)
     gen_webp_lossless_branch_coverage(d)
     gen_webp_lossless_cache_width_11_max_index(d)
+    gen_webp_lossless_cache_width_6_max_index(d)
     rgba_state = 0xC0FFEE01
     rgba_noise_bytes = bytearray()
     for _ in range(32 * 32 * 4):
@@ -7702,6 +7703,79 @@ def gen_webp_lossless_cache_width_11_max_index(directory):
             or decoded.tobytes() != bytes(pixel) * 2
         ):
             raise RuntimeError("VP8L width-11 maximum-cache-index fixture differs from Pillow")
+
+
+def gen_webp_lossless_cache_width_6_max_index(directory):
+    """Write a public VP8L case that looks up the final entry in a 6-bit cache."""
+    from PIL import _webp, features
+
+    if PILLOW_VERSION != "12.2.0" or not features.check("webp"):
+        raise RuntimeError("VP8L width-6 fixture requires Pillow 12.2.0 with WebP support")
+    if _webp.webpdecoder_version != "1.6.0":
+        raise RuntimeError(
+            "VP8L width-6 fixture requires libwebp 1.6.0, "
+            f"found {_webp.webpdecoder_version}"
+        )
+
+    cache_bits = 6
+    cache_size = 1 << cache_bits
+    cache_index = cache_size - 1
+    pixel = (96, 0, 0, 141)
+    red, green, blue, alpha = pixel
+    color = (alpha << 24) | (red << 16) | (green << 8) | blue
+    actual_index = (0x1E35A7BD * color & 0xFFFFFFFF) >> (32 - cache_bits)
+    if actual_index != cache_index:
+        raise RuntimeError("VP8L cache-width-6 pixel no longer hashes to index 63")
+
+    bits = [0, 1]  # no transforms; color cache enabled
+    _append_vp8l_lsb(bits, cache_bits, 4)
+    bits.append(0)  # no meta-Huffman image
+
+    # The green tree spans the complete 344-symbol alphabet. Its two
+    # one-bit leaves are the literal and the final cache symbol.
+    bits.append(0)  # dynamic Huffman tree
+    _append_vp8l_lsb(bits, 0, 4)  # four code-length-code lengths
+    for code_length in (0, 0, 1, 1):  # complete tree for code lengths 0 and 1
+        _append_vp8l_lsb(bits, code_length, 3)
+    bits.append(1)  # explicitly describe the full expanded alphabet
+    _append_vp8l_lsb(bits, 4, 3)  # 10 bits encode max_symbol = 2 + 342
+    _append_vp8l_lsb(bits, 280 + cache_size - 2, 10)
+    for symbol in range(280 + cache_size):
+        bits.append(int(symbol in (green, 280 + cache_index)))
+
+    for symbol in (red, blue, alpha, 0):  # simple singleton channel/distance trees
+        _append_vp8l_single_symbol_tree(bits, symbol)
+
+    # Canonical order assigns code 0 to the literal and code 1 to cache entry
+    # 63. The literal inserts the pixel immediately before that lookup.
+    bits.extend((0, 1))
+
+    packed_bits = bytearray((len(bits) + 7) // 8)
+    for index, bit in enumerate(bits):
+        packed_bits[index // 8] |= bit << (index % 8)
+
+    dimensions = 1 | (1 << 28)  # 2x1 RGBA, version zero
+    payload = b"\x2f" + struct.pack("<I", dimensions) + bytes(packed_bits)
+    chunk = b"VP8L" + struct.pack("<I", len(payload)) + payload
+    if len(payload) & 1:
+        chunk += b"\0"
+    encoded = b"RIFF" + struct.pack("<I", len(chunk) + 4) + b"WEBP" + chunk
+
+    expected_sha256 = "73110f2456c6d29870bf4230b7e60c7dd2da1495b7c977facd236e59b4cef0a6"
+    if hashlib.sha256(encoded).hexdigest() != expected_sha256:
+        raise RuntimeError("VP8L width-6 maximum-cache-index fixture differs from its pinned hash")
+
+    path = directory / "lossless_cache_width_6_max_index_2x1.webp"
+    path.write_bytes(encoded)
+    with Image.open(path) as decoded:
+        decoded.load()
+        if (
+            decoded.format != "WEBP"
+            or decoded.mode != "RGBA"
+            or decoded.size != (2, 1)
+            or decoded.tobytes() != bytes(pixel) * 2
+        ):
+            raise RuntimeError("VP8L width-6 maximum-cache-index fixture differs from Pillow")
 
 
 def gen_webp_lossless_single_symbol_copy_fallback(directory):
