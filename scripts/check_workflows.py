@@ -694,7 +694,7 @@ def release_oidc_isolation_violations(contents: str) -> list[str]:
             if (action := re.search(r"(?m)^\s*uses:\s*(\S+)", step)) is not None
         ]
         if [action.group(1).partition(" #")[0] for action in publish_actions] != [
-            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
             "rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18",
         ]:
             violations.append(
@@ -960,7 +960,7 @@ fi""",
             if (action := re.search(r"(?m)^\s*uses:\s*(\S+)", step)) is not None
         ]
         if [action.group(1).partition(" #")[0] for action in release_actions] != [
-            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
             "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
         ]:
             violations.append(

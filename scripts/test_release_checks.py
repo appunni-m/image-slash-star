@@ -969,7 +969,7 @@ class WorkflowDownloadTests(unittest.TestCase):
                     )
         prefix, publisher = workflow.split("  publish:", 1)
         unsafe = prefix + "  publish:" + publisher.replace(
-            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
             "actions/download-artifact@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             1,
         )
