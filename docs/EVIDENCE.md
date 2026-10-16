@@ -1,9 +1,42 @@
 # Versioned compatibility evidence
 
 Fixture declarations, executed comparisons, source coverage, and release
-publication have different identities and denominators.
-The full-coverage section records the last full local report; later entries
-retain the report-specific observations made when each entry was recorded.
+publication have different identities and denominators. The latest local
+all-feature report and the historical managed coverage baseline are recorded
+separately; later entries retain the report-specific observations made when
+each entry was recorded.
+
+## Latest full all-feature coverage — 2026-10-16
+
+One complete local `make coverage` run on source commit
+`7fe6010a91b4b1732bf3f1f6fac99cdc418b4340` passed all 136 executed tests:
+3 unit, 57 coverage-matrix, 7 decode-policy, 1 determinism, and 68
+feature-gate tests. The run used:
+
+```text
+env RUSTC_WRAPPER= PYTHON=.oracle-venv/bin/python CARGO_BUILD_JOBS=2 make coverage COVERAGE_REPORT=target/release-evidence/coverage-main-full-20261016.json
+```
+
+The report is retained at
+`.coverage-mcp/local-evidence/20261016/main-full-7fe6010a/coverage.json`
+and was also written to
+`target/release-evidence/coverage-main-full-20261016.json`. Its SHA-256 is
+`8425ebb15b6b2c2e2f2022afc4bf3d813c30eda6325ab723fcab936ac39dbafd`.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 89,333 / 135,876 | 65.745974% |
+| Branches | 17,470 / 31,282 | 55.846813% |
+| Functions | 5,003 / 8,694 | 57.545434% |
+| Regions | 136,514 / 210,887 | 64.733246% |
+
+The run passes the owner-approved alpha floors of 59% lines, 46% branches,
+52% functions, and 58% regions. It does not meet the separate 100% goal.
+Coverage MCP can read the report, but its record has unverified source
+identity, no registered build receipt, and unknown test attribution. Keep this
+local exploration report separate from the historical managed baseline; no
+verified regression or aggregate incremental-gain claim follows from comparing
+them.
 
 ## Local artifact availability and exporter investigation — 2026-10-05
 
@@ -76,7 +109,7 @@ selected receipt SHA-256 is
 The full totals below belong to their earlier source. Paired throughput
 timing remains pending.
 
-## Last full all-feature coverage — 2026-10-05
+## Managed full-coverage baseline — 2026-10-05 (historical)
 
 The fresh full run on `ede1d7fa` passes `make coverage-with-exporter` and all
 seven existing test binaries (3/4/1/57/7/1/68), with zero failures or ignored
@@ -7206,6 +7239,7 @@ outside Pillow parity counts.
 
 The selected fault-contract row passed 1/1. Its JSON report is
 `target/release-evidence/coverage-avif-partition-context-above.json`, retained
-for Coverage MCP inspection. No aggregate coverage gain or full-suite result
-is claimed. The exact coverage-origin inventory now records 152 `cfg(coverage)`
-guards across 26 Rust files.
+for Coverage MCP inspection. No aggregate coverage gain is attributed to this
+individual case. A later full all-feature local run and its attribution
+limits are recorded above. The exact coverage-origin inventory now records
+152 `cfg(coverage)` guards across 26 Rust files.

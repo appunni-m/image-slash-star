@@ -9,14 +9,12 @@ is not evidence that a later fix failed. No entry is silently removed here.
 ## Current pure-Rust AVIF cutover
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
-The last recorded complete all-feature run passed 57/57 matrix tests and 68/68
-feature-gate tests, along with all 525 AVIF decode rows and all 25 target-only
-fault contracts. Its local full report is
-`target/release-evidence/coverage-avif-derived-skip-refs-v2-20261005.json`, with SHA-256
-`32b12a55dddb5a2488f8c09bfb67a02feb42dab40fa0ac21697c0b151983e0e3`.
-The LLVM percentages below remain the historical measured baseline; current
-local report counts and their separate denominator are recorded in
-[Evidence](EVIDENCE.md).
+The latest complete local all-feature run passed 57/57 matrix tests and 68/68
+feature-gate tests, as part of 136 executed tests, on source commit
+`7fe6010a91b4b1732bf3f1f6fac99cdc418b4340`. Its report, exact totals, test
+counts, and Coverage MCP attribution limits are recorded in
+[Evidence](EVIDENCE.md). The LLVM percentages below remain the historical
+managed baseline; they use a separate report and denominator.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 The origin verifier passes for 152 exact `cfg(coverage)` guards across 26 files.
 
