@@ -1096,6 +1096,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::SequenceDecode,
             ),
+            (
+                "avif.i444_10bit_alpha.plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif10BitI444AlphaPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -1376,6 +1385,9 @@ fn execute_fault_contract(
         "av1.temporal_projection.field_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 projected temporal field",
         ),
+        "avif.i444_10bit_alpha.plane_length_mismatch" => {
+            Some("decode: AVIF input is outside the supported pure-Rust decode subset")
+        }
         "av1.frame.color_tile_state_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",
         ),
@@ -1533,6 +1545,17 @@ fn execute_fault_contract(
             && (row.fault.point != "av1.segment_map.reservation"
                 || (offset.is_none() && identity.is_none()))
             && expected_message.is_none_or(|expected| message == expected) => {}
+        Err(img::ImageError::Unsupported {
+            format: Some(actual_format),
+            message,
+            stage: Some(stage),
+            reason: Some(img::UnsupportedReason::NotImplemented),
+            offset: None,
+            identity: None,
+        }) if row.fault.point == "avif.i444_10bit_alpha.plane_length_mismatch"
+            && actual_format == expected_format
+            && stage == expected_stage
+            && expected_message.is_some_and(|expected| message == expected) => {}
         Err(error) => {
             return Err(format!(
                 "{}: injected operation returned the wrong public error: {error:?}",

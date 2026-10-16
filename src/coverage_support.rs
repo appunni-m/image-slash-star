@@ -50,6 +50,8 @@ pub enum CoverageFaultPoint {
     Av1ProjectedTemporalFieldReservation,
     /// Force AVIF sequence-frame reservation to fail before any frame is decoded.
     AvifSequenceFrameReservation,
+    /// Shorten a valid AVIF 10-bit I444 alpha plane to test its length guard.
+    Avif10BitI444AlphaPlaneLengthMismatch,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.

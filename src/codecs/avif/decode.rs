@@ -932,6 +932,17 @@ fn convert_full_resolution_rgb_10bit_alpha(
     alpha_plane: &[u16],
 ) -> Option<Vec<u8>> {
     let sample_count = y_plane.len();
+    // Public AVIF parsing keeps full-resolution planes aligned. This fault is
+    // coverage-only and exercises the defensive alpha-length check below.
+    #[cfg(coverage)]
+    let alpha_plane = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Avif10BitI444AlphaPlaneLengthMismatch,
+    ) {
+        let (_, alpha_plane) = alpha_plane.split_last()?;
+        alpha_plane
+    } else {
+        alpha_plane
+    };
     if u_plane.len() != sample_count
         || v_plane.len() != sample_count
         || alpha_plane.len() != sample_count
