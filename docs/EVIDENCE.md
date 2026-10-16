@@ -7526,10 +7526,10 @@ segment inserted between the entropy scan and EOI. The fixture SHA-256 is
 The first focused run exposed a public decode failure: the single-scan fast
 boundary check rejected COM as a non-DQT marker, then generic entropy
 extraction treated COM as entropy and returned no segment. The parser had
-already recorded the validated end of scan entropy. The decoder now reuses
-that boundary for a single baseline scan when any parsed marker precedes EOI.
-This keeps entropy extraction bounded at the scan and avoids additional pixel
-processing. The selected matrix row passes.
+already recorded the end of scan entropy. The decoder now reuses that
+boundary for a single baseline scan when parsed COM or DQT segments precede
+EOI. This keeps entropy extraction bounded at the scan and avoids additional
+pixel processing. The selected matrix row passes.
 
 The selected LLVM report is
 `target/release-evidence/coverage-jpeg-postscan-com-selected.json`. Coverage
@@ -7545,3 +7545,22 @@ The current fixture matrix contains 2,270 total rows: 1,787 decode /
 inspect / verify rows and 483 encode rows. Of those, 1,787 decode rows and
 451 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 47 rows.
+
+### JPEG entropy-boundary regression guard — 2026-10-17
+
+GitHub CI #658 exposed two regressions in the initial COM fix on x86-64 and
+Windows: a fill byte before an RST marker shortened entropy extraction, and
+an unexpected `FF02` marker after entropy was accepted by the fast path. The
+boundary helper now walks the post-scan tail and only accepts well-formed COM
+and DQT segments. Restart markers and other marker codes fall back to generic
+entropy extraction, which preserves RST splitting and malformed-marker
+rejection.
+
+The selected matrix run passed the COM parity case, the restart-marker-fill
+case, and the malformed unexpected-marker case. Its LLVM report is
+`target/release-evidence/coverage-jpeg-tail-regressions.json`; Coverage MCP
+reports 367/31,392 branch outcomes for this selection. Its source receipt and
+test attribution are absent, and comparison with the historical full report
+is incomparable because the baseline detail does not reconcile with its
+totals. This is selected-run evidence only; it does not establish aggregate
+coverage change.
