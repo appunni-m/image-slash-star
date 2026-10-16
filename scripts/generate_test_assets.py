@@ -2405,6 +2405,28 @@ def gen_jpeg():
         pass
     else:
         raise RuntimeError("Pillow accepted baseline JPEG DC category 16")
+    baseline_multiscan_dc_category_16 = mutate_first_jpeg_dc_category(
+        build_baseline_multiscan_reserved_ac_zero_size_eob_jpeg(), 16
+    )
+    if len(jpeg_scan_segments(baseline_multiscan_dc_category_16)[0]) != 3:
+        raise RuntimeError("multiscan DC-category fixture does not contain three scans")
+    (d / "baseline_multiscan_dc_category_16.jpg").write_bytes(
+        baseline_multiscan_dc_category_16
+    )
+    try:
+        with Image.open(BytesIO(baseline_multiscan_dc_category_16)) as malformed_image:
+            malformed_image.verify()
+    except OSError as error:
+        raise RuntimeError(
+            "Pillow failed to verify multiscan DC-category fixture"
+        ) from error
+    try:
+        with Image.open(BytesIO(baseline_multiscan_dc_category_16)) as malformed_image:
+            malformed_image.load()
+    except OSError:
+        pass
+    else:
+        raise RuntimeError("Pillow accepted multiscan baseline JPEG DC category 16")
     refinement_rng = random.Random(0xAC_CE55)
     refinement_noise = Image.new("RGB", (64, 64))
     refinement_noise.putdata(

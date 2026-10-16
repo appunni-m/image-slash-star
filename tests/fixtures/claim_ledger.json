@@ -11,20 +11,20 @@
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
-    "malformed_ledger": "3afc1fb6a87fe9deb0c1a55383d920c6781e77980b87d3a43a5157f8d86c3307",
+    "malformed_ledger": "7731b7580dbdf1c85aa69b9e1e83a0fa6966426548511b1a756fb8b2d0cb71ce",
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "84aba705f5a8e6fa2a0de7fc6306468e416460a43b009f8de8c2c144c77b5cf4",
+    "roadmap": "5f89be478da12eb490e64cc602e364eb3f0bf625f525cdd277b1160f44b5c3d6",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "793d98dc5b9fc310e8a8eb07f86b4660805455d864d4718bd36c797da21109db",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "7a15729ffa604aaddc94964b766ab6ed6b110c3339743dea6d3b425e47c88228"
+    "webp_property_map": "0b2375b88d9c374914b71121cb8b716dc97f8c3635a9561df8715b43ceea80c3"
   },
   "format_version": 2,
-  "manifest_sha256": "1b813b8e42d3154e7e0c22c9ca59e62d17d78aa816b7c64f8c8f14833625d61c",
-  "matrix_sha256": "32bc5c54c9ab90a152c0d838bcbca07e4d1b29036d2ed6190d4887eb25ff64fd",
+  "manifest_sha256": "04389267c9038ae1c0776c2cb2a73015e95bb8aff03bfc149cfd788d49dbb43c",
+  "matrix_sha256": "ffecdb42525b3e514cdf65bb9511635471417207e180241ebcdd4039ae5ddfd0",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"

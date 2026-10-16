@@ -1087,6 +1087,11 @@ formats:
       test_assets:
       - baseline_dc_category_16.jpg
       expect_error: true
+    - id: error_baseline_multiscan_dc_category_16
+      description: Complete baseline 4:4:4 JPEG whose first component scan contains DC category 16 and is rejected during pixel decoding
+      test_assets:
+      - baseline_multiscan_dc_category_16.jpg
+      expect_error: true
     - id: progressive_com_tail_junk
       description: Progressive JPEG with a post-scan COM marker followed by non-marker bytes
       test_assets:

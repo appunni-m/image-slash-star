@@ -98669,6 +98669,83 @@
           }
         },
         {
+          "id": "error_baseline_multiscan_dc_category_16",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "error",
+          "description": "Complete baseline 4:4:4 JPEG whose first component scan contains DC category 16 and is rejected during pixel decoding",
+          "asset": "baseline_multiscan_dc_category_16.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "807a3da9cac05080e6182c047e551652eeee8e94653ef030a4c60775e4c4c4ea",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "progressive_com_tail_junk",
           "type": "decode",
           "format": "jpeg",
@@ -189637,12 +189714,12 @@
     }
   },
   "summary": {
-    "total_rows": 2246,
-    "decode_rows": 1765,
+    "total_rows": 2247,
+    "decode_rows": 1766,
     "encode_rows": 481,
     "formats": 8,
-    "assets_available": 1762,
-    "decode_active": 1765,
+    "assets_available": 1763,
+    "decode_active": 1766,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

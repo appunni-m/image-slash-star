@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1b813b8e42d3154e7e0c22c9ca59e62d17d78aa816b7c64f8c8f14833625d61c`; matrix `32bc5c54c9ab90a152c0d838bcbca07e4d1b29036d2ed6190d4887eb25ff64fd`.
+- Current fixture integrity only: manifest `04389267c9038ae1c0776c2cb2a73015e95bb8aff03bfc149cfd788d49dbb43c`; matrix `ffecdb42525b3e514cdf65bb9511635471417207e180241ebcdd4039ae5ddfd0`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7134,3 +7134,34 @@ changed.
 The current fixture matrix contains 2,246 total rows: 1,765 decode /
 inspect / verify rows and 481 encode rows. Of those, 1,765 decode rows and
 449 encode rows are active. No full coverage campaign was run.
+
+### JPEG multiscan invalid DC category parity — 2026-10-16
+
+The active public error row `error_baseline_multiscan_dc_category_16` adds a
+complete 165-byte SOF0 4:4:4 JPEG with three single-component scans. Its first
+scan contains DC category 16, which is invalid for baseline JPEG. The input
+`baseline_multiscan_dc_category_16.jpg` has SHA-256
+`807a3da9cac05080e6182c047e551652eeee8e94653ef030a4c60775e4c4c4ea`. The
+generator mutates the existing deterministic three-scan fixture; pinned Pillow
+12.2.0 verifies the file structure and rejects pixel loading with
+`OSError: broken data stream when reading image file`.
+
+The focused public matrix test passed 1/1 for this row. Coverage MCP's selected
+branch report is
+`target/release-evidence/coverage-jpeg-multiscan-dc-category-16-local.json`
+(SHA-256
+`b3048e2376faa1a96b4c130653b6d6177540a1c502187c82d51064263ebcdcac`). It
+records 160/31,278 observed branch outcomes. At
+`src/codecs/jpeg/decode/decode.rs:57`, Coverage MCP lists only the `false` arm
+of `dc_cat > 15` as unobserved, so this selected report observes the invalid
+category arm in scalar `decode_block`. The previous selected multi-scan AC
+report shows the complementary arm. The incremental comparison is
+incomparable because exact branch detail is incomplete; both reports lack
+source/build receipts and Coverage MCP test attribution. These are selected
+path observations only, not an aggregate coverage gain or full-suite result.
+
+The current fixture matrix contains 2,247 total rows: 1,766 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,766 decode rows and
+449 encode rows are active. The regenerated malformed-input ledger contains
+610 classes across eight formats. No Rust decoder or SIMD code changed, and
+no full coverage campaign was run.
