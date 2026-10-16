@@ -7216,8 +7216,8 @@ incomparable because exact branch detail is incomplete; both reports lack
 source/build receipts and Coverage MCP test attribution. These are selected
 path observations only, not an aggregate coverage gain or full-suite result.
 
-The current fixture matrix contains 2,252 total rows: 1,771 decode /
-inspect / verify rows and 481 encode rows. Of those, 1,771 decode rows and
+The current fixture matrix contains 2,253 total rows: 1,772 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,772 decode rows and
 449 encode rows are active. The regenerated malformed-input ledger contains
 611 classes across eight formats. The Rust AV1 decoder gained the 12-bit clipped
 B32 lossless inter path; no SIMD code changed, and no full coverage campaign
