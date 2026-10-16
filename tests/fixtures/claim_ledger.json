@@ -15,16 +15,16 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "e025b998ba9d5d3f277e7ad52aa722f3466bad2d40748f585141a1fd2c6725f1",
+    "roadmap": "b27f09b67b6af3feb07668793c15fd7f21573625f781501649bdfe34235e00af",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "4febc750ec8a1a5420746fe5e816e888fb2376421dc422add7408687ab3ae769",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "3f92032ab90dae3948bfacc74b0b69542ddf3552be623b9b433b6866cf8c0e1d"
+    "webp_property_map": "8f9566be179ad124c9033d6fa3a02bceea93c32c6d3d6c90bed24858d5820cdc"
   },
   "format_version": 2,
   "manifest_sha256": "a9af4d3e06c70a67a4016e44250dafed1018428f80f314e3f6bed94905eb332b",
-  "matrix_sha256": "38ec376cd2d92f4d830be1960cd81e6e2bb63b43c33315269cb6c25edd896ee1",
+  "matrix_sha256": "60a25601c8fca9901579b1da764f788a5bcd7dec799d14fc5e312bf103c9ef99",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"

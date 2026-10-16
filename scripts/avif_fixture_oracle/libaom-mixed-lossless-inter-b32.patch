@@ -1,0 +1,27 @@
+diff --git a/av1/encoder/bitstream.c b/av1/encoder/bitstream.c
+index a6a92bf..25106de 100644
+--- a/av1/encoder/bitstream.c
++++ b/av1/encoder/bitstream.c
+@@ -4183,0 +4184,2 @@ static uint32_t write_tiles_in_tg_obus(AV1_COMP *const cpi, uint8_t *const dst,
++    // Fixture-only: keep the ROI segment map explicit in the AVIF parity case.
++    cm->seg.temporal_update = 0;
+diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
+index fd9e025..7776f0a 100644
+--- a/av1/encoder/partition_search.c
++++ b/av1/encoder/partition_search.c
+@@ -3027,6 +3027,15 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
+                 "AVIF_FIXTURE_LEAF row=%d col=%d width=%d height=%d segment=%d qindex=%d\n",
+                 mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
+                 mib[0]->segment_id, mib[0]->current_qindex);
++        if (cm->current_frame.frame_number == 1 &&
++            cm->current_frame.frame_type == INTER_FRAME) {
++          fprintf(stderr,
++                  "AVIF_FIXTURE_INTER_LEAF frame_number=%u frame_type=%d row=%d col=%d width=%d height=%d partition=%d segment=%d qindex=%d\n",
++                  cm->current_frame.frame_number, cm->current_frame.frame_type,
++                  mi_row, mi_col, block_size_wide[bsize],
++                  block_size_high[bsize], partition, mib[0]->segment_id,
++                  mib[0]->current_qindex);
++        }
+       }
+       encode_b_nonrd(cpi, tile_data, td, tp, mi_row, mi_col, 0, bsize,
+                      partition, pc_tree->none, NULL);

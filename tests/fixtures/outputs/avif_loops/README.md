@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 98 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. Ninety accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 297 hashed artifacts total
-10,370,758 bytes, including 98 inputs, the compiled observer's
-source, and 9,815,768 bytes of Pillow-decoded frame outputs. Mutation cases
+This bundle records 101 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. Ninety-three accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 309 hashed artifacts total
+10,759,856 bytes, including 101 inputs, the compiled observer's
+source, and 10,199,348 bytes of Pillow-decoded frame outputs. Mutation cases
 share the original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 63 unchanged fixture sources are declared in
+The 70 unchanged fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
@@ -69,6 +69,11 @@ observation are retained.
 The 60x64 all-lossless I420 source selects an inter B32x32 leaf at pixel
 `(32,32)` with a 28x32 visible extent at the right edge. Its exact two Pillow
 frames and native loop observation are retained.
+The two-frame full-range 64x64 8-bit I420 mixed-segment sequence keeps segment 1
+lossless at qindex zero while segments 0 and 2 remain lossy. Its second frame
+is inter-coded and the pinned encoder trace confirms an unsplit, full-visible
+B32x32 leaf at MI `(8,8)`. The matrix binds both exact Pillow RGB frames and
+the native infinite-loop observation.
 The 28x64 full-range 10-bit I420 companion fixes encoder partitions to 32x32.
 AV1 pads its partition tree to 32 luma columns, so the translated patch stays
 inside the full-width left B32 leaf. The generator checks its key/inter

@@ -415,6 +415,32 @@
       "collection_index_sha256": "4d156fa0dde996af37fec1ccde1e4ff7c75652acd9812e90de7de622a4ee1fdf",
       "generator_sha256": "32ef5b0fb832586a25d978a37c6cfe70be580f3370a2b2a16824f66acdd45153",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "c240900628f72f83b18c111296bd3b8ba7ec2da304200f689b95574f1cc2b92a",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "mixed_lossless_inter_b32_i420_64x64"
+      ],
+      "collection_index_sha256": "5b46956553f52a69ee01eff2af37c2866c50c698cebfabd1241450d8a53752a7",
+      "generator_sha256": "2adb9e1bd8f3cb6b59ea282341ece052ca74d923e0e9bba32e0e865d2609d18c",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
@@ -1947,6 +1973,21 @@
       "bytes": 10752,
       "path": "pixels/lossless_inter_420_clipped_b32x32_12bit_partition32_56x64/frame_1.bin",
       "sha256": "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6"
+    },
+    {
+      "bytes": 1083,
+      "path": "inputs/mixed_lossless_inter_b32_i420_64x64.avif",
+      "sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/mixed_lossless_inter_b32_i420_64x64/frame_0.bin",
+      "sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/mixed_lossless_inter_b32_i420_64x64/frame_1.bin",
+      "sha256": "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4"
     }
   ],
   "build": {
@@ -8165,6 +8206,54 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
       "source_sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87"
+    },
+    {
+      "input_bytes": 1083,
+      "input_path": "inputs/mixed_lossless_inter_b32_i420_64x64.avif",
+      "input_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "mixed_lossless_inter_b32_i420_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "mixed_lossless_inter_b32_i420_64x64",
+      "source_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257"
     }
   ],
   "oracle": {

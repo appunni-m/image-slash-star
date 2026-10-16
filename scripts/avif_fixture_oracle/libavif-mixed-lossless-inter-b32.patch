@@ -1,0 +1,38 @@
+diff --git a/src/codec_aom.c b/src/codec_aom.c
+index 4a3ece0..1924628 100644
+--- a/src/codec_aom.c
++++ b/src/codec_aom.c
+@@ -536,0 +537,33 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha,
++        if (avifKeyEqualsName(entry->key, "fixture-roi-lossless-inter-b32", alpha)) {
++            if (alpha || strcmp(entry->value, "1") || (image->width != 64) || (image->height != 64)) {
++                return AVIF_FALSE;
++            }
++            const unsigned int rows = 16;
++            const unsigned int cols = 16;
++            uint8_t * const map = (uint8_t *)calloc(rows * cols, sizeof(*map));
++            if (map == NULL) {
++                return AVIF_FALSE;
++            }
++            for (unsigned int row = 8; row < rows; ++row) {
++                for (unsigned int col = 8; col < cols; ++col) {
++                    map[row * cols + col] = 1;
++                }
++            }
++            aom_roi_map_t roi = { 0 };
++            roi.roi_map = map;
++            roi.rows = rows;
++            roi.cols = cols;
++            roi.delta_q[1] = -63;
++            for (int i = 0; i < AOM_MAX_SEGMENTS; ++i) {
++                roi.ref_frame[i] = -1;
++            }
++            const aom_codec_err_t roiResult =
++                aom_codec_control(&codec->internal->encoder, AOME_SET_ROI_MAP, &roi);
++            free(map);
++            if (roiResult != AOM_CODEC_OK) {
++                avifDiagnosticsPrintf(codec->diag, "AOME_SET_ROI_MAP %u x %u failed: %s", rows, cols,
++                                      aom_codec_error(&codec->internal->encoder));
++                return AVIF_FALSE;
++            }
++            continue;
++        }

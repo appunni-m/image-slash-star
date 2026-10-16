@@ -130,6 +130,10 @@ FIXTURES = {
         "animated_lossless_inter_420_b32x32_10bit_64x64.avif",
         "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
     ),
+    "mixed_lossless_inter_b32_i420_64x64": (
+        "animated_mixed_lossless_inter_b32_i420_64x64.avif",
+        "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
+    ),
     "lossless_inter_420_clipped_b32x32_10bit_28x28": (
         "animated_lossless_inter_420_clipped_b32x32_10bit_28x28.avif",
         "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
