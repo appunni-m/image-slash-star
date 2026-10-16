@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Publish via GitHub OIDC and prove exact registry archive identity."""
+"""Verify exact registry archive identity without publishing credentials."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -16,9 +15,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from verify_release_tag import ReleaseTagError, verify_remote_tag
-
-
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_NAME = "image-slash-star"
 API_ROOT = "https://crates.io/api/v1/crates"
@@ -26,7 +22,7 @@ USER_AGENT = "image-slash-star-release-verifier/0.1 (release automation)"
 
 
 class PublishError(RuntimeError):
-    """The registry or local release identity is unsafe to publish."""
+    """The registry or local release identity cannot be verified."""
 
 
 def capture(command: list[str]) -> str:
@@ -133,46 +129,6 @@ def download_registry_archive(version: str, destination: Path) -> str:
     return digest
 
 
-def require_publish_approval() -> None:
-    """Require the exact clean GitHub tag and its OIDC publishing context."""
-
-    status = capture(["git", "status", "--porcelain=v1", "--untracked-files=all"])
-    if status:
-        raise PublishError(f"publish checkout is not clean:\n{status}")
-    commit = capture(["git", "rev-parse", "HEAD"])
-    if (
-        os.environ.get("GITHUB_ACTIONS") != "true"
-        or os.environ.get("GITHUB_REPOSITORY") != "appunni-m/image-slash-star"
-        or os.environ.get("GITHUB_REF") != f"refs/tags/v{package_version()}"
-        or not os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL")
-        or not os.environ.get("CARGO_REGISTRY_TOKEN")
-    ):
-        raise PublishError("publication requires the exact GitHub tag and OIDC job")
-    if os.environ.get("RELEASE_CI_SHA") != commit:
-        raise PublishError(
-            "RELEASE_CI_SHA must equal the exact clean commit being published"
-        )
-    if os.environ.get("GITHUB_SHA") != commit:
-        raise PublishError("GITHUB_SHA must equal the exact clean commit being published")
-    try:
-        verify_remote_tag(
-            os.environ.get("GITHUB_REF_NAME", ""),
-            commit,
-            capture_command=capture,
-        )
-    except (ReleaseTagError, subprocess.CalledProcessError) as error:
-        raise PublishError(f"release tag changed before publication: {error}") from error
-
-
-def publish(version: str) -> None:
-    """Ask Cargo to publish from the clean exact source tree."""
-
-    require_publish_approval()
-    # The identical archive was compiled before OIDC authentication.
-    print(f"+ cargo publish --locked --no-verify ({PACKAGE_NAME} {version})", flush=True)
-    subprocess.run(["cargo", "publish", "--locked", "--no-verify"], cwd=ROOT, check=True)
-
-
 def wait_until_visible(version: str, timeout_seconds: int = 300) -> None:
     """Wait for the immutable version metadata to become registry-visible."""
 
@@ -187,11 +143,11 @@ def wait_until_visible(version: str, timeout_seconds: int = 300) -> None:
 
 
 def arguments() -> argparse.Namespace:
-    """Parse registry probe or publish-and-verify mode."""
+    """Parse registry probe or candidate-verification mode."""
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--probe", action="store_true")
-    parser.add_argument("--publish-if-missing", action="store_true")
+    parser.add_argument("--wait-until-visible", action="store_true")
     parser.add_argument("--candidate", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -208,15 +164,15 @@ def verify_candidate(candidate: Path, version: str) -> str:
 
 
 def main() -> int:
-    """Probe or publish, then compare the exact candidate with crates.io."""
+    """Probe or compare the exact candidate with crates.io."""
 
     try:
         args = arguments()
         version = package_version()
         present = registry_version(version) is not None
         if args.probe:
-            if args.candidate or args.output or args.publish_if_missing:
-                raise PublishError("--probe cannot be combined with publish arguments")
+            if args.candidate or args.output or args.wait_until_visible:
+                raise PublishError("--probe cannot be combined with verification arguments")
             print("present" if present else "absent")
             return 0
         if args.candidate is None or args.output is None:
@@ -224,15 +180,11 @@ def main() -> int:
 
         candidate_digest = verify_candidate(args.candidate, version)
         if not present:
-            if not args.publish_if_missing:
+            if args.wait_until_visible:
+                wait_until_visible(version)
+            else:
                 raise PublishError(f"{PACKAGE_NAME} {version} is absent from crates.io")
-            local_archive = ROOT / "target" / "package" / f"{PACKAGE_NAME}-{version}.crate"
-            if not local_archive.is_file() or sha256(local_archive) != candidate_digest:
-                raise PublishError("pre-authentication Cargo archive differs from the CI candidate")
-            publish(version)
-            wait_until_visible(version)
-        else:
-            print(f"{PACKAGE_NAME} {version} already exists; verifying immutable bytes")
+        print(f"{PACKAGE_NAME} {version} is visible; verifying immutable bytes")
 
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="image-slash-star-registry-") as temporary:
@@ -249,7 +201,7 @@ def main() -> int:
         )
         return 0
     except (OSError, PublishError, subprocess.CalledProcessError) as error:
-        print(f"release publication failed: {error}", file=sys.stderr)
+        print(f"release registry verification failed: {error}", file=sys.stderr)
         return 1
 
 

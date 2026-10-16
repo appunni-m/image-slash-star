@@ -44,6 +44,7 @@ help:
 	@printf "  make dependency-update Update one dependency in both lockfiles (DEPENDENCY, DEPENDENCY_VERSION)\n"
 	@printf "  make release-lock-update Refresh both workspace lockfiles after a version bump\n"
 	@printf "  make release-registry-verify Compare the candidate with its published archive\n"
+	@printf "  make release-publish-request Frame the verified crate archive for registry upload\n"
 	@printf "  make coverage-complete Require 100 percent coverage across all four metrics\n"
 
 .PHONY: fmt
@@ -178,9 +179,12 @@ release-publish-prepare:
 	cargo package --locked
 	cmp "target/package/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate" "$(VERIFIED_CRATE)"
 
-.PHONY: release-publish-oidc
-release-publish-oidc:
-	$(PYTHON) scripts/publish_release.py --candidate "$(VERIFIED_CRATE)" --output "$(REGISTRY_OUTPUT)" --publish-if-missing
+.PHONY: release-publish-request
+release-publish-request:
+	@test -n "$(VERIFIED_CRATE)" && test -n "$(PUBLISH_REQUEST)" || { \
+		printf "Set VERIFIED_CRATE and PUBLISH_REQUEST to the verified crate and upload request paths.\n" >&2; exit 2; \
+	}
+	$(PYTHON) scripts/prepare_crates_io_publish.py --candidate "$(VERIFIED_CRATE)" --output "$(PUBLISH_REQUEST)"
 
 .PHONY: build fmt-fix example bench bench-setup
 build:

@@ -29,8 +29,17 @@ the coverage goal.
 
 The crates.io trusted publisher identifies repository
 `appunni-m/image-slash-star`, workflow filename `release.yml`, and environment
-`crates-io`. Only the publishing job receives OIDC permission. No local login
-or long-lived registry token is used by subsequent releases.
+`crates-io`. The dedicated crates.io upload job receives OIDC permission; it
+does not check out the repository or run Cargo, Python, Make, or other
+repository scripts. An unprivileged job builds and checks the candidate, then
+frames those exact archive bytes for the crates.io API. The publisher verifies
+the prepared request and the remote annotated tag before authentication, then
+uploads that request directly. Registry download and byte comparison run in a
+separate job without OIDC permission. No local login or long-lived registry
+token is used by subsequent releases. The GitHub attestation job requests OIDC
+separately for attestations. If a retry finds the same version already
+published with identical archive bytes, it skips the upload and continues to
+registry verification; different bytes fail closed.
 
 The workflow builds and validates before publishing. It checks registry
 artifact identity and creates GitHub assets only after successful publication.
@@ -51,9 +60,11 @@ Retry only the same source and unchanged artifacts after a transient failure.
 An uploaded registry version or released tag must never be overwritten.
 Changed source, packaging, or artifact bytes require a new version and tag.
 Verify which job actually failed before changing trusted-publisher settings.
-Protect `v*` tags with a GitHub ruleset that blocks updates and deletion. The
-release workflow also rechecks the remote annotated tag against the triggering
-commit before crates.io publication and GitHub release creation.
+Protect `v*` tags with a GitHub ruleset that blocks updates and deletion; the
+workflow checks cannot eliminate the brief race between a remote-tag check and
+an upload. The publisher rechecks the annotated tag against the triggering
+commit immediately before authentication and upload. The GitHub release job
+checks it again before attestation and release creation.
 
 The completed local bootstrap target has been removed. The maintainer controls
 releases through repository review and tag permissions; no maintainer-succession

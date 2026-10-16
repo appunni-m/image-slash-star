@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import textwrap
 import time
 import urllib.error
 import urllib.request
@@ -456,6 +457,633 @@ def release_coverage_gate_violations(contents: str) -> list[str]:
     return violations
 
 
+def yaml_mapping(
+    contents: str, key: str, indentation: int
+) -> dict[str, str] | str | None:
+    """Read a simple YAML mapping at one indentation level."""
+
+    prefix = " " * indentation
+    match = re.search(
+        rf"(?m)^{prefix}{re.escape(key)}:[ \t]*(?P<inline>[^\n]*)$", contents
+    )
+    if match is None:
+        return None
+    if match.group("inline").strip():
+        return match.group("inline").strip()
+
+    values = {}
+    child_prefix = prefix + "  "
+    for line in contents[match.end():].splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith(child_prefix):
+            break
+        entry = line[len(child_prefix):]
+        if entry.startswith(" ") or ":" not in entry:
+            return "<invalid mapping>"
+        name, separator, value = entry.partition(":")
+        if not separator or not name.strip() or name.strip() in values:
+            return "<invalid mapping>"
+        values[name.strip()] = value.strip()
+    return values
+
+
+def has_quoted_yaml_key(contents: str, indentation: int) -> bool:
+    """Detect quoted mapping keys whose decoded spelling needs YAML parsing."""
+
+    prefix = " " * indentation
+    return re.search(
+        rf"(?m)^{prefix}(?:\"(?:[^\"\\]|\\.)*\"|'(?:[^']|'')*')[ \t]*:",
+        contents,
+    ) is not None
+
+
+def has_yaml_indirect_key(contents: str, indentation: int) -> bool:
+    """Reject YAML key syntax that can hide job or step controls."""
+
+    prefix = " " * indentation
+    return re.search(
+        rf"(?m)^{prefix}(?:<<[ \t]*:|\?[ \t]+|!+[^\s]*[ \t]+|&[^\s]+[ \t]+|\*[^\s]+[ \t]*:)",
+        contents,
+    ) is not None
+
+
+def has_indented_yaml_continuation(
+    contents: str, key: str, indentation: int
+) -> bool:
+    """Detect a folded plain scalar extending a reviewed control value."""
+
+    prefix = " " * indentation
+    key_line = re.compile(rf"^{prefix}{re.escape(key)}[ \t]*:")
+    lines = contents.splitlines()
+    for index, line in enumerate(lines):
+        if key_line.search(line) is None:
+            continue
+        for following in lines[index + 1:]:
+            if not following.strip() or following.lstrip().startswith("#"):
+                continue
+            following_indentation = len(following) - len(following.lstrip(" "))
+            if following_indentation > indentation:
+                return True
+            break
+    return False
+
+
+def reviewed_job_control_violations(job_name: str, settings: str) -> list[str]:
+    """Require OIDC jobs to use normal success dependency handling."""
+
+    prefix = " " * 4
+    if (
+        has_quoted_yaml_key(settings, 4)
+        or has_yaml_indirect_key(settings, 4)
+        or any(
+            re.search(rf"(?m)^{prefix}{control}[ \t]*:", settings) is not None
+            for control in ("if", "continue-on-error")
+        )
+    ):
+        return [f"{job_name} job controls must match the reviewed policy"]
+    return []
+
+
+def reviewed_step_control_violations(
+    job_name: str,
+    steps: list[str],
+    expected_conditions: dict[str, str],
+) -> list[str]:
+    """Require exact conditions and never permit a credentialed step to ignore failure."""
+
+    violations = []
+    for step in steps[1:]:
+        name_match = re.search(r"(?m)^name:\s*(.+)$", step)
+        step_name = name_match.group(1) if name_match is not None else None
+        actual_conditions = re.findall(
+            r"(?m)^ {8}if[ \t]*:[ \t]*(?P<condition>[^\r\n]*?)[ \t]*$",
+            step,
+        )
+        expected_condition = expected_conditions.get(step_name)
+        expected_conditions_for_step = (
+            [expected_condition] if expected_condition is not None else []
+        )
+        if (
+            actual_conditions != expected_conditions_for_step
+            or has_indented_yaml_continuation(step, "if", 8)
+            or has_quoted_yaml_key(step, 8)
+            or has_yaml_indirect_key(step, 8)
+            or re.search(
+                r"(?m)^ {8}continue-on-error[ \t]*:",
+                step,
+            ) is not None
+        ):
+            violations.append(f"{job_name} step controls must match the reviewed policy")
+            break
+    return violations
+
+
+def release_oidc_isolation_violations(contents: str) -> list[str]:
+    """Keep repository code outside release jobs with OIDC permissions."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["release workflow has no jobs section"]
+    violations = []
+    if yaml_mapping(contents, "permissions", 0) != {"contents": "read"}:
+        violations.append(
+            "release workflow must use only the reviewed top-level contents: read permission"
+        )
+    if yaml_mapping(contents, "env", 0) != {
+        "CARGO_TERM_COLOR": "always",
+        "RUST_BACKTRACE": '"1"',
+        "RUSTC_WRAPPER": '""',
+        "RUST_TOOLCHAIN": '"1.96.1"',
+        "PYTHON_VERSION": '"3.12.10"',
+        "COVERAGE_TOOLCHAIN": '"nightly-2026-07-16"',
+    }:
+        violations.append("release workflow environment must not add execution hooks")
+    if (
+        yaml_mapping(contents, "defaults", 0) is not None
+        or has_quoted_yaml_key(contents, 0)
+        or has_yaml_indirect_key(contents, 0)
+    ):
+        violations.append("release workflow must not override default shell execution")
+
+    expected_job_permissions = {
+        "preflight": {"contents": "read", "actions": "read"},
+        "release-coverage": None,
+        "prepare-publish": {"contents": "read"},
+        "publish": {"contents": "read", "id-token": "write"},
+        "verify-registry": {"contents": "read"},
+        "github-release": {
+            "contents": "write",
+            "attestations": "write",
+            "artifact-metadata": "write",
+            "id-token": "write",
+        },
+    }
+    if set(jobs) != set(expected_job_permissions):
+        violations.append("release workflow job set must match its reviewed permission map")
+    for job_name, job in jobs.items():
+        if job_name not in expected_job_permissions:
+            continue
+        actual_permissions = yaml_mapping(job, "permissions", 4)
+        if actual_permissions != expected_job_permissions[job_name]:
+            violations.append(
+                f"{job_name} must use its reviewed least-privilege permissions"
+            )
+        if (
+            job_name not in {"publish", "github-release"}
+            and isinstance(actual_permissions, dict)
+            and actual_permissions.get("id-token") == "write"
+        ):
+            violations.append(f"{job_name} must not have OIDC token permission")
+
+    prepare_job = jobs.get("prepare-publish")
+    if prepare_job is not None:
+        if "needs: [preflight, release-coverage]" not in prepare_job:
+            violations.append("prepare-publish must depend on preflight and release-coverage")
+        if "make release-publish-prepare" not in prepare_job:
+            violations.append("prepare-publish must reproduce and compile the candidate")
+        if "make release-publish-request" not in prepare_job:
+            violations.append("prepare-publish must frame the candidate for the crates.io API")
+
+    publish_job = jobs.get("publish")
+    if publish_job is None:
+        violations.append("release workflow has no publish job")
+    else:
+        settings, _, _ = publish_job.partition("    steps:")
+        violations.extend(reviewed_job_control_violations("publish", settings))
+        if "needs: [preflight, release-coverage, prepare-publish]" not in publish_job:
+            violations.append("publish must depend on the verified preparation and coverage gates")
+        if not re.search(r"(?m)^    environment:\s*crates-io\s*$", settings):
+            violations.append("publish must use the crates-io protected environment")
+        if not re.search(r"(?m)^    runs-on:\s*ubuntu-24\.04\s*$", settings):
+            violations.append("publish must use the reviewed hosted runner")
+        if yaml_mapping(settings, "env", 4) is not None:
+            violations.append("crates.io credentials must not be job-scoped")
+        if any(
+            yaml_mapping(settings, key, 4) is not None
+            for key in ("container", "defaults")
+        ):
+            violations.append(
+                "publish must not override its runner, shell, or environment"
+            )
+        if re.search(r"(?m)^      - uses: actions/checkout@", publish_job):
+            violations.append("publish must not check out or execute repository source")
+
+        steps = re.split(r"(?m)^      - ", publish_job)
+        violations.extend(
+            reviewed_step_control_violations(
+                "publish",
+                steps,
+                {
+                    "Authenticate to crates.io with OIDC": (
+                        "steps.existing-version.outputs.present != 'true'"
+                    ),
+                    "Upload the verified archive to crates.io": (
+                        "steps.existing-version.outputs.present != 'true'"
+                    ),
+                },
+            )
+        )
+        if len(steps) != 7:
+            violations.append(
+                "publish must contain only artifact, version, tag, OIDC, and upload steps"
+            )
+        publish_actions = [
+            action
+            for step in steps[1:]
+            if (action := re.search(r"(?m)^\s*uses:\s*(\S+)", step)) is not None
+        ]
+        if [action.group(1).partition(" #")[0] for action in publish_actions] != [
+            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18",
+        ]:
+            violations.append(
+                "publish may use only the reviewed artifact and crates.io OIDC action revisions"
+            )
+        existing_index = next(
+            (index for index, step in enumerate(steps)
+             if step.startswith("name: Check whether this exact crate version is already published")),
+            None,
+        )
+        tag_check_index = next(
+            (index for index, step in enumerate(steps)
+             if step.startswith("name: Verify the remote annotated tag")),
+            None,
+        )
+        checksum_index = next(
+            (index for index, step in enumerate(steps)
+             if step.startswith("name: Verify publish request checksum")),
+            None,
+        )
+        auth_index = next(
+            (index for index, step in enumerate(steps)
+             if "uses: rust-lang/crates-io-auth-action@" in step),
+            None,
+        )
+        upload_index = next(
+            (index for index, step in enumerate(steps)
+             if step.startswith("name: Upload the verified archive to crates.io")),
+            None,
+        )
+        if tag_check_index is None:
+            violations.append("publish must recheck the remote annotated tag")
+        elif auth_index is not None and tag_check_index >= auth_index:
+            violations.append("remote tag verification must precede OIDC authentication")
+        else:
+            tag_script = run_script(steps[tag_check_index])
+            if tag_script is None or not all(
+                marker in tag_script
+                for marker in (
+                    "gh api",
+                    "/git/ref/tags/",
+                    "/git/tags/",
+                    "object.type",
+                    "$GITHUB_SHA",
+                )
+            ):
+                violations.append("publish tag check must require an annotated tag at GITHUB_SHA")
+        if checksum_index is None:
+            violations.append("publish must verify the prepared request checksum")
+        elif auth_index is not None and checksum_index >= auth_index:
+            violations.append("publish request checksum verification must precede OIDC authentication")
+        if existing_index is None:
+            violations.append("publish must check for an identical already-published version")
+        elif auth_index is not None and existing_index >= auth_index:
+            violations.append("existing-version verification must precede OIDC authentication")
+        else:
+            existing_script = run_script(steps[existing_index])
+            if existing_script is None or not all(
+                marker in existing_script
+                for marker in (
+                    "https://crates.io/api/v1/crates/image-slash-star/",
+                    "version.checksum",
+                    "sha256sum",
+                    "present=true",
+                    "present=false",
+                )
+            ):
+                violations.append("existing-version check must require exact crate archive bytes")
+        if auth_index is None:
+            violations.append("publish must authenticate to crates.io with OIDC")
+        elif "if: steps.existing-version.outputs.present != 'true'" not in steps[auth_index]:
+            violations.append("publish must skip OIDC when the exact version already exists")
+        if upload_index is None:
+            violations.append("publish must upload the prepared request body")
+        elif auth_index is not None:
+            if upload_index <= auth_index:
+                violations.append("crates.io upload must follow OIDC authentication")
+            if upload_index != len(steps) - 1:
+                violations.append("only the crates.io upload may follow OIDC authentication")
+            if "if: steps.existing-version.outputs.present != 'true'" not in steps[upload_index]:
+                violations.append("publish must skip upload when the exact version already exists")
+            upload_script = run_script(steps[upload_index])
+            if upload_script is None or not all(
+                marker in upload_script
+                for marker in (
+                    "curl --config /dev/null",
+                    "--request PUT",
+                    "--data-binary @target/crates-io-publish/crates-io-upload.bin",
+                    "https://crates.io/api/v1/crates/new",
+                )
+            ):
+                violations.append("publish must upload the prepared archive directly to crates.io")
+            auth_id_match = re.search(r"(?m)^        id:\s*([A-Za-z0-9_-]+)\s*$", steps[auth_index])
+            if auth_id_match is None:
+                violations.append("crates.io OIDC action must have a stable step id")
+            else:
+                expected_token = (
+                    "CRATES_IO_PUBLISH_TOKEN: ${{ "
+                    f"steps.{auth_id_match.group(1)}.outputs.token }}"
+                )
+                if expected_token not in steps[upload_index]:
+                    violations.append("crates.io token must be scoped to the upload step")
+
+        expected_publish_scripts = {
+            "Verify publish request checksum": (
+                "(cd target/crates-io-publish && sha256sum --check SHA256SUMS)"
+            ),
+            "Check whether this exact crate version is already published": """\
+set -euo pipefail
+version="${GITHUB_REF_NAME#v}"
+response_file="${RUNNER_TEMP}/crates-io-existing-version.json"
+status="$(curl --config /dev/null \\
+  --proto '=https' \\
+  --silent --show-error --connect-timeout 10 --max-time 30 \\
+  --output "$response_file" --write-out '%{http_code}' \\
+  "https://crates.io/api/v1/crates/image-slash-star/${version}")"
+if [[ "$status" == 404 ]]; then
+  echo "present=false" >> "$GITHUB_OUTPUT"
+elif [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+  expected="$(sha256sum "target/crates-io-publish/image-slash-star-${version}.crate" | cut -d ' ' -f 1)"
+  actual="$(jq -r '.version.checksum // empty' "$response_file")"
+  [[ "$actual" == "$expected" ]] || {
+    echo "crates.io already contains ${version} with different archive bytes" >&2
+    exit 1
+  }
+  echo "present=true" >> "$GITHUB_OUTPUT"
+else
+  cat "$response_file" >&2
+  echo "crates.io version lookup returned HTTP ${status}" >&2
+  exit 1
+fi""",
+            "Verify the remote annotated tag still names this commit": """\
+set -euo pipefail
+[[ "$GITHUB_REF_NAME" == v* ]]
+[[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+tag_ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+[[ "$(jq -r '.object.type' <<< "$tag_ref")" == "tag" ]]
+tag_object_sha="$(jq -r '.object.sha' <<< "$tag_ref")"
+[[ "$tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
+tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
+[[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
+tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
+[[ "$tag_commit" == "$GITHUB_SHA" ]]
+echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}\"""",
+            "Upload the verified archive to crates.io": """\
+set -euo pipefail
+response_file="${RUNNER_TEMP}/crates-io-publish-response.json"
+status="$(curl --config /dev/null \\
+  --proto '=https' \\
+  --silent --show-error --connect-timeout 10 --max-time 300 \\
+  --output "$response_file" --write-out '%{http_code}' \\
+  --request PUT \\
+  --header "Authorization: ${CRATES_IO_PUBLISH_TOKEN}" \\
+  --header 'Content-Type: application/octet-stream' \\
+  --header 'Accept: application/json' \\
+  --data-binary @target/crates-io-publish/crates-io-upload.bin \\
+  https://crates.io/api/v1/crates/new)"
+if [[ ! "$status" =~ ^2[0-9][0-9]$ ]]; then
+  cat "$response_file" >&2
+  echo "crates.io publish request returned HTTP ${status}" >&2
+  exit 1
+fi
+if ! jq -e 'type == "object" and (has("errors") | not)' \\
+  "$response_file" >/dev/null; then
+  cat "$response_file" >&2
+  echo "crates.io returned an error payload for the publish request" >&2
+  exit 1
+fi""",
+        }
+        for step in steps[1:]:
+            step_name = re.search(r"(?m)^name:\s*(.+)$", step)
+            script = run_script(step)
+            shell = re.search(r"(?m)^ {8}shell:\s*(.+)$", step)
+            shell_value = shell.group(1).strip() if shell is not None else None
+            expected_shell = (
+                "bash"
+                if step_name is not None
+                and step_name.group(1)
+                in {
+                    "Check whether this exact crate version is already published",
+                    "Verify the remote annotated tag still names this commit",
+                    "Upload the verified archive to crates.io",
+                }
+                else None
+            )
+            if shell_value != expected_shell:
+                violations.append("publish must use only the reviewed step shells")
+                break
+            if re.search(r"(?m)^ {8}working-directory:", step):
+                violations.append("publish must use the reviewed working directory")
+                break
+            if step_name is not None and script is not None:
+                expected_script = expected_publish_scripts.get(step_name.group(1))
+                if expected_script is None or textwrap.dedent(script).strip() != textwrap.dedent(
+                    expected_script
+                ).strip():
+                    violations.append(
+                        "publish shell steps must match the reviewed static command set"
+                    )
+                    break
+            elif script is not None:
+                violations.append(
+                    "publish shell steps must have a reviewed name and command"
+                )
+                break
+            expected_env = {
+                "Verify the remote annotated tag still names this commit": {
+                    "GH_TOKEN": "${{ github.token }}",
+                },
+                "Upload the verified archive to crates.io": {
+                    "CRATES_IO_PUBLISH_TOKEN": (
+                        "${{ steps.crates-io-auth.outputs.token }}"
+                    ),
+                },
+            }.get(step_name.group(1) if step_name is not None else "")
+            if yaml_mapping(step, "env", 8) != expected_env:
+                violations.append("publish step environments must match the reviewed token scopes")
+                break
+
+        for step in steps:
+            script = run_script(step)
+            if script is not None and re.search(
+                r"(?im)^\s*(?:cargo|make|python(?:3)?|scripts/|\.\/scripts/)\b",
+                script,
+            ):
+                violations.append("publish must not run Cargo or repository-controlled scripts")
+                break
+
+    verify_job = jobs.get("verify-registry")
+    if verify_job is not None and "needs: publish" not in verify_job:
+        violations.append("verify-registry must follow a successful publish")
+
+    github_release_job = jobs.get("github-release")
+    if github_release_job is not None:
+        if "needs: verify-registry" not in github_release_job:
+            violations.append("github-release must follow registry byte verification")
+        settings, _, _ = github_release_job.partition("    steps:")
+        violations.extend(
+            reviewed_job_control_violations("github-release", settings)
+        )
+        if not re.search(r"(?m)^    runs-on:\s*ubuntu-24\.04\s*$", settings):
+            violations.append("github-release must use the reviewed hosted runner")
+        if any(
+            yaml_mapping(settings, key, 4) is not None
+            for key in ("container", "defaults", "env", "environment")
+        ):
+            violations.append(
+                "github-release must not override its runner, shell, or environment"
+            )
+        if re.search(r"(?m)^      - uses: actions/checkout@", github_release_job):
+            violations.append("github-release must not check out repository source")
+        steps = re.split(r"(?m)^      - ", github_release_job)
+        violations.extend(
+            reviewed_step_control_violations("github-release", steps, {})
+        )
+        if len(steps) != 6:
+            violations.append(
+                "github-release must contain only artifact, checksum, tag, attestation, and release steps"
+            )
+        release_actions = [
+            action
+            for step in steps[1:]
+            if (action := re.search(r"(?m)^\s*uses:\s*(\S+)", step)) is not None
+        ]
+        if [action.group(1).partition(" #")[0] for action in release_actions] != [
+            "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+            "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
+        ]:
+            violations.append(
+                "github-release may use only the reviewed artifact and attestation action revisions"
+            )
+        attest_index = next(
+            (index for index, step in enumerate(steps)
+             if "uses: actions/attest@" in step),
+            None,
+        )
+        tag_check_index = next(
+            (index for index, step in enumerate(steps)
+             if step.startswith("name: Verify the remote annotated tag")),
+            None,
+        )
+        if attest_index is None:
+            violations.append("github-release must attest the canonical registry archive")
+        elif tag_check_index is None or tag_check_index >= attest_index:
+            violations.append("github-release must recheck the tag before attestation")
+        elif tag_check_index is not None:
+            tag_script = run_script(steps[tag_check_index])
+            if tag_script is None or not all(
+                marker in tag_script
+                for marker in (
+                    "gh api",
+                    "/git/ref/tags/",
+                    "/git/tags/",
+                    "object.type",
+                    "$GITHUB_SHA",
+                )
+            ):
+                violations.append("github-release tag check must require an annotated tag at GITHUB_SHA")
+        for step in steps:
+            script = run_script(step)
+            if script is not None and re.search(
+                r"(?im)^\s*(?:cargo|make|python(?:3)?|scripts/|\.\/scripts/)\b",
+                script,
+            ):
+                violations.append("github-release must not execute repository code with OIDC permission")
+                break
+        if attest_index is not None:
+            post_attestation_steps = steps[attest_index + 1:]
+            if len(post_attestation_steps) != 1 or not post_attestation_steps[0].startswith(
+                "name: Create GitHub prerelease"
+            ):
+                violations.append(
+                    "only GitHub release creation may follow the attestation action"
+                )
+        expected_release_scripts = {
+            "Verify canonical registry checksum": (
+                "(cd registry-bundle && sha256sum --check SHA256SUMS)"
+            ),
+            "Verify the remote annotated tag still names this commit": """\
+set -euo pipefail
+[[ "$GITHUB_REF_NAME" == v* ]]
+[[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+tag_ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}")"
+[[ "$(jq -r '.object.type' <<< "$tag_ref")" == "tag" ]]
+tag_object_sha="$(jq -r '.object.sha' <<< "$tag_ref")"
+[[ "$tag_object_sha" =~ ^[0-9a-f]{40}$ ]]
+tag_object="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}")"
+[[ "$(jq -r '.object.type' <<< "$tag_object")" == "commit" ]]
+tag_commit="$(jq -r '.object.sha' <<< "$tag_object")"
+[[ "$tag_commit" == "$GITHUB_SHA" ]]
+echo "verified annotated tag ${GITHUB_REF_NAME} at ${tag_commit}\"""",
+            "Create GitHub prerelease": """\
+gh release create "$GITHUB_REF_NAME" \\
+  --verify-tag \\
+  --prerelease \\
+  --title "image-slash-star ${GITHUB_REF_NAME#v}" \\
+  --notes-file registry-bundle/release-notes.md \\
+  registry-bundle/image-slash-star-*.crate registry-bundle/SHA256SUMS""",
+        }
+        for step in steps[1:]:
+            step_name = re.search(r"(?m)^name:\s*(.+)$", step)
+            script = run_script(step)
+            shell = re.search(r"(?m)^ {8}shell:\s*(.+)$", step)
+            shell_value = shell.group(1).strip() if shell is not None else None
+            expected_shell = (
+                "bash"
+                if step_name is not None
+                and step_name.group(1)
+                == "Verify the remote annotated tag still names this commit"
+                else None
+            )
+            if shell_value != expected_shell:
+                violations.append("github-release must use only the reviewed step shells")
+                break
+            if re.search(r"(?m)^ {8}working-directory:", step):
+                violations.append("github-release must use the reviewed working directory")
+                break
+            if step_name is not None and script is not None:
+                expected_script = expected_release_scripts.get(step_name.group(1))
+                if expected_script is None or textwrap.dedent(script).strip() != textwrap.dedent(
+                    expected_script
+                ).strip():
+                    violations.append(
+                        "github-release shell steps must match the reviewed static command set"
+                    )
+                    break
+            elif script is not None:
+                violations.append(
+                    "github-release shell steps must have a reviewed name and command"
+                )
+                break
+            expected_env = {
+                "Verify the remote annotated tag still names this commit": {
+                    "GH_TOKEN": "${{ github.token }}",
+                },
+                "Create GitHub prerelease": {
+                    "GH_TOKEN": "${{ github.token }}",
+                    "GH_REPO": "${{ github.repository }}",
+                },
+            }.get(step_name.group(1) if step_name is not None else "")
+            if yaml_mapping(step, "env", 8) != expected_env:
+                violations.append(
+                    "github-release step environments must match the reviewed token scopes"
+                )
+                break
+
+    return violations
+
+
 def verify_release_coverage_gate(workflow: Path) -> bool:
     """Reject release workflows that can publish without tagged-source coverage."""
 
@@ -730,6 +1358,12 @@ def main() -> int:
         return 1
     release_workflow = ROOT / ".github" / "workflows" / "release.yml"
     if not verify_release_coverage_gate(release_workflow):
+        return 1
+    if not verify_workflow_policy(
+        release_workflow,
+        release_oidc_isolation_violations,
+        "Release OIDC isolation",
+    ):
         return 1
     if not verify_workflow_policy(
         release_workflow,
