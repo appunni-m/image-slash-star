@@ -13,17 +13,6 @@ import struct
 from io import BytesIO
 from pathlib import Path
 
-from PIL import (
-    Image,
-    UnidentifiedImageError,
-    __version__ as PILLOW_VERSION,
-    _avif,
-    features,
-)
-
-from generate_decode_refs import stable_error_message
-
-
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 SOURCE = FIXTURE_DIR / "baseline.avif"
@@ -139,6 +128,16 @@ def build_fixture(source: bytes) -> bytes:
 
 def verify_pillow(fixture: bytes) -> None:
     """Check the exact pinned Pillow and libavif public open failure."""
+    from PIL import (
+        Image,
+        UnidentifiedImageError,
+        __version__ as PILLOW_VERSION,
+        _avif,
+        features,
+    )
+
+    from generate_decode_refs import stable_error_message
+
     if PILLOW_VERSION != "12.2.0":
         raise RuntimeError(f"Pillow 12.2.0 is required, found {PILLOW_VERSION}")
     avif_version = features.version("avif")
