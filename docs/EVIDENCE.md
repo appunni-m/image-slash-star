@@ -6504,7 +6504,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `51ef6f04db96396f8efe315ac1e8387a59ebb3b7d9bf7b3d6dcc88ba2eed72a3`; matrix `fbbe034ac9af5253a4d43d3989986466d610c672fe4bfd2d3637a8234fd2b8c5`.
+- Current fixture integrity only: manifest `d2c7680e2817efba95abc1f828573f5d39a08baa4d67515605e3b86814b648ef`; matrix `6a91271bbb326f54acfd0771595b913177cab973c90b069bbbdec636f42c030e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7323,6 +7323,29 @@ full report is incomparable because that report's branch detail is incomplete.
 No aggregate coverage gain or full-suite claim is made; no full coverage
 campaign or SIMD change was made.
 
-The current fixture matrix contains 2,257 total rows: 1,774 decode /
-inspect / verify rows and 483 encode rows. Of those, 1,774 decode rows and
+### AVIF wide-I444 mode-2 mixed topology parity — 2026-10-16
+
+The active `animated_lossy_wide_i444_mode2_mixed_b128x128` row adds a
+two-frame 256x256 lossy I444 input with fixed 128-pixel partitions. Only the
+top-left 128x128 mode-2 inter leaf has one TX64 root split once to TX32; its
+other three roots and the remaining leaves stay unsplit. No TX32 child splits.
+The pinned generator
+double-encodes the input and checks its SHA-256
+`0e72f7d47e8e83e0a6e13a76a816cb98974cdb2976fff72857901712e2633d61` and both
+Pillow RGB frame hashes. The complete-file loop observer reports infinite
+repetition. The selected public row passes exact Pillow parity 1/1.
+
+The selected branch report records the mixed-plan fallback at
+`entropy.rs:7152`. In `block.rs:57706`, one decoder monomorphization observes
+both `topology.is_some()` outcomes (8 true and 24 false); the remaining six
+monomorphizations have no hits in this selected-only run. Coverage MCP reports
+3,308/31,296 branch observations for the selected measurement, with source
+identity unverified and test attribution unknown because no source/build or
+test receipt accompanies the LLVM report. This is selected-path evidence,
+not an aggregate coverage gain or full-suite result. Report:
+`target/release-evidence/coverage-avif-mode2-mixed-selected-20261016.json`.
+No full coverage campaign or SIMD change was made.
+
+The current fixture matrix contains 2,258 total rows: 1,775 decode /
+inspect / verify rows and 483 encode rows. Of those, 1,775 decode rows and
 451 encode rows are active; 32 planned encode rows remain.

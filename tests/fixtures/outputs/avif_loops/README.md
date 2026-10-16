@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 101 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. Ninety-three accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 309 hashed artifacts total
-10,759,856 bytes, including 101 inputs, the compiled observer's
-source, and 10,199,348 bytes of Pillow-decoded frame outputs. Mutation cases
-share the original frame artifacts; each observation records complete per-frame
-pixel hashes and durations.
+This bundle records 103 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. Ninety-five accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 317 hashed artifacts total
+11,205,331 bytes, including 103 inputs, the compiled observer source, and
+10,629,428 bytes of Pillow-decoded frame outputs. Mutation cases share the
+original frame artifacts; each observation records complete per-frame pixel
+hashes and durations.
 
-The 70 unchanged fixture sources are declared in
+The 72 unchanged fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
@@ -34,6 +34,11 @@ The companion two-frame quality-80 I444 source has a flat gray key frame and
 a row-alternating 32-pixel sinusoid. It splits each TX64 root in all four
 128x128 mode-2 inter leaves to TX32, without splitting the TX32 children. Both
 exact Pillow frames and its native infinite-loop observation are retained.
+The companion mixed-topology source also has a flat gray key frame and a
+localized row-alternating 32-pixel sinusoid. Only the top-left 128x128 mode-2
+inter leaf splits one TX64 root once to TX32; its other three roots and the
+remaining 128x128 leaves remain unsplit. No TX32 child splits. Both exact
+Pillow frames and its native infinite-loop observation are retained.
 The three-frame 64x64 source selects a B64 inter root with a TX64 transform
 split into TX32 children at both x offsets; all RGB frames match Pillow. The
 two 512x128 sequences move the same 96x64 textured patch between x=192 and

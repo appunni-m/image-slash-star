@@ -226,6 +226,10 @@ FIXTURES = {
         "animated_lossy_wide_i444_mode2_split32_b128x128.avif",
         "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
     ),
+    "lossy_wide_i444_mode2_mixed_b128x128": (
+        "animated_lossy_wide_i444_mode2_mixed_b128x128.avif",
+        "0e72f7d47e8e83e0a6e13a76a816cb98974cdb2976fff72857901712e2633d61",
+    ),
     "lossy_global_rotzoom_compound_i444_b128x128": (
         "animated_lossy_global_rotzoom_compound_i444_b128x128.avif",
         "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
