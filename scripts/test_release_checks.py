@@ -242,6 +242,17 @@ jobs:
             group,
         )
 
+    def test_ci_supply_chain_job_has_bounded_timeout(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "ci.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        match = re.search(
+            r"(?ms)^  supply-chain:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)",
+            contents,
+        )
+        self.assertIsNotNone(match, "CI must retain the supply-chain job")
+        self.assertRegex(match.group("body"), r"(?m)^    timeout-minutes: 20$")
+
     def test_windows_msvc_lane_runs_all_feature_checks_and_parity(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "ci.yml")
