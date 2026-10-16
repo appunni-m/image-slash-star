@@ -6363,6 +6363,11 @@ formats:
       test_assets:
       - malformed_filmgrain_y_point_count_15.avif
       expect_error: true
+    - id: malformed_filmgrain_y_point_non_increasing
+      description: A complete I444 AVIF sets the second film-grain Y point x value equal to the first
+      test_assets:
+      - malformed_filmgrain_y_point_non_increasing.avif
+      expect_error: true
     - id: malformed_filmgrain_uv_point_count_11
       description: A complete I444 AVIF declares eleven film-grain UV points, exceeding the ten-point limit
       test_assets:

@@ -4330,6 +4330,18 @@ fn read_global_motion(
     Ok(motions)
 }
 
+#[inline]
+pub(super) fn validate_film_grain_point_order(
+    previous: &[u32; 2],
+    point: &[u32; 2],
+    error_message: &'static str,
+) -> Av1Result<()> {
+    if previous[0] >= point[0] {
+        return Err(malformed(error_message));
+    }
+    Ok(())
+}
+
 fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u32; 2]>> {
     let count =
         usize::try_from(count).map_err(|_| malformed("film-grain point count exceeds usize"))?;
@@ -4349,11 +4361,8 @@ fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u
         .map_err(|_| malformed("unable to allocate film-grain points"))?;
     for _ in 0..count {
         let point = [bits.bits(8)?, bits.bits(8)?];
-        if points
-            .last()
-            .is_some_and(|previous| previous[0] >= point[0])
-        {
-            return Err(malformed("frame syntax validation failed"));
+        if let Some(previous) = points.last() {
+            validate_film_grain_point_order(previous, &point, "frame syntax validation failed")?;
         }
         points.push(point);
     }

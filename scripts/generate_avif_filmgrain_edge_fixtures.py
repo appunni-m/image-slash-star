@@ -46,6 +46,7 @@ SIZE = (64, 64)
 I444_SOURCE_SHA256 = "5e40ca71068fdd232d11f356103f53c1fdd7b94356fa91b0004d7307de4cbd25"
 I422_NAME = "portable_lossless_filmgrain_i422_64x64.avif"
 INACTIVE_REUSE_NAME = "animated_filmgrain_inactive_reference_reuse_i444_64x64.avif"
+NON_INCREASING_Y_POINTS_NAME = "malformed_filmgrain_y_point_non_increasing.avif"
 FIXTURE_SHA256 = {
     I422_NAME: "7c0241226c98d663df8b704b60fabb22e625bf7b010ad194f41db4b80afa0344",
     "malformed_filmgrain_y_point_count_15.avif": (
@@ -59,6 +60,9 @@ FIXTURE_SHA256 = {
     ),
     "malformed_filmgrain_unused_reference_slot.avif": (
         "82dec6de0b8f46bf2157101847abe34e89a40cd23098b5beb69c1cd0d3eb5ae1"
+    ),
+    NON_INCREASING_Y_POINTS_NAME: (
+        "1a7811072b8e1e3b9ea0694aaf5415d61d00f19a4dcdbbcb0048f7fddd94fe71"
     ),
     INACTIVE_REUSE_NAME: (
         "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536"
@@ -89,6 +93,10 @@ MALFORMED_EXPECTATIONS = {
     "malformed_filmgrain_unused_reference_slot.avif": (
         "film grain references an unused slot",
         1,
+    ),
+    NON_INCREASING_Y_POINTS_NAME: (
+        "film grain Y points are not increasing",
+        0,
     ),
 }
 
@@ -342,7 +350,7 @@ def validate_malformed(name: str, data: bytes) -> None:
 
 
 def fixture_bytes() -> dict[str, bytes]:
-    """Regenerate all source encodes and construct the six input-only cases."""
+    """Regenerate all source encodes and construct the seven input-only cases."""
 
     i444 = encode_still(0x21108, "4:4:4")
     if i444 != encode_still(0x21108, "4:4:4") or sha256(i444) != I444_SOURCE_SHA256:
@@ -382,6 +390,19 @@ def fixture_bytes() -> dict[str, bytes]:
         ),
         "malformed_filmgrain_i420_unequal_uv_presence.avif": unequal_uv_presence(i420),
     }
+    y_points = grain["y_points"]
+    if len(y_points) < 2:
+        raise ValueError("I444 source does not contain two film-grain Y points")
+    y_point_bit = obu["frame_header"]["film_grain_start_bit"] + 1 + 16 + 4
+    y_point_bit += 16
+    fixtures[NON_INCREASING_Y_POINTS_NAME] = replace_field(
+        i444,
+        obu,
+        y_point_bit,
+        8,
+        y_points[1][0],
+        y_points[0][0],
+    )
     _, inter_obu = frame_location(reuse, "track_pict", 1)
     inter = inter_obu["frame_header"]
     if inter["frame_type"] != "inter" or inter["film_grain"]["update"]:
@@ -402,7 +423,7 @@ def fixture_bytes() -> dict[str, bytes]:
 
 
 def write_avif_filmgrain_edge_fixtures(output_dir: Path) -> tuple[Path, ...]:
-    """Validate frozen inputs and live outcomes, then write all six AVIF files."""
+    """Validate frozen inputs and live outcomes, then write all seven AVIF files."""
 
     require_pinned_oracle()
     fixtures = fixture_bytes()

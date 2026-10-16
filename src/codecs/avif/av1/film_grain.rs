@@ -8,7 +8,7 @@
 //! cover this source-derived translation; no native codec is linked.
 
 use super::block::{FirstLeaf, ReconstructedPlane};
-use super::frame::FilmGrain;
+use super::frame::{FilmGrain, validate_film_grain_point_order};
 use super::{Av1Result, CodecError, malformed};
 use crate::CancellationToken;
 
@@ -534,9 +534,11 @@ fn validate_parameters(params: &FilmGrain) -> Av1Result<()> {
     }
     for points in std::iter::once(&params.y_points).chain(params.uv_points.iter()) {
         for pair in points.windows(2) {
-            if pair[0][0] >= pair[1][0] {
-                return Err(malformed("film-grain scaling points are not increasing"));
-            }
+            validate_film_grain_point_order(
+                &pair[0],
+                &pair[1],
+                "film-grain scaling points are not increasing",
+            )?;
         }
         if points
             .iter()
