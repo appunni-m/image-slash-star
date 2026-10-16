@@ -660,16 +660,32 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
         "lossy_wide_i444_mode2_mixed_b128x128",
     ];
+    let expected_name_set: std::collections::HashSet<_> = expected_names.iter().copied().collect();
+    assert_eq!(
+        expected_name_set.len(),
+        expected_names.len(),
+        "duplicate expected AVIF loop witness"
+    );
     // STTS parser cases in the shared index are exercised by matrix parity;
     // this test stays focused on complete native repetition witnesses.
     let cases: Vec<Value> = field(&index, "cases");
-    let cases: Vec<Value> = cases
-        .into_iter()
-        .filter(|case| expected_names.contains(&field::<String>(case, "name").as_str()))
-        .collect();
-    assert_eq!(cases.len(), expected_names.len());
-    for (case, expected_name) in cases.iter().zip(expected_names) {
-        assert_eq!(field::<String>(case, "name"), expected_name);
+    let mut cases_by_name = std::collections::HashMap::with_capacity(expected_names.len());
+    for case in cases {
+        let name: String = field(&case, "name");
+        if expected_name_set.contains(name.as_str()) {
+            assert!(
+                cases_by_name.insert(name.clone(), case).is_none(),
+                "duplicate indexed AVIF loop witness: {name}"
+            );
+        }
+    }
+    assert_eq!(
+        cases_by_name.len(),
+        expected_names.len(),
+        "AVIF loop index is missing expected witnesses"
+    );
+    for expected_name in expected_names {
+        let case = require_some(cases_by_name.get(expected_name), "complete loop witness");
         assert!(field::<bool>(case, "repeat_equal"));
         assert!(field::<bool>(case, "media_payloads_equal"));
         let path: String = field(case, "input_path");
