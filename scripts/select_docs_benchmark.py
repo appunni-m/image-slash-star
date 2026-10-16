@@ -2,14 +2,74 @@
 """Select public benchmark data without executing code from an artifact."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+import http.client
 import json
+import math
 import os
 from pathlib import Path
 import re
+import time
+import urllib.error
 import urllib.request
 
 
 ROOT = Path(__file__).resolve().parent.parent
+REQUEST_ATTEMPTS = 4
+MAX_RETRY_DELAY_SECONDS = 60.0
+RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+
+
+def _server_retry_delay(error: urllib.error.HTTPError) -> float | None:
+    headers = error.headers or {}
+    retry_after = headers.get("Retry-After")
+    if retry_after:
+        try:
+            seconds = float(retry_after)
+        except ValueError:
+            try:
+                retry_at = parsedate_to_datetime(retry_after)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                seconds = float("nan")
+        if math.isfinite(seconds):
+            return max(seconds, 0.0)
+
+    reset = headers.get("X-RateLimit-Reset")
+    if reset is not None:
+        try:
+            reset_at = float(reset)
+        except ValueError:
+            return None
+        if math.isfinite(reset_at):
+            return max(reset_at - datetime.now(timezone.utc).timestamp(), 0.0)
+    return None
+
+
+def _retry_delay(error: urllib.error.HTTPError, attempt: int) -> float:
+    server_delay = _server_retry_delay(error)
+    if server_delay is not None:
+        return min(server_delay, MAX_RETRY_DELAY_SECONDS)
+    return min(float(2 ** (attempt - 1)), MAX_RETRY_DELAY_SECONDS)
+
+
+def _retryable_http_error(error: urllib.error.HTTPError) -> bool:
+    if error.code in RETRYABLE_HTTP_STATUSES:
+        delay = _server_retry_delay(error)
+        return delay is None or delay <= MAX_RETRY_DELAY_SECONDS
+    headers = error.headers or {}
+    if error.code != 403:
+        return False
+    if headers.get("Retry-After") is not None:
+        delay = _server_retry_delay(error)
+        return delay is None or delay <= MAX_RETRY_DELAY_SECONDS
+    if headers.get("X-RateLimit-Remaining") == "0":
+        delay = _server_retry_delay(error)
+        return delay is not None and delay <= MAX_RETRY_DELAY_SECONDS
+    return False
 
 
 def read_json(url: str) -> dict:
@@ -17,8 +77,22 @@ def read_json(url: str) -> dict:
     token = os.environ.get("GH_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as response:
-        return json.load(response)
+    for attempt in range(1, REQUEST_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(
+                urllib.request.Request(url, headers=headers), timeout=30
+            ) as response:
+                return json.load(response)
+        except urllib.error.HTTPError as error:
+            if not _retryable_http_error(error) or attempt == REQUEST_ATTEMPTS:
+                raise
+            delay = _retry_delay(error, attempt)
+        except (OSError, http.client.HTTPException, json.JSONDecodeError):
+            if attempt == REQUEST_ATTEMPTS:
+                raise
+            delay = min(float(2 ** (attempt - 1)), MAX_RETRY_DELAY_SECONDS)
+        time.sleep(delay)
+    raise AssertionError("unreachable request retry state")
 
 
 def trusted_run(run: dict, repository: str) -> bool:

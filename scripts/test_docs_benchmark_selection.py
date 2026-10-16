@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import copy
+import http.client
+import io
+import json
+import time
+import urllib.error
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from select_docs_benchmark import select_run
+from select_docs_benchmark import read_json, select_run
 
 
 class BenchmarkSelectionTests(unittest.TestCase):
@@ -62,6 +67,112 @@ class BenchmarkSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate"):
             select_run("owner/repo", "workflow_run", {"workflow_run": self.run},
                        Mock(return_value={"artifacts": self.artifacts["artifacts"] * 2}))
+
+    def test_transient_github_errors_retry_and_honor_retry_after(self) -> None:
+        rate_limit = urllib.error.HTTPError(
+            "https://api.github.com/runs",
+            429,
+            "rate limited",
+            {"Retry-After": "3"},
+            io.BytesIO(),
+        )
+        unavailable = urllib.error.HTTPError(
+            "https://api.github.com/runs",
+            503,
+            "service unavailable",
+            {},
+            io.BytesIO(),
+        )
+        with (
+            patch(
+                "select_docs_benchmark.urllib.request.urlopen",
+                side_effect=[rate_limit, unavailable, io.BytesIO(b'{"ok": true}')],
+            ) as urlopen,
+            patch("select_docs_benchmark.time.sleep") as sleep,
+        ):
+            self.assertEqual(read_json("https://api.github.com/runs"), {"ok": True})
+
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [3.0, 2.0])
+
+    def test_permanent_http_errors_and_exhausted_network_errors_remain_visible(self) -> None:
+        unauthorized = urllib.error.HTTPError(
+            "https://api.github.com/runs", 401, "unauthorized", {}, io.BytesIO()
+        )
+        with patch(
+            "select_docs_benchmark.urllib.request.urlopen", side_effect=unauthorized
+        ) as urlopen:
+            with self.assertRaises(urllib.error.HTTPError):
+                read_json("https://api.github.com/runs")
+        urlopen.assert_called_once()
+
+        with (
+            patch(
+                "select_docs_benchmark.urllib.request.urlopen",
+                side_effect=OSError("network unavailable"),
+            ) as urlopen,
+            patch("select_docs_benchmark.time.sleep") as sleep,
+        ):
+            with self.assertRaisesRegex(OSError, "network unavailable"):
+                read_json("https://api.github.com/runs")
+
+        self.assertEqual(urlopen.call_count, 4)
+        self.assertEqual(sleep.call_count, 3)
+
+    def test_primary_rate_limit_waits_for_reset_and_requires_a_usable_reset(self) -> None:
+        rate_limit = urllib.error.HTTPError(
+            "https://api.github.com/runs",
+            403,
+            "rate limited",
+            {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(int(time.time()) + 10),
+            },
+            io.BytesIO(),
+        )
+        with (
+            patch(
+                "select_docs_benchmark.urllib.request.urlopen",
+                side_effect=[rate_limit, io.BytesIO(b'{"ok": true}')],
+            ) as urlopen,
+            patch("select_docs_benchmark.time.sleep") as sleep,
+        ):
+            self.assertEqual(read_json("https://api.github.com/runs"), {"ok": True})
+
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertGreater(sleep.call_args.args[0], 0.0)
+        self.assertLessEqual(sleep.call_args.args[0], 10.0)
+
+        unusable_reset = urllib.error.HTTPError(
+            "https://api.github.com/runs",
+            403,
+            "rate limited",
+            {"X-RateLimit-Remaining": "0"},
+            io.BytesIO(),
+        )
+        with patch(
+            "select_docs_benchmark.urllib.request.urlopen", side_effect=unusable_reset
+        ) as urlopen:
+            with self.assertRaises(urllib.error.HTTPError):
+                read_json("https://api.github.com/runs")
+        urlopen.assert_called_once()
+
+    def test_truncated_github_response_retries(self) -> None:
+        with (
+            patch(
+                "select_docs_benchmark.urllib.request.urlopen",
+                side_effect=[
+                    http.client.IncompleteRead(b"partial", 8),
+                    io.BytesIO(b'{"partial":'),
+                    io.BytesIO(b'{"ok": true}'),
+                ],
+            ) as urlopen,
+            patch("select_docs_benchmark.time.sleep") as sleep,
+        ):
+            self.assertEqual(read_json("https://api.github.com/runs"), {"ok": True})
+
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [1.0, 2.0])
 
 
 if __name__ == "__main__":

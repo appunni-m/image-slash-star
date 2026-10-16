@@ -4,8 +4,12 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import hashlib
+import http.client
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -14,11 +18,16 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Callable, TypeVar
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_NAME = "image-slash-star"
 API_ROOT = "https://crates.io/api/v1/crates"
 USER_AGENT = "image-slash-star-release-verifier/0.1 (release automation)"
+REQUEST_ATTEMPTS = 4
+MAX_RETRY_DELAY_SECONDS = 60.0
+RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+Result = TypeVar("Result")
 
 
 class PublishError(RuntimeError):
@@ -71,18 +80,89 @@ def request(url: str, *, accept: str = "application/json") -> urllib.request.Req
     )
 
 
+def _retryable_http_error(error: urllib.error.HTTPError) -> bool:
+    headers = error.headers or {}
+    delay = _server_retry_delay(error)
+    if error.code in RETRYABLE_HTTP_STATUSES:
+        return delay is None or delay <= MAX_RETRY_DELAY_SECONDS
+    if error.code != 403:
+        return False
+    if headers.get("Retry-After") is not None:
+        return delay is None or delay <= MAX_RETRY_DELAY_SECONDS
+    return headers.get("X-RateLimit-Remaining") == "0" and (
+        delay is not None and delay <= MAX_RETRY_DELAY_SECONDS
+    )
+
+
+def _server_retry_delay(error: urllib.error.HTTPError) -> float | None:
+    headers = error.headers or {}
+    retry_after = headers.get("Retry-After")
+    if retry_after:
+        try:
+            seconds = float(retry_after)
+        except ValueError:
+            try:
+                retry_at = parsedate_to_datetime(retry_after)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                seconds = float("nan")
+        if math.isfinite(seconds):
+            return max(seconds, 0.0)
+
+    reset = headers.get("X-RateLimit-Reset")
+    if reset is not None:
+        try:
+            reset_at = float(reset)
+        except ValueError:
+            return None
+        if math.isfinite(reset_at):
+            return max(reset_at - datetime.now(timezone.utc).timestamp(), 0.0)
+    return None
+
+
+def _retry_delay(error: BaseException, attempt: int) -> float:
+    if isinstance(error, urllib.error.HTTPError):
+        server_delay = _server_retry_delay(error)
+        if server_delay is not None:
+            return min(server_delay, MAX_RETRY_DELAY_SECONDS)
+    return min(float(2 ** (attempt - 1)), MAX_RETRY_DELAY_SECONDS)
+
+
+def _retry_registry_request(action: Callable[[], Result]) -> Result:
+    """Retry bounded transient registry failures without weakening validation."""
+
+    for attempt in range(1, REQUEST_ATTEMPTS + 1):
+        try:
+            return action()
+        except urllib.error.HTTPError as error:
+            if not _retryable_http_error(error) or attempt == REQUEST_ATTEMPTS:
+                raise
+            delay = _retry_delay(error, attempt)
+        except (OSError, http.client.HTTPException, json.JSONDecodeError) as error:
+            if attempt == REQUEST_ATTEMPTS:
+                raise
+            delay = _retry_delay(error, attempt)
+        time.sleep(delay)
+    raise AssertionError("unreachable registry retry state")
+
+
 def registry_version(version: str) -> dict | None:
     """Return exact registry metadata, distinguishing absence from API failure."""
 
     url = f"{API_ROOT}/{PACKAGE_NAME}/{version}"
     try:
-        with urllib.request.urlopen(request(url), timeout=30) as response:
-            document = json.load(response)
+        def read_metadata() -> dict:
+            with urllib.request.urlopen(request(url), timeout=30) as response:
+                return json.load(response)
+
+        document = _retry_registry_request(read_metadata)
     except urllib.error.HTTPError as error:
         if error.code == 404:
             return None
         raise PublishError(f"crates.io metadata request failed: HTTP {error.code}") from error
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, http.client.HTTPException, json.JSONDecodeError) as error:
         raise PublishError(f"crates.io metadata request failed: {error}") from error
     item = document.get("version")
     if not isinstance(item, dict) or item.get("num") != version:
@@ -113,12 +193,19 @@ def download_registry_archive(version: str, destination: Path) -> str:
     try:
         # crates.io returns {"url": ...} for application/json clients. Ask
         # for binary data so the endpoint redirects to the actual .crate.
-        with urllib.request.urlopen(
-            request(url, accept="application/octet-stream"), timeout=60
-        ) as response:
-            with destination.open("wb") as output:
-                shutil.copyfileobj(response, output)
+        def download() -> None:
+            with urllib.request.urlopen(
+                request(url, accept="application/octet-stream"), timeout=60
+            ) as response:
+                with destination.open("wb") as output:
+                    shutil.copyfileobj(response, output)
+
+        _retry_registry_request(download)
     except (OSError, urllib.error.HTTPError) as error:
+        destination.unlink(missing_ok=True)
+        raise PublishError(f"cannot download registry archive: {error}") from error
+    except http.client.HTTPException as error:
+        destination.unlink(missing_ok=True)
         raise PublishError(f"cannot download registry archive: {error}") from error
     digest = sha256(destination)
     if digest != metadata["checksum"]:

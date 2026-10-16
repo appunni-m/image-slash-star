@@ -19,7 +19,9 @@ import struct
 import sys
 import tarfile
 import tempfile
+import time
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -79,6 +81,133 @@ class CoverageTests(unittest.TestCase):
 
 
 class PublishTests(unittest.TestCase):
+    def test_registry_metadata_retries_transient_server_errors(self) -> None:
+        version = "0.1.3"
+        unavailable = urllib.error.HTTPError(
+            f"{publish_release.API_ROOT}/image-slash-star/{version}",
+            503,
+            "service unavailable",
+            {},
+            io.BytesIO(),
+        )
+        checksum = hashlib.sha256(b"verified release archive").hexdigest()
+        response = io.BytesIO(
+            json.dumps({"version": {"num": version, "checksum": checksum}}).encode()
+        )
+        with (
+            patch.object(
+                publish_release.urllib.request,
+                "urlopen",
+                side_effect=[unavailable, response],
+            ) as urlopen,
+            patch.object(publish_release.time, "sleep") as sleep,
+        ):
+            metadata = publish_release.registry_version(version)
+
+        self.assertEqual(metadata["checksum"], checksum)
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(1.0)
+
+    def test_registry_metadata_retries_invalid_json_body(self) -> None:
+        version = "0.1.3"
+        checksum = hashlib.sha256(b"verified release archive").hexdigest()
+        response = io.BytesIO(
+            json.dumps({"version": {"num": version, "checksum": checksum}}).encode()
+        )
+        with (
+            patch.object(
+                publish_release.urllib.request,
+                "urlopen",
+                side_effect=[io.BytesIO(b'{"version":'), response],
+            ) as urlopen,
+            patch.object(publish_release.time, "sleep") as sleep,
+        ):
+            metadata = publish_release.registry_version(version)
+
+        self.assertEqual(metadata["checksum"], checksum)
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(1.0)
+
+    def test_registry_metadata_waits_for_primary_rate_limit_reset(self) -> None:
+        version = "0.1.3"
+        rate_limit = urllib.error.HTTPError(
+            f"{publish_release.API_ROOT}/image-slash-star/{version}",
+            403,
+            "rate limited",
+            {
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(int(time.time()) + 10),
+            },
+            io.BytesIO(),
+        )
+        response = io.BytesIO(
+            json.dumps({"version": {"num": version, "checksum": "0" * 64}}).encode()
+        )
+        with (
+            patch.object(
+                publish_release.urllib.request,
+                "urlopen",
+                side_effect=[rate_limit, response],
+            ) as urlopen,
+            patch.object(publish_release.time, "sleep") as sleep,
+        ):
+            self.assertIsNotNone(publish_release.registry_version(version))
+
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertGreater(sleep.call_args.args[0], 0.0)
+        self.assertLessEqual(sleep.call_args.args[0], 10.0)
+
+    def test_registry_metadata_does_not_retry_rate_limit_without_reset(self) -> None:
+        version = "0.1.3"
+        rate_limit = urllib.error.HTTPError(
+            f"{publish_release.API_ROOT}/image-slash-star/{version}",
+            403,
+            "rate limited",
+            {"X-RateLimit-Remaining": "0"},
+            io.BytesIO(),
+        )
+        with patch.object(
+            publish_release.urllib.request, "urlopen", side_effect=rate_limit
+        ) as urlopen:
+            with self.assertRaisesRegex(publish_release.PublishError, "HTTP 403"):
+                publish_release.registry_version(version)
+        urlopen.assert_called_once()
+
+    def test_registry_archive_retries_rate_limit_and_keeps_checksum_validation(self) -> None:
+        version = "0.1.1"
+        archive = gzip.compress(b"verified release archive", mtime=0)
+        digest = hashlib.sha256(archive).hexdigest()
+        rate_limit = urllib.error.HTTPError(
+            f"{publish_release.API_ROOT}/image-slash-star/{version}/download",
+            429,
+            "rate limited",
+            {"Retry-After": "4"},
+            io.BytesIO(),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "release.crate"
+            with (
+                patch.object(
+                    publish_release,
+                    "registry_version",
+                    return_value={"num": version, "checksum": digest},
+                ),
+                patch.object(
+                    publish_release.urllib.request,
+                    "urlopen",
+                    side_effect=[rate_limit, io.BytesIO(archive)],
+                ) as urlopen,
+                patch.object(publish_release.time, "sleep") as sleep,
+            ):
+                self.assertEqual(
+                    publish_release.download_registry_archive(version, destination),
+                    digest,
+                )
+
+            self.assertEqual(destination.read_bytes(), archive)
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(4.0)
+
     def test_download_negotiates_archive_bytes_instead_of_the_json_url(self) -> None:
         version = "0.1.1"
         archive = gzip.compress(b"verified release archive", mtime=0)
