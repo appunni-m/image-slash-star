@@ -1998,7 +1998,8 @@ fn convert_ycbcr_full_resolution(
         ));
     }
 
-    for (index, pixel) in samples.chunks_exact_mut(3).enumerate() {
+    let (pixels, _) = samples.as_chunks_mut::<3>();
+    for (index, pixel) in pixels.iter_mut().enumerate() {
         if index.is_multiple_of(1_024) {
             crate::codecs::error::check_cancelled(token)?;
         }
