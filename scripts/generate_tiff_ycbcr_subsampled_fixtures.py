@@ -327,6 +327,15 @@ def fixtures() -> dict[
         subsampling=(1, 2),
         positioning=1,
     )
+    custom_coefficients_one_by_two_odd_height = build_tiff(
+        4,
+        3,
+        4,
+        one_by_two_clumps,
+        subsampling=(1, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
     odd_edge = build_tiff(
         3,
         3,
@@ -437,6 +446,20 @@ def fixtures() -> dict[
             bytes.fromhex(
                 "6807006d2306714031765c5b8d2c0192482b9665569b8180"
                 "a55244aa6e6eaf8b99b4a7c3"
+            ),
+        ),
+        "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": (
+            custom_coefficients_one_by_two_odd_height,
+            (4, 3),
+            "b9c6456db4389b82894e338cbec478835eb4eab02f3664289164f74c4f3ecba7",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (1, 2),
+                531: 1,
+            },
+            bytes.fromhex(
+                "710e0073290476442f785f5b963300984e299b69549d8480"
+                "ad5942af746db28f99b4aac4"
             ),
         ),
         "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": (
@@ -592,6 +615,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
             "ycbcr_subsampled_lzw_1x2.tiff": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
             "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
+            "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
