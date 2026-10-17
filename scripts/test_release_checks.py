@@ -31,6 +31,7 @@ import prepare_crates_io_publish
 import publish_release
 import setup_benchmark_oracle
 import verify_claim_ledger as claim_ledger
+import verify_coverage_origins as coverage_origins
 import verify_release_tag
 
 
@@ -79,6 +80,99 @@ class CoverageTests(unittest.TestCase):
                     coverage.load_totals(report)
             report.write_text(json.dumps({"data": [{"totals": self.totals}]}))
             self.assertEqual(coverage.load_totals(report), self.totals)
+
+
+class CoverageOriginTests(unittest.TestCase):
+    def test_guard_indexes_survive_source_line_insertions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            library = root / "src" / "lib.rs"
+            matrix = root / "tests" / "matrix.rs"
+            inventory = root / "tests" / "fixtures" / "coverage_origin_manifest.json"
+            library.parent.mkdir(parents=True)
+            matrix.parent.mkdir(parents=True)
+            inventory.parent.mkdir(parents=True)
+            library.write_text("#[cfg(coverage)]\nfn allocation_guard() {}\n")
+            matrix.write_text(
+                "#[cfg(coverage)]\nfn first_fault_contract() {}\n"
+                "#[cfg(coverage)]\nfn second_fault_contract() {}\n"
+            )
+            inventory.write_text(
+                json.dumps(
+                    {
+                        "format_version": 2,
+                        "entries": [
+                            {
+                                "path": "src/lib.rs",
+                                "guard_count": 1,
+                                "guards": [
+                                    {"index": 1, "origin": "defensive_model"}
+                                ],
+                            },
+                            {
+                                "path": "tests/matrix.rs",
+                                "guard_count": 2,
+                                "guards": [
+                                    {
+                                        "index": 1,
+                                        "origin": "independent_implementation",
+                                    },
+                                    {
+                                        "index": 2,
+                                        "origin": "independent_implementation",
+                                    },
+                                ],
+                            },
+                        ],
+                    }
+                )
+            )
+
+            with (
+                patch.object(coverage_origins, "ROOT", root),
+                patch.object(coverage_origins, "INVENTORY", inventory),
+            ):
+                self.assertEqual(coverage_origins.verify(), (3, 2))
+                library.write_text("// unrelated header\n\n" + library.read_text())
+                matrix.write_text("// inserted comment\n" + matrix.read_text())
+                self.assertEqual(coverage_origins.verify(), (3, 2))
+
+    def test_guard_count_still_rejects_unrecorded_source_guards(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "src" / "lib.rs"
+            inventory = root / "tests" / "fixtures" / "coverage_origin_manifest.json"
+            source.parent.mkdir(parents=True)
+            inventory.parent.mkdir(parents=True)
+            source.write_text("#[cfg(coverage)]\nfn first() {}\n")
+            inventory.write_text(
+                json.dumps(
+                    {
+                        "format_version": 2,
+                        "entries": [
+                            {
+                                "path": "src/lib.rs",
+                                "guard_count": 1,
+                                "guards": [
+                                    {"index": 1, "origin": "defensive_model"}
+                                ],
+                            }
+                        ],
+                    }
+                )
+            )
+
+            with (
+                patch.object(coverage_origins, "ROOT", root),
+                patch.object(coverage_origins, "INVENTORY", inventory),
+            ):
+                source.write_text(
+                    source.read_text() + "\n#[cfg(coverage)]\nfn unlisted() {}\n"
+                )
+                with self.assertRaisesRegex(
+                    RuntimeError, "guard_count 1 differs from source count 2"
+                ):
+                    coverage_origins.verify()
 
 
 class PublishTests(unittest.TestCase):

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Verify the provenance inventory for exact ``cfg(coverage)`` guards.
 
-The inventory is a static source audit. It rejects source coverage exclusions
-and ``pillow_fixture`` as an origin for a coverage guard. Pillow parity is
-represented by ``coverage_matrix.json`` instead.
+The inventory is a static source audit. Guard identities use per-file
+ordinals so ordinary line insertions do not invalidate provenance. The verifier
+still requires every guard to be accounted for and rejects source coverage
+exclusions and ``pillow_fixture`` as an origin. Pillow parity is represented by
+``coverage_matrix.json`` instead.
 """
 
 from __future__ import annotations
@@ -53,8 +55,8 @@ def verify() -> tuple[int, int]:
     except (OSError, json.JSONDecodeError) as error:
         fail(f"cannot read {INVENTORY}: {error}")
 
-    if document.get("format_version") != 1:
-        fail("coverage origin manifest format_version must be 1")
+    if document.get("format_version") != 2:
+        fail("coverage origin manifest format_version must be 2")
     entries = document.get("entries")
     if not isinstance(entries, list) or not entries:
         fail("coverage origin manifest entries must be a non-empty array")
@@ -96,14 +98,14 @@ def verify() -> tuple[int, int]:
         fail(f"coverage origin file set differs: missing={missing}, extra={extra}")
 
     total = 0
-    for path, line_numbers in discovered.items():
+    for path, source_lines in discovered.items():
         entry = indexed[path]
-        if entry["guard_count"] != len(line_numbers):
+        if entry["guard_count"] != len(source_lines):
             fail(
                 f"{path}: guard_count {entry['guard_count']} differs from source "
-                f"count {len(line_numbers)}"
+                f"count {len(source_lines)}"
             )
-        total += len(line_numbers)
+        total += len(source_lines)
         explicit = entry.get("guards")
         if explicit is None:
             if entry.get("origin") not in ORIGINS:
@@ -111,21 +113,24 @@ def verify() -> tuple[int, int]:
             continue
         if not isinstance(explicit, list):
             fail(f"{path}: guards must be an array")
-        by_line: dict[int, dict] = {}
+        by_index: dict[int, dict] = {}
         for guard in explicit:
             if not isinstance(guard, dict):
                 fail(f"{path}: listed guards must be objects")
-            line = guard.get("line")
+            if "line" in guard:
+                fail(f"{path}: guard identities must use stable indexes, not source lines")
+            index = guard.get("index")
             origin = guard.get("origin")
-            if not isinstance(line, int) or line in by_line:
-                fail(f"{path}: invalid or duplicate listed guard line {line!r}")
+            if type(index) is not int or index < 1 or index in by_index:
+                fail(f"{path}: invalid or duplicate guard index {index!r}")
             if origin not in ORIGINS:
-                fail(f"{path}:{line}: unsupported coverage origin {origin!r}")
-            by_line[line] = guard
-        if set(by_line) != set(line_numbers):
+                fail(f"{path}: guard {index}: unsupported coverage origin {origin!r}")
+            by_index[index] = guard
+        expected_indexes = set(range(1, len(source_lines) + 1))
+        if set(by_index) != expected_indexes:
             fail(
-                f"{path}: listed guard lines {sorted(by_line)} differ from source "
-                f"lines {line_numbers}"
+                f"{path}: listed guard indexes {sorted(by_index)} differ from "
+                f"source indexes {sorted(expected_indexes)}"
             )
 
     return total, len(discovered)

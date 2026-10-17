@@ -9,103 +9,103 @@
       "guard_count": 25,
       "guards": [
         {
-          "line": 6,
+          "index": 1,
           "origin": "independent_implementation"
         },
         {
-          "line": 33,
+          "index": 2,
           "origin": "independent_implementation"
         },
         {
-          "line": 41,
+          "index": 3,
           "origin": "independent_implementation"
         },
         {
-          "line": 60,
+          "index": 4,
           "origin": "independent_implementation"
         },
         {
-          "line": 68,
+          "index": 5,
           "origin": "independent_implementation"
         },
         {
-          "line": 75,
+          "index": 6,
           "origin": "independent_implementation"
         },
         {
-          "line": 81,
+          "index": 7,
           "origin": "independent_implementation"
         },
         {
-          "line": 114,
+          "index": 8,
           "origin": "independent_implementation"
         },
         {
-          "line": 194,
+          "index": 9,
           "origin": "independent_implementation"
         },
         {
-          "line": 219,
+          "index": 10,
           "origin": "independent_implementation"
         },
         {
-          "line": 287,
+          "index": 11,
           "origin": "independent_implementation"
         },
         {
-          "line": 318,
+          "index": 12,
           "origin": "independent_implementation"
         },
         {
-          "line": 339,
+          "index": 13,
           "origin": "independent_implementation"
         },
         {
-          "line": 412,
+          "index": 14,
           "origin": "independent_implementation"
         },
         {
-          "line": 854,
+          "index": 15,
           "origin": "defensive_model"
         },
         {
-          "line": 1854,
+          "index": 16,
           "origin": "defensive_model"
         },
         {
-          "line": 2219,
+          "index": 17,
           "origin": "defensive_model"
         },
         {
-          "line": 11136,
+          "index": 18,
           "origin": "independent_implementation"
         },
         {
-          "line": 11318,
+          "index": 19,
           "origin": "defensive_model"
         },
         {
-          "line": 12258,
+          "index": 20,
           "origin": "independent_implementation"
         },
         {
-          "line": 20637,
+          "index": 21,
           "origin": "independent_implementation"
         },
         {
-          "line": 20822,
+          "index": 22,
           "origin": "independent_implementation"
         },
         {
-          "line": 21657,
+          "index": 23,
           "origin": "independent_implementation"
         },
         {
-          "line": 21857,
+          "index": 24,
           "origin": "independent_implementation"
         },
         {
-          "line": 22275,
+          "index": 25,
           "origin": "independent_implementation"
         }
       ],
@@ -120,71 +120,71 @@
       "guard_count": 17,
       "guards": [
         {
-          "line": 408,
+          "index": 1,
           "origin": "independent_implementation"
         },
         {
-          "line": 443,
+          "index": 2,
           "origin": "independent_implementation"
         },
         {
-          "line": 496,
+          "index": 3,
           "origin": "independent_implementation"
         },
         {
-          "line": 551,
+          "index": 4,
           "origin": "independent_implementation"
         },
         {
-          "line": 1562,
+          "index": 5,
           "origin": "independent_implementation"
         },
         {
-          "line": 1580,
+          "index": 6,
           "origin": "defensive_model"
         },
         {
-          "line": 1605,
+          "index": 7,
           "origin": "independent_implementation"
         },
         {
-          "line": 1977,
+          "index": 8,
           "origin": "independent_implementation"
         },
         {
-          "line": 1999,
+          "index": 9,
           "origin": "defensive_model"
         },
         {
-          "line": 2016,
+          "index": 10,
           "origin": "defensive_model"
         },
         {
-          "line": 2193,
+          "index": 11,
           "origin": "independent_implementation"
         },
         {
-          "line": 2278,
+          "index": 12,
           "origin": "defensive_model"
         },
         {
-          "line": 2307,
+          "index": 13,
           "origin": "defensive_model"
         },
         {
-          "line": 2329,
+          "index": 14,
           "origin": "defensive_model"
         },
         {
-          "line": 2945,
+          "index": 15,
           "origin": "defensive_model"
         },
         {
-          "line": 3074,
+          "index": 16,
           "origin": "defensive_model"
         },
         {
-          "line": 4349,
+          "index": 17,
           "origin": "defensive_model"
         }
       ],
@@ -194,47 +194,47 @@
       "guard_count": 11,
       "guards": [
         {
-          "line": 27,
+          "index": 1,
           "origin": "independent_implementation"
         },
         {
-          "line": 65,
+          "index": 2,
           "origin": "independent_implementation"
         },
         {
-          "line": 534,
+          "index": 3,
           "origin": "independent_implementation"
         },
         {
-          "line": 561,
+          "index": 4,
           "origin": "independent_implementation"
         },
         {
-          "line": 589,
+          "index": 5,
           "origin": "independent_implementation"
         },
         {
-          "line": 898,
+          "index": 6,
           "origin": "defensive_model"
         },
         {
-          "line": 1379,
+          "index": 7,
           "origin": "independent_implementation"
         },
         {
-          "line": 1391,
+          "index": 8,
           "origin": "independent_implementation"
         },
         {
-          "line": 1397,
+          "index": 9,
           "origin": "independent_implementation"
         },
         {
-          "line": 1436,
+          "index": 10,
           "origin": "independent_implementation"
         },
         {
-          "line": 1468,
+          "index": 11,
           "origin": "independent_implementation"
         }
       ],
@@ -244,15 +244,15 @@
       "guard_count": 3,
       "guards": [
         {
-          "line": 2080,
+          "index": 1,
           "origin": "independent_implementation"
         },
         {
-          "line": 2988,
+          "index": 2,
           "origin": "defensive_model"
         },
         {
-          "line": 3122,
+          "index": 3,
           "origin": "defensive_model"
         }
       ],
@@ -272,11 +272,11 @@
       "guard_count": 2,
       "guards": [
         {
-          "line": 173,
+          "index": 1,
           "origin": "defensive_model"
         },
         {
-          "line": 218,
+          "index": 2,
           "origin": "independent_implementation"
         }
       ],
@@ -296,15 +296,15 @@
       "guard_count": 3,
       "guards": [
         {
-          "line": 575,
+          "index": 1,
           "origin": "defensive_model"
         },
         {
-          "line": 1091,
+          "index": 2,
           "origin": "defensive_model"
         },
         {
-          "line": 1140,
+          "index": 3,
           "origin": "defensive_model"
         }
       ],
@@ -314,11 +314,11 @@
       "guard_count": 2,
       "guards": [
         {
-          "line": 91,
+          "index": 1,
           "origin": "defensive_model"
         },
         {
-          "line": 96,
+          "index": 2,
           "origin": "independent_implementation"
         }
       ],
@@ -368,15 +368,15 @@
       "guard_count": 3,
       "guards": [
         {
-          "line": 687,
+          "index": 1,
           "origin": "defensive_model"
         },
         {
-          "line": 1881,
+          "index": 2,
           "origin": "defensive_model"
         },
         {
-          "line": 1983,
+          "index": 3,
           "origin": "defensive_model"
         }
       ],
@@ -396,15 +396,15 @@
       "guard_count": 3,
       "guards": [
         {
-          "line": 91,
+          "index": 1,
           "origin": "defensive_model"
         },
         {
-          "line": 93,
+          "index": 2,
           "origin": "defensive_model"
         },
         {
-          "line": 120,
+          "index": 3,
           "origin": "defensive_model"
         }
       ],
@@ -414,187 +414,187 @@
       "guard_count": 46,
       "guards": [
         {
-          "line": 24,
+          "index": 1,
           "origin": "independent_implementation"
         },
         {
-          "line": 28,
+          "index": 2,
           "origin": "independent_implementation"
         },
         {
-          "line": 32,
+          "index": 3,
           "origin": "independent_implementation"
         },
         {
-          "line": 36,
+          "index": 4,
           "origin": "independent_implementation"
         },
         {
-          "line": 50,
+          "index": 5,
           "origin": "independent_implementation"
         },
         {
-          "line": 1024,
+          "index": 6,
           "origin": "defensive_model"
         },
         {
-          "line": 1805,
+          "index": 7,
           "origin": "defensive_model"
         },
         {
-          "line": 2244,
+          "index": 8,
           "origin": "independent_implementation"
         },
         {
-          "line": 2254,
+          "index": 9,
           "origin": "independent_implementation"
         },
         {
-          "line": 2263,
+          "index": 10,
           "origin": "independent_implementation"
         },
         {
-          "line": 2276,
+          "index": 11,
           "origin": "independent_implementation"
         },
         {
-          "line": 2285,
+          "index": 12,
           "origin": "independent_implementation"
         },
         {
-          "line": 2296,
+          "index": 13,
           "origin": "independent_implementation"
         },
         {
-          "line": 2309,
+          "index": 14,
           "origin": "independent_implementation"
         },
         {
-          "line": 2321,
+          "index": 15,
           "origin": "independent_implementation"
         },
         {
-          "line": 2336,
+          "index": 16,
           "origin": "independent_implementation"
         },
         {
-          "line": 2346,
+          "index": 17,
           "origin": "independent_implementation"
         },
         {
-          "line": 2356,
+          "index": 18,
           "origin": "independent_implementation"
         },
         {
-          "line": 2620,
+          "index": 19,
           "origin": "independent_implementation"
         },
         {
-          "line": 2628,
+          "index": 20,
           "origin": "independent_implementation"
         },
         {
-          "line": 2635,
+          "index": 21,
           "origin": "independent_implementation"
         },
         {
-          "line": 2646,
+          "index": 22,
           "origin": "independent_implementation"
         },
         {
-          "line": 2653,
+          "index": 23,
           "origin": "independent_implementation"
         },
         {
-          "line": 2662,
+          "index": 24,
           "origin": "independent_implementation"
         },
         {
-          "line": 2673,
+          "index": 25,
           "origin": "independent_implementation"
         },
         {
-          "line": 2683,
+          "index": 26,
           "origin": "independent_implementation"
         },
         {
-          "line": 2696,
+          "index": 27,
           "origin": "independent_implementation"
         },
         {
-          "line": 2704,
+          "index": 28,
           "origin": "independent_implementation"
         },
         {
-          "line": 2712,
+          "index": 29,
           "origin": "independent_implementation"
         },
         {
-          "line": 2725,
+          "index": 30,
           "origin": "independent_implementation"
         },
         {
-          "line": 2732,
+          "index": 31,
           "origin": "independent_implementation"
         },
         {
-          "line": 2753,
+          "index": 32,
           "origin": "independent_implementation"
         },
         {
-          "line": 2756,
+          "index": 33,
           "origin": "independent_implementation"
         },
         {
-          "line": 2758,
+          "index": 34,
           "origin": "independent_implementation"
         },
         {
-          "line": 2761,
+          "index": 35,
           "origin": "independent_implementation"
         },
         {
-          "line": 2818,
+          "index": 36,
           "origin": "independent_implementation"
         },
         {
-          "line": 2857,
+          "index": 37,
           "origin": "independent_implementation"
         },
         {
-          "line": 8062,
+          "index": 38,
           "origin": "independent_implementation"
         },
         {
-          "line": 8150,
+          "index": 39,
           "origin": "independent_implementation"
         },
         {
-          "line": 8162,
+          "index": 40,
           "origin": "independent_implementation"
         },
         {
-          "line": 8172,
+          "index": 41,
           "origin": "independent_implementation"
         },
         {
-          "line": 8232,
+          "index": 42,
           "origin": "independent_implementation"
         },
         {
-          "line": 8249,
+          "index": 43,
           "origin": "independent_implementation"
         },
         {
-          "line": 8483,
+          "index": 44,
           "origin": "independent_implementation"
         },
         {
-          "line": 8728,
+          "index": 45,
           "origin": "independent_implementation"
         },
         {
-          "line": 15129,
+          "index": 46,
           "origin": "defensive_model"
         }
       ],
@@ -606,7 +606,7 @@
       "path": "tests/support/av1_short_references.rs"
     }
   ],
-  "format_version": 1,
+  "format_version": 2,
   "origin_definitions": {
     "defensive_model": "Synthetic private-state, overflow, cancellation, fault-injection, or target-boundary exercise that a valid Pillow input cannot select.",
     "independent_implementation": "Private codec state and output checked against pinned dav1d/libavif/reference corpora; Pillow/native output is retained independently.",
