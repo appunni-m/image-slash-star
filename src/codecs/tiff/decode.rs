@@ -1904,7 +1904,17 @@ fn convert_ycbcr_subsampled_2x2(
         .and_then(|pixels| pixels.checked_mul(3))
         .dimensions("TIFF YCbCr RGB buffer size overflows")?;
     let mut rgb = Vec::new();
-    rgb.try_reserve_exact(output_len).map_err(|_| {
+    #[cfg(coverage)]
+    let reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrRgbOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_len
+    };
+    #[cfg(not(coverage))]
+    let reservation = output_len;
+    rgb.try_reserve_exact(reservation).map_err(|_| {
         CodecError::Dimensions("unable to allocate TIFF YCbCr RGB buffer".to_owned())
     })?;
     rgb.resize(output_len, 0);

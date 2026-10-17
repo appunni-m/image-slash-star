@@ -194523,6 +194523,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "tiff_ycbcr_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "png_decoded_sample_buffer_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

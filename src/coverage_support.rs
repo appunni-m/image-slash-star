@@ -96,6 +96,8 @@ pub enum CoverageFaultPoint {
     TiffStripAssemblyReservation,
     /// Report a TIFF 2-by-2 YCbCr clump-buffer length mismatch.
     TiffYcbcrClumpLengthMismatch,
+    /// Force TIFF 2-by-2 YCbCr RGB output reservation to fail.
+    TiffYcbcrRgbOutputReservation,
     /// Report a TIFF full-resolution YCbCr sample-buffer length mismatch.
     TiffYcbcrFullResolutionLengthMismatch,
     /// Force AV1 partial monochrome tile-state retention to fail.

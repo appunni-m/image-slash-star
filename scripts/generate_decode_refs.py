@@ -2816,6 +2816,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "tiff.ycbcr.clump_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
+        "tiff.ycbcr.rgb_output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "tiff.ycbcr.full_resolution_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
