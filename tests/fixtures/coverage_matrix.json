@@ -127889,6 +127889,90 @@
           },
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "apng_duplicate_actl_before_idat",
+          "type": "decode",
+          "format": "png",
+          "category": "apng",
+          "description": "Duplicate pre-IDAT animation controls fall back to the static default image",
+          "asset": "apng_duplicate_actl_before_idat.png",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "18b489f5cea0c7e3e58550afcc2ce169a12d377d5f7e357b1de2714ab5c67022",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_duplicate_actl_before_idat_png.bin",
+          "ref_bytes": 64,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": {
+            "srgb": null,
+            "gamma": null,
+            "chromaticities": null,
+            "icc_profile_present": false
+          },
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "decoded_source_color": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ],
       "encode": [
@@ -130625,10 +130709,6 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
-          "oracle_status": "error",
-          "oracle_error_type": "builtins.ValueError",
-          "oracle_error_message": "cannot write empty image",
-          "oracle_error_kind": "dimensions",
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
@@ -130647,7 +130727,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "cannot write empty image",
+          "oracle_error_kind": "dimensions"
         },
         {
           "description": "",
@@ -193775,12 +193859,12 @@
     }
   },
   "summary": {
-    "total_rows": 2295,
-    "decode_rows": 1801,
+    "total_rows": 2296,
+    "decode_rows": 1802,
     "encode_rows": 494,
     "formats": 8,
-    "assets_available": 1798,
-    "decode_active": 1801,
+    "assets_available": 1799,
+    "decode_active": 1802,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

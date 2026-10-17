@@ -2616,6 +2616,10 @@ formats:
       - actl_after_idat.png
       - apng_large_frame_count.png
       - apng_duplicate_actl.png
+    - id: apng_duplicate_actl_before_idat
+      description: Duplicate pre-IDAT animation controls fall back to the static default image
+      test_assets:
+      - apng_duplicate_actl_before_idat.png
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
       description: A still PNG cannot represent a retained horizontal frame offset

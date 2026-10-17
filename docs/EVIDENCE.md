@@ -6,6 +6,30 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## APNG duplicate control before the default image — 2026-10-17
+
+Added the public `decode:png:apng_duplicate_actl_before_idat` row. Its
+CRC-checked fixture duplicates the `acTL` chunk before `IDAT` from
+`apng_rgba_controls.png`; the input SHA-256 is
+`18b489f5cea0c7e3e58550afcc2ce169a12d377d5f7e357b1de2714ab5c67022`.
+Pinned Pillow 12.2.0 warns that the APNG is invalid, then verifies and loads
+the static default image as one 4x4 RGBA frame. The exact pixel reference SHA-256
+is `21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6`.
+The selected public matrix run passed for this case and the existing duplicate
+`acTL` after `IDAT` control.
+
+The selected branch report is
+`.coverage-mcp/local-evidence/20261017/png-apng-pre-idat-duplicate-actl/coverage.json`
+(SHA-256
+`b25cc6e2ac8dc97e8521c5a0dfe4e53e99a5758c925582ecd4998e1b7c4a32de`). It
+contains 249/31,482 observed branches overall. Coverage MCP reports no missing
+branch group spanning `src/codecs/png/decode.rs:1032`, the duplicate-control
+fallback arm. The report has no source/build receipt and unknown test
+inventory, so this is coordinate-only reachability evidence. The current
+fixture matrix contains 2,296 total rows: 1,802 decode / inspect / verify rows and 494 encode rows.
+Of those, 1,802 decode rows and 462 encode rows are active; the other 32 encode
+rows are planned.
+
 ## WebP oversized alpha ANMF height parity — 2026-10-17
 
 Added the public `pillow_tolerated_malformed_animated_alpha_anmf_height_mismatch`
@@ -6698,7 +6722,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `0052b6a66481e10ac8edbafc98434bbbdf30359e2f0af97dd1600b14c249c515`; matrix `f48b0ca80f85cb21eac910c075c938e866e3a59b2c3a45a21fdead36097914bd`.
+- Current fixture integrity only: manifest `8feff33e7ff29f1c089015894ecf2c5fbc6917692a73ddcd3a66eab0b0038f72`; matrix `264f5650e8c37c0c2da57225e8966011db258b4b9e40aa604555baa74c556b16`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

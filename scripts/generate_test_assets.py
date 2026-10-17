@@ -4052,6 +4052,9 @@ def gen_png():
     )
     duplicated_actl.insert(first_actl + 1, duplicated_actl[first_actl])
     (d / "apng_duplicate_actl.png").write_bytes(rebuild_png(duplicated_actl))
+    from generate_png_apng_duplicate_actl import make_fixture
+
+    (d / "apng_duplicate_actl_before_idat.png").write_bytes(make_fixture(controls))
 
     (d / "apng_short_first_fctl.png").write_bytes(
         mutate_png_chunk(
