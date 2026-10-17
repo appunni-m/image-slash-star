@@ -130515,6 +130515,63 @@
           "oracle_error_kind": "dimensions"
         },
         {
+          "id": "enc_error_zero_width",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "Zero-width source is rejected",
+          "params": {
+            "source_dimensions": [
+              0,
+              1
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb.png",
+          "source_sha256": "fc88e54a55583ec05de9253f7fe2576f5431ae3be587b22c25087d7ba95d0fb8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "cannot write empty image",
+          "oracle_error_kind": "dimensions",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "error",
+            "encode_sequence": "not_applicable"
+          },
+          "error_contracts": {
+            "encode": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "cannot write empty image",
+              "rust_kind": "dimensions",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_l8",
@@ -192164,9 +192221,9 @@
     }
   },
   "summary": {
-    "total_rows": 2273,
+    "total_rows": 2274,
     "decode_rows": 1790,
-    "encode_rows": 483,
+    "encode_rows": 484,
     "formats": 8,
     "assets_available": 1787,
     "decode_active": 1790,

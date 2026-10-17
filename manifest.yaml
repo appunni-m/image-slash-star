@@ -2722,6 +2722,11 @@ formats:
       description: Zero-height source is rejected
       params: {'source_dimensions': [1, 0]}
       expect_error: true
+    - id: enc_error_zero_width
+      description: Zero-width source is rejected
+      source_asset: rgb.png
+      params: {'source_dimensions': [0, 1]}
+      expect_error: true
     - id: enc_l8
       description: 
       params: {'color_type': 'L'}

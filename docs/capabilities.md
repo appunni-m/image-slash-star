@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `c6b64c23c5f042eb620e0ae4e4a9c172ba6d22af9f7e8821ecd87a737a8ac381`.
+- Active fixture source SHA-256: `4774a63c0a534dc27022bea52647d2eeb54a98acbaaf6ca9317f37579471b1d1`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 2,241 (1,790 decode; 451 encode).
+- Active fixture rows: 2,242 (1,790 decode; 452 encode).
 - Planned fixture rows excluded: 32 (0 decode; 32 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 128.
+- Active `not_applicable` operation outcomes excluded from evidence groups: 129.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -455,7 +455,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 4: `png:enc_indexed`, `png:enc_indexed_alpha`, `png:enc_indexed_missing_palette`, `png:enc_indexed_opaque_trns` |
 | PNG | still_encode | accepted | Rgb8 | 1 frame | Rgb8 | — (still result) | — | 51: `png:enc_1x1`, `png:enc_adam7`, `png:enc_chunk_gamma`, `png:enc_chunk_phys`, `png:enc_chunk_srgb`, `png:enc_chunk_text`, `png:enc_chunk_time`, `png:enc_compress_0`, `png:enc_compress_1`, `png:enc_compress_1_1x1`, `png:enc_compress_1_boundary`, `png:enc_compress_1_large_solid`, `png:enc_compress_2`, `png:enc_compress_2_boundary`, `png:enc_compress_3`, `png:enc_compress_3_1x1`, `png:enc_compress_3_boundary`, `png:enc_compress_4`, `png:enc_compress_4_boundary`, `png:enc_compress_5`, `png:enc_compress_5_boundary`, `png:enc_compress_6`, `png:enc_compress_6_boundary`, `png:enc_compress_6_large_solid`, `png:enc_compress_7`, `png:enc_compress_7_1x1`, `png:enc_compress_7_boundary`, `png:enc_compress_8`, `png:enc_compress_8_1x1`, `png:enc_compress_8_boundary`, `png:enc_compress_9`, `png:enc_compress_9_1x1`, `png:enc_compress_9_boundary`, `png:enc_compress_9_large_solid`, `png:enc_compress_default`, `png:enc_compress_max`, `png:enc_compress_none`, `png:enc_compress_stored`, `png:enc_filter_adaptive`, `png:enc_filter_avg`, `png:enc_filter_none`, `png:enc_filter_paeth`, `png:enc_filter_sub`, `png:enc_filter_up`, `png:enc_interlaced`, `png:enc_no_interlace`, `png:enc_odd_size`, `png:enc_optimize`, `png:enc_optimize_average`, `png:enc_rgb`, `png:enc_rgb8` |
 | PNG | still_encode | accepted | Rgba8 | 1 frame | Rgba8 | — (still result) | — | 2: `png:enc_rgba`, `png:enc_rgba8` |
-| PNG | still_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | dimensions | 2: `png:enc_error_truncated_pixels`, `png:enc_error_zero_height` |
+| PNG | still_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | dimensions | 3: `png:enc_error_truncated_pixels`, `png:enc_error_zero_height`, `png:enc_error_zero_width` |
 | PNG | still_encode | rejected | Rgb8; invalid-mode witness: Cmyk8, La16, Rgb16, Rgba16, Rgb32F, Rgba32F, F32, I32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_public_mode_contract` |
 | TIFF | sequence_encode | accepted | Cmyk8 | 1 frame | Cmyk8 | SingleFrame | — | 1: `tiff:enc_cmyk` |
 | TIFF | sequence_encode | accepted | F32 | 1 frame | F32 | SingleFrame | — | 3: `tiff:enc_32bit`, `tiff:enc_f32_be_source`, `tiff:enc_f32_be_source_predictor` |

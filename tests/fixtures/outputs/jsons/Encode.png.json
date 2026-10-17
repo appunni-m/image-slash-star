@@ -2111,6 +2111,56 @@
       "error_kind": "dimensions"
     },
     {
+      "id": "enc_error_zero_width",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "fc88e54a55583ec05de9253f7fe2576f5431ae3be587b22c25087d7ba95d0fb8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "cannot write empty image",
+          "rust_kind": "dimensions",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "cannot write empty image",
+      "error_kind": "dimensions"
+    },
+    {
       "id": "enc_l8",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_l8.bin",
       "ref_bytes": 16384,

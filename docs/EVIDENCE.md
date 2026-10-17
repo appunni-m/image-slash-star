@@ -6575,7 +6575,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `31ba003fbc5676702a769f97d77587b248ec11470d103b43fb265f3b5b50ab14`; matrix `c6b64c23c5f042eb620e0ae4e4a9c172ba6d22af9f7e8821ecd87a737a8ac381`.
+- Current fixture integrity only: manifest `5e01382ea218f03f72a5f4921a6ddb171f5f0d56a7e2d2cdccac7ab2cdfc48a1`; matrix `4774a63c0a534dc27022bea52647d2eeb54a98acbaaf6ca9317f37579471b1d1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7586,3 +7586,29 @@ outcomes in
 test receipts are absent, and the comparison with the historical full report
 is incomparable because its branch detail does not reconcile with totals.
 No aggregate coverage gain is claimed.
+
+### PNG zero-width encoder parity — 2026-10-17
+
+Added the active public row `encode:png:enc_error_zero_width`, using the
+existing `rgb.png` source transformed to dimensions `[0, 1]`. The pinned
+Pillow 12.2.0 oracle reports `ValueError: cannot write empty image`; the Rust
+encoder reports the structured `Dimensions` error. The PNG reference generator
+added the case to the input index and coverage matrix without adding a binary
+asset. The focused selected row passed 1/1. The existing zero-height control
+also passed 1/1.
+
+Coverage MCP reports 120/31,392 branch observations for
+`target/release-evidence/coverage-png-zero-width-20261017.json`. Its query for
+`src/types/mod.rs:2727` identifies the missing outcomes in
+`DecodedImage::validate`; the width predicate's true outcome is absent from the
+missing branch list, so the zero-width input reaches that path. Comparison
+against both the historical full report and the selected zero-height control
+is incomparable because report identities and branch detail do not reconcile.
+The reports have no source/build receipts or test attribution, so no aggregate
+coverage gain is claimed. No full coverage campaign or Rust source change was
+made.
+
+The current fixture matrix contains 2,274 total rows: 1,790 decode /
+inspect / verify rows and 484 encode rows. Of those, 1,790 decode rows and
+452 encode rows are active; 32 planned encode rows remain. The separate
+target-only fault lane contains 47 rows.

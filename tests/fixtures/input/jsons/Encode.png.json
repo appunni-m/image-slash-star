@@ -2547,6 +2547,72 @@
       }
     },
     {
+      "id": "enc_error_zero_width",
+      "source_asset": "rgb.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "fc88e54a55583ec05de9253f7fe2576f5431ae3be587b22c25087d7ba95d0fb8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "cannot write empty image",
+          "rust_kind": "dimensions",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "source_dimensions": [
+          0,
+          1
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "source_transform": {
+          "method": "PIL.Image.new",
+          "mode": "source mode",
+          "size": [
+            0,
+            1
+          ]
+        }
+      }
+    },
+    {
       "id": "enc_l8",
       "source_asset": "gray.png",
       "source_format": "png",
