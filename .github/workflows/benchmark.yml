@@ -61,6 +61,8 @@ jobs:
     name: Paired x86 SSE2 and AVX2 measurements
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      BENCHMARK_CMAKE: /usr/bin/cmake
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,12 +82,16 @@ jobs:
           set -euo pipefail
           test "$(dpkg-query -W -f='${Version}' cmake)" = '3.28.3-1build7'
           test "$(dpkg-query -W -f='${Version}' nasm)" = '2.16.01-1build1'
+          test -x "$BENCHMARK_CMAKE"
+          test "$(command -v "$BENCHMARK_CMAKE")" = "$BENCHMARK_CMAKE"
+          test "$("$BENCHMARK_CMAKE" --version | sed -n '1p')" = 'cmake version 3.28.3'
           mkdir -p target/benchmarks/jpeg/simd-x86_64
           {
             printf 'runner_image=ubuntu-24.04\n'
             dpkg-query -W -f='cmake_package=${Version}\n' cmake
             dpkg-query -W -f='nasm_package=${Version}\n' nasm
-            cmake --version
+            printf 'cmake_executable=%s\n' "$BENCHMARK_CMAKE"
+            "$BENCHMARK_CMAKE" --version
             nasm -v
           } > target/benchmarks/jpeg/simd-x86_64/native-toolchain.txt
       - name: Measure the x86-64 SSE2 baseline

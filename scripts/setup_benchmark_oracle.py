@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tarfile
@@ -47,12 +48,13 @@ def main() -> None:
             extracted.rename(source)
     if (source / ".source-sha256").read_text().strip() != SHA256:
         raise SystemExit("oracle source is not the verified extraction")
+    cmake = os.environ.get("BENCHMARK_CMAKE", "cmake")
     commands = [
-        ["cmake", "-S", str(source), "-B", str(BASE / "build"),
+        [cmake, "-S", str(source), "-B", str(BASE / "build"),
          "-DCMAKE_BUILD_TYPE=Release", f"-DCMAKE_INSTALL_PREFIX={install}",
          "-DENABLE_SHARED=ON", "-DENABLE_STATIC=OFF", "-DWITH_TURBOJPEG=ON", "-DWITH_SIMD=ON"],
-        ["cmake", "--build", str(BASE / "build"), "--parallel", "2"],
-        ["cmake", "--install", str(BASE / "build")],
+        [cmake, "--build", str(BASE / "build"), "--parallel", "2"],
+        [cmake, "--install", str(BASE / "build")],
     ]
     for command in commands:
         subprocess.run(command, check=True)
