@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,299 total rows: 1,805 decode / inspect / verify rows and 494 encode rows.
-Of those, 1,805 decode rows and 462 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,300 total rows: 1,805 decode / inspect / verify rows and 495 encode rows.
+Of those, 1,805 decode rows and 463 encode rows are active; the other 32 encode
 rows are planned.
 
 ## APNG duplicate control before the default image — 2026-10-17
@@ -6772,7 +6772,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fc5dd3a7379b8202a7e583aabb031f85226bed03547ec64d186d1bbffc63b598`; matrix `7a8007f5d07eda60f5e5ae2bd743c678fda8533225d6da7c0a2d2568e8022c2d`.
+- Current fixture integrity only: manifest `1e1a959ed3177c2401a07c17d6d9fd72e9c2739da810065c89c993730d99ae89`; matrix `b8fe4a66182036982dc87f242549d0f0e16d35542cc617b1dfc9bac11d09d174`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -1856,6 +1856,61 @@
       }
     },
     {
+      "id": "enc_grayscale_streaming_exif",
+      "source_asset": "baseline_gray_aligned_32x8.jpg",
+      "source_format": "jpeg",
+      "source_mode": "L8",
+      "source_sha256": "5d3ee39cd5a25f7507d5eb910b5ae05f836679ec6215f1d467b4d4992bd46719",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "grayscale": true,
+        "progressive": false,
+        "optimize": false,
+        "exif_hex": "45786966000049492a000800000000000000"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_gray_aligned_32x8.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "optimize": false,
+          "progressive": false,
+          "exif": {
+            "type": "bytes",
+            "hex": "45786966000049492a000800000000000000"
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_grayscale_optimized",
       "source_asset": "baseline_gray.jpg",
       "source_format": "jpeg",

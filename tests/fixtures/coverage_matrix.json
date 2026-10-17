@@ -107546,6 +107546,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_grayscale_streaming_exif",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Aligned 32x8 grayscale streaming encode emits a valid EXIF APP1 marker",
+          "params": {
+            "grayscale": true,
+            "progressive": false,
+            "optimize": false,
+            "exif_hex": "45786966000049492a000800000000000000"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_gray_aligned_32x8.jpg",
+          "source_sha256": "5d3ee39cd5a25f7507d5eb910b5ae05f836679ec6215f1d467b4d4992bd46719",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_streaming_exif.bin",
+          "encoded_ref_bytes": 487,
+          "encoded_ref_sha256": "2f5654c7a02d1f35f1c8fdf3ec0fd629a7cf75dab825f6afb5567fb67b31a595",
+          "ref_sha256": "a37ef2228141dbb92402ba2cb0b91ffc05458cc4b2f5364830268ff7f5151964",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_streaming_exif.bin",
+          "ref_bytes": 256,
+          "ref_mode": "L8",
+          "ref_size": [
+            32,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_grayscale_optimized",
           "type": "encode",
           "format": "jpeg",
@@ -194152,9 +194208,9 @@
     }
   },
   "summary": {
-    "total_rows": 2299,
+    "total_rows": 2300,
     "decode_rows": 1805,
-    "encode_rows": 494,
+    "encode_rows": 495,
     "formats": 8,
     "assets_available": 1802,
     "decode_active": 1805,

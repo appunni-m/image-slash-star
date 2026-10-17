@@ -1821,6 +1821,10 @@ formats:
       description: Aligned 32x8 grayscale source exercises baseline streaming below the size threshold
       params: {'grayscale': True, 'progressive': False, 'optimize': False}
       source_asset: baseline_gray_aligned_32x8.jpg
+    - id: enc_grayscale_streaming_exif
+      description: Aligned 32x8 grayscale streaming encode emits a valid EXIF APP1 marker
+      params: {'grayscale': True, 'progressive': False, 'optimize': False, 'exif_hex': '45786966000049492a000800000000000000'}
+      source_asset: baseline_gray_aligned_32x8.jpg
     - id: enc_grayscale_optimized
       description: Optimized baseline grayscale exercises the generic entropy path
       params: {'grayscale': True, 'progressive': False, 'optimize': True}
