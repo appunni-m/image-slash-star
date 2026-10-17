@@ -1954,7 +1954,19 @@ fn convert_ycbcr_subsampled_general_with(
     let expected_sample_len = clump_count
         .checked_mul(clump_size)
         .dimensions("TIFF YCbCr clump buffer size overflows")?;
-    if samples.len() != expected_sample_len {
+    #[cfg(coverage)]
+    let fault_injected = crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrClumpLengthMismatch,
+    );
+    #[cfg(not(coverage))]
+    let fault_injected = false;
+    let available_len = if fault_injected {
+        samples.len().saturating_sub(1)
+    } else {
+        samples.len()
+    };
+    let (available_samples, _) = samples.split_at(available_len);
+    if available_samples.len() != expected_sample_len {
         return Err(CodecError::Malformed(
             "TIFF YCbCr clump buffer has an invalid length".to_owned(),
         ));
@@ -1987,7 +1999,7 @@ fn convert_ycbcr_subsampled_general_with(
             let clump_end = clump_start
                 .checked_add(clump_size)
                 .dimensions("TIFF YCbCr clump offset overflows")?;
-            let clump = samples
+            let clump = available_samples
                 .get(clump_start..clump_end)
                 .ok_or_else(|| CodecError::Malformed("TIFF YCbCr clump is missing".to_owned()))?;
             let chroma_cb_index = luma_samples_per_clump;

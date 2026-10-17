@@ -264,6 +264,20 @@ fault_contracts:
       point: tiff.ycbcr.clump_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_general_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_4x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_full_resolution_length_mismatch
     type: fault-contract
     operation: decode
