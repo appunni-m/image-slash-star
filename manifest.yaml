@@ -138,6 +138,48 @@ fault_contracts:
       point: avif.i444_generic_rgb.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_12bit_i444_generic_u_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_12bit_444_alpha_9x9
+    fault:
+      point: avif.i444_generic_rgb.u_plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_12bit_i444_generic_v_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_12bit_444_alpha_9x9
+    fault:
+      point: avif.i444_generic_rgb.v_plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_12bit_i444_generic_invalid_sample
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_12bit_444_alpha_9x9
+    fault:
+      point: avif.i444_generic_rgb.invalid_sample
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_10bit_i444_u_plane_length_mismatch
     type: fault-contract
     operation: decode

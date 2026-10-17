@@ -1115,6 +1115,30 @@ fn execute_fault_contract(
                 img::ImageErrorStage::StillDecode,
             ),
             (
+                "avif.i444_generic_rgb.u_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifGenericI444UPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.i444_generic_rgb.v_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifGenericI444VPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.i444_generic_rgb.invalid_sample", "decode_unsupported_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifGenericI444InvalidSample,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
                 "avif.i444_10bit_alpha.u_plane_length_mismatch",
                 "decode_unsupported_then_retry_succeeds",
             ) => (
@@ -1444,6 +1468,9 @@ fn execute_fault_contract(
         ),
         "avif.i444_10bit_alpha.plane_length_mismatch"
         | "avif.i444_generic_alpha.plane_length_mismatch"
+        | "avif.i444_generic_rgb.u_plane_length_mismatch"
+        | "avif.i444_generic_rgb.v_plane_length_mismatch"
+        | "avif.i444_generic_rgb.invalid_sample"
         | "avif.i444_10bit_alpha.u_plane_length_mismatch"
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
         | "avif.i444_10bit_alpha.invalid_sample" => {
@@ -1640,6 +1667,9 @@ fn execute_fault_contract(
             row.fault.point.as_str(),
             "avif.i444_10bit_alpha.plane_length_mismatch"
                 | "avif.i444_generic_alpha.plane_length_mismatch"
+                | "avif.i444_generic_rgb.u_plane_length_mismatch"
+                | "avif.i444_generic_rgb.v_plane_length_mismatch"
+                | "avif.i444_generic_rgb.invalid_sample"
                 | "avif.i444_10bit_alpha.u_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.v_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.invalid_sample"

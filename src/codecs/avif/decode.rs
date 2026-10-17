@@ -888,9 +888,27 @@ fn convert_full_resolution_rgb(
 ) -> Option<Vec<u8>> {
     let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
     let sample_count = y_plane.len();
-    // Public AVIF parsing validates plane shapes before conversion. Keep a
-    // coverage-only fault point here to exercise the defensive alpha guard
-    // without exposing a fault control in normal builds.
+    // Public AVIF parsing validates plane shapes before conversion. Keep
+    // coverage-only fault points here to exercise defensive length guards
+    // without exposing controls in normal builds.
+    #[cfg(coverage)]
+    let u_plane = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifGenericI444UPlaneLengthMismatch,
+    ) {
+        let (_, u_plane) = u_plane.split_last()?;
+        u_plane
+    } else {
+        u_plane
+    };
+    #[cfg(coverage)]
+    let v_plane = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifGenericI444VPlaneLengthMismatch,
+    ) {
+        let (_, v_plane) = v_plane.split_last()?;
+        v_plane
+    } else {
+        v_plane
+    };
     #[cfg(coverage)]
     let alpha_plane = alpha_plane.map(|alpha| {
         if crate::coverage_support::take_fault_point(
@@ -913,13 +931,28 @@ fn convert_full_resolution_rgb(
     // This preserves `SampleDepth::truncate_to_u8`'s rejection of any sample
     // outside the declared nominal depth, including values that would shift
     // into an apparently valid byte.
-    if y_plane
+    #[cfg(coverage)]
+    let injected_invalid_samples: &[u16] = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifGenericI444InvalidSample,
+    ) {
+        &[u16::MAX]
+    } else {
+        &[]
+    };
+    #[cfg(coverage)]
+    let mut samples = y_plane
         .iter()
         .chain(u_plane)
         .chain(v_plane)
         .chain(alpha_plane.into_iter().flatten())
-        .any(|&sample| sample_depth.validate(sample).is_none())
-    {
+        .chain(injected_invalid_samples.iter());
+    #[cfg(not(coverage))]
+    let mut samples = y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane.into_iter().flatten());
+    if samples.any(|&sample| sample_depth.validate(sample).is_none()) {
         return None;
     }
     let mut output = Vec::new();
