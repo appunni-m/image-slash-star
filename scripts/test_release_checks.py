@@ -941,6 +941,38 @@ jobs:
             job,
         )
 
+    def test_x86_simd_benchmark_runs_on_relevant_pull_requests_only(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "benchmark.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        pull_request = re.search(
+            r"(?ms)^  pull_request:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|^jobs:)",
+            contents,
+        )
+        self.assertIsNotNone(pull_request, "benchmark must run on relevant PRs")
+        paths = pull_request.group("body")
+        for path in (
+            "benchmarks/jpeg-production/**",
+            "src/codecs/jpeg/**",
+            "src/codecs/mod.rs",
+            "src/lib.rs",
+            "src/types/**",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(f"- '{path}'", paths)
+
+        jobs = check_workflows.workflow_jobs(contents)
+        self.assertIsNotNone(jobs)
+        self.assertEqual(
+            check_workflows.workflow_job_condition(jobs["benchmark"]),
+            "github.event_name != 'pull_request'",
+            "the full Apple matrix must stay off pull requests",
+        )
+        self.assertIsNone(
+            check_workflows.workflow_job_condition(jobs["x86-simd"]),
+            "the paired x86 benchmark must run for matching pull requests",
+        )
+
     def test_release_coverage_is_required_before_publishing(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "release.yml")
