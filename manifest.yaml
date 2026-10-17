@@ -3851,6 +3851,10 @@ formats:
       - lossy_y2_empty_ac_16x16_q90_m4.webp
       - lossy_macroblock_residual_context_edges_32x16_q75_m4.webp
       - lossy_intra_chroma_dc_32x32_q100_m4.webp
+    - id: lossy_duplicate_image_chunk_tolerated
+      description: Simple WebP with a duplicate VP8 chunk tolerated by Pillow
+      test_assets:
+      - simple_duplicate_lossy_image_chunk.webp
     - id: lossy_q0_uvdc_clamp
       description: VP8 quality-zero frame with UV DC dequantizer above the 132 clamp
       test_assets:
@@ -4144,6 +4148,10 @@ formats:
       - animated_alpha_missing_nested_vp8_header.webp
       - extended_vp8_dimension_mismatch.webp
       - extended_canvas_too_large.webp
+      - duplicate_lossless_image_chunk.webp
+      - duplicate_lossy_image_chunk.webp
+      - lossless_before_lossy_image_chunks.webp
+      - lossy_before_lossless_image_chunks.webp
       - vp8_decompression_bomb.webp
       - bad_anmf_scan_size.webp
       - bad_anmf_decode_size.webp

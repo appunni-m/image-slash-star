@@ -57,9 +57,53 @@ it is coordinate-only reachability evidence. The selected-test absence at line
 329 is not a regression. Comparison with the saved 2026-10-16 full report is
 incomparable because branch details do not reconcile with its totals. No
 aggregate coverage gain or full-suite regression conclusion is claimed. The
-current fixture matrix contains 2,290 total rows: 1,796 decode /
-inspect / verify rows and 494 encode rows. Of those, 1,796 decode rows and 462
+current fixture matrix contains 2,291 total rows: 1,797 decode /
+inspect / verify rows and 494 encode rows. Of those, 1,797 decode rows and 462
 encode rows are active; the other 32 encode rows are planned.
+
+## WebP extended duplicate image chunk rejection — 2026-10-17
+
+Added four malformed extended-container parity rows for duplicate VP8L,
+duplicate VP8, and both VP8L/VP8 mixed-chunk orders, plus a simple WebP case
+where Pillow tolerates a duplicate VP8 chunk. The inputs are derived from
+pinned fixtures and have their RIFF extents updated. Pillow 12.2.0 recognizes
+each malformed WebP signature, then rejects inspection, verification, still
+decode, and sequence decode with `OSError: could not create decoder object`.
+The simple duplicate-VP8 file remains accepted. All five public matrix rows
+pass their recorded operation outcomes. Full inspection and the native
+extended decoder reject a second image chunk while the simple WebP path keeps
+Pillow's tolerant behavior; VP8L headers continue to be read through a
+chunk-bounded reader.
+
+The selected five-row WebP branch report is at
+`.coverage-mcp/local-evidence/20261017/webp-extended-image-chunk-parity/coverage.json`;
+its SHA-256 is
+`fbc64e64fb1f0e56ec79f2687180d49128133a222695fe2ff45d993b459b8a09`.
+Coverage MCP shows the compound inspector guard's true path and the duplicate
+VP8 decoder error path were reached; the simple duplicate-VP8 path is included
+in this selected run. The report observes 313 of 31,460 branch coordinates;
+false short-circuit outcomes remain among the reported inspector gaps.
+Source/build identity is unverified and test inventory is unknown, so this is
+coordinate-only reachability evidence.
+
+A Coverage MCP incremental regional comparison used the duplicate-VP8L and
+alpha-flag rows as a three-row baseline and the four additional chunk cases as
+the new batch. It returned `limited`: 2,998/212,096 baseline regions, 4,993
+batch regions, 3,447 newly observed coordinates, and 1,546 already covered.
+The projected union is 6,445/212,096 regions (+1.625 percentage points on
+that denominator). Both reports lack source/build identity and test inventory,
+so the union is exploratory coordinate evidence, not a verified suite gain.
+Branch and line incremental comparisons were `incomparable` because detailed
+locations did not reconcile with report totals. The baseline report is
+`.coverage-mcp/local-evidence/20261017/webp-image-chunk-baseline/coverage.json`
+(SHA-256 `37f1f634d90a92a5e9446aa507a38318f494a7e18190ce9600eb8b68e89b3b8f`);
+the new-batch report is
+`.coverage-mcp/local-evidence/20261017/webp-image-chunk-incremental/coverage.json`
+(SHA-256 `f23fdb42cb9f503ea3a35cb88b4c9938a297ccff35dabda99cee1108c88a056b`).
+No full coverage run or full-suite regression conclusion is claimed. The current fixture matrix
+contains 2,295 total rows: 1,801 decode / inspect / verify rows and 494 encode rows.
+Of those, 1,801 decode rows and 462 encode rows are active; the other 32 encode
+rows are planned.
 
 ## AVIF 12-bit I444 auxiliary-alpha parity — 2026-10-17
 
@@ -6654,7 +6698,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a9d4c769cddc44899c29f9fbab01cfdf6f6226939eebf0a61411180f78fc1c2e`; matrix `ff8a4b27ba41627bebfa4c0de841d02883599b7f2a6d0c730f5bcbe9c9203817`.
+- Current fixture integrity only: manifest `0052b6a66481e10ac8edbafc98434bbbdf30359e2f0af97dd1600b14c249c515`; matrix `f48b0ca80f85cb21eac910c075c938e866e3a59b2c3a45a21fdead36097914bd`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

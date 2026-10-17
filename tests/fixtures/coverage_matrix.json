@@ -162786,6 +162786,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "lossy_duplicate_image_chunk_tolerated",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Simple WebP with a duplicate VP8 chunk tolerated by Pillow",
+          "asset": "simple_duplicate_lossy_image_chunk.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a1c52ac1b8c00f75af5c858970e7b9489d57c474d6e65243c7fd4db055a11a06",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_simple_duplicate_lossy_image_chunk_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "lossy_q0_uvdc_clamp",
           "type": "decode",
           "format": "webp",
@@ -175418,6 +175496,378 @@
           },
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "error_malformed_container_duplicate_lossless_image_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "duplicate_lossless_image_chunk.webp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "23fcaeaaeccac633b1729f1f839f98669692208358d2c1c7973fc9e9d1e9822a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "could not create decoder object",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "could not create decoder object",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_container_duplicate_lossy_image_chunk",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "duplicate_lossy_image_chunk.webp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "800368e4af44c18ebccac747448c5e89626db5b1987105206bccc03c3e8f6fb1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "could not create decoder object",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "could not create decoder object",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_container_lossless_before_lossy_image_chunks",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "lossless_before_lossy_image_chunks.webp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "3d9c36bb122c24b6d45bb64fedfb4fd5d48664d7fa4d647ceec5467a18066603",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "could not create decoder object",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "could not create decoder object",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_container_lossy_before_lossless_image_chunks",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "lossy_before_lossless_image_chunks.webp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "962c29761899bced5fbaee3acdb294f841c3dd326ae6ca920e9aebdc0404966e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "could not create decoder object",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "could not create decoder object",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "id": "error_malformed_container_vp8_decompression_bomb",
@@ -193325,12 +193775,12 @@
     }
   },
   "summary": {
-    "total_rows": 2290,
-    "decode_rows": 1796,
+    "total_rows": 2295,
+    "decode_rows": 1801,
     "encode_rows": 494,
     "formats": 8,
-    "assets_available": 1793,
-    "decode_active": 1796,
+    "assets_available": 1798,
+    "decode_active": 1801,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

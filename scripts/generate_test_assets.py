@@ -6977,6 +6977,94 @@ def gen_webp():
         set_vp8x_alpha_flag_without_vp8l_hint,
     )
 
+    def append_duplicate_vp8l_image_chunk(data):
+        vp8l = data.find(b"VP8L")
+        if vp8l < 12 or vp8l + 8 > len(data):
+            raise RuntimeError("extended WebP did not contain a complete VP8L chunk header")
+        size = int.from_bytes(data[vp8l + 4 : vp8l + 8], "little")
+        end = vp8l + 8 + size + (size & 1)
+        if end > len(data):
+            raise RuntimeError("extended WebP VP8L chunk exceeds its RIFF extent")
+        data.extend(bytes(data[vp8l:end]))
+        data[4:8] = (len(data) - 8).to_bytes(4, "little")
+
+    def top_level_chunks(data):
+        chunks = []
+        position = 12
+        while position < len(data):
+            if position + 8 > len(data):
+                raise RuntimeError("WebP source contains a truncated chunk header")
+            size = int.from_bytes(data[position + 4 : position + 8], "little")
+            end = position + 8 + size + (size & 1)
+            if end > len(data):
+                raise RuntimeError("WebP source chunk exceeds its RIFF extent")
+            chunks.append((bytes(data[position : position + 4]), bytes(data[position:end])))
+            position = end
+        return chunks
+
+    def image_chunk(source, kind):
+        source_data = bytearray((d / source).read_bytes())
+        for chunk_kind, chunk in top_level_chunks(source_data):
+            if chunk_kind == kind:
+                return chunk
+        raise RuntimeError(f"WebP source {source} does not contain {kind!r}")
+
+    def rewrite_chunks(data, chunks):
+        rewritten = data[:12] + b"".join(chunk for _, chunk in chunks)
+        data[:] = rewritten
+        data[4:8] = (len(data) - 8).to_bytes(4, "little")
+
+    def append_duplicate_vp8_image_chunk(data):
+        vp8_chunk = next(
+            (chunk for kind, chunk in top_level_chunks(data) if kind == b"VP8 "),
+            None,
+        )
+        if vp8_chunk is None:
+            raise RuntimeError("extended WebP source does not contain a VP8 image chunk")
+        data.extend(vp8_chunk)
+        data[4:8] = (len(data) - 8).to_bytes(4, "little")
+
+    def append_lossy_vp8_image_chunk(data):
+        data.extend(image_chunk("lossy.webp", b"VP8 "))
+        data[4:8] = (len(data) - 8).to_bytes(4, "little")
+
+    def insert_lossy_before_lossless_image_chunk(data):
+        chunks = top_level_chunks(data)
+        image_index = next(
+            (index for index, (kind, _) in enumerate(chunks) if kind == b"VP8L"),
+            None,
+        )
+        if image_index is None:
+            raise RuntimeError("extended WebP source does not contain a VP8L image chunk")
+        chunks.insert(image_index, (b"VP8 ", image_chunk("lossy.webp", b"VP8 ")))
+        rewrite_chunks(data, chunks)
+
+    write_mutated_webp(
+        "duplicate_lossless_image_chunk.webp",
+        "icc.webp",
+        append_duplicate_vp8l_image_chunk,
+    )
+    write_mutated_webp(
+        "duplicate_lossy_image_chunk.webp",
+        "alpha_lossy_gradient.webp",
+        append_duplicate_vp8_image_chunk,
+    )
+    write_mutated_webp(
+        "simple_duplicate_lossy_image_chunk.webp",
+        "lossy.webp",
+        append_duplicate_vp8_image_chunk,
+    )
+    write_mutated_webp(
+        "lossless_before_lossy_image_chunks.webp",
+        "icc.webp",
+        append_lossy_vp8_image_chunk,
+    )
+    write_mutated_webp(
+        "lossy_before_lossless_image_chunks.webp",
+        "icc.webp",
+        insert_lossy_before_lossless_image_chunk,
+    )
+
     unrecognized_animation = BytesIO()
     unrecognized_frames = [
         Image.new("RGB", (16, 16), color)

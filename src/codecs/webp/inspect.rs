@@ -226,6 +226,13 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         let chunk_offset = position;
         let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
+        let is_image_chunk = kind == *b"VP8 " || kind == *b"VP8L";
+        if !declares_animation && saw_image && is_image_chunk {
+            return Err(CodecError::Malformed(
+                "extended WebP contains multiple image chunks".to_owned(),
+            )
+            .at(chunk_offset as u64, "webp_chunk"));
+        }
         if kind == *b"VP8 " {
             let info = with_chunk_context(inspect_vp8(payload), chunk_offset)?;
             if info.width != width || info.height != height {
@@ -244,7 +251,9 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
                 )
                 .at(chunk_offset as u64, "webp_chunk"));
             }
-            has_alpha = info.mode == ImageMode::Rgba8;
+            if !saw_image {
+                has_alpha = info.mode == ImageMode::Rgba8;
+            }
             saw_image = true;
             frame_count = 1;
         } else if kind == *b"ANIM" {

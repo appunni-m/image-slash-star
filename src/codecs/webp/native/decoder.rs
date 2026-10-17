@@ -322,11 +322,22 @@ impl<'a> WebPDecoder<'a> {
                                 continue;
                             }
 
+                            let is_first_vp8 = chunk == WebPRiffChunk::VP8
+                                && !self.chunks.contains_key(&WebPRiffChunk::VP8);
+                            let is_first_vp8l = chunk == WebPRiffChunk::VP8L
+                                && !self.chunks.contains_key(&WebPRiffChunk::VP8L);
                             if !chunk.is_unknown() {
                                 self.chunks.entry(chunk).or_insert(range.clone());
                             }
 
+                            if !info.animation && chunk == WebPRiffChunk::VP8 && !is_first_vp8 {
+                                return Err(DecodingError::ChunkHeaderInvalid);
+                            }
+
                             if !info.animation && chunk == WebPRiffChunk::VP8L {
+                                if !is_first_vp8l {
+                                    return Err(DecodingError::ChunkHeaderInvalid);
+                                }
                                 let has_alpha = {
                                     let mut payload = self.r.by_ref().take(chunk_size);
                                     read_vp8l_header(&mut payload)?.2
