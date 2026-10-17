@@ -540,6 +540,7 @@ fn decode_portable_inner(
                     .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
                 matrix,
+                portable_error,
             )?,
         }
     } else {
@@ -883,6 +884,7 @@ fn convert_full_resolution_rgb(
     alpha_plane: Option<&[u16]>,
     bit_depth: u32,
     matrix: PortableYuvMatrix,
+    portable_error: &mut Option<CodecError>,
 ) -> Option<Vec<u8>> {
     let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
     let sample_count = y_plane.len();
@@ -921,7 +923,22 @@ fn convert_full_resolution_rgb(
         return None;
     }
     let mut output = Vec::new();
-    output.try_reserve_exact(output_length).ok()?;
+    #[cfg(coverage)]
+    let reservation_length = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifI444RgbOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_length
+    };
+    #[cfg(not(coverage))]
+    let reservation_length = output_length;
+    if output.try_reserve_exact(reservation_length).is_err() {
+        *portable_error = Some(CodecError::Dimensions(
+            "unable to allocate AVIF I444 RGB output".to_owned(),
+        ));
+        return None;
+    }
     output.resize(output_length, 0);
 
     let shift = bit_depth.checked_sub(8)?;

@@ -62,6 +62,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444InvalidSample,
     /// Force the AVIF 10-bit I444 alpha output reservation to fail.
     Avif10BitI444AlphaOutputReservation,
+    /// Force generic AVIF I444 RGB output reservation to fail.
+    AvifI444RgbOutputReservation,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.
