@@ -57,6 +57,7 @@ fmt:
 verify-fixture-integrity:
 	$(PYTHON) scripts/verify_claim_ledger.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
+	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
 	$(PYTHON) scripts/verify_roadmap.py
 	$(PYTHON) scripts/generate_capability_docs.py --check
@@ -83,7 +84,6 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_multi_entry_stsc_fixture.py --check
 	$(PYTHON) scripts/generate_avif_imir_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_inter_i444_frame_header_b64.py --check
-	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py
 
