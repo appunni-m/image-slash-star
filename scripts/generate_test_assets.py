@@ -4621,6 +4621,29 @@ def gen_gif():
     ):
         raise RuntimeError("1x1 GIF image descriptor must have no local color table")
     global_palette = bytes(one_pixel[palette_start:image_offset])
+    pre_frame_zero_padding = (
+        bytes(one_pixel[:image_offset])
+        + b"\x00"
+        + bytes(one_pixel[image_offset:])
+    )
+    if hashlib.sha256(pre_frame_zero_padding).hexdigest() != (
+        "4c25c0da8eb0126a59c3b171a3316a9d8fed08697074a75f19dc0add1bb9a044"
+    ):
+        raise RuntimeError(
+            "1x1 GIF pre-frame padding mutation differs from its pinned hash"
+        )
+    pre_frame_zero_padding_path = d / "pre_frame_zero_padding.gif"
+    pre_frame_zero_padding_path.write_bytes(pre_frame_zero_padding)
+    with Image.open(pre_frame_zero_padding_path) as oracle:
+        oracle.load()
+        if (
+            oracle.format != "GIF"
+            or oracle.mode != "P"
+            or oracle.size != (1, 1)
+            or oracle.n_frames != 1
+            or oracle.tobytes() != b"\x00"
+        ):
+            raise RuntimeError("1x1 GIF pre-frame padding changed Pillow pixels")
     local_palette_gif = bytearray(
         one_pixel[:palette_start]
         + one_pixel[image_offset:descriptor_end]
@@ -4669,8 +4692,12 @@ def gen_gif():
     (d / "declared_global_palette_short.gif").write_bytes(
         b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00"
     )
-    (d / "no_frame_trailer.gif").write_bytes(b"GIF89a\x01\x00\x01\x00\x00\x00\x00\x3b")
-    (d / "no_frame_no_trailer.gif").write_bytes(b"GIF89a\x01\x00\x01\x00\x00\x00\x00")
+    no_frame_trailer = b"GIF89a\x01\x00\x01\x00\x00\x00\x00\x3b"
+    (d / "no_frame_trailer.gif").write_bytes(no_frame_trailer)
+    (d / "no_frame_zero_padding_trailer.gif").write_bytes(
+        no_frame_trailer[:-1] + b"\x00\x3b"
+    )
+    (d / "no_frame_no_trailer.gif").write_bytes(no_frame_trailer[:-1])
     (d / "truncated_global_palette.gif").write_bytes(bytes(static[: table_end - 1]))
     (d / "extension_no_label.gif").write_bytes(bytes(static[:image_offset]) + b"\x21")
     (d / "application_no_length.gif").write_bytes(bytes(static[:image_offset]) + b"\x21\xff")

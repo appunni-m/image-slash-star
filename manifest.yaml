@@ -3122,6 +3122,12 @@ formats:
       rust_decode_with_metadata_limit: 34
       test_assets:
       - post_frame_zero_padding.gif
+    - id: pre_frame_zero_padding
+      description: Pillow ignores a zero-valued block marker between the global palette and first frame
+      rust_inspect_basic: true
+      rust_decode_with_metadata_limit: 34
+      test_assets:
+      - pre_frame_zero_padding.gif
     - id: error_empty
       description: Empty file
       test_assets:
@@ -3140,6 +3146,7 @@ formats:
       - truncated_after_background.gif
       - declared_global_palette_short.gif
       - no_frame_trailer.gif
+      - no_frame_zero_padding_trailer.gif
       - truncated_global_palette.gif
       - unknown_block.gif
       - extension_no_label.gif

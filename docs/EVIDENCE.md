@@ -6,6 +6,32 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## GIF pre-frame zero padding parity — 2026-10-17
+
+Added `decode:gif:pre_frame_zero_padding` for a complete 1x1 indexed GIF with
+a zero padding block before its first image descriptor. Pinned Pillow 12.2.0
+verifies and loads the input as one `P` frame with pixel `00`; the fixture SHA-256
+is `4c25c0da8eb0126a59c3b171a3316a9d8fed08697074a75f19dc0add1bb9a044` and the
+exact pixel-reference SHA-256 is
+`6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d`. The
+selected matrix run passed with the post-frame padding control and no-frame
+inputs. It also exercises basic inspection and the exact 34-byte metadata
+limit. A separate zero-padding-before-trailer input still matches Pillow's
+no-image error.
+
+The selected branch report is
+`.coverage-mcp/local-evidence/20261017/gif-pre-frame-zero-padding-selected/coverage.json`
+(SHA-256
+`ac416dd62e5b1f608917d2c903e52feffa2903bf4682319cad7148e6ac28c12f`). It
+contains 110/31,476 observed branches overall. Coverage MCP reports no missing
+branch group spanning `src/codecs/gif/decode.rs:175`,
+`src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
+still/sequence parsing, metadata measurement, and inspection padding paths.
+The report has no source/build receipt and unknown test inventory, so these
+remain coordinate-only observations. The current fixture matrix contains 2,298 total rows: 1,804 decode / inspect / verify rows and 494 encode rows.
+Of those, 1,804 decode rows and 462 encode rows are active; the other 32 encode
+rows are planned.
+
 ## APNG duplicate control before the default image — 2026-10-17
 
 Added the public `decode:png:apng_duplicate_actl_before_idat` row. Its
@@ -6722,7 +6748,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8feff33e7ff29f1c089015894ecf2c5fbc6917692a73ddcd3a66eab0b0038f72`; matrix `264f5650e8c37c0c2da57225e8966011db258b4b9e40aa604555baa74c556b16`.
+- Current fixture integrity only: manifest `1fe9430f83c1e90458a14fe1608427dd7b393ba17d0e91882f2fc9b39724920d`; matrix `61c82effff122032087ce736fc8e5f96d2f32f344283dc1c9b74255c22448c82`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

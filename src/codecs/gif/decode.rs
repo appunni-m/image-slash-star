@@ -169,10 +169,10 @@ pub fn decode_sequence(
                 recovering_from_bad_gce = false;
             }
             TRAILER => break,
-            // Pillow tolerates zero-valued padding after a complete frame.
-            // Keep this leniency scoped to the post-frame stream so a zero
-            // byte cannot hide a missing or malformed first image block.
-            PADDING_BLOCK if !frames.is_empty() => {}
+            // Pillow treats zero-valued padding as a no-op anywhere between
+            // the global color table and the trailer. The final frame check
+            // still rejects a stream that contains only padding.
+            PADDING_BLOCK => {}
             _ if recovering_from_bad_gce => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
@@ -417,7 +417,7 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
                 saw_frame = true;
             }
             TRAILER => break,
-            PADDING_BLOCK if saw_frame => {}
+            PADDING_BLOCK => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
             }

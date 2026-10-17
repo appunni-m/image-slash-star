@@ -6987,6 +6987,54 @@
         "verify_status": "error"
       },
       {
+        "asset": "no_frame_zero_padding_trailer.gif",
+        "class": "error_malformed_no_frame_zero_padding_trailer",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Invalid headers, descriptors, controls, and LZW roots",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "truncated_after_background.gif",
         "class": "error_malformed_truncated_after_background",
         "contracts": {
@@ -26132,7 +26180,7 @@
     "by_format": {
       "avif": 60,
       "bmp": 66,
-      "gif": 47,
+      "gif": 48,
       "ico": 30,
       "jpeg": 100,
       "png": 61,
@@ -26140,17 +26188,17 @@
       "webp": 136
     },
     "by_origin": {
-      "pillow_fixture": 618,
+      "pillow_fixture": 619,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 354,
+      "spec_violation": 355,
       "tolerated": 0,
       "truncated": 190
     },
-    "classes": 618,
+    "classes": 619,
     "formats": 8
   }
 }

@@ -138,9 +138,10 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
                 }
             }
             TRAILER => break,
-            // Match Pillow's tolerance for zero-valued padding after the
-            // first complete frame while keeping pre-frame markers strict.
-            PADDING_BLOCK if first_mode.is_some() => {}
+            // Pillow ignores zero-valued padding outside image data, even
+            // before the first frame. The final frame check still rejects
+            // padding-only streams.
+            PADDING_BLOCK => {}
             _ if recovering_from_bad_gce => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
