@@ -1892,10 +1892,162 @@ fn convert_ycbcr_subsampled(
     match subsampling {
         (1, 2) => convert_ycbcr_subsampled_1x2(dimensions, samples, conversion, token),
         (2, 2) => convert_ycbcr_subsampled_2x2(dimensions, samples, conversion, token),
-        _ => Err(CodecError::Malformed(
-            "unsupported TIFF YCbCr subsampling".to_owned(),
-        )),
+        _ => convert_ycbcr_subsampled_general(dimensions, samples, subsampling, conversion, token),
     }
+}
+
+/// Expand other Pillow-supported YCbCr clump dimensions without affecting the
+/// specialized 1-by-2 and 2-by-2 paths.
+fn convert_ycbcr_subsampled_general(
+    dimensions: (u32, u32),
+    samples: &[u8],
+    subsampling: (usize, usize),
+    conversion: super::inspect::YcbcrConversion,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    match YcbcrTables::new(conversion)?.as_ref() {
+        Some(tables) => convert_ycbcr_subsampled_general_with(
+            dimensions,
+            samples,
+            subsampling,
+            token,
+            |y, cb, cr| tables.to_rgb(y, cb, cr),
+        ),
+        None => convert_ycbcr_subsampled_general_with(
+            dimensions,
+            samples,
+            subsampling,
+            token,
+            ycbcr_to_rgb_pixel,
+        ),
+    }
+}
+
+fn convert_ycbcr_subsampled_general_with(
+    dimensions: (u32, u32),
+    samples: &[u8],
+    subsampling: (usize, usize),
+    token: Option<&crate::CancellationToken>,
+    convert_pixel: impl Fn(u8, u8, u8) -> [u8; 3],
+) -> CodecResult<Vec<u8>> {
+    let (width, height) = dimensions;
+    let width = width as usize;
+    let height = height as usize;
+    let (horizontal, vertical) = subsampling;
+    if horizontal == 0 || vertical == 0 {
+        return Err(CodecError::Malformed(
+            "unsupported TIFF YCbCr subsampling".to_owned(),
+        ));
+    }
+
+    let clump_columns = width.div_ceil(horizontal);
+    let clump_rows = height.div_ceil(vertical);
+    let luma_samples_per_clump = horizontal
+        .checked_mul(vertical)
+        .dimensions("TIFF YCbCr clump size overflows")?;
+    let clump_size = luma_samples_per_clump
+        .checked_add(2)
+        .dimensions("TIFF YCbCr clump size overflows")?;
+    let clump_count = clump_columns
+        .checked_mul(clump_rows)
+        .dimensions("TIFF YCbCr clump count overflows")?;
+    let expected_sample_len = clump_count
+        .checked_mul(clump_size)
+        .dimensions("TIFF YCbCr clump buffer size overflows")?;
+    if samples.len() != expected_sample_len {
+        return Err(CodecError::Malformed(
+            "TIFF YCbCr clump buffer has an invalid length".to_owned(),
+        ));
+    }
+
+    let output_len = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(3))
+        .dimensions("TIFF YCbCr RGB buffer size overflows")?;
+    let mut rgb = Vec::new();
+    rgb.try_reserve_exact(output_len).map_err(|_| {
+        CodecError::Dimensions("unable to allocate TIFF YCbCr RGB buffer".to_owned())
+    })?;
+    rgb.resize(output_len, 0);
+
+    let mut processed = 0usize;
+    for clump_y in 0..clump_rows {
+        crate::codecs::error::check_cancelled(token)?;
+        let first_y = clump_y
+            .checked_mul(vertical)
+            .dimensions("TIFF YCbCr row offset overflows")?;
+        for clump_x in 0..clump_columns {
+            let clump_index = clump_y
+                .checked_mul(clump_columns)
+                .and_then(|row| row.checked_add(clump_x))
+                .dimensions("TIFF YCbCr clump offset overflows")?;
+            let clump_start = clump_index
+                .checked_mul(clump_size)
+                .dimensions("TIFF YCbCr clump offset overflows")?;
+            let clump_end = clump_start
+                .checked_add(clump_size)
+                .dimensions("TIFF YCbCr clump offset overflows")?;
+            let clump = samples
+                .get(clump_start..clump_end)
+                .ok_or_else(|| CodecError::Malformed("TIFF YCbCr clump is missing".to_owned()))?;
+            let chroma_cb_index = luma_samples_per_clump;
+            let chroma_cr_index = chroma_cb_index
+                .checked_add(1)
+                .dimensions("TIFF YCbCr chroma offset overflows")?;
+            let cb = *clump.get(chroma_cb_index).ok_or_else(|| {
+                CodecError::Malformed("TIFF YCbCr Cb sample is missing".to_owned())
+            })?;
+            let cr = *clump.get(chroma_cr_index).ok_or_else(|| {
+                CodecError::Malformed("TIFF YCbCr Cr sample is missing".to_owned())
+            })?;
+            let first_x = clump_x
+                .checked_mul(horizontal)
+                .dimensions("TIFF YCbCr column offset overflows")?;
+
+            for local_y in 0..vertical {
+                let y = first_y
+                    .checked_add(local_y)
+                    .dimensions("TIFF YCbCr row offset overflows")?;
+                if y >= height {
+                    continue;
+                }
+                for local_x in 0..horizontal {
+                    let x = first_x
+                        .checked_add(local_x)
+                        .dimensions("TIFF YCbCr column offset overflows")?;
+                    if x >= width {
+                        continue;
+                    }
+                    let luma_index = local_y
+                        .checked_mul(horizontal)
+                        .and_then(|row| row.checked_add(local_x))
+                        .dimensions("TIFF YCbCr luma offset overflows")?;
+                    let y_sample = *clump.get(luma_index).ok_or_else(|| {
+                        CodecError::Malformed("TIFF YCbCr luma sample is missing".to_owned())
+                    })?;
+                    let pixel = convert_pixel(y_sample, cb, cr);
+                    let pixel_index = y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(x))
+                        .and_then(|pixel| pixel.checked_mul(3))
+                        .dimensions("TIFF YCbCr RGB offset overflows")?;
+                    let output_end = pixel_index
+                        .checked_add(3)
+                        .dimensions("TIFF YCbCr RGB offset overflows")?;
+                    let output = rgb.get_mut(pixel_index..output_end).ok_or_else(|| {
+                        CodecError::Malformed("TIFF YCbCr RGB pixel is out of bounds".to_owned())
+                    })?;
+                    output.copy_from_slice(&pixel);
+                    processed = processed.saturating_add(1);
+                    if processed.is_multiple_of(1_024) {
+                        crate::codecs::error::check_cancelled(token)?;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(rgb)
 }
 
 /// Expand contiguous TIFF YCbCr 2-by-2 clumps using Pillow/libtiff's RGB path.

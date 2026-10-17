@@ -5197,6 +5197,34 @@ formats:
       description: Horizontally full-resolution YCbCr samples in vertically subsampled LZW clumps
       test_assets:
       - ycbcr_subsampled_lzw_1x2.tiff
+    - id: ycbcr_subsampled_lzw_2x1
+      description: Two-by-one YCbCr LZW clumps with horizontal subsampling
+      test_assets:
+      - ycbcr_subsampled_lzw_2x1.tiff
+    - id: ycbcr_subsampled_lzw_4x1
+      description: Four-by-one YCbCr LZW clumps with horizontal subsampling
+      test_assets:
+      - ycbcr_subsampled_lzw_4x1.tiff
+    - id: ycbcr_subsampled_lzw_4x2
+      description: Four-by-two YCbCr LZW clumps with horizontal and vertical subsampling
+      test_assets:
+      - ycbcr_subsampled_lzw_4x2.tiff
+    - id: ycbcr_custom_coefficients_lzw_4x2
+      description: Rec. 709 YCbCr coefficients on four-by-two LZW clumps
+      test_assets:
+      - ycbcr_custom_coefficients_lzw_4x2.tiff
+    - id: ycbcr_subsampled_lzw_4x4
+      description: Four-by-four YCbCr LZW clumps with horizontal and vertical subsampling
+      test_assets:
+      - ycbcr_subsampled_lzw_4x4.tiff
+    - id: ycbcr_subsampled_lzw_4x4_odd_edge
+      description: Four-by-four YCbCr LZW clumps clipped at odd image edges and split across strips
+      test_assets:
+      - ycbcr_subsampled_lzw_4x4_odd_edge.tiff
+    - id: ycbcr_custom_coefficients_lzw_4x4_odd_edge
+      description: Rec. 709 coefficients on four-by-four LZW clumps clipped at odd image edges
+      test_assets:
+      - ycbcr_custom_coefficients_lzw_4x4_odd_edge.tiff
     - id: ycbcr_subsampled_lzw_1x2_odd_height
       description: Vertically subsampled YCbCr LZW clumps clipped at an odd bottom edge
       test_assets:
@@ -5217,6 +5245,18 @@ formats:
       description: Rec. 709 YCbCr coefficients in a compressed 2-by-2 TIFF
       test_assets:
       - ycbcr_custom_coefficients_lzw_2x2.tiff
+    - id: ycbcr_positioning_zero_value_lzw_2x2
+      description: Pillow-compatible YCbCr decoding ignores positioning value zero
+      test_assets:
+      - ycbcr_positioning_zero_value_lzw_2x2.tiff
+    - id: ycbcr_positioning_long_type_lzw_2x2
+      description: Pillow-compatible YCbCr decoding ignores LONG positioning metadata
+      test_assets:
+      - ycbcr_positioning_long_type_lzw_2x2.tiff
+    - id: ycbcr_positioning_zero_count_lzw_2x2
+      description: Pillow-compatible YCbCr decoding ignores empty positioning metadata
+      test_assets:
+      - ycbcr_positioning_zero_count_lzw_2x2.tiff
     - id: ycbcr_zero_green_coefficient_lzw_2x2
       description: Zero green YCbCr coefficient opens and verifies but fails during pixel decoding
       test_assets:

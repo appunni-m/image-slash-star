@@ -1239,6 +1239,16 @@ def validate_tiff_claim(case_id, asset_name, data):
             raise RuntimeError("TIFF is not un-sub-sampled baseline YCbCr")
         ycbcr_lzw_claims = {
             "ycbcr_subsampled_lzw_2x2": ((4, 4), 4, (2, 2), 1, 1),
+            "ycbcr_positioning_zero_value_lzw_2x2": ((4, 4), 4, (2, 2), 0, 1),
+            "ycbcr_positioning_long_type_lzw_2x2": ((4, 4), 4, (2, 2), 1, 1),
+            "ycbcr_positioning_zero_count_lzw_2x2": ((4, 4), 4, (2, 2), None, 1),
+            "ycbcr_subsampled_lzw_2x1": ((8, 8), 8, (2, 1), 1, 1),
+            "ycbcr_subsampled_lzw_4x1": ((8, 8), 8, (4, 1), 1, 1),
+            "ycbcr_subsampled_lzw_4x2": ((8, 8), 8, (4, 2), 1, 1),
+            "ycbcr_custom_coefficients_lzw_4x2": ((8, 8), 8, (4, 2), 1, 1),
+            "ycbcr_subsampled_lzw_4x4": ((8, 8), 8, (4, 4), 1, 1),
+            "ycbcr_subsampled_lzw_4x4_odd_edge": ((5, 5), 4, (4, 4), 1, 2),
+            "ycbcr_custom_coefficients_lzw_4x4_odd_edge": ((5, 5), 4, (4, 4), 1, 2),
             "ycbcr_subsampled_lzw_2x2_odd_edge": ((3, 3), 4, None, None, 1),
             "ycbcr_subsampled_lzw_2x2_two_strips": ((4, 4), 2, (2, 2), 2, 2),
             "ycbcr_full_resolution_lzw_1x1": ((4, 4), 4, (1, 1), None, 1),

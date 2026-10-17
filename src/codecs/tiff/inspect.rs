@@ -371,10 +371,12 @@ pub(super) fn layout_and_palette(
             let subsampling = ycbcr_subsampling.unwrap_or((2, 2));
             match subsampling {
                 (1, 1) => TiffLayout::YcbcrFull8 { conversion },
-                (1, 2) | (2, 2) => TiffLayout::YcbcrSubsampled8 {
-                    conversion,
-                    subsampling,
-                },
+                (1, 2) | (2, 1) | (2, 2) | (4, 1) | (4, 2) | (4, 4) => {
+                    TiffLayout::YcbcrSubsampled8 {
+                        conversion,
+                        subsampling,
+                    }
+                }
                 _ => {
                     return Err(CodecError::Malformed(
                         "unsupported TIFF YCbCr subsampling".to_owned(),
@@ -425,8 +427,8 @@ pub(super) fn layout_and_palette(
 ///
 /// Compressed TIFF YCbCr data is converted using default 1-by-1 triples or
 /// default 2-by-2 clumps. Uncompressed files retain Pillow's legacy RGBX raw
-/// interpretation. Libtiff's RGBA conversion uses one chroma pair for each
-/// clump for either valid positioning value.
+/// interpretation. Libtiff's RGB conversion ignores the positioning tag and
+/// uses one chroma pair for each clump.
 pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrParameters> {
     const DEFAULT_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
     const DEFAULT_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
@@ -446,6 +448,10 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
                 [1, 1] => (1, 1),
                 [1, 2] => (1, 2),
                 [2, 2] => (2, 2),
+                [2, 1] => (2, 1),
+                [4, 1] => (4, 1),
+                [4, 2] => (4, 2),
+                [4, 4] => (4, 4),
                 _ => {
                     return Err(CodecError::Malformed(
                         "unsupported TIFF YCbCr subsampling".to_owned(),
@@ -459,25 +465,6 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
             ));
         }
     };
-
-    match directory.field_type(531) {
-        None => {}
-        Some(3) if directory.value_count(531) == Some(1) => {
-            let positioning = directory.one(531).ok_or_else(|| {
-                CodecError::Malformed("TIFF YCbCr positioning is malformed".to_owned())
-            })?;
-            if !matches!(positioning, 1 | 2) {
-                return Err(CodecError::Malformed(
-                    "unsupported TIFF YCbCr positioning".to_owned(),
-                ));
-            }
-        }
-        Some(_) => {
-            return Err(CodecError::Malformed(
-                "TIFF YCbCr positioning must contain one SHORT value".to_owned(),
-            ));
-        }
-    }
 
     let is_default = rational_values_match_default(&coefficients, &DEFAULT_COEFFICIENTS)
         && rational_values_match_default(&reference_black_white, &DEFAULT_REFERENCE_BLACK_WHITE);

@@ -104,6 +104,26 @@ def lzw_blocks(
     return blocks
 
 
+def deterministic_factor_clumps(
+    width: int, height: int, subsampling: tuple[int, int]
+) -> tuple[tuple[int, ...], ...]:
+    """Build varied luma/chroma clumps for accepted tag 530 factor pairs."""
+    horizontal, vertical = subsampling
+    clump_columns = (width + horizontal - 1) // horizontal
+    clump_rows = (height + vertical - 1) // vertical
+    return tuple(
+        tuple(
+            [
+                (17 + row * 31 + column * 19 + sample * 13) % 256
+                for sample in range(horizontal * vertical)
+            ]
+            + [73 + row * 17 + column * 9, 181 - row * 11 - column * 7]
+        )
+        for row in range(clump_rows)
+        for column in range(clump_columns)
+    )
+
+
 def pack_lzw_codes_with_growth(codes: list[int]) -> bytes:
     """Pack TIFF LZW codes with the format's early-change code widths."""
     fields = []
@@ -316,6 +336,26 @@ def mutate_ifd_tag(
             struct.pack_into("<H", output, entry_offset + 2, field_type)
         if count is not None:
             struct.pack_into("<I", output, entry_offset + 4, count)
+        return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
+
+
+def set_ifd_short_value(data: bytes, tag: int, value: int) -> bytes:
+    """Replace one inline SHORT value in a generated little-endian TIFF."""
+    if data[:4] != b"II*\0":
+        raise ValueError("SHORT mutations require a generated little-endian TIFF")
+    output = bytearray(data)
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        if struct.unpack_from("<H", output, entry_offset)[0] != tag:
+            continue
+        field_type = struct.unpack_from("<H", output, entry_offset + 2)[0]
+        count = struct.unpack_from("<I", output, entry_offset + 4)[0]
+        if field_type != 3 or count != 1:
+            raise ValueError(f"tag {tag} is not one inline SHORT value")
+        struct.pack_into("<H", output, entry_offset + 8, value)
         return bytes(output)
     raise ValueError(f"generated TIFF does not contain tag {tag}")
 
@@ -547,6 +587,15 @@ def fixtures() -> dict[
     reference_long_count = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 532, count=7
     )
+    positioning_invalid_value = set_ifd_short_value(
+        custom_coefficients_and_reference_black_white, 531, 0
+    )
+    positioning_long_type = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 531, field_type=4
+    )
+    positioning_zero_count = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 531, count=0
+    )
     full_resolution_pixels = bytes(
         value
         for y in range(4)
@@ -587,6 +636,85 @@ def fixtures() -> dict[
         subsampling=(2, 2),
         positioning=1,
     )
+    factor_fixtures = {}
+    for horizontal, vertical in ((2, 1), (4, 1), (4, 2), (4, 4)):
+        subsampling = (horizontal, vertical)
+        width = 8
+        height = 8
+        factor_fixtures[f"ycbcr_subsampled_lzw_{horizontal}x{vertical}.tiff"] = (
+            build_tiff(
+                width,
+                height,
+                height,
+                deterministic_factor_clumps(width, height, subsampling),
+                subsampling=subsampling,
+                positioning=1,
+            ),
+            (width, height),
+            {
+                (2, 1): "919d55463c5f83d6ed6cd44fe05914879871d8daec7f8345113b0071339f5bd1",
+                (4, 1): "61d626f6056a0386c908194af851d84da9c56cbf55d22428d42fabf014df2787",
+                (4, 2): "ce4ab52f7dfd14008940466767f2a397e9b2177fc00d292794be0c5d44ee74bd",
+                (4, 4): "73a2e7a7ea192ec490b4cedc7690286af5182a8fc141752db6b75303ee8174c3",
+            }[subsampling],
+            {530: subsampling, 531: 1},
+            None,
+        )
+
+    custom_4x2 = build_tiff(
+        8,
+        8,
+        8,
+        deterministic_factor_clumps(8, 8, (4, 2)),
+        subsampling=(4, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    factor_fixtures["ycbcr_custom_coefficients_lzw_4x2.tiff"] = (
+        custom_4x2,
+        (8, 8),
+        "6df0546698f326496000568126d81424f292fad152199d9894142d95f703c824",
+        {
+            529: (0.2126, 0.7152, 0.0722),
+            530: (4, 2),
+            531: 1,
+        },
+        bytes.fromhex(
+            "640200710f007e1c008b29006c1700792400863100933e00983600a54300"
+            "b25000bf5d06a04b03ad5810ba651dc7722a7223007f30008c3d03994a10"
+            "7a380d87451a945227a15f34a6571db3642ac07137cd7e44ae6c41bb794e"
+            "c8865bd593688044288d51359a5e42a76b4f88594c956659a27366af8073"
+            "b4785cc18569ce9276db9f83bc8d80c99a8dd6a79ae3b4a78d65679a7274"
+            "a77f81b48c8e957a8aa28797af94a4bca1b1c1999bcea6a8dbb3b5e8c0c2"
+            "c9aebed6bbcbe3c8d8f0d5e5"
+        ),
+    )
+
+    odd_edge_width = 5
+    odd_edge_height = 5
+    odd_edge_subsampling = (4, 4)
+    odd_edge_4x4 = build_tiff(
+        odd_edge_width,
+        odd_edge_height,
+        4,
+        deterministic_factor_clumps(
+            odd_edge_width, odd_edge_height, odd_edge_subsampling
+        ),
+        subsampling=odd_edge_subsampling,
+        positioning=1,
+    )
+    custom_odd_edge_4x4 = build_tiff(
+        odd_edge_width,
+        odd_edge_height,
+        4,
+        deterministic_factor_clumps(
+            odd_edge_width, odd_edge_height, odd_edge_subsampling
+        ),
+        subsampling=odd_edge_subsampling,
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+
     return {
         "ycbcr_subsampled_lzw_2x2.tiff": (
             REFERENCE_CANDIDATE,
@@ -923,6 +1051,42 @@ def fixtures() -> dict[
                 "0009296a9fbf387630064400386d8d063b5b"
             ),
         ),
+        "ycbcr_positioning_zero_value_lzw_2x2.tiff": (
+            positioning_invalid_value,
+            (4, 4),
+            "cc0b9abbf0f9741f8dd977611938d485be949664bb386c1b23a38abd1b52d66b",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 0,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
+        "ycbcr_positioning_long_type_lzw_2x2.tiff": (
+            positioning_long_type,
+            (4, 4),
+            "cc0b9abbf0f9741f8dd977611938d485be949664bb386c1b23a38abd1b52d66b",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
+        "ycbcr_positioning_zero_count_lzw_2x2.tiff": (
+            positioning_zero_count,
+            (4, 4),
+            "cc0b9abbf0f9741f8dd977611938d485be949664bb386c1b23a38abd1b52d66b",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: None,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
         "ycbcr_custom_reference_black_white_lzw_2x2.tiff": (
             custom_reference_black_white,
             (4, 4),
@@ -980,6 +1144,33 @@ def fixtures() -> dict[
             {530: (2, 2), 531: 1},
             None,
         ),
+        "ycbcr_subsampled_lzw_4x4_odd_edge.tiff": (
+            odd_edge_4x4,
+            (odd_edge_width, odd_edge_height),
+            "18133f36a5dfa0595cf17ec4ceee5c79ef983e4b4d4f89456e76e0ba641bf177",
+            {530: (4, 4), 531: 1},
+            bytes.fromhex(
+                "5b0000680b007518008225006413008f32009c3f00a94c00b6590b98"
+                "4706c36618d07325dd8032ea8d3fcc7b3af79a4cffa759ffb466ffc"
+                "173ffaf6e6b1f00782c00853907924614743410"
+            ),
+        ),
+        "ycbcr_custom_coefficients_lzw_4x4_odd_edge.tiff": (
+            custom_odd_edge_4x4,
+            (odd_edge_width, odd_edge_height),
+            "3a1f7bcac62ca5a45bef741bab0a4f2969a8f94d2cee233c8ef9ac23902a6506",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (4, 4),
+                531: 1,
+            },
+            bytes.fromhex(
+                "640200710f007e1c008b29006c1700983600a54300b25000bf5d06a04b"
+                "03cc6a13d97720e6842df3913ad47f37ff9e47ffab54ffb861ffc56eff"
+                "b36b7223007f30008c3d03994a107a380d"
+            ),
+        ),
+        **factor_fixtures,
     }
 
 
@@ -1105,6 +1296,16 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_full_resolution_lzw_1x1.tiff": "7a90e875697e13f98b23500bf9b4c9d5b83064b572daa102784bb84503cc167a",
             "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": "ec170a210ddaf4c27f3cc69810a68ee666f57eb77001c860b8558583011e8248",
             "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
+            "ycbcr_subsampled_lzw_2x1.tiff": "abc595f9245db5d77d61f3ca19894bcba716db5e9841a258f08afcebec29fc35",
+            "ycbcr_subsampled_lzw_4x1.tiff": "dda6b978a0f36882c6f380bb505f89d4801cacea4f298f23a3b27f570d06f657",
+            "ycbcr_subsampled_lzw_4x2.tiff": "61de5caf036d78fdc559e1607b60590f1b2be45e7d887794768b1d45b6c8977f",
+            "ycbcr_subsampled_lzw_4x4.tiff": "d9e6f0dc5d95750791aca652af5669e5c1f74bd597c778e791cd0fad5ceb8f13",
+            "ycbcr_subsampled_lzw_4x4_odd_edge.tiff": "d77892013772aa86644a89d45471d05efab08b997517c93c575fdbb266dbe5b3",
+            "ycbcr_custom_coefficients_lzw_4x2.tiff": "54fe5be273b743f33a510d177f3eade1d075281dd4d67714a0a2fd993aa024c6",
+            "ycbcr_custom_coefficients_lzw_4x4_odd_edge.tiff": "425396287e96b1c7a710934e58a5cf1e9b5ac1530d3532ec56a84bbc13f42867",
+            "ycbcr_positioning_zero_value_lzw_2x2.tiff": "126b986668c66582533c5d590c02579d076cf7a2b02905ad97488026279bc228",
+            "ycbcr_positioning_long_type_lzw_2x2.tiff": "ff83ab481e010441fb73adac938b1632976a8083f18af792623a3495d54d8a00",
+            "ycbcr_positioning_zero_count_lzw_2x2.tiff": "35cc88ce341e6e843891488c3f4d3eb0686ae0dbd1b430903df56c1d179f0562",
         }[name]
         actual_input_hash = sha256(data).hexdigest()
         if actual_input_hash != expected_input_hash:

@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,342 total rows: 1,846 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,846 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,352 total rows: 1,856 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,856 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF YCbCr rational edge parity — 2026-10-18
@@ -87,6 +87,28 @@ Coverage MCP lists ten missing branch coordinates in
 `decode.rs:2332` and `:2337`. This selected report also has no source/build
 receipt or test attribution, so the coordinates remain exploratory rather
 than proof of current-source coverage.
+
+## TIFF YCbCr subsampling and positioning parity — 2026-10-18
+
+Added seven public Pillow parity inputs for the supported 2x1, 4x1, 4x2, and
+4x4 clump layouts, including odd image edges and custom coefficients. Added
+three more inputs showing that libtiff ignores malformed YCbCr positioning
+metadata (tag 531) during RGB conversion. The selected run passed all 10 rows
+with pixel parity. The four existing TIFF YCbCr fault-contract rows also passed
+4/4 with `oracle_status: not_applicable`.
+
+The selected public report is
+`target/release-evidence/selected/20261017T223455Z/coverage.json`; the selected
+fault-contract report is
+`target/release-evidence/selected/20261017T223916Z/coverage.json`. Coverage MCP
+reports no missing branch groups for the general converter's odd-edge clipping
+checks at `decode.rs:2011` and `:2018`. It still lists uncovered defensive
+validation arms for zero clump factors and mismatched sample lengths in the
+general converter. Both reports have no source/build receipt and unknown test
+inventory; they are selected-test exploration evidence and do not establish an
+aggregate coverage gain or full-suite coverage claim. The baseline comparison
+was incomparable because the saved baseline lacks matching coverage detail and
+verified receipts.
 
 ## APNG duplicate control before the default image — 2026-10-17
 
@@ -6847,7 +6869,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fbfdf475514a1dce0f9335ed48095dcd0d87333a68ca300741cf3436faa6a37b`; matrix `b8ed3be09d8fec64a26a14a658c77a8855728c6eb589919278d63bee0fe8c50f`.
+- Current fixture integrity only: manifest `c01baaf157ba8e4fd705bf6052d14b0c07a85c75f8e8f2df260fa5fa8f80d5ca`; matrix `45229c16f4d6c6e200d11fd8134da0a38382d42aeaee0cd2f693bdc4c3694916`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
