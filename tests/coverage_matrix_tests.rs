@@ -1129,6 +1129,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.i444_10bit_alpha.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Avif10BitI444AlphaOutputReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -1426,6 +1432,9 @@ fn execute_fault_contract(
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
         | "avif.i444_10bit_alpha.invalid_sample" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
+        }
+        "avif.i444_10bit_alpha.output_reservation" => {
+            Some("decode: unable to allocate AVIF 10-bit I444 alpha output")
         }
         "av1.frame.color_tile_state_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",

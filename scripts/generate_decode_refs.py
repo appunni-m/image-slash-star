@@ -2758,6 +2758,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.i444_10bit_alpha.invalid_sample": {
             "decode_unsupported_then_retry_succeeds"
         },
+        "avif.i444_10bit_alpha.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.superres.position_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },

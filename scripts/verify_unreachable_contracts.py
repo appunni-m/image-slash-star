@@ -65,6 +65,14 @@ FAULT_CONTRACTS = {
         "point": "avif.i444_10bit_alpha.invalid_sample",
         "contract": "decode_unsupported_then_retry_succeeds",
     },
+    "avif_10bit_i444_alpha_output_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure",
+        "source_case": "decode:avif:high_bitdepth_still_10bit_444_alpha_lossy_16x16",
+        "point": "avif.i444_10bit_alpha.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_10bit_i444_u_plane_length_mismatch": {
         "format": "avif",
         "category": "structured-diagnostics",

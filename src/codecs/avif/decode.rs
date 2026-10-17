@@ -20,7 +20,7 @@ pub fn decode(
     let extracted = extract_av1(data)?;
     let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let image = decode_portable(&validated).ok_or_else(|| {
+    let image = decode_portable_with_error(&validated)?.ok_or_else(|| {
         CodecError::NotImplemented(
             "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
         )
@@ -253,7 +253,7 @@ pub fn decode_sequence(
         let image = super::av1::ValidatedAv1 {
             portable_still: Some(portable),
         };
-        let image = decode_portable(&image).ok_or_else(|| {
+        let image = decode_portable_with_error(&image)?.ok_or_else(|| {
             CodecError::NotImplemented(
                 "AVIF sequence frame is outside the supported pure-Rust color subset".to_owned(),
             )
@@ -396,7 +396,27 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
+fn decode_portable_with_error(
+    validated: &super::av1::ValidatedAv1,
+) -> CodecResult<Option<DecodedImage>> {
+    let mut portable_error = None;
+    let image = decode_portable_inner(validated, &mut portable_error);
+    match (image, portable_error) {
+        (Some(image), _) => Ok(Some(image)),
+        (None, Some(error)) => Err(error),
+        (None, None) => Ok(None),
+    }
+}
+
+#[cfg(any(test, coverage))]
 pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
+    decode_portable_with_error(validated).ok().flatten()
+}
+
+fn decode_portable_inner(
+    validated: &super::av1::ValidatedAv1,
+    portable_error: &mut Option<CodecError>,
+) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
@@ -497,12 +517,18 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
                 still.bit_depth,
             )?,
             PortableColorConversion::Yuv(_) if has_alpha && still.bit_depth == 10 => {
-                convert_full_resolution_rgb_10bit_alpha(
+                match convert_full_resolution_rgb_10bit_alpha(
                     &y_plane.samples,
                     &u_plane.samples,
                     &v_plane.samples,
                     still.alpha_plane.as_ref()?.samples.as_slice(),
-                )?
+                ) {
+                    Ok(pixels) => pixels,
+                    Err(error) => {
+                        *portable_error = Some(error);
+                        return None;
+                    }
+                }
             }
             PortableColorConversion::Yuv(matrix) => convert_full_resolution_rgb(
                 &y_plane.samples,
@@ -930,15 +956,18 @@ fn convert_full_resolution_rgb_10bit_alpha(
     u_plane: &[u16],
     v_plane: &[u16],
     alpha_plane: &[u16],
-) -> Option<Vec<u8>> {
+) -> CodecResult<Vec<u8>> {
     let sample_count = y_plane.len();
+    const UNSUPPORTED_SUBSET: &str = "AVIF input is outside the supported pure-Rust decode subset";
     // Public AVIF parsing keeps full-resolution planes aligned. These faults
     // are coverage-only and exercise the defensive plane-length checks below.
     #[cfg(coverage)]
     let u_plane = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::Avif10BitI444UPlaneLengthMismatch,
     ) {
-        let (_, u_plane) = u_plane.split_last()?;
+        let (_, u_plane) = u_plane
+            .split_last()
+            .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?;
         u_plane
     } else {
         u_plane
@@ -947,7 +976,9 @@ fn convert_full_resolution_rgb_10bit_alpha(
     let v_plane = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::Avif10BitI444VPlaneLengthMismatch,
     ) {
-        let (_, v_plane) = v_plane.split_last()?;
+        let (_, v_plane) = v_plane
+            .split_last()
+            .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?;
         v_plane
     } else {
         v_plane
@@ -956,7 +987,9 @@ fn convert_full_resolution_rgb_10bit_alpha(
     let alpha_plane = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::Avif10BitI444AlphaPlaneLengthMismatch,
     ) {
-        let (_, alpha_plane) = alpha_plane.split_last()?;
+        let (_, alpha_plane) = alpha_plane
+            .split_last()
+            .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?;
         alpha_plane
     } else {
         alpha_plane
@@ -965,9 +998,10 @@ fn convert_full_resolution_rgb_10bit_alpha(
         || v_plane.len() != sample_count
         || alpha_plane.len() != sample_count
     {
-        return None;
+        return Err(CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()));
     }
-    let sample_depth = super::av1::sample_depth::SampleDepth::new(10)?;
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(10)
+        .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?;
     #[cfg(coverage)]
     let injected_invalid_samples: &[u16] = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::Avif10BitI444InvalidSample,
@@ -990,21 +1024,40 @@ fn convert_full_resolution_rgb_10bit_alpha(
         .chain(v_plane)
         .chain(alpha_plane);
     if samples.any(|&sample| sample_depth.validate(sample).is_none()) {
-        return None;
+        return Err(CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()));
     }
-    let output_length = sample_count.checked_mul(4)?;
+    let Some(output_length) = sample_count.checked_mul(4) else {
+        return Err(CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()));
+    };
     let mut output = Vec::new();
-    output.try_reserve_exact(output_length).ok()?;
+    #[cfg(coverage)]
+    let inject_reservation_failure = crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Avif10BitI444AlphaOutputReservation,
+    );
+    #[cfg(not(coverage))]
+    let inject_reservation_failure = false;
+    if inject_reservation_failure {
+        return Err(CodecError::Dimensions(
+            "unable to allocate AVIF 10-bit I444 alpha output".to_owned(),
+        ));
+    }
+    output.try_reserve_exact(output_length).map_err(|_| {
+        CodecError::Dimensions("unable to allocate AVIF 10-bit I444 alpha output".to_owned())
+    })?;
     for index in 0..sample_count {
-        let rgb =
-            libyuv_bt601_full_range_rgb_10bit(y_plane[index], u_plane[index], v_plane[index])?;
+        let rgb = libyuv_bt601_full_range_rgb_10bit(y_plane[index], u_plane[index], v_plane[index])
+            .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?;
         output.extend_from_slice(&rgb);
-        output.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+        output.push(
+            sample_depth
+                .truncate_to_u8(alpha_plane[index])
+                .ok_or_else(|| CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()))?,
+        );
     }
     if output.len() != output_length {
-        return None;
+        return Err(CodecError::NotImplemented(UNSUPPORTED_SUBSET.to_owned()));
     }
-    Some(output)
+    Ok(output)
 }
 
 // `convert_full_resolution_rgb` validates every plane against the declared

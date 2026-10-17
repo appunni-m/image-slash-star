@@ -58,6 +58,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444VPlaneLengthMismatch,
     /// Inject an out-of-range AVIF 10-bit I444 sample before validation.
     Avif10BitI444InvalidSample,
+    /// Force the AVIF 10-bit I444 alpha output reservation to fail.
+    Avif10BitI444AlphaOutputReservation,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.
