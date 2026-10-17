@@ -184,6 +184,14 @@ fn png_mode(color_type: u8, bit_depth: u8) -> CodecResult<ImageMode> {
 }
 
 fn consume_sequence(actual: u32, next: &mut Option<u32>) -> CodecResult<()> {
+    #[cfg(coverage)]
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::ApngSequenceCounterExhaustion,
+    ) {
+        // Model a valid prefix through MAX before this frame-control chunk.
+        *next = None;
+    }
+
     let Some(expected) = *next else {
         return Err(CodecError::Malformed(
             "PNG animation sequence number overflows".to_owned(),

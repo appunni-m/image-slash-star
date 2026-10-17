@@ -329,6 +329,15 @@ FAULT_CONTRACTS = {
         "point": "png.apng.sequence_counter_exhaustion",
         "contract": "sequence_decode_error_then_retry_succeeds",
     },
+    "png_apng_inspection_sequence_counter_exhaustion": {
+        "format": "png",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:png:png_apng_inspection_sequence_counter_exhaustion",
+        "source_case": "decode:png:apng_sequence_controls",
+        "point": "png.apng.sequence_counter_exhaustion",
+        "contract": "inspection_error_then_retry_succeeds",
+        "operation": "inspect",
+    },
     "avif_monochrome_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",
@@ -643,7 +652,7 @@ def verify_fault_contract_case_index(entries: object) -> None:
             row.get("type") != "fault-contract"
             or row.get("verification") != "fault-contract"
             or row.get("oracle_status") != "not_applicable"
-            or row.get("operation") != "decode"
+            or row.get("operation") != expected.get("operation", "decode")
             or row.get("status") != "active"
             or row.get("format") != expected["format"]
             or entry.get("selector")

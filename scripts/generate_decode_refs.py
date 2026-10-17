@@ -2819,7 +2819,8 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "png.apng.sequence_counter_exhaustion": {
-            "sequence_decode_error_then_retry_succeeds"
+            "sequence_decode_error_then_retry_succeeds",
+            "inspection_error_then_retry_succeeds",
         },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
@@ -2915,11 +2916,11 @@ def sync_fault_contract_rows(manifest, matrix):
             row.get("type") != "fault-contract"
             or row.get("verification") != "fault-contract"
             or row.get("oracle_status") != "not_applicable"
-            or row.get("operation") != "decode"
+            or row.get("operation") not in {"decode", "inspect"}
             or row.get("status") != "active"
         ):
             raise RuntimeError(
-                f"{case_id}: fault contract must be active decode with a not_applicable oracle"
+                f"{case_id}: fault contract must be active decode or inspect with a not_applicable oracle"
             )
         if row.get("format") not in {"avif", "bmp", "jpeg", "png", "tiff"}:
             raise RuntimeError(f"{case_id}: unsupported fault-contract format")
@@ -2974,6 +2975,18 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(f"{case_id}: fault point and contract must be strings")
         if point not in allowed_faults or contract not in allowed_faults.get(point, set()):
             raise RuntimeError(f"{case_id}: fault point or public contract is not allow-listed")
+        if row["operation"] == "inspect" and (
+            row["format"] != "png"
+            or point != "png.apng.sequence_counter_exhaustion"
+            or contract != "inspection_error_then_retry_succeeds"
+        ):
+            raise RuntimeError(
+                f"{case_id}: inspect fault contracts must use the APNG inspection exhaustion contract"
+            )
+        if contract == "inspection_error_then_retry_succeeds" and row["operation"] != "inspect":
+            raise RuntimeError(
+                f"{case_id}: inspection retry contract requires operation: inspect"
+            )
 
     matrix["fault_contracts"] = rows
 

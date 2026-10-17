@@ -1028,7 +1028,7 @@ fn execute_fault_contract(
     row: &FaultContractRow,
 ) -> Result<(), String> {
     if row.row_type != "fault-contract"
-        || row.operation != "decode"
+        || !matches!(row.operation.as_str(), "decode" | "inspect")
         || !matches!(
             row.format.as_str(),
             "avif" | "bmp" | "jpeg" | "png" | "tiff"
@@ -1039,7 +1039,7 @@ fn execute_fault_contract(
         || row.requirements.as_slice() != ["structured-diagnostics"]
     {
         return Err(format!(
-            "{}: row is not a valid target-only decode fault contract",
+            "{}: row is not a valid target-only decode or inspect fault contract",
             row.id
         ));
     }
@@ -1425,6 +1425,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Png,
                 img::ImageErrorStage::SequenceDecode,
             ),
+            ("png.apng.sequence_counter_exhaustion", "inspection_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::ApngSequenceCounterExhaustion,
+                false,
+                img::ImageFormat::Png,
+                img::ImageErrorStage::Inspection,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -1450,6 +1456,14 @@ fn execute_fault_contract(
                 ));
             }
         };
+    if (row.operation == "inspect")
+        != (row.fault.contract == "inspection_error_then_retry_succeeds")
+    {
+        return Err(format!(
+            "{}: fault operation does not match its public contract",
+            row.id
+        ));
+    }
     let expected_message = match row.fault.point.as_str() {
         "av1.segment_map.reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 segment map")
@@ -1564,6 +1578,9 @@ fn execute_fault_contract(
         "png.scanline.sample_buffer_reservation" => {
             Some("decode: unable to reserve PNG decoded sample buffer")
         }
+        "png.apng.sequence_counter_exhaustion" if row.operation == "inspect" => {
+            Some("inspect: PNG animation sequence number overflows")
+        }
         "png.apng.sequence_counter_exhaustion" => {
             Some("decode sequence: APNG sequence number overflows")
         }
@@ -1616,7 +1633,9 @@ fn execute_fault_contract(
     )?;
 
     let injected = img::__coverage_with_fault_point(fault_point, || {
-        if sequence_decode {
+        if row.operation == "inspect" {
+            img::inspect(&bytes).map(|_| ())
+        } else if sequence_decode {
             img::decode_sequence(&bytes).map(|_| ())
         } else {
             img::decode(&bytes).map(|_| ())
@@ -1690,7 +1709,24 @@ fn execute_fault_contract(
         }
     }
 
-    if sequence_decode {
+    if row.operation == "inspect" {
+        let retry = img::inspect(&bytes)
+            .map_err(|error| format!("{}: inspect retry failed: {error:?}", row.id))?;
+        if retry.format != expected_format {
+            return Err(format!(
+                "{}: retry inspected as {:?}, expected {:?}",
+                row.id, retry.format, expected_format
+            ));
+        }
+        let reference = img::inspect(&bytes)
+            .map_err(|error| format!("{}: reference inspect retry failed: {error:?}", row.id))?;
+        if retry != reference {
+            return Err(format!(
+                "{}: inspect retry differs from a fresh uninjected inspect",
+                row.id
+            ));
+        }
+    } else if sequence_decode {
         let retry = img::decode_sequence(&bytes)
             .map_err(|error| format!("{}: sequence decode retry failed: {error:?}", row.id))?;
         if retry.format != expected_format {
