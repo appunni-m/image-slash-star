@@ -75,7 +75,8 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     }
     super::validate_compression(data, header_size, bit_depth, compression)?;
 
-    let alpha_mask = bitfield_alpha(data, header_size, bit_depth, compression)?;
+    let masks = bitfield_masks(data, header_size, bit_depth, compression)?;
+    let alpha_mask = masks.map_or(0, |masks| masks.alpha);
     let palette_start = if header_size == INFO_HEADER_SIZE && compression == BI_BITFIELDS {
         header_end.saturating_add(12)
     } else {
@@ -144,26 +145,26 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     })
 }
 
-fn bitfield_alpha(
+fn bitfield_masks(
     data: &[u8],
     header_size: u32,
     bit_depth: u16,
     compression: u32,
-) -> CodecResult<u32> {
+) -> CodecResult<Option<super::BitfieldMasks>> {
     if compression != BI_BITFIELDS {
-        return Ok(0);
+        return Ok(None);
     }
-    if le_u32(data, 54)? == 0 || le_u32(data, 58)? == 0 || le_u32(data, 62)? == 0 {
-        return Err(
-            CodecError::Unsupported("unsupported BMP bitfields layout".to_owned())
-                .at(54, "bmp_bitfields"),
-        );
-    }
-    if bit_depth == 32 && header_size >= 56 {
-        le_u32(data, 66)
-    } else {
-        Ok(0)
-    }
+    let masks = super::BitfieldMasks {
+        red: le_u32(data, 54)?,
+        green: le_u32(data, 58)?,
+        blue: le_u32(data, 62)?,
+        alpha: if bit_depth == 32 && header_size >= 56 {
+            le_u32(data, 66)?
+        } else {
+            0
+        },
+    };
+    super::normalize_bitfield_masks(bit_depth, masks).map(Some)
 }
 
 fn read_palette(

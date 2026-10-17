@@ -5240,6 +5240,58 @@ def write_bmp_bitfields_v2_32(path):
     write_bmp(path, bytes(dib), pixels)
 
 
+def write_bmp_bitfields_32_zero_masks(path):
+    """Write Pillow's all-zero 32-bit BI_BITFIELDS BGRA fallback case."""
+    dib = bmp_info_header(1, 1, 32, 3, 4)
+    masks = struct.pack("<III", 0, 0, 0)
+    write_bmp(path, dib, bytes((0x10, 0x20, 0x30, 0x40)), masks=masks)
+
+
+def write_bmp_bitfields_32_layout(path, masks):
+    """Write one Pillow-supported 32-bit BI_BITFIELDS channel layout."""
+    pixel = 0
+    for mask, value in zip(masks, (0x11, 0x22, 0x33, 0x44)):
+        if mask:
+            shift = (mask & -mask).bit_length() - 1
+            pixel |= value << shift
+    if masks[3] == 0:
+        dib = bmp_info_header(1, 1, 32, 3, 4)
+        external_masks = struct.pack("<III", *masks[:3])
+        write_bmp(path, dib, struct.pack("<I", pixel), masks=external_masks)
+        return
+
+    dib = bytearray(56)
+    struct.pack_into(
+        "<IiiHHIIiiII", dib, 0, 56, 1, 1, 1, 32, 3, 4, 3_780, 3_780, 0, 0
+    )
+    struct.pack_into("<IIII", dib, 40, *masks)
+    write_bmp(path, bytes(dib), struct.pack("<I", pixel))
+
+
+def write_bmp_bitfields_24(path):
+    """Write a canonical BGR 24-bit BI_BITFIELDS bitmap."""
+    dib = bmp_info_header(1, 1, 24, 3, 4)
+    masks = struct.pack("<III", 0x00FF0000, 0x0000FF00, 0x000000FF)
+    pixels = bytes((0x33, 0x22, 0x11, 0))
+    write_bmp(path, dib, pixels, masks=masks)
+
+
+def write_bmp_bitfields_16_rgb565(path):
+    """Write a 1x1 RGB565 BI_BITFIELDS bitmap."""
+    dib = bmp_info_header(1, 1, 16, 3, 4)
+    masks = struct.pack("<III", 0xF800, 0x07E0, 0x001F)
+    pixel = (31 << 11) | (32 << 5) | 7
+    write_bmp(path, dib, struct.pack("<H", pixel) + bytes(2), masks=masks)
+
+
+def write_bmp_bitfields_16_unsupported_masks(path):
+    """Write a complete file with nonzero but unsupported 16-bit masks."""
+    dib = bmp_info_header(1, 1, 16, 3, 4)
+    masks = struct.pack("<III", 0x0F00, 0x00F0, 0x000F)
+    pixels = struct.pack("<H", 0x1234) + bytes(2)
+    write_bmp(path, dib, pixels, masks=masks)
+
+
 def write_bmp_v4_16(path):
     """Write a V4 RGB555 bitmap whose optional alpha mask is ignored by Pillow."""
     dib = bytearray(108)
@@ -5291,6 +5343,18 @@ def gen_bmp():
     struct.pack_into("<i", bottom_up_1_palette, 22, 5)
     (d / "bottom_up_1_palette.bmp").write_bytes(bottom_up_1_palette)
     write_bmp_bitfields(d / "bitfields.bmp", pattern_img("RGBA"))
+    write_bmp_bitfields_32_zero_masks(d / "bitfields_32_zero_masks.bmp")
+    write_bmp_bitfields_24(d / "bitfields_24.bmp")
+    write_bmp_bitfields_16_rgb565(d / "bitfields_16_rgb565.bmp")
+    bitfield_layouts_32 = {
+        "2": (0xFF000000, 0x00FF0000, 0x0000FF00, 0),
+        "3": (0xFF000000, 0x0000FF00, 0x000000FF, 0),
+        "4": (0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF),
+        "5": (0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000),
+        "7": (0xFF000000, 0x0000FF00, 0x000000FF, 0x00FF0000),
+    }
+    for layout, masks in bitfield_layouts_32.items():
+        write_bmp_bitfields_32_layout(d / f"bitfields_32_layout_{layout}.bmp", masks)
     zero_mask = bytearray((d / "bitfields.bmp").read_bytes())
     struct.pack_into("<I", zero_mask, 58, 0)
     (d / "bitfields_zero_mask.bmp").write_bytes(zero_mask)
@@ -5301,6 +5365,7 @@ def gen_bmp():
     struct.pack_into("<I", zero_blue_mask, 62, 0)
     (d / "bitfields_zero_blue_mask.bmp").write_bytes(zero_blue_mask)
     write_bmp_bitfields_v2_32(d / "bitfields_v2_32_no_alpha.bmp")
+    write_bmp_bitfields_16_unsupported_masks(d / "bitfields_16_unsupported_masks.bmp")
     write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
     write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
     write_bmp_v4_16(d / "v4header16.bmp")

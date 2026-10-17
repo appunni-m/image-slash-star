@@ -3611,11 +3611,24 @@ formats:
       test_assets:
       - rle4_delta_odd_x_encoded_run.bmp
     - id: compression_bitfields
-      description: BI_BITFIELDS (16/32 bit with masks)
+      description: Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts
       test_assets:
       - bitfields.bmp
       - bitfields_v2_32_no_alpha.bmp
+      - bitfields_16_rgb565.bmp
+      - bitfields_24.bmp
+      - bitfields_32_layout_2.bmp
+      - bitfields_32_layout_3.bmp
+      - bitfields_32_layout_4.bmp
+      - bitfields_32_layout_5.bmp
+      - bitfields_32_layout_7.bmp
+      - bitfields_32_zero_masks.bmp
       - v4header16.bmp
+    - id: error_unsupported_bitfields_layout
+      description: Pillow rejects a complete 16-bit INFO-header BMP with nonzero unsupported BI_BITFIELDS masks
+      test_assets:
+      - bitfields_16_unsupported_masks.bmp
+      expect_error: true
     - id: top_down
       description: Top-down scanline order (negative height)
       test_assets:

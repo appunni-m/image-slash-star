@@ -12,6 +12,60 @@ pub(super) const fn is_supported_info_dib_header_size(header_size: u32) -> bool 
     matches!(header_size, 40 | 52 | 56 | 64 | 108 | 124)
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct BitfieldMasks {
+    pub(super) red: u32,
+    pub(super) green: u32,
+    pub(super) blue: u32,
+    pub(super) alpha: u32,
+}
+
+/// Validate the BI_BITFIELDS layouts accepted by Pillow 12.2.0.
+pub(super) fn normalize_bitfield_masks(
+    bit_depth: u16,
+    masks: BitfieldMasks,
+) -> CodecResult<BitfieldMasks> {
+    let rgb = (masks.red, masks.green, masks.blue);
+    let supported = match bit_depth {
+        16 => matches!(rgb, (0xF800, 0x07E0, 0x001F) | (0x7C00, 0x03E0, 0x001F)),
+        24 => rgb == (0x00FF_0000, 0x0000_FF00, 0x0000_00FF),
+        32 => matches!(
+            (masks.red, masks.green, masks.blue, masks.alpha),
+            (0x00FF_0000, 0x0000_FF00, 0x0000_00FF, 0)
+                | (0xFF00_0000, 0x00FF_0000, 0x0000_FF00, 0)
+                | (0xFF00_0000, 0x0000_FF00, 0x0000_00FF, 0)
+                | (0xFF00_0000, 0x00FF_0000, 0x0000_FF00, 0x0000_00FF)
+                | (0x0000_00FF, 0x0000_FF00, 0x00FF_0000, 0xFF00_0000)
+                | (0x00FF_0000, 0x0000_FF00, 0x0000_00FF, 0xFF00_0000)
+                | (0xFF00_0000, 0x0000_FF00, 0x0000_00FF, 0x00FF_0000)
+                | (0, 0, 0, 0)
+        ),
+        _ => false,
+    };
+    if !supported {
+        return Err(
+            CodecError::Unsupported("unsupported BMP bitfields layout".to_owned())
+                .at(54, "bmp_bitfields"),
+        );
+    }
+
+    if bit_depth == 32 && rgb == (0, 0, 0) {
+        // Pillow treats the all-zero 32-bit tuple as byte-ordered BGRA.
+        // The supported-layout check above also guarantees a zero alpha mask.
+        return Ok(BitfieldMasks {
+            red: 0x00FF_0000,
+            green: 0x0000_FF00,
+            blue: 0x0000_00FF,
+            alpha: 0xFF00_0000,
+        });
+    }
+
+    Ok(BitfieldMasks {
+        alpha: if bit_depth == 32 { masks.alpha } else { 0 },
+        ..masks
+    })
+}
+
 /// Reject compressed payload families before either caller reads a palette or
 /// treats the payload as raw scanlines. Both callers validate pixel depth first.
 fn validate_compression(

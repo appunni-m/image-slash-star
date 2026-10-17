@@ -1084,7 +1084,7 @@ def validate_png_claim(case_id, data):
             )
 
 
-def validate_bmp_claim(case_id, data):
+def validate_bmp_claim(case_id, asset_name, data):
     if data[:2] != b"BM" or len(data) < 26:
         raise RuntimeError("invalid BMP file header")
     dib_size = struct.unpack_from("<I", data, 14)[0]
@@ -1110,6 +1110,39 @@ def validate_bmp_claim(case_id, data):
         raise RuntimeError(
             f"BMP compression is {compression}, expected {compression_claims[case_id]}"
         )
+    if asset_name == "bitfields_32_zero_masks.bmp":
+        masks = struct.unpack_from("<III", data, 54)
+        if (depth, compression, masks) != (32, 3, (0, 0, 0)):
+            raise RuntimeError("BMP is not the all-zero 32-bit BI_BITFIELDS case")
+    if asset_name == "bitfields_16_rgb565.bmp":
+        masks = struct.unpack_from("<III", data, 54)
+        if (depth, compression, masks) != (16, 3, (0xF800, 0x07E0, 0x001F)):
+            raise RuntimeError("BMP is not the canonical RGB565 BI_BITFIELDS case")
+    if asset_name == "bitfields_24.bmp":
+        masks = struct.unpack_from("<III", data, 54)
+        if (depth, compression, masks) != (
+            24,
+            3,
+            (0x00FF0000, 0x0000FF00, 0x000000FF),
+        ):
+            raise RuntimeError("BMP is not the canonical 24-bit BI_BITFIELDS case")
+    if asset_name.startswith("bitfields_32_layout_"):
+        layout = asset_name.removeprefix("bitfields_32_layout_").removesuffix(".bmp")
+        supported_masks = {
+            "2": (0xFF000000, 0x00FF0000, 0x0000FF00, 0),
+            "3": (0xFF000000, 0x0000FF00, 0x000000FF, 0),
+            "4": (0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF),
+            "5": (0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000),
+            "7": (0xFF000000, 0x0000FF00, 0x000000FF, 0x00FF0000),
+        }
+        alpha_mask = struct.unpack_from("<I", data, 66)[0] if dib_size >= 56 else 0
+        masks = (*struct.unpack_from("<III", data, 54), alpha_mask)
+        if depth != 32 or compression != 3 or masks != supported_masks.get(layout):
+            raise RuntimeError("BMP does not match its declared 32-bit BI_BITFIELDS layout")
+    if case_id == "error_unsupported_bitfields_layout":
+        masks = struct.unpack_from("<III", data, 54)
+        if (depth, compression, masks) != (16, 3, (0x0F00, 0x00F0, 0x000F)):
+            raise RuntimeError("BMP is not the nonzero unsupported 16-bit BI_BITFIELDS case")
     if case_id == "top_down" and height >= 0:
         raise RuntimeError("BMP height is not negative")
     if case_id == "bottom_up" and height <= 0:
@@ -1310,6 +1343,12 @@ def preflight_decode_cases(manifest, target_format=None):
                 if not path.exists():
                     failures.append(f"{case_name}: asset does not exist")
                     continue
+                if fmt_name == "bmp" and case.get("id") == "error_unsupported_bitfields_layout":
+                    try:
+                        validate_bmp_claim(case["id"], asset_name, path.read_bytes())
+                    except Exception as error:
+                        failures.append(f"{case_name}: {error}")
+                        continue
                 if case.get("pillow_call") is not None:
                     # Outcomes for an explicit call are observed in generation;
                     # neither success nor failure is a stimulus requirement.
@@ -1370,7 +1409,7 @@ def preflight_decode_cases(manifest, target_format=None):
                     if fmt_name == "png":
                         validate_png_claim(case["id"], data)
                     elif fmt_name == "bmp":
-                        validate_bmp_claim(case["id"], data)
+                        validate_bmp_claim(case["id"], asset_name, data)
                     elif fmt_name == "tiff":
                         validate_tiff_claim(case["id"], asset_name, data)
                     elif fmt_name == "ico":

@@ -5361,6 +5361,54 @@
         "verify_status": "error"
       },
       {
+        "asset": "bitfields_16_unsupported_masks.bmp",
+        "class": "error_unsupported_bitfields_layout",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP bitfields layout",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP bitfields layout",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP bitfields layout",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP bitfields layout",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a complete 16-bit INFO-header BMP with nonzero unsupported BI_BITFIELDS masks",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP bitfields layout",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "core_header_invalid_depth.bmp",
         "class": "error_unsupported_core_depth",
         "contracts": {
@@ -26451,7 +26499,7 @@
   "summary": {
     "by_format": {
       "avif": 60,
-      "bmp": 67,
+      "bmp": 68,
       "gif": 48,
       "ico": 30,
       "jpeg": 100,
@@ -26460,17 +26508,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 625,
+      "pillow_fixture": 626,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 360,
+      "spec_violation": 361,
       "tolerated": 0,
       "truncated": 191
     },
-    "classes": 625,
+    "classes": 626,
     "formats": 8
   }
 }

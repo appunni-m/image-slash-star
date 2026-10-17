@@ -478,12 +478,20 @@ pub fn decode(
             (0, 0, 0, 0)
         }
     };
-    if compression == 3 && (rm == 0 || gm == 0 || bm == 0) {
-        return Err(
-            CodecError::Unsupported("unsupported BMP bitfields layout".to_owned())
-                .at(54, "bmp_bitfields"),
-        );
-    }
+    let (rm, gm, bm, am) = if compression == 3 {
+        let masks = super::normalize_bitfield_masks(
+            bit_depth_raw,
+            super::BitfieldMasks {
+                red: rm,
+                green: gm,
+                blue: bm,
+                alpha: am,
+            },
+        )?;
+        (masks.red, masks.green, masks.blue, masks.alpha)
+    } else {
+        (rm, gm, bm, am)
+    };
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
     let dib_end = 14u64.saturating_add(u64::from(header_size));
