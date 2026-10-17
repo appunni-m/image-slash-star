@@ -639,7 +639,10 @@ jobs:
         )
         self.assertIsNotNone(match, "CI must retain the Windows MSVC runtime job")
         job = match.group("body")
-        self.assertIn("runs-on: windows-latest", job)
+        self.assertIn("runs-on: windows-2025", job)
+        self.assertIn("name: Record Windows, MSVC, and SDK versions", job)
+        self.assertIn("MSVC toolset:", job)
+        self.assertIn("Windows SDK versions:", job)
         self.assertIn('RUSTC_WRAPPER: ""', job)
         self.assertIn("run: cargo check --workspace --all-features --locked", job)
         self.assertIn(
