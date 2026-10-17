@@ -52,6 +52,8 @@ pub enum CoverageFaultPoint {
     AvifSequenceFrameReservation,
     /// Shorten a valid AVIF 10-bit I444 alpha plane to test its length guard.
     Avif10BitI444AlphaPlaneLengthMismatch,
+    /// Shorten a valid AVIF full-resolution alpha plane to test its generic length guard.
+    AvifI444AlphaPlaneLengthMismatch,
     /// Shorten a valid AVIF 10-bit I444 U plane to test its length guard.
     Avif10BitI444UPlaneLengthMismatch,
     /// Shorten a valid AVIF 10-bit I444 V plane to test its length guard.

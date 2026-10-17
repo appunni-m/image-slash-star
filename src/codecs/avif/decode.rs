@@ -886,6 +886,19 @@ fn convert_full_resolution_rgb(
 ) -> Option<Vec<u8>> {
     let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
     let sample_count = y_plane.len();
+    // Public AVIF parsing validates plane shapes before conversion. Keep a
+    // coverage-only fault point here to exercise the defensive alpha guard
+    // without exposing a fault control in normal builds.
+    #[cfg(coverage)]
+    let alpha_plane = alpha_plane.map(|alpha| {
+        if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifI444AlphaPlaneLengthMismatch,
+        ) {
+            &alpha[..alpha.len().saturating_sub(1)]
+        } else {
+            alpha
+        }
+    });
     if u_plane.len() != sample_count
         || v_plane.len() != sample_count
         || alpha_plane.is_some_and(|alpha| alpha.len() != sample_count)

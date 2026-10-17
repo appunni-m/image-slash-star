@@ -1106,6 +1106,15 @@ fn execute_fault_contract(
                 img::ImageErrorStage::StillDecode,
             ),
             (
+                "avif.i444_generic_alpha.plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifI444AlphaPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
                 "avif.i444_10bit_alpha.u_plane_length_mismatch",
                 "decode_unsupported_then_retry_succeeds",
             ) => (
@@ -1428,6 +1437,7 @@ fn execute_fault_contract(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 projected temporal field",
         ),
         "avif.i444_10bit_alpha.plane_length_mismatch"
+        | "avif.i444_generic_alpha.plane_length_mismatch"
         | "avif.i444_10bit_alpha.u_plane_length_mismatch"
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
         | "avif.i444_10bit_alpha.invalid_sample" => {
@@ -1620,6 +1630,7 @@ fn execute_fault_contract(
         }) if matches!(
             row.fault.point.as_str(),
             "avif.i444_10bit_alpha.plane_length_mismatch"
+                | "avif.i444_generic_alpha.plane_length_mismatch"
                 | "avif.i444_10bit_alpha.u_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.v_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.invalid_sample"
