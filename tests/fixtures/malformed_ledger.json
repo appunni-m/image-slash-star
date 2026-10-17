@@ -5049,6 +5049,38 @@
         "verify_status": "error"
       },
       {
+        "asset": "palette_missing_8bit.bmp",
+        "class": "error_palette_missing_8bit",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "An 8-bit BI_RGB BMP with no declared or implicit color table is rejected as truncated",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (0 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "related_ba.bmp",
         "class": "error_related_os2_signatures",
         "contracts": {
@@ -26179,7 +26211,7 @@
   "summary": {
     "by_format": {
       "avif": 60,
-      "bmp": 66,
+      "bmp": 67,
       "gif": 48,
       "ico": 30,
       "jpeg": 100,
@@ -26188,7 +26220,7 @@
       "webp": 136
     },
     "by_origin": {
-      "pillow_fixture": 619,
+      "pillow_fixture": 620,
       "specification_reference": 60
     },
     "by_spec_status": {
@@ -26196,9 +26228,9 @@
       "not_the_format": 39,
       "spec_violation": 355,
       "tolerated": 0,
-      "truncated": 190
+      "truncated": 191
     },
-    "classes": 619,
+    "classes": 620,
     "formats": 8
   }
 }

@@ -5250,6 +5250,11 @@ def gen_bmp():
     implicit_palette = bytearray((d / "8bit.bmp").read_bytes())
     struct.pack_into("<I", implicit_palette, 46, 0)
     (d / "8bit_implicit_palette.bmp").write_bytes(implicit_palette)
+    write_bmp(
+        d / "palette_missing_8bit.bmp",
+        bmp_info_header(1, 1, 8, 0, 4),
+        bytes((1, 0, 0, 0)),
+    )
     write_bmp_16(d / "16bit.bmp", img)
     img.convert("L").save(d / "gray.bmp")
     img.save(d / "uncompressed.bmp")

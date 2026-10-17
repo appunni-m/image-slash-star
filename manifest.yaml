@@ -3519,6 +3519,11 @@ formats:
       - palette_green_mismatch.bmp
       - palette_red_mismatch.bmp
       - 8bit_implicit_palette.bmp
+    - id: error_palette_missing_8bit
+      description: An 8-bit BI_RGB BMP with no declared or implicit color table is rejected as truncated
+      test_assets:
+      - palette_missing_8bit.bmp
+      expect_error: true
     - id: depth_16
       description: 16-bit (RGB555)
       test_assets:
