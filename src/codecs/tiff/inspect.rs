@@ -241,10 +241,18 @@ fn required_dimension(directory: &Directory<'_>, tag: u16, name: &'static str) -
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum TiffLayout {
-    Bilevel { invert: bool },
-    Gray2 { invert: bool },
-    Gray4 { invert: bool },
-    Gray8 { invert: bool },
+    Bilevel {
+        invert: bool,
+    },
+    Gray2 {
+        invert: bool,
+    },
+    Gray4 {
+        invert: bool,
+    },
+    Gray8 {
+        invert: bool,
+    },
     Gray16,
     GrayAlpha8,
     GrayIgnored8,
@@ -253,11 +261,18 @@ pub(super) enum TiffLayout {
     Rgb8,
     RgbIgnored8,
     Rgba8,
-    Palette { bits: u8 },
+    Palette {
+        bits: u8,
+    },
     Cmyk8,
     Ycbcr8,
-    YcbcrFull8 { conversion: YcbcrConversion },
-    YcbcrSubsampled8 { conversion: YcbcrConversion },
+    YcbcrFull8 {
+        conversion: YcbcrConversion,
+    },
+    YcbcrSubsampled8 {
+        conversion: YcbcrConversion,
+        subsampling: (usize, usize),
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -352,9 +367,13 @@ pub(super) fn layout_and_palette(
         (6, 3, 8) if compression == 1 => TiffLayout::Ycbcr8,
         (6, 3, 8) => {
             let conversion = ycbcr_conversion.malformed("TIFF YCbCr conversion is missing")?;
-            match ycbcr_subsampling.unwrap_or((2, 2)) {
+            let subsampling = ycbcr_subsampling.unwrap_or((2, 2));
+            match subsampling {
                 (1, 1) => TiffLayout::YcbcrFull8 { conversion },
-                (2, 2) => TiffLayout::YcbcrSubsampled8 { conversion },
+                (1, 2) | (2, 2) => TiffLayout::YcbcrSubsampled8 {
+                    conversion,
+                    subsampling,
+                },
                 _ => {
                     return Err(CodecError::Malformed(
                         "unsupported TIFF YCbCr subsampling".to_owned(),
@@ -438,6 +457,7 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
             })?;
             match values.as_slice() {
                 [1, 1] => (1, 1),
+                [1, 2] => (1, 2),
                 [2, 2] => (2, 2),
                 _ => {
                     return Err(CodecError::Malformed(

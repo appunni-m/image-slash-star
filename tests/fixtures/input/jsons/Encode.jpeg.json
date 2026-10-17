@@ -952,6 +952,59 @@
       }
     },
     {
+      "id": "enc_sub_420_generic_mcu_aligned_16x16",
+      "source_asset": "jpeg_420_generic_source_16x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "subsampling": "420",
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_420_generic_source_16x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_sub_420_aligned_odd_height",
       "source_asset": "rgb_16x1.jpg",
       "source_format": "jpeg",

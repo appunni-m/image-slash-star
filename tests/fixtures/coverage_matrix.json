@@ -106566,6 +106566,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_sub_420_generic_mcu_aligned_16x16",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 16x16 RGB PNG exercises the generic 4:2:0 independent-entropy path with a complete 2x2 luma-block grid",
+          "params": {
+            "subsampling": "420",
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_420_generic_source_16x16.png",
+          "source_sha256": "427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_generic_mcu_aligned_16x16.bin",
+          "encoded_ref_bytes": 818,
+          "encoded_ref_sha256": "f8f11806f51915cf5673c8f5732280b24fe53ee7b3c5ef6669ac17ace9e97031",
+          "ref_sha256": "6fb0c4384dd488fb72663f0799d7591a1fe701165b1ac614a289974139f9696a",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_generic_mcu_aligned_16x16.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_sub_420_aligned_odd_height",
           "type": "encode",
           "format": "jpeg",
@@ -107577,6 +107633,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_streaming_exif.bin",
           "encoded_ref_bytes": 487,
           "encoded_ref_sha256": "2f5654c7a02d1f35f1c8fdf3ec0fd629a7cf75dab825f6afb5567fb67b31a595",
@@ -107589,17 +107655,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_optimized",
@@ -139467,6 +139523,162 @@
           "ref_size": [
             4,
             4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_1x2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontally full-resolution YCbCr samples in vertically subsampled LZW clumps",
+          "asset": "ycbcr_subsampled_lzw_1x2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_tiff.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_1x2_odd_height",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Vertically subsampled YCbCr LZW clumps clipped at an odd bottom edge",
+          "asset": "ycbcr_subsampled_lzw_1x2_odd_height.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "c71479e1cfff0dd7c76fbe5df2c61e80c75405df52c1aa2413e2f4d08a99f1fb",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_odd_height_tiff.bin",
+          "ref_bytes": 36,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            3
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -194799,12 +195011,12 @@
     }
   },
   "summary": {
-    "total_rows": 2307,
-    "decode_rows": 1812,
-    "encode_rows": 495,
+    "total_rows": 2310,
+    "decode_rows": 1814,
+    "encode_rows": 496,
     "formats": 8,
-    "assets_available": 1809,
-    "decode_active": 1812,
+    "assets_available": 1811,
+    "decode_active": 1814,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

@@ -1779,6 +1779,11 @@ formats:
       description: A small 16x2 source exercises the aligned fused 4:2:0 batch path below the streaming threshold
       params: {'subsampling': '420', 'quality': 85}
       source_asset: rgb_16x2.jpg
+    - id: enc_sub_420_generic_mcu_aligned_16x16
+      description: A 16x16 RGB PNG exercises the generic 4:2:0 independent-entropy path with a complete 2x2 luma-block grid
+      params: {'subsampling': '420', 'quality': 85, 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_420_generic_source_16x16.png
     - id: enc_sub_420_aligned_odd_height
       description: A 16x1 source keeps width aligned while exercising odd-height replication in the fused 4:2:0 path
       params: {'subsampling': '420', 'quality': 85}
@@ -5160,6 +5165,14 @@ formats:
       description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_subsampled_lzw_1x2
+      description: Horizontally full-resolution YCbCr samples in vertically subsampled LZW clumps
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_odd_height
+      description: Vertically subsampled YCbCr LZW clumps clipped at an odd bottom edge
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_odd_height.tiff
     - id: ycbcr_subsampled_lzw_2x2_odd_edge
       description: Default 2-by-2 YCbCr clumps clipped at odd image edges
       test_assets:

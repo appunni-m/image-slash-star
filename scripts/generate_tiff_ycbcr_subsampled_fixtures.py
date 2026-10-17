@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Pillow-parity fixtures for TIFF YCbCr 2-by-2 LZW strips."""
+"""Generate Pillow-parity fixtures for subsampled TIFF YCbCr LZW strips."""
 
 from __future__ import annotations
 
@@ -64,23 +64,35 @@ BASE_CLUMPS = (
 
 
 def lzw_blocks(
-    width: int, height: int, rows_per_strip: int, clumps: tuple[tuple[int, ...], ...]
+    width: int,
+    height: int,
+    rows_per_strip: int,
+    clumps: tuple[tuple[int, ...], ...],
+    *,
+    subsampling: tuple[int, int] = (2, 2),
 ) -> list[bytes]:
     """Encode one TIFF LZW stream for each strip of complete clump rows."""
     if width <= 0 or height <= 0:
         raise ValueError("YCbCr image dimensions must be positive")
-    if rows_per_strip <= 0 or rows_per_strip % 2 != 0:
-        raise ValueError("YCbCr RowsPerStrip must be a positive even value")
-    clump_columns = (width + 1) // 2
-    clump_rows = (height + 1) // 2
-    clump_rows_per_strip = rows_per_strip // 2
+    horizontal, vertical = subsampling
+    if horizontal <= 0 or vertical <= 0:
+        raise ValueError("YCbCr subsampling factors must be positive")
+    if rows_per_strip <= 0 or rows_per_strip % vertical != 0:
+        raise ValueError("YCbCr RowsPerStrip must align to subsampled rows")
+    clump_columns = (width + horizontal - 1) // horizontal
+    clump_rows = (height + vertical - 1) // vertical
+    clump_rows_per_strip = rows_per_strip // vertical
+    samples_per_clump = horizontal * vertical + 2
     if len(clumps) != clump_columns * clump_rows:
         raise ValueError("YCbCr clump count does not match image geometry")
     if any(
-        len(clump) != 6 or any(not 0 <= sample <= 255 for sample in clump)
+        len(clump) != samples_per_clump
+        or any(not 0 <= sample <= 255 for sample in clump)
         for clump in clumps
     ):
-        raise ValueError("each YCbCr clump must contain six 8-bit samples")
+        raise ValueError(
+            f"each YCbCr clump must contain {samples_per_clump} 8-bit samples"
+        )
 
     blocks = []
     for first_row in range(0, clump_rows, clump_rows_per_strip):
@@ -129,7 +141,14 @@ def build_tiff(
     reference_black_white: tuple[tuple[int, int], ...] | None = None,
 ) -> bytes:
     """Write a compact contiguous YCbCr TIFF with independent LZW strips."""
-    blocks = lzw_blocks(width, height, rows_per_strip, clumps)
+    storage_subsampling = (2, 2) if subsampling is None else subsampling
+    blocks = lzw_blocks(
+        width,
+        height,
+        rows_per_strip,
+        clumps,
+        subsampling=storage_subsampling,
+    )
     entries = [
         (256, 4, [width]),
         (257, 4, [height]),
@@ -282,6 +301,32 @@ def fixtures() -> dict[
     str, tuple[bytes, tuple[int, int], str, dict[int, object], bytes | None]
 ]:
     """Return deterministic inputs and the pinned Pillow result metadata."""
+    one_by_two_clumps = tuple(
+        (
+            (31 + 37 * (2 * clump_row) + 23 * x) % 256,
+            (31 + 37 * (2 * clump_row + 1) + 23 * x) % 256,
+            90 + 11 * x + 17 * clump_row,
+            180 - 13 * x - 9 * clump_row,
+        )
+        for clump_row in range(2)
+        for x in range(4)
+    )
+    one_by_two = build_tiff(
+        4,
+        4,
+        4,
+        one_by_two_clumps,
+        subsampling=(1, 2),
+        positioning=1,
+    )
+    one_by_two_odd_height = build_tiff(
+        4,
+        3,
+        4,
+        one_by_two_clumps,
+        subsampling=(1, 2),
+        positioning=1,
+    )
     odd_edge = build_tiff(
         3,
         3,
@@ -373,6 +418,26 @@ def fixtures() -> dict[
             REFERENCE_PIXEL_SHA256,
             {530: (2, 2), 531: 1},
             REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampled_lzw_1x2.tiff": (
+            one_by_two,
+            (4, 4),
+            "1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6",
+            {530: (1, 2), 531: 1},
+            bytes.fromhex(
+                "6807006d2306714031765c5b8d2c0192482b9665569b8180"
+                "a55244aa6e6eaf8b99b4a7c3ca7769cf9393d4b0bed9cce8"
+            ),
+        ),
+        "ycbcr_subsampled_lzw_1x2_odd_height.tiff": (
+            one_by_two_odd_height,
+            (4, 3),
+            "c71479e1cfff0dd7c76fbe5df2c61e80c75405df52c1aa2413e2f4d08a99f1fb",
+            {530: (1, 2), 531: 1},
+            bytes.fromhex(
+                "6807006d2306714031765c5b8d2c0192482b9665569b8180"
+                "a55244aa6e6eaf8b99b4a7c3"
+            ),
         ),
         "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": (
             odd_edge,
@@ -525,6 +590,8 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_subsampled_lzw_1x2.tiff": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
+            "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",

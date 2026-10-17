@@ -3102,6 +3102,27 @@ def gen_png():
     img = pattern_img("RGB")
     img.save(d / "16x16.png")
     img.save(d / "rgb.png")
+    jpeg_420_pixels = bytearray(16 * 16 * 3)
+    xorshift_state = 0x12345678
+    for index in range(len(jpeg_420_pixels)):
+        xorshift_state ^= (xorshift_state << 13) & 0xFFFFFFFF
+        xorshift_state ^= xorshift_state >> 17
+        xorshift_state ^= (xorshift_state << 5) & 0xFFFFFFFF
+        jpeg_420_pixels[index] = xorshift_state & 0xFF
+    if hashlib.sha256(jpeg_420_pixels).hexdigest() != (
+        "385e0052ce5527cb720b6997b236b317e5105ae043ca418c5928ded12bf04fe3"
+    ):
+        raise RuntimeError("JPEG 4:2:0 generic source pixels differ from their pinned hash")
+    jpeg_420_source = d / "jpeg_420_generic_source_16x16.png"
+    Image.frombytes("RGB", (16, 16), bytes(jpeg_420_pixels)).save(
+        jpeg_420_source,
+        format="PNG",
+        compress_level=9,
+    )
+    if hashlib.sha256(jpeg_420_source.read_bytes()).hexdigest() != (
+        "427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef"
+    ):
+        raise RuntimeError("JPEG 4:2:0 generic source PNG differs from its pinned hash")
     append_png_idat_empty_zlib_member(
         d / "rgb.png", d / "idat_trailing_zlib_member.png"
     )

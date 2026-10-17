@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,307 total rows: 1,812 decode / inspect / verify rows and 495 encode rows.
-Of those, 1,812 decode rows and 463 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,310 total rows: 1,814 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,814 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
 
 ## APNG duplicate control before the default image — 2026-10-17
@@ -4805,6 +4805,31 @@ two-row strip boundaries. Uncompressed files retain Pillow's RGBX raw path,
 including the existing 1-by-1 rows. The fixture generator pins input hashes,
 tag claims, and oracle output hashes, and is part of `make verify`.
 
+The active `ycbcr_subsampled_lzw_1x2` row adds Pillow-compatible horizontal
+full-resolution and vertical 2:1 subsampling. Its 203-byte complete TIFF has
+input SHA-256
+`d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9`; pinned
+Pillow 12.2.0 decodes it to 4×4 RGB with reference SHA-256
+`1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6`. Rust
+accepts `[1, 2]` subsampling and keeps the established `[2, 2]` converter on its
+existing specialized path. The selected public parity row passes. Two separate
+target-only fault-contract rows exercise clump-length rejection and RGB output
+reservation failure on the 1-by-2 path; both declare Pillow `not_applicable`
+and are reported outside the parity totals.
+
+The active `ycbcr_subsampled_lzw_1x2_odd_height` row is a 4×3, 203-byte TIFF
+with the same 1-by-2 LZW layout. Its input SHA-256 is
+`00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185`; pinned
+Pillow produces 36 RGB bytes with SHA-256
+`c71479e1cfff0dd7c76fbe5df2c61e80c75405df52c1aa2413e2f4d08a99f1fb`. It
+reaches and passes the new converter's bottom-edge clipping condition. The
+selected public parity row passes. The focused report
+`target/release-evidence/coverage-tiff-ycbcr-1x2-odd-final.json` records both
+outcomes at `decode.rs:2124` (20 clipped and 60 in-bounds observations in the
+exercised specialization). Coverage MCP calls hung in this run, so the
+selected report is not unioned with a baseline and establishes no aggregate
+coverage change.
+
 The full all-format public decode matrix passes all eight integration tests.
 Its report,
 `target/release-evidence/coverage-public-decode-matrix-parity-final-20261002.json`,
@@ -6734,6 +6759,24 @@ format detection rejects that signature before metadata preflight, so it does
 not justify another parity fixture. The report remains unbound to source/build
 receipts and has unknown test attribution.
 
+## JPEG 4:2:0 generic small-image encoder parity — 2026-10-17
+
+The active `enc_sub_420_generic_mcu_aligned_16x16` row encodes a deterministic
+16×16 RGB PNG at quality 85 with baseline 4:2:0 subsampling and Huffman
+optimization disabled. Its PNG input is 852 bytes with SHA-256
+`427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef`; the
+Pillow JPEG reference is 818 bytes with SHA-256
+`f8f11806f51915cf5673c8f5732280b24fe53ee7b3c5ef6669ac17ace9e97031`, and the
+roundtrip RGB reference hash is
+`6fb0c4384dd488fb72663f0799d7591a1fe701165b1ac614a289974139f9696a`.
+The source forms a complete 2×2 luma-block grid below the 1024-pixel
+streaming threshold. The selected public encode row passes. The focused report
+`target/release-evidence/coverage-jpeg-420-generic-16x16-final.json` records
+the selected row's aligned-grid outcomes at
+`src/codecs/jpeg/encode/mod.rs:4611–4614` (three taken observations per
+guard). Coverage MCP calls hung in this run, so the selected report is not
+unioned with a baseline and establishes no aggregate coverage change.
+
 ## Small JPEG chroma and WebP palette encode parity — 2026-10-04
 
 Two active public encode rows add exact Pillow references using existing source
@@ -6772,7 +6815,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `35e9e1ef37095f41e9b7864cadb5afc91abdafea6a9ec19dc90f04a9a16b030e`; matrix `2e2febb62f0cd0be80b9c26bc4694da2e8e48c127ae07129d73e5dc0f9c3061f`.
+- Current fixture integrity only: manifest `6ea6f3c4110c702088b021e6c156d0fbc4079e65c0d720e1ec691bf8cdb52ace`; matrix `122960b4e7b08910a679e36ea33898a48806b9848ea68058e3729cb463dcf84f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

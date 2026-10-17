@@ -7,7 +7,7 @@
   },
   "fixture_manifests": {
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
-    "coverage_origins": "2b774ddce8843dc41b6564a5de056b315491e6c910b4eff5e4736d7cb41f696b",
+    "coverage_origins": "2add492d90da82e55b528bb56fd1371b03a75ed2e3e7bb0a618956a1a3664348",
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
@@ -15,16 +15,16 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "69d59bc58ef7235cf6202d5c2f2e221cafa2ab7ca598223cbb06097526b3ef34",
+    "roadmap": "22b2bdb400b4421bf4b2fcdc08041fe1e8ab3f5ea8cfbdd27c097ebb73d9baff",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "9859ea554dfaad177c0186e495ca3ac6e311329991b467f7c4555080ce1cd227",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "a49ff8e3df4bf83e16d640aa9a3ddd78c6b0e2792a2e129583713ea71a3bcefb"
+    "webp_property_map": "95a230f369ec7da189d8cbd365b65c5778c79e147f5ba17433ede51e7032becc"
   },
   "format_version": 2,
-  "manifest_sha256": "35e9e1ef37095f41e9b7864cadb5afc91abdafea6a9ec19dc90f04a9a16b030e",
-  "matrix_sha256": "2e2febb62f0cd0be80b9c26bc4694da2e8e48c127ae07129d73e5dc0f9c3061f",
+  "manifest_sha256": "6ea6f3c4110c702088b021e6c156d0fbc4079e65c0d720e1ec691bf8cdb52ace",
+  "matrix_sha256": "122960b4e7b08910a679e36ea33898a48806b9848ea68058e3729cb463dcf84f",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"
