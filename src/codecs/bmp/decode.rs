@@ -690,8 +690,21 @@ pub fn decode(
             }
             BmpBitDepth::TwentyFour => {
                 // 24 bpp — BGR order
-                let mut out =
-                    Vec::with_capacity(width_usize.saturating_mul(height_usize).saturating_mul(3));
+                let capacity = width_usize.saturating_mul(height_usize).saturating_mul(3);
+                let mut out = Vec::new();
+                #[cfg(coverage)]
+                let reservation = if crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::BmpDecodedPixelsReservation,
+                ) {
+                    usize::MAX
+                } else {
+                    capacity
+                };
+                #[cfg(not(coverage))]
+                let reservation = capacity;
+                out.try_reserve_exact(reservation).map_err(|_| {
+                    CodecError::Dimensions("unable to allocate BMP decoded pixels".to_owned())
+                })?;
                 for row in 0..height_usize {
                     crate::codecs::error::check_cancelled(token)?;
                     let src_row = if top_down {

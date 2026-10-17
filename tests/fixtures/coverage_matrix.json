@@ -194313,6 +194313,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "bmp_decoded_pixels_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "bmp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:bmp:depth_24"
+      },
+      "fault": {
+        "point": "bmp.decoded_pixels.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

@@ -1410,6 +1410,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Bmp,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("bmp.decoded_pixels.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::BmpDecodedPixelsReservation,
+                false,
+                img::ImageFormat::Bmp,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("png.scanline.sample_buffer_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::PngDecodedSampleBufferReservation,
                 false,
@@ -1575,6 +1581,9 @@ fn execute_fault_contract(
             Some("decode: unable to allocate JPEG Huffman table slots")
         }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
+        "bmp.decoded_pixels.output_reservation" => {
+            Some("decode: unable to allocate BMP decoded pixels")
+        }
         "png.scanline.sample_buffer_reservation" => {
             Some("decode: unable to reserve PNG decoded sample buffer")
         }

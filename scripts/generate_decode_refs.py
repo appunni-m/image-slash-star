@@ -2806,6 +2806,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.palette.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "bmp.decoded_pixels.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "tiff.strip_assembly.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

@@ -289,6 +289,14 @@ FAULT_CONTRACTS = {
         "point": "bmp.palette.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "bmp_decoded_pixels_reservation_failure": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_decoded_pixels_reservation_failure",
+        "source_case": "decode:bmp:depth_24",
+        "point": "bmp.decoded_pixels.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

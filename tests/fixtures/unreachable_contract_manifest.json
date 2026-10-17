@@ -50,6 +50,12 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "bmp_decoded_pixels_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:bmp:bmp_decoded_pixels_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_strip_assembly_reservation_failure",
