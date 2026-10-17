@@ -63,6 +63,7 @@ jobs:
     timeout-minutes: 120
     env:
       BENCHMARK_CMAKE: /usr/bin/cmake
+      UBUNTU_APT_SNAPSHOT: '20261017T000000Z'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -74,8 +75,9 @@ jobs:
         run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
       - name: Install the pinned SIMD benchmark oracle
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes cmake=3.28.3-1build7 nasm=2.16.01-1build1
+          sudo apt-get update --snapshot "$UBUNTU_APT_SNAPSHOT"
+          sudo apt-get install --yes --snapshot "$UBUNTU_APT_SNAPSHOT" \
+            cmake=3.28.3-1build7 nasm=2.16.01-1build1
           make bench-setup PYTHON=python3
       - name: Verify and record native benchmark tool versions
         run: |
@@ -88,6 +90,7 @@ jobs:
           mkdir -p target/benchmarks/jpeg/simd-x86_64
           {
             printf 'runner_image=ubuntu-24.04\n'
+            printf 'ubuntu_apt_snapshot=%s\n' "$UBUNTU_APT_SNAPSHOT"
             dpkg-query -W -f='cmake_package=${Version}\n' cmake
             dpkg-query -W -f='nasm_package=${Version}\n' nasm
             printf 'cmake_executable=%s\n' "$BENCHMARK_CMAKE"

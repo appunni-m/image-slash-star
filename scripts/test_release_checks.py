@@ -918,6 +918,29 @@ jobs:
         self.assertIn("run: cargo test --workspace --all-features --locked", job)
         self.assertNotRegex(job, r"(?m)^\s+(?:if|continue-on-error):")
 
+    def test_x86_simd_benchmark_pins_and_records_ubuntu_apt_snapshot(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "benchmark.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        match = re.search(
+            r"(?ms)^  x86-simd:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)",
+            contents,
+        )
+        self.assertIsNotNone(match, "benchmark must retain the x86 SIMD job")
+        job = match.group("body")
+        self.assertIn("UBUNTU_APT_SNAPSHOT: '20261017T000000Z'", job)
+        self.assertIn(
+            'sudo apt-get update --snapshot "$UBUNTU_APT_SNAPSHOT"', job
+        )
+        self.assertIn(
+            'sudo apt-get install --yes --snapshot "$UBUNTU_APT_SNAPSHOT"',
+            job,
+        )
+        self.assertIn(
+            "printf 'ubuntu_apt_snapshot=%s\\n' \"$UBUNTU_APT_SNAPSHOT\"",
+            job,
+        )
+
     def test_release_coverage_is_required_before_publishing(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "release.yml")
