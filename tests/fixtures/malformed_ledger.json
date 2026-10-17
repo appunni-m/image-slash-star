@@ -20869,6 +20869,54 @@
     ],
     "webp": [
       {
+        "asset": "animated_duplicate_top_level_image_chunks.webp",
+        "class": "error_animated_duplicate_top_level_image_chunks",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Animated WebP rejects duplicate top-level VP8L images before its ANIM control",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "could not create decoder object",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "animated_nested_vp8l_bad_signature.webp",
         "class": "error_animated_nested_vp8l_signature",
         "contracts": {
@@ -20954,6 +21002,54 @@
           }
         },
         "description": "Animated VP8L frame declares an unsupported bitstream version",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "could not create decoder object",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "animated_top_level_image_chunk.webp",
+        "class": "error_animated_top_level_image_chunk",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Animated WebP rejects a top-level VP8L image before its ANIM control",
         "inspect_status": "error",
         "origins": [
           "pillow_fixture"
@@ -26361,20 +26457,20 @@
       "jpeg": 100,
       "png": 61,
       "tiff": 118,
-      "webp": 139
+      "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 623,
+      "pillow_fixture": 625,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 358,
+      "spec_violation": 360,
       "tolerated": 0,
       "truncated": 191
     },
-    "classes": 623,
+    "classes": 625,
     "formats": 8
   }
 }

@@ -35,3 +35,12 @@ mutant SHA-256 values are `0x01`:
 `0x80`: `b2dc2020ec817a1e3f0bf477560c76b5b7cbb71cc577a0b1c5c44f3abd5ee8b9`.
 Pinned Pillow 12.2.0 detects each file as WebP, then rejects open, verify,
 load, and sequence decode with `OSError: could not create decoder object`.
+
+`animated_top_level_image_chunk.webp` and
+`animated_duplicate_top_level_image_chunks.webp` are complete animated RIFF
+files derived from `animated_rgb_palette_background.webp`. The generator checks
+the pinned source and output hashes, copies the full-canvas VP8L payload from
+the first ANMF frame, and inserts one or two top-level VP8L chunks before
+ANIM. Regenerate and check them with
+`scripts/generate_webp_animated_top_level_image_fixtures.py`; Pillow 12.2.0
+rejects both during image open with `OSError: could not create decoder object`.

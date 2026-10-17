@@ -302,6 +302,12 @@ impl<'a> WebPDecoder<'a> {
                             let range = position + 8..position + 8 + chunk_size;
                             position += 8 + chunk_size_rounded;
 
+                            if info.animation
+                                && matches!(chunk, WebPRiffChunk::VP8 | WebPRiffChunk::VP8L)
+                            {
+                                return Err(DecodingError::ChunkHeaderInvalid);
+                            }
+
                             if chunk == WebPRiffChunk::ANMF {
                                 if chunk_size < 24 {
                                     return Err(DecodingError::InvalidChunkSize);

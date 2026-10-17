@@ -233,11 +233,15 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     let mut frame_count = 0u32;
     let mut saw_image = false;
     let mut saw_animation_control = false;
+    let mut animated_top_level_image_offset = None;
     while position < data.len() {
         let chunk_offset = position;
         let (kind, payload, next) = read_chunk(data, position)?;
         position = next;
         let is_image_chunk = kind == *b"VP8 " || kind == *b"VP8L";
+        if declares_animation && is_image_chunk {
+            animated_top_level_image_offset.get_or_insert(chunk_offset);
+        }
         if !declares_animation && saw_image && is_image_chunk {
             return Err(CodecError::Malformed(
                 "extended WebP contains multiple image chunks".to_owned(),
@@ -285,6 +289,12 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         }
     }
     if declares_animation {
+        if let Some(chunk_offset) = animated_top_level_image_offset {
+            return Err(CodecError::Malformed(
+                "animated WebP contains a top-level image chunk".to_owned(),
+            )
+            .at(chunk_offset as u64, "webp_chunk"));
+        }
         if !saw_animation_control || frame_count == 0 {
             return Err(CodecError::NeedMore {
                 minimum: codec_add_end(position, 8),

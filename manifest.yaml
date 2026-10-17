@@ -4189,6 +4189,16 @@ formats:
       test_assets:
       - animated_vp8l_frame_outside_bottom.webp
       expect_error: true
+    - id: error_animated_top_level_image_chunk
+      description: Animated WebP rejects a top-level VP8L image before its ANIM control
+      test_assets:
+      - animated_top_level_image_chunk.webp
+      expect_error: true
+    - id: error_animated_duplicate_top_level_image_chunks
+      description: Animated WebP rejects duplicate top-level VP8L images before its ANIM control
+      test_assets:
+      - animated_duplicate_top_level_image_chunks.webp
+      expect_error: true
     - id: error_malformed_container
       description: Malformed WebP container and codec headers
       test_assets:
