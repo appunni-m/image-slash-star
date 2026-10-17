@@ -4321,6 +4321,21 @@ formats:
       description: Pillow composites the decoded alpha frame despite an oversized ANMF height declaration
       test_assets:
       - animated_alpha_anmf_height_mismatch.webp
+    - id: error_malformed_container_vp8x_reserved_flag_0x01
+      description: Full WebP RIFF with VP8X reserved flag bit 0 set
+      test_assets:
+      - vp8x_reserved_flag_0x01.webp
+      expect_error: true
+    - id: error_malformed_container_vp8x_reserved_flag_0x40
+      description: Full WebP RIFF with VP8X reserved flag bit 6 set
+      test_assets:
+      - vp8x_reserved_flag_0x40.webp
+      expect_error: true
+    - id: error_malformed_container_vp8x_reserved_flag_0x80
+      description: Full WebP RIFF with VP8X reserved flag bit 7 set
+      test_assets:
+      - vp8x_reserved_flag_0x80.webp
+      expect_error: true
     - id: pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch
       description: Pillow exposes the VP8L alpha hint despite a clear VP8X alpha flag
       test_assets:

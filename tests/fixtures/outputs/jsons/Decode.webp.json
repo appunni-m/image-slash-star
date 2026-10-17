@@ -24237,6 +24237,318 @@
       }
     },
     {
+      "id": "error_malformed_container_vp8x_reserved_flag_0x01",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.OSError",
+      "inspect_error_message": "could not create decoder object",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "could not create decoder object",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "5f61cb5418ee6aac04b3c813ce4679bb286fc6c232fea0ec9ddd8a8f6532971a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_container_vp8x_reserved_flag_0x40",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.OSError",
+      "inspect_error_message": "could not create decoder object",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "could not create decoder object",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "a7e995a2d38cb074be90bea6b4ea85c3b9f658239bcd11cfbfb836c3727ddde3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_container_vp8x_reserved_flag_0x80",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "could not create decoder object",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.OSError",
+      "inspect_error_message": "could not create decoder object",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "could not create decoder object",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "b2dc2020ec817a1e3f0bf477560c76b5b7cbb71cc577a0b1c5c44f3abd5ee8b9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch",
       "status": "ok",
       "error_type": null,

@@ -45,6 +45,7 @@ pub enum DecodingError {
     WebpSignatureInvalid,
     ChunkMissing,
     ChunkHeaderInvalid,
+    Vp8xReservedFlags,
     InvalidAlphaPreprocessing,
     InvalidCompressionMethod,
     ImageTooLarge,

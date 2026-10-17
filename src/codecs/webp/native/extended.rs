@@ -262,6 +262,9 @@ pub(crate) fn read_extended_header<R: Read>(
     reader: &mut R,
 ) -> Result<WebPExtendedInfo, DecodingError> {
     let chunk_flags = reader.read_u8()?;
+    if chunk_flags & super::super::VP8X_RESERVED_FLAG_MASK != 0 {
+        return Err(DecodingError::Vp8xReservedFlags);
+    }
 
     let alpha = chunk_flags & 0b00010000 != 0;
     let animation = chunk_flags & 0b00000010 != 0;

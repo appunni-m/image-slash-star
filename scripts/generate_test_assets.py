@@ -6976,6 +6976,56 @@ def gen_webp():
         mutate(malformed)
         (d / name).write_bytes(malformed)
 
+    icc_source = (d / "icc.webp").read_bytes()
+    if hashlib.sha256(icc_source).hexdigest() != (
+        "1b1872b2280483eefe2084ac09335d2ab40649204996df6a58bc14d3b3b15219"
+    ):
+        raise RuntimeError("ICC WebP source differs from the pinned VP8X fixture")
+
+    def vp8x_flags_offset(data):
+        if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+            raise RuntimeError("reserved-flag source is not a complete WebP RIFF file")
+        if struct.unpack_from("<I", data, 4)[0] != len(data) - 8:
+            raise RuntimeError("reserved-flag source has an inconsistent RIFF extent")
+        position = 12
+        offsets = []
+        while position < len(data):
+            if len(data) - position < 8:
+                raise RuntimeError("reserved-flag source has a truncated chunk header")
+            kind = data[position : position + 4]
+            size = struct.unpack_from("<I", data, position + 4)[0]
+            payload_start = position + 8
+            payload_end = payload_start + size
+            next_position = payload_end + (size & 1)
+            if next_position > len(data):
+                raise RuntimeError("reserved-flag source chunk exceeds the RIFF extent")
+            if kind == b"VP8X":
+                if size != 10:
+                    raise RuntimeError("reserved-flag source has an invalid VP8X header")
+                offsets.append(payload_start)
+            position = next_position
+        if position != len(data) or len(offsets) != 1:
+            raise RuntimeError("reserved-flag source must contain exactly one VP8X chunk")
+        return offsets[0]
+
+    reserved_flags_offset = vp8x_flags_offset(icc_source)
+    if icc_source[reserved_flags_offset] != 0x20:
+        raise RuntimeError("ICC WebP source has unexpected VP8X flags")
+    for reserved_flag, expected_sha256 in (
+        (0x01, "5f61cb5418ee6aac04b3c813ce4679bb286fc6c232fea0ec9ddd8a8f6532971a"),
+        (0x40, "a7e995a2d38cb074be90bea6b4ea85c3b9f658239bcd11cfbfb836c3727ddde3"),
+        (0x80, "b2dc2020ec817a1e3f0bf477560c76b5b7cbb71cc577a0b1c5c44f3abd5ee8b9"),
+    ):
+        reserved_flag_fixture = bytearray(icc_source)
+        reserved_flag_fixture[reserved_flags_offset] |= reserved_flag
+        if hashlib.sha256(reserved_flag_fixture).hexdigest() != expected_sha256:
+            raise RuntimeError("VP8X reserved-flag fixture differs from its pinned hash")
+        expected_flags = 0x20 | reserved_flag
+        if reserved_flag_fixture[reserved_flags_offset] != expected_flags:
+            raise RuntimeError("VP8X reserved-flag mutation changed unrelated flags")
+        filename = f"vp8x_reserved_flag_0x{reserved_flag:02x}.webp"
+        (d / filename).write_bytes(reserved_flag_fixture)
+
     def set_vp8l_alpha_hint_without_vp8x_alpha(data):
         vp8x = data.find(b"VP8X")
         vp8l = data.find(b"VP8L")

@@ -49,6 +49,7 @@ fn inspect_extended_basic(
 ) -> CodecResult<ImageInfo> {
     let header = payload.get(..10).malformed("truncated WebP VP8X header")?;
     let flags = header[0];
+    validate_vp8x_flags(flags)?;
     let width = le_u24(header, 4).wrapping_add(1);
     let height = le_u24(header, 7).wrapping_add(1);
     enforce_dimension_limit(width, height)?;
@@ -142,6 +143,15 @@ fn inspect_extended_basic(
     })
 }
 
+fn validate_vp8x_flags(flags: u8) -> CodecResult<()> {
+    if flags & super::VP8X_RESERVED_FLAG_MASK != 0 {
+        return Err(CodecError::Malformed(
+            "WebP VP8X reserved flag bits are set".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn inspect_vp8(payload: &[u8]) -> CodecResult<ImageInfo> {
     let header = payload.get(..10).malformed("truncated WebP VP8 header")?;
     if header[0] & 1 != 0 || &header[3..6] != b"\x9d\x01\x2a" {
@@ -214,6 +224,7 @@ fn still_info(width: u32, height: u32, mode: ImageMode, has_alpha: bool) -> Code
 fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecResult<ImageInfo> {
     let header = payload.get(..10).malformed("truncated WebP VP8X header")?;
     let flags = header[0];
+    validate_vp8x_flags(flags)?;
     let width = le_u24(header, 4).wrapping_add(1);
     let height = le_u24(header, 7).wrapping_add(1);
     enforce_dimension_limit(width, height)?;

@@ -21,3 +21,17 @@ fixture as 128x128 RGB. The asset SHA-256 is
 `86b97b8489b9ec2318858bef5d91be138e1222398dd2b8ffbde6dded0e598b55`; the
 decoded-pixel SHA-256 is
 `ce195285d0ae374bc2ae5538da590658fbe26846b27cf2b0d2300979319f4c99`.
+
+`vp8x_reserved_flag_0x01.webp`, `vp8x_reserved_flag_0x40.webp`, and
+`vp8x_reserved_flag_0x80.webp` are complete RIFF WebP files derived
+independently from the pinned `icc.webp` source. The generator validates the
+source hash and walks RIFF chunk extents to find the sole 10-byte `VP8X`
+header, then sets one reserved flag bit while preserving ICC bit `0x20`. The
+source SHA-256 is
+`1b1872b2280483eefe2084ac09335d2ab40649204996df6a58bc14d3b3b15219`; the
+mutant SHA-256 values are `0x01`:
+`5f61cb5418ee6aac04b3c813ce4679bb286fc6c232fea0ec9ddd8a8f6532971a`, `0x40`:
+`a7e995a2d38cb074be90bea6b4ea85c3b9f658239bcd11cfbfb836c3727ddde3`, and
+`0x80`: `b2dc2020ec817a1e3f0bf477560c76b5b7cbb71cc577a0b1c5c44f3abd5ee8b9`.
+Pinned Pillow 12.2.0 detects each file as WebP, then rejects open, verify,
+load, and sequence decode with `OSError: could not create decoder object`.

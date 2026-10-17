@@ -25637,6 +25637,150 @@
         "verify_status": "ok"
       },
       {
+        "asset": "vp8x_reserved_flag_0x01.webp",
+        "class": "error_malformed_container_vp8x_reserved_flag_0x01",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Full WebP RIFF with VP8X reserved flag bit 0 set",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "could not create decoder object",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "vp8x_reserved_flag_0x40.webp",
+        "class": "error_malformed_container_vp8x_reserved_flag_0x40",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Full WebP RIFF with VP8X reserved flag bit 6 set",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "could not create decoder object",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "vp8x_reserved_flag_0x80.webp",
+        "class": "error_malformed_container_vp8x_reserved_flag_0x80",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "could not create decoder object",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Full WebP RIFF with VP8X reserved flag bit 7 set",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "could not create decoder object",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "vp8x_short_header.webp",
         "class": "error_malformed_container_vp8x_short_header",
         "contracts": {
@@ -26217,20 +26361,20 @@
       "jpeg": 100,
       "png": 61,
       "tiff": 118,
-      "webp": 136
+      "webp": 139
     },
     "by_origin": {
-      "pillow_fixture": 620,
+      "pillow_fixture": 623,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 355,
+      "spec_violation": 358,
       "tolerated": 0,
       "truncated": 191
     },
-    "classes": 620,
+    "classes": 623,
     "formats": 8
   }
 }
