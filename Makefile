@@ -56,6 +56,7 @@ fmt:
 .PHONY: verify-fixture-integrity
 verify-fixture-integrity:
 	$(PYTHON) scripts/verify_claim_ledger.py
+	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
 	$(PYTHON) scripts/verify_roadmap.py
 	$(PYTHON) scripts/generate_capability_docs.py --check
@@ -69,7 +70,6 @@ refresh-fixture-integrity:
 verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/verify_no_source_unit_tests.py
 	$(PYTHON) scripts/verify_third_party_licenses.py
-	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/generate_png_srgb_intent_fixtures.py --check
 	$(PYTHON) scripts/generate_png_1bit_odd_width_fixture.py --check
 	$(PYTHON) scripts/generate_png_itxt_missing_keyword_separator.py --check
