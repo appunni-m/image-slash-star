@@ -188,6 +188,68 @@ CI_COVERAGE_CONDITION = (
     "github.event_name == 'schedule' || "
     "github.event_name == 'workflow_dispatch'"
 )
+APPLE_ARM64_ORACLE_JOBS = {
+    "ci.yml": ("quality", "coverage"),
+    "benchmark.yml": ("benchmark",),
+    "release.yml": ("release-coverage",),
+}
+
+
+def apple_arm64_runner_violations(workflows: dict[str, str]) -> list[str]:
+    """Pin oracle jobs to the Apple ARM64 image used for fixture capture."""
+
+    violations = []
+    for workflow_name, job_names in APPLE_ARM64_ORACLE_JOBS.items():
+        contents = workflows.get(workflow_name)
+        if contents is None:
+            violations.append(f"missing {workflow_name} workflow")
+            continue
+
+        jobs = workflow_jobs(contents)
+        if jobs is None:
+            violations.append(f"{workflow_name} workflow has no jobs section")
+            continue
+
+        for job_name in job_names:
+            job = jobs.get(job_name)
+            if job is None:
+                violations.append(
+                    f"{workflow_name} workflow has no {job_name} job"
+                )
+                continue
+
+            if not re.search(r"(?m)^    runs-on: macos-15\s*$", job):
+                violations.append(
+                    f"{workflow_name} {job_name} must run on macos-15"
+                )
+
+            steps = re.split(r"(?m)^      - ", job)
+            architecture_step = next(
+                (
+                    index
+                    for index, step in enumerate(steps)
+                    if run_script(step) == 'test "$(uname -m)" = arm64'
+                ),
+                None,
+            )
+            if architecture_step is None:
+                violations.append(
+                    f"{workflow_name} {job_name} must verify an arm64 runner"
+                )
+                continue
+
+            for step in steps[:architecture_step]:
+                action = re.search(r"(?m)^(?:        )?uses:\s*(\S+)", step)
+                if run_script(step) is not None or (
+                    action and not action.group(1).startswith("actions/checkout@")
+                ):
+                    violations.append(
+                        f"{workflow_name} {job_name} must verify arm64 "
+                        "before substantive steps"
+                    )
+                    break
+
+    return violations
 
 
 def coverage_event_is_allowed(event_name: str) -> bool:
@@ -366,6 +428,23 @@ def verify_workflow_policy(
     print(f"{label} workflow policy validation failed:", file=sys.stderr)
     for violation in violations:
         print(f"  {workflow.relative_to(ROOT)}: {violation}", file=sys.stderr)
+    return False
+
+
+def verify_apple_arm64_runner_policy() -> bool:
+    """Apply the Apple ARM64 runner policy to all oracle workflows."""
+
+    workflow_dir = ROOT / ".github" / "workflows"
+    workflows = {
+        name: (workflow_dir / name).read_text(encoding="utf-8")
+        for name in APPLE_ARM64_ORACLE_JOBS
+    }
+    violations = apple_arm64_runner_violations(workflows)
+    if not violations:
+        return True
+    print("Apple ARM64 runner workflow policy validation failed:", file=sys.stderr)
+    for violation in violations:
+        print(f"  {violation}", file=sys.stderr)
     return False
 
 
@@ -1419,6 +1498,8 @@ def main() -> int:
     if not verify_workflow_policy(
         ci_workflow, ci_coverage_gate_violations, "CI coverage"
     ):
+        return 1
+    if not verify_apple_arm64_runner_policy():
         return 1
     docs_workflow = ROOT / ".github" / "workflows" / "docs.yml"
     if not verify_workflow_policy(

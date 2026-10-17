@@ -813,6 +813,88 @@ jobs:
         self.assertIsNotNone(match, "CI must retain the supply-chain job")
         self.assertRegex(match.group("body"), r"(?m)^    timeout-minutes: 20$")
 
+    def test_apple_arm64_oracle_jobs_pin_runner_and_architecture_guard(self) -> None:
+        workflow_dir = (
+            Path(__file__).resolve().parent.parent / ".github" / "workflows"
+        )
+        workflows = {
+            workflow_name: (workflow_dir / workflow_name).read_text(
+                encoding="utf-8"
+            )
+            for workflow_name in check_workflows.APPLE_ARM64_ORACLE_JOBS
+        }
+        self.assertEqual(
+            check_workflows.apple_arm64_runner_violations(workflows), []
+        )
+
+        def mutate_job(
+            workflow: str, job_name: str, old: str, new: str
+        ) -> str:
+            pattern = re.compile(
+                rf"(?ms)^(  {re.escape(job_name)}:\n)"
+                r"(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)"
+            )
+            match = pattern.search(workflow)
+            self.assertIsNotNone(match, f"missing {job_name} job")
+            body = match.group("body")
+            self.assertIn(old, body, f"missing expected text in {job_name} job")
+            return (
+                workflow[:match.start("body")]
+                + body.replace(old, new, 1)
+                + workflow[match.end("body"):]
+            )
+
+        for workflow_name, job_names in (
+            check_workflows.APPLE_ARM64_ORACLE_JOBS.items()
+        ):
+            for job_name in job_names:
+                for old, new, expected in (
+                    (
+                        "runs-on: macos-15",
+                        "runs-on: macos-latest",
+                        f"{workflow_name} {job_name} must run on macos-15",
+                    ),
+                    (
+                        'run: test "$(uname -m)" = arm64',
+                        'run: test "$(uname -m)" = x86_64',
+                        f"{workflow_name} {job_name} must verify an arm64 runner",
+                    ),
+                ):
+                    with self.subTest(
+                        workflow=workflow_name, job=job_name, change=old
+                    ):
+                        mutated = dict(workflows)
+                        mutated[workflow_name] = mutate_job(
+                            workflows[workflow_name], job_name, old, new
+                        )
+                        self.assertIn(
+                            expected,
+                            check_workflows.apple_arm64_runner_violations(mutated),
+                        )
+
+        ci_workflow = workflows["ci.yml"]
+        guard_step = (
+            '      - name: Confirm Apple silicon runner\n'
+            '        run: test "$(uname -m)" = arm64\n'
+        )
+        reordered = ci_workflow.replace(guard_step, "", 1)
+        setup_step = "      - uses: actions/setup-python@"
+        setup_index = reordered.index(setup_step)
+        next_step_index = reordered.index(
+            "      - ", setup_index + len(setup_step)
+        )
+        reordered = (
+            reordered[:next_step_index]
+            + guard_step
+            + reordered[next_step_index:]
+        )
+        moved_guard = dict(workflows)
+        moved_guard["ci.yml"] = reordered
+        self.assertIn(
+            "ci.yml quality must verify arm64 before substantive steps",
+            check_workflows.apple_arm64_runner_violations(moved_guard),
+        )
+
     def test_windows_msvc_lane_runs_all_feature_checks_and_parity(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "ci.yml")
