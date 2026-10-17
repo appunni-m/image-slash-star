@@ -263,10 +263,24 @@ run_native_lane() {
     # suite for every lane. Repository CI separately runs all-feature Clippy
     # and rustdoc, so repeating those checks for every native feature subset
     # only duplicates compilation without adding a distinct runtime result.
+    # The no-feature lane is the exception: all-feature Clippy cannot check its
+    # distinct cfg surface, so run one strict Clippy pass for that lane.
+    native_status=0
+    if [ "$features" = none ]; then
+        if cargo clippy --workspace --all-targets --locked \
+            --no-default-features -- -D warnings; then
+            :
+        else
+            native_status=$?
+        fi
+    fi
     CAPABILITY_TABLE_OUTPUT="$capability_output" cargo test \
         --locked --test feature_gate_tests "$@" -- \
         --test-threads "$MATRIX_TEST_THREADS"
-    native_status=$?
+    test_status=$?
+    if [ "$native_status" -eq 0 ]; then
+        native_status=$test_status
+    fi
     cat "$capability_output"
     return "$native_status"
 }
