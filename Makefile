@@ -89,7 +89,9 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/verify_unreachable_contracts.py
 
 .PHONY: lint
+# All-features can hide cfg branches used by the crate's default feature set.
 lint:
+	cargo clippy --workspace --all-targets --locked -- -D warnings
 	cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 	cargo clippy --release --workspace --all-targets --all-features --locked -- -D warnings
 	CARGO_TARGET_DIR=target/cfg-coverage-clippy cargo +"$(COVERAGE_TOOLCHAIN)" clippy --workspace --all-targets --all-features --locked -- -D warnings --cfg coverage --cfg coverage_nightly
