@@ -470,6 +470,7 @@ def encode_params(fmt, params):
         "rust_invalid_color_mode",
         "rust_encode_with_token",
         "rust_encode_sequence_with_token",
+        "rust_redecode_error_kind",
         "encoded_only",
         "sequence_canvas_padding",
         "sequence_frame_offset",

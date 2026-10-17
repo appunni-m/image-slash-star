@@ -7952,6 +7952,38 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 continue;
             }
 
+            if let Some(expected_kind) = row
+                .params
+                .get("rust_redecode_error_kind")
+                .and_then(Value::as_str)
+            {
+                match img::decode(&encoded) {
+                    Err(error) if error_matches_kind(&error, Some(expected_kind), format) => {
+                        matrix_success!(
+                            "  OK   [{}] {}B, re-decode returned expected {expected_kind} error",
+                            row.id,
+                            encoded.len()
+                        );
+                        passed += 1;
+                    }
+                    Ok(_) => {
+                        eprintln!(
+                            "  FAIL [{}]: re-decode succeeded; expected {expected_kind} error",
+                            row.id
+                        );
+                        failed += 1;
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: re-decode returned {error}; expected {expected_kind} error",
+                            row.id
+                        );
+                        failed += 1;
+                    }
+                }
+                continue;
+            }
+
             // Roundtrip: re-decode and compare pixels against the PIL reference.
             match img::decode(&encoded) {
                 Ok(redecoded) => {

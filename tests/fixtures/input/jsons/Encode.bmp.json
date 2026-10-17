@@ -194,7 +194,8 @@
       },
       "error_contracts": {},
       "params": {
-        "load_truncated_images": true
+        "load_truncated_images": true,
+        "rust_redecode_error_kind": "malformed"
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/palette_missing_plte.png",

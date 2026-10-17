@@ -20,11 +20,11 @@
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "833ccc8937fd9694c1f0d8c13553acfb103b139c7aa6ae3517553c2b811bd484",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "bbf84e2a36f40123b6a08ae6e89e42523b253a7f5ac17d59e1306b98df4a8818"
+    "webp_property_map": "1ef2f4c764796d780d4c09c49e6e0031792f33bff43e19d657a8f7d3240e1a8c"
   },
   "format_version": 2,
-  "manifest_sha256": "88ad6eaa2e9c5e149c079d32e7538b2d0e3d56caa0d20c37a2b840fbd439f577",
-  "matrix_sha256": "a278ec54420fda4464476b14d3f01530afb5c086f65f9e8e0174e8c5087594b0",
+  "manifest_sha256": "fc5dd3a7379b8202a7e583aabb031f85226bed03547ec64d186d1bbffc63b598",
+  "matrix_sha256": "7a8007f5d07eda60f5e5ae2bd743c678fda8533225d6da7c0a2d2568e8022c2d",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"

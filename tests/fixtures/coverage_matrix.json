@@ -64311,9 +64311,10 @@
           "type": "encode",
           "format": "bmp",
           "category": "indexed",
-          "description": "With truncated-image loading enabled, Pillow preserves P8 samples and omits the BMP color table for a PNG without PLTE",
+          "description": "Pillow emits a palette-less BMP here; truncated-image loading permits its roundtrip, while strict decoding reports the missing implicit palette",
           "params": {
-            "load_truncated_images": true
+            "load_truncated_images": true,
+            "rust_redecode_error_kind": "malformed"
           },
           "status": "active",
           "source_format": "png",
