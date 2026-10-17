@@ -4766,6 +4766,7 @@ formats:
       - gray16_deflate_predictor.tiff
       - float32_deflate_predictor.tiff
       - be_float32_predictor.tiff
+      - be_unsigned16_wraparound_predictor.tiff
     - id: compression_deflate_truncated_adler
       description: Pillow decodes a complete TIFF raster when the final zlib Adler-32 byte is missing
       test_assets:

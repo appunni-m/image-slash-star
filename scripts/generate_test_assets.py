@@ -9054,22 +9054,25 @@ def write_lzw_dictionary_saturation_tiff(path, pixel_count=4100):
 
 
 def write_grayscale_predictor_tiff(
-    path, bits, byte_order, photometric=1, sample_format=3
+    path, bits, byte_order, photometric=1, sample_format=3, rows=None
 ):
     """Write Deflate-compressed grayscale samples with horizontal prediction."""
     width, height = 4, 2
     marker = b"II" if byte_order == "<" else b"MM"
     if bits == 16:
-        rows = ([1000, 2000, 4000, 8000], [123, 456, 789, 1024])
+        default_rows = ([1000, 2000, 4000, 8000], [123, 456, 789, 1024])
         format_code = "H"
         mask = 0xFFFF
     else:
-        rows = (
+        default_rows = (
             [struct.unpack("<I", struct.pack("<f", value))[0] for value in (1.0, 2.0, 4.0, 8.0)],
             [struct.unpack("<I", struct.pack("<f", value))[0] for value in (0.5, 1.5, 3.5, 7.5)],
         )
         format_code = "I"
         mask = 0xFFFF_FFFF
+    rows = default_rows if rows is None else rows
+    if len(rows) != height or any(len(row) != width for row in rows):
+        raise ValueError("grayscale predictor rows must match the 4x2 TIFF raster")
     predicted = bytearray()
     for row in rows:
         previous = 0
@@ -10172,6 +10175,13 @@ def gen_tiff():
         predictor=2,
     )
     write_grayscale_predictor_tiff(d / "be_float32_predictor.tiff", 32, ">")
+    write_grayscale_predictor_tiff(
+        d / "be_unsigned16_wraparound_predictor.tiff",
+        16,
+        ">",
+        sample_format=1,
+        rows=([65000, 500, 30000, 65535], [1024, 1023, 0, 65535]),
+    )
     write_grayscale_predictor_tiff(
         d / "le_unsigned32_predictor.tiff", 32, "<", sample_format=1
     )

@@ -6575,7 +6575,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5e01382ea218f03f72a5f4921a6ddb171f5f0d56a7e2d2cdccac7ab2cdfc48a1`; matrix `4774a63c0a534dc27022bea52647d2eeb54a98acbaaf6ca9317f37579471b1d1`.
+- Current fixture integrity only: manifest `a0aa39a31a4cb519cc3ff4b3e54ced94846ce811d77e9ce9689f11844a36dcfb`; matrix `f79fb4ee167bcc2808049e8510ede2be87c6c76bddc5e0c6d5157bf27d2c7bc4`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7610,5 +7610,33 @@ made.
 
 The current fixture matrix contains 2,274 total rows: 1,790 decode /
 inspect / verify rows and 484 encode rows. Of those, 1,790 decode rows and
+452 encode rows are active; 32 planned encode rows remain. The separate
+target-only fault lane contains 47 rows.
+
+### TIFF big-endian Gray16 Predictor=2 parity — 2026-10-17
+
+Added the active public row
+`decode:tiff:compression_deflate_be_unsigned16_wraparound_predictor`. The
+4×2 Deflate TIFF is unsigned 16-bit grayscale, big-endian, and uses horizontal
+Predictor=2. Its rows include modulo-65,536 underflow and overflow deltas. The
+input SHA-256 is
+`88d758ddbc04e3fab7c12ac38c14cb0e35c07bab67d74dfc997f10305a40b7d3`.
+Pinned Pillow 12.2.0 returns mode `I;16B` and 16 reference bytes with SHA-256
+`07822398b6986233a08a9555cfde5e101e6482fa3107d37e4b76631197d46872`.
+
+The public `ImageMode::L16` transfer contract stores samples little-endian and
+the decoded source descriptor retains the TIFF's big-endian provenance. The
+matrix comparator now converts Pillow `I;16B` sample bytes into that declared
+transfer order before comparing; the original Pillow bytes and digest remain
+unchanged. The selected public LLVM coverage run passed 1/1. Its report records
+one execution of `reverse_horizontal_predictor_with_token` and observes the
+16-bit predictor path. The 1,024-byte checkpoint outcome is not exercised by
+this small fixture. Coverage MCP's incremental comparison could not complete
+because its local daemon was unhealthy. The saved full baseline also lacks
+source/build receipts and test attribution, so no aggregate coverage claim is
+made.
+
+The current fixture matrix contains 2,275 total rows: 1,791 decode /
+inspect / verify rows and 484 encode rows. Of those, 1,791 decode rows and
 452 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 47 rows.
