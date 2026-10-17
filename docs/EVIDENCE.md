@@ -26,7 +26,39 @@ reachability evidence. The incremental comparison with the saved 2026-10-16
 full report is incomparable because its branch details do not reconcile with
 its totals. No aggregate coverage gain or full-suite regression conclusion is
 claimed. The current fixture matrix contains 2,288 total rows: 1,794 decode /
-inspect / verify rows and 494 encode rows. Of those, 1,794 decode rows and 462
+inspect / verify rows and 494 encode rows. At that point, 1,794 decode rows
+and 462 encode rows were active; the other 32 encode rows were planned.
+
+## WebP VP8L alpha hint parity — 2026-10-17
+
+Added a paired VP8X/VP8L alpha-flag parity case. The
+`pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch` fixture sets the
+VP8L alpha hint while keeping the VP8X alpha bit clear, without changing the
+image bitstream. Pinned Pillow 12.2.0 accepts it as an opaque 128x128 RGBA
+image; the exact pixel reference SHA-256 is
+`6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b`. The
+complementary `pillow_tolerated_malformed_vp8x_alpha_flag_without_vp8l_hint`
+fixture sets only the VP8X alpha bit; Pillow reports RGB and the exact pixel
+reference SHA-256 is
+`8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131`.
+
+The first selected Rust matrix run failed because inspection reported RGB. The
+public codec now takes still VP8L alpha metadata from its parsed image header,
+and the selected pair and complete WebP matrix tests pass. A selected
+branch-coverage report is at
+`.coverage-mcp/local-evidence/20261017/webp-vp8x-alpha-pair-selected/coverage.json`;
+its SHA-256 is
+`0631eeae65b1d0a7b8abcc1d49fe4a0aa4b5d675393e59282405af5fca40223e`.
+Coverage MCP reports no missing branch group at
+`src/codecs/webp/inspect.rs:247` and one unobserved false outcome at
+`src/codecs/webp/native/decoder.rs:329`. The report contains 256/31,460
+observed branches, has no source/build receipt, and has unknown test inventory;
+it is coordinate-only reachability evidence. The selected-test absence at line
+329 is not a regression. Comparison with the saved 2026-10-16 full report is
+incomparable because branch details do not reconcile with its totals. No
+aggregate coverage gain or full-suite regression conclusion is claimed. The
+current fixture matrix contains 2,290 total rows: 1,796 decode /
+inspect / verify rows and 494 encode rows. Of those, 1,796 decode rows and 462
 encode rows are active; the other 32 encode rows are planned.
 
 ## AVIF 12-bit I444 auxiliary-alpha parity — 2026-10-17
@@ -6622,7 +6654,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `202fcbe746e7e2fe83d83f14e7f622581b5f176ce734e446f4f0991f751b2293`; matrix `a95b69d1732464f02ee3117a69aecda0b6cfcefaf2700d528b915ce10efaae0c`.
+- Current fixture integrity only: manifest `a9d4c769cddc44899c29f9fbab01cfdf6f6226939eebf0a61411180f78fc1c2e`; matrix `ff8a4b27ba41627bebfa4c0de841d02883599b7f2a6d0c730f5bcbe9c9203817`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

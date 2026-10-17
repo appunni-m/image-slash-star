@@ -52,19 +52,19 @@ fn inspect_extended_basic(
     let width = le_u24(header, 4).wrapping_add(1);
     let height = le_u24(header, 7).wrapping_add(1);
     enforce_dimension_limit(width, height)?;
-    let has_alpha = flags & 0x10 != 0;
+    let mut has_alpha = flags & 0x10 != 0;
     let declares_animation = flags & 0x02 != 0;
     let mode = if has_alpha {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
     };
-    let source = if has_alpha {
-        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
-    } else {
-        crate::types::SourceDescriptor::new()
-    };
     if declares_animation {
+        let source = if has_alpha {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+        } else {
+            crate::types::SourceDescriptor::new()
+        };
         return Ok(ImageInfo {
             format: ImageFormat::WebP,
             width,
@@ -104,6 +104,7 @@ fn inspect_extended_basic(
                 )
                 .at(chunk_offset as u64, "webp_chunk"));
             }
+            has_alpha = info.mode == ImageMode::Rgba8;
             saw_image = true;
             break;
         }
@@ -115,6 +116,16 @@ fn inspect_extended_basic(
         }
         .at(position as u64, "webp_chunk"));
     }
+    let source = if has_alpha {
+        crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
+    } else {
+        crate::types::SourceDescriptor::new()
+    };
+    let mode = if has_alpha {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
@@ -207,12 +218,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     let height = le_u24(header, 7).wrapping_add(1);
     enforce_dimension_limit(width, height)?;
     let declares_animation = flags & 0x02 != 0;
-    let has_alpha = flags & 0x10 != 0;
-    let mode = if has_alpha {
-        ImageMode::Rgba8
-    } else {
-        ImageMode::Rgb8
-    };
+    let mut has_alpha = flags & 0x10 != 0;
     let mut frame_count = 0u32;
     let mut saw_image = false;
     let mut saw_animation_control = false;
@@ -238,6 +244,7 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
                 )
                 .at(chunk_offset as u64, "webp_chunk"));
             }
+            has_alpha = info.mode == ImageMode::Rgba8;
             saw_image = true;
             frame_count = 1;
         } else if kind == *b"ANIM" {
@@ -273,6 +280,11 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
         .at(position as u64, "webp_chunk"));
     }
     let is_animated = frame_count > 1;
+    let mode = if has_alpha {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
     let source = if has_alpha {
         crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Straight)
     } else {

@@ -6941,6 +6941,42 @@ def gen_webp():
         mutate(malformed)
         (d / name).write_bytes(malformed)
 
+    def set_vp8l_alpha_hint_without_vp8x_alpha(data):
+        vp8x = data.find(b"VP8X")
+        vp8l = data.find(b"VP8L")
+        if vp8x < 12 or vp8l < 12 or vp8l + 13 > len(data):
+            raise RuntimeError("extended WebP did not contain complete VP8X and VP8L headers")
+        vp8x_flags = data[vp8x + 8]
+        vp8l_header = data[vp8l + 9 : vp8l + 13]
+        if vp8x_flags & 0x10 or vp8l_header[3] & 0x10:
+            raise RuntimeError("ICC WebP source already declared alpha in a container header")
+        # The VP8L alpha hint lives in bit 28 of its packed five-byte header.
+        # Pillow exposes the stream's opaque alpha even when VP8X omits its hint.
+        data[vp8l + 12] |= 0x10
+
+    write_mutated_webp(
+        "vp8l_alpha_hint_without_vp8x_alpha_flag.webp",
+        "icc.webp",
+        set_vp8l_alpha_hint_without_vp8x_alpha,
+    )
+
+    def set_vp8x_alpha_flag_without_vp8l_hint(data):
+        vp8x = data.find(b"VP8X")
+        vp8l = data.find(b"VP8L")
+        if vp8x < 12 or vp8l < 12 or vp8l + 13 > len(data):
+            raise RuntimeError("extended WebP did not contain complete VP8X and VP8L headers")
+        vp8l_header = data[vp8l + 9 : vp8l + 13]
+        if data[vp8x + 8] & 0x10 or vp8l_header[3] & 0x10:
+            raise RuntimeError("ICC WebP source already declared alpha in a container header")
+        # Pillow follows the VP8L header and reports RGB when only VP8X says alpha.
+        data[vp8x + 8] |= 0x10
+
+    write_mutated_webp(
+        "vp8x_alpha_flag_without_vp8l_alpha_hint.webp",
+        "icc.webp",
+        set_vp8x_alpha_flag_without_vp8l_hint,
+    )
+
     unrecognized_animation = BytesIO()
     unrecognized_frames = [
         Image.new("RGB", (16, 16), color)

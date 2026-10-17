@@ -4265,6 +4265,14 @@ formats:
       description: Pillow composites the decoded alpha frame despite an oversized ANMF height declaration
       test_assets:
       - animated_alpha_anmf_height_mismatch.webp
+    - id: pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch
+      description: Pillow exposes the VP8L alpha hint despite a clear VP8X alpha flag
+      test_assets:
+      - vp8l_alpha_hint_without_vp8x_alpha_flag.webp
+    - id: pillow_tolerated_malformed_vp8x_alpha_flag_without_vp8l_hint
+      description: Pillow reports RGB from VP8L despite the VP8X alpha flag
+      test_assets:
+      - vp8x_alpha_flag_without_vp8l_alpha_hint.webp
     - id: pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch
       description: Pillow composites the nested VP8L frame despite an oversized ANMF width declaration
       test_assets:

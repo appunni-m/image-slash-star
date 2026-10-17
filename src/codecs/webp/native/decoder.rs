@@ -276,22 +276,15 @@ impl<'a> WebPDecoder<'a> {
                     .insert(WebPRiffChunk::VP8, start..start + chunk_size);
             }
             WebPRiffChunk::VP8L => {
-                let signature = self.r.read_u8()?;
-                if signature != 0x2f {
-                    return Err(DecodingError::LosslessSignatureInvalid);
-                }
-
-                let header = self.r.read_u32::<LittleEndian>()?;
-                let version = header >> 29;
-                if version != 0 {
-                    return Err(DecodingError::VersionNumberInvalid);
-                }
-
-                self.width = (1 + header) & 0x3FFF;
-                self.height = (1 + (header >> 14)) & 0x3FFF;
+                let (width, height, has_alpha) = {
+                    let mut payload = self.r.by_ref().take(chunk_size);
+                    read_vp8l_header(&mut payload)?
+                };
+                self.width = width;
+                self.height = height;
                 self.chunks
                     .insert(WebPRiffChunk::VP8L, start..start + chunk_size);
-                self.has_alpha = (header >> 28) & 1 != 0;
+                self.has_alpha = has_alpha;
             }
             WebPRiffChunk::VP8X => {
                 let mut info = extended::read_extended_header(&mut self.r)?;
@@ -331,6 +324,14 @@ impl<'a> WebPDecoder<'a> {
 
                             if !chunk.is_unknown() {
                                 self.chunks.entry(chunk).or_insert(range.clone());
+                            }
+
+                            if !info.animation && chunk == WebPRiffChunk::VP8L {
+                                let has_alpha = {
+                                    let mut payload = self.r.by_ref().take(chunk_size);
+                                    read_vp8l_header(&mut payload)?.2
+                                };
+                                info.alpha = has_alpha;
                             }
 
                             match chunk {
@@ -864,6 +865,22 @@ pub(crate) fn range_reader<'reader>(
 ) -> impl BufRead + 'reader {
     r.set_position(range.start);
     r.take(range.end - range.start)
+}
+
+fn read_vp8l_header<R: Read>(reader: &mut R) -> Result<(u32, u32, bool), DecodingError> {
+    if reader.read_u8()? != 0x2f {
+        return Err(DecodingError::LosslessSignatureInvalid);
+    }
+
+    let header = reader.read_u32::<LittleEndian>()?;
+    if header >> 29 != 0 {
+        return Err(DecodingError::VersionNumberInvalid);
+    }
+
+    let width = (1 + header) & 0x3FFF;
+    let height = (1 + (header >> 14)) & 0x3FFF;
+    let has_alpha = (header >> 28) & 1 != 0;
+    Ok((width, height, has_alpha))
 }
 
 pub(crate) fn read_fourcc<R: BufRead>(mut r: R) -> Result<WebPRiffChunk, DecodingError> {

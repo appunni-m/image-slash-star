@@ -184065,6 +184065,162 @@
           "error_contracts": {}
         },
         {
+          "id": "pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Pillow exposes the VP8L alpha hint despite a clear VP8X alpha flag",
+          "asset": "vp8l_alpha_hint_without_vp8x_alpha_flag.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "43ca5c9016e569a9201533e87bcf90530d333bfa4823fcb0e1869814208ce7a8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8l_alpha_hint_without_vp8x_alpha_flag_webp.bin",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "pillow_tolerated_malformed_vp8x_alpha_flag_without_vp8l_hint",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Pillow reports RGB from VP8L despite the VP8X alpha flag",
+          "asset": "vp8x_alpha_flag_without_vp8l_alpha_hint.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "541aacaf69ddacfe457f11b1b6d1e5ef0c8d8180deeecf01de13e01889bcce1b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_vp8x_alpha_flag_without_vp8l_alpha_hint_webp.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch",
           "type": "decode",
           "format": "webp",
@@ -193169,12 +193325,12 @@
     }
   },
   "summary": {
-    "total_rows": 2288,
-    "decode_rows": 1794,
+    "total_rows": 2290,
+    "decode_rows": 1796,
     "encode_rows": 494,
     "formats": 8,
-    "assets_available": 1791,
-    "decode_active": 1794,
+    "assets_available": 1793,
+    "decode_active": 1796,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

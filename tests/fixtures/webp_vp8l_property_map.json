@@ -10,9 +10,9 @@
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
     "inspector_sha256": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
     "manifest_path": "manifest.yaml",
-    "manifest_sha256": "202fcbe746e7e2fe83d83f14e7f622581b5f176ce734e446f4f0991f751b2293",
+    "manifest_sha256": "a9d4c769cddc44899c29f9fbab01cfdf6f6226939eebf0a61411180f78fc1c2e",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "a95b69d1732464f02ee3117a69aecda0b6cfcefaf2700d528b915ce10efaae0c"
+    "matrix_sha256": "ff8a4b27ba41627bebfa4c0de841d02883599b7f2a6d0c730f5bcbe9c9203817"
   },
   "malformed_witnesses": [
     {
@@ -482,6 +482,30 @@
           },
           "operation": "decode",
           "row_id": "pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch"
+        },
+        {
+          "expect": {
+            "status": "ok",
+            "structure": {
+              "alpha_used": true,
+              "height": 128,
+              "width": 128
+            }
+          },
+          "operation": "decode",
+          "row_id": "pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch"
+        },
+        {
+          "expect": {
+            "status": "ok",
+            "structure": {
+              "alpha_used": false,
+              "height": 128,
+              "width": 128
+            }
+          },
+          "operation": "decode",
+          "row_id": "pillow_tolerated_malformed_vp8x_alpha_flag_without_vp8l_hint"
         }
       ]
     }
@@ -494,7 +518,7 @@
   "properties": [
     {
       "claim_boundary": "pillow_outer_result",
-      "gap": "The independent parser proves exact VP8L header dimensions and transform records for two standalone successful rows and confirms the embedded VP8L header/transform in one Pillow-tolerated ANMF-width row; it does not prove the outer ANMF dimensions. Other VP8L headers, transform orderings, and stream states remain outside this witnessed scope.",
+      "gap": "The independent parser proves exact VP8L header dimensions and transform records for two standalone successful rows, confirms the embedded VP8L header/transform in one Pillow-tolerated ANMF-width row, and confirms both VP8L alpha-hint values and dimensions across the paired VP8X/VP8L alpha-flag mismatch rows; it does not prove the outer ANMF dimensions. Other VP8L headers, transform orderings, and stream states remain outside this witnessed scope.",
       "id": "vp8l.frame.header_and_outer_result",
       "internal_state_proven": true,
       "minimal_witnesses": [
@@ -505,6 +529,14 @@
         {
           "operation": "decode",
           "row_id": "lossless_transform_variants"
+        },
+        {
+          "operation": "decode",
+          "row_id": "pillow_tolerated_malformed_vp8x_vp8l_alpha_flag_mismatch"
+        },
+        {
+          "operation": "decode",
+          "row_id": "pillow_tolerated_malformed_vp8x_alpha_flag_without_vp8l_hint"
         }
       ],
       "status": "witnessed"
