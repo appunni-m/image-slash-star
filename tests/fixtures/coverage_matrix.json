@@ -74683,7 +74683,7 @@
           "type": "decode",
           "format": "gif",
           "category": "error",
-          "description": "Invalid headers, descriptors, controls, and LZW roots",
+          "description": "Token-aware decode preserves Pillow's error for a truncated GIF LZW output stream",
           "asset": "lzw_truncated_output.gif",
           "expect_error": true,
           "status": "active",
@@ -74753,7 +74753,8 @@
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_token": true
         },
         {
           "id": "error_malformed_no_frame_no_trailer",

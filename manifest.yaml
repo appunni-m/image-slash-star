@@ -3227,6 +3227,11 @@ formats:
       - zero_frame_width.gif
       - zero_frame_height.gif
       - bad_gce_terminator.gif
+      expect_error: true
+    - id: error_malformed_lzw_truncated_output
+      description: Token-aware decode preserves Pillow's error for a truncated GIF LZW output stream
+      rust_decode_with_token: true
+      test_assets:
       - lzw_truncated_output.gif
       expect_error: true
     - id: error_malformed_no_frame_no_trailer

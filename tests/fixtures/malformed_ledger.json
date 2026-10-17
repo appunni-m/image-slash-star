@@ -6791,7 +6791,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "Invalid headers, descriptors, controls, and LZW roots",
+        "description": "Token-aware decode preserves Pillow's error for a truncated GIF LZW output stream",
         "inspect_status": "ok",
         "origins": [
           "pillow_fixture"
