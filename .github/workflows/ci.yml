@@ -192,7 +192,8 @@ jobs:
   windows-msvc:
     name: Windows MSVC runtime and strict lint
     needs: fixture-integrity
-    runs-on: windows-latest
+    # Keep the OS/MSVC image stable; advance deliberately after CI review.
+    runs-on: windows-2025
     timeout-minutes: 90
     env:
       # The repository Cargo config selects sccache, which is not installed on
@@ -206,6 +207,29 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
+      - name: Record Windows, MSVC, and SDK versions
+        shell: pwsh
+        run: |
+          Get-ComputerInfo -Property WindowsProductName, WindowsVersion, OsBuildNumber | Format-List
+          rustc --version --verbose
+
+          $programFilesX86 = [System.Environment]::GetFolderPath('ProgramFilesX86')
+          $vswhere = Join-Path $programFilesX86 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsInstall = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ([string]::IsNullOrWhiteSpace($vsInstall)) {
+            throw 'The Windows runner has no Visual C++ toolchain installation.'
+          }
+
+          $msvcRoot = Join-Path $vsInstall 'VC\Tools\MSVC'
+          $msvc = Get-ChildItem $msvcRoot -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          if ($null -eq $msvc) {
+            throw 'The Windows runner has no MSVC toolset version directory.'
+          }
+          Write-Output "MSVC toolset: $($msvc.Name)"
+
+          $sdkRoot = Join-Path $programFilesX86 'Windows Kits\10\Include'
+          $sdkVersions = Get-ChildItem $sdkRoot -Directory | ForEach-Object Name
+          Write-Output "Windows SDK versions: $($sdkVersions -join ', ')"
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - name: Check all features on Windows MSVC
         run: cargo check --workspace --all-features --locked
