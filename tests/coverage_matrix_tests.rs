@@ -104,6 +104,18 @@ fn matrix_verbose() -> bool {
     *MATRIX_VERBOSE.get_or_init(|| std::env::var_os("IMAGE_SLASH_STAR_VERBOSE_MATRIX").is_some())
 }
 
+fn report_matrix_case_executing(operation: &str, format: &str, row_id: &str) {
+    if matrix_verbose() {
+        eprintln!("MATRIX_ROW_EXECUTING {operation}:{format}:{row_id}");
+    }
+}
+
+fn report_matrix_case_passed(operation: &str, format: &str, row_id: &str) {
+    if matrix_verbose() {
+        eprintln!("MATRIX_ROW_PASSED {operation}:{format}:{row_id}");
+    }
+}
+
 macro_rules! matrix_success {
     ($($arg:tt)*) => {
         if matrix_verbose() {
@@ -1840,9 +1852,13 @@ fn run_fault_contract_matrix() {
             planned_not_executed += 1;
             continue;
         }
+        report_matrix_case_executing("fault-contract", &row.format, &row.id);
         executed += 1;
         match execute_fault_contract(manifest_dir, matrix, row) {
-            Ok(()) => passed += 1,
+            Ok(()) => {
+                report_matrix_case_passed("fault-contract", &row.format, &row.id);
+                passed += 1;
+            }
             Err(message) => {
                 failed += 1;
                 eprintln!("  FAIL [fault-contract:{}]: {message}", row.id);
@@ -5574,6 +5590,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
             if !selection.contains(MatrixOperation::Decode, fmt_name, &row.id) {
                 continue;
             }
+            report_matrix_case_executing("decode", fmt_name, &row.id);
             let asset_name = match &row.asset {
                 Some(a) => a,
                 None => {
@@ -6113,6 +6130,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     && source_error_is_stable
                 {
                     matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
+                    report_matrix_case_passed("decode", fmt_name, &row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -6670,6 +6688,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         decoded.as_bytes().len(),
                         row.ref_mode.as_deref().unwrap_or("?")
                     );
+                    report_matrix_case_passed("decode", fmt_name, &row.id);
                     passed += 1;
                 }
                 Err(message) => {
@@ -6858,6 +6877,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 continue;
             }
 
+            report_matrix_case_executing("encode", fmt_name, &row.id);
             total += 1;
 
             // Determine source: use row's source_asset if present, otherwise fall back
@@ -7432,6 +7452,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         "  OK   [{}] all public unsupported modes and invalid state returned structured errors",
                         row.id
                     );
+                    report_matrix_case_passed("encode", fmt_name, &row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -7591,6 +7612,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         row.id,
                         row.rust_error_reason.as_deref().unwrap_or("unspecified")
                     );
+                    report_matrix_case_passed("encode", fmt_name, &row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -7623,6 +7645,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     )
                 {
                     matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
+                    report_matrix_case_passed("encode", fmt_name, &row.id);
                     passed += 1;
                 } else {
                     eprintln!(
@@ -7957,6 +7980,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     row.id,
                     encoded.len()
                 );
+                report_matrix_case_passed("encode", fmt_name, &row.id);
                 passed += 1;
                 continue;
             }
@@ -7973,6 +7997,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             row.id,
                             encoded.len()
                         );
+                        report_matrix_case_passed("encode", fmt_name, &row.id);
                         passed += 1;
                     }
                     Ok(_) => {
@@ -8061,6 +8086,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                                     redecoded.height,
                                     row.ref_mode.as_deref().unwrap_or("?")
                                 );
+                                report_matrix_case_passed("encode", fmt_name, &row.id);
                                 passed += 1;
                             }
                             Err(message) => {

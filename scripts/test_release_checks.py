@@ -33,6 +33,7 @@ import setup_benchmark_oracle
 import verify_claim_ledger as claim_ledger
 import verify_coverage_origins as coverage_origins
 import verify_release_tag
+import run_selected_coverage as selected_coverage
 
 
 class CoverageTests(unittest.TestCase):
@@ -80,6 +81,189 @@ class CoverageTests(unittest.TestCase):
                     coverage.load_totals(report)
             report.write_text(json.dumps({"data": [{"totals": self.totals}]}))
             self.assertEqual(coverage.load_totals(report), self.totals)
+
+
+class SelectedCoverageTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.matrix = Path(self.directory.name) / "coverage_matrix.json"
+        self.matrix.write_text(
+            json.dumps(
+                {
+                    "formats": {
+                        "webp": {
+                            "decode": [
+                                {"id": "active", "format": "webp", "status": "active"},
+                                {"id": "planned", "format": "webp", "status": "planned"},
+                            ],
+                            "encode": [],
+                        }
+                    },
+                    "fault_contracts": [
+                        {"id": "fault", "format": "bmp", "status": "active"}
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_case_list_rejects_malformed_and_duplicate_selectors(self) -> None:
+        for value in (
+            "decode:webp",
+            "decode:webp:*",
+            "decode:webp:a,decode:webp:b",
+        ):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                selected_coverage.parse_case_list(value)
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            selected_coverage.parse_case_list("decode:webp:active decode:webp:active")
+
+    def test_selection_rejects_unknown_and_planned_only_cases(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unknown selector"):
+            selected_coverage.load_selected_rows(["decode:webp:missing"], self.matrix)
+        with self.assertRaisesRegex(ValueError, "planned-only"):
+            selected_coverage.load_selected_rows(["decode:webp:planned"], self.matrix)
+
+    def test_fault_case_hashes_its_referenced_parity_input(self) -> None:
+        rows = selected_coverage.load_selected_rows(
+            ["fault-contract:bmp:bmp_palette_reservation_failure"]
+        )
+        hashes = selected_coverage.fixture_hashes(rows)
+        self.assertEqual(
+            hashes["tests/fixtures/input/images/bmp/rle4_odd_absolute_eol.bmp"]["status"],
+            "present",
+        )
+
+    def test_fixture_hashes_include_nested_palette_and_explicit_asset_paths(self) -> None:
+        rows = selected_coverage.load_selected_rows(
+            ["decode:png:color_indexed_alpha"]
+        )
+        hashes = selected_coverage.fixture_hashes(rows)
+        self.assertEqual(
+            hashes["tests/fixtures/input/images/png/indexed_alpha.png"]["status"],
+            "present",
+        )
+        self.assertEqual(
+            hashes[
+                "tests/fixtures/outputs/raws/Decode.png_indexed_alpha_png.decoded-palette.alpha.bin"
+            ]["status"],
+            "present",
+        )
+
+    def test_command_preserves_each_exact_selector_as_a_separate_argument(self) -> None:
+        command = selected_coverage.build_command(
+            "nightly-2026-07-16",
+            Path("target/selected/coverage.json"),
+            ["decode:webp:active", "fault-contract:bmp:fault"],
+            "aarch64-apple-darwin",
+        )
+        self.assertEqual(
+            command[:5],
+            ["cargo", "+nightly-2026-07-16", "llvm-cov", "test", "--all-features"],
+        )
+        self.assertEqual(
+            command[-4:],
+            [
+                "--skip",
+                "__image_slash_star_matrix_row_selector__=decode:webp:active",
+                "--skip",
+                "__image_slash_star_matrix_row_selector__=fault-contract:bmp:fault",
+            ],
+        )
+        self.assertEqual(
+            command[5:7], ["--target", "aarch64-apple-darwin"]
+        )
+
+    def test_harness_output_must_prove_exact_selected_and_executed_sets(self) -> None:
+        selected = selected_coverage.load_selected_rows(
+            ["decode:webp:active", "decode:webp:planned"], self.matrix
+        )
+        output = (
+            "matrix row selection: selected=2 active=1 planned-not-executed=1; "
+            "canonical=decode:webp:active [active], "
+            "decode:webp:planned [planned-not-executed]\n"
+            "MATRIX_ROW_EXECUTING decode:webp:active\n"
+            "MATRIX_ROW_PASSED decode:webp:active\n"
+            "decode matrix (selected): 1/1 active rows passed, 0 failed, "
+            "1 planned-not-executed\n"
+        )
+        result = selected_coverage.parse_harness_output(output, selected)
+        self.assertEqual(
+            result["counts"],
+            {
+                "selected": 2,
+                "executed": 1,
+                "passed": 1,
+                "failed": 0,
+                "planned_not_executed": 1,
+            },
+        )
+        self.assertEqual(result["executed_case_ids"], ["decode:webp:active"])
+        with self.assertRaisesRegex(ValueError, "did not execute"):
+            selected_coverage.parse_harness_output(
+                output.replace("MATRIX_ROW_EXECUTING decode:webp:active\n", "")
+                .replace("MATRIX_ROW_PASSED decode:webp:active\n", "")
+                .replace(
+                    "decode matrix (selected): 1/1 active rows passed, 0 failed, ",
+                    "decode matrix (selected): 0/1 active rows passed, 1 failed, ",
+                ),
+                selected,
+            )
+
+    def test_harness_accepts_rust_canonical_order_different_from_request_order(self) -> None:
+        selected = selected_coverage.load_selected_rows(
+            ["decode:webp:planned", "decode:webp:active"], self.matrix
+        )
+        output = (
+            "matrix row selection: selected=2 active=1 planned-not-executed=1; "
+            "canonical=decode:webp:active [active], "
+            "decode:webp:planned [planned-not-executed]\n"
+            "MATRIX_ROW_EXECUTING decode:webp:active\n"
+            "MATRIX_ROW_PASSED decode:webp:active\n"
+            "decode matrix (selected): 1/1 active rows passed, 0 failed, "
+            "1 planned-not-executed\n"
+        )
+        result = selected_coverage.parse_harness_output(output, selected)
+        self.assertEqual(
+            result["selected_case_ids"],
+            ["decode:webp:planned", "decode:webp:active"],
+        )
+
+    def test_coverage_totals_require_a_present_nonempty_valid_report(self) -> None:
+        report = Path(self.directory.name) / "coverage.json"
+        with self.assertRaisesRegex(ValueError, "missing or empty"):
+            selected_coverage.report_totals(report)
+        metrics = {
+            name: {"covered": 1, "count": 2, "percent": 50.0}
+            for name in ("lines", "branches", "functions", "regions")
+        }
+        report.write_text(json.dumps({"data": [{"totals": metrics}]}), encoding="utf-8")
+        self.assertEqual(
+            selected_coverage.report_totals(report)["branches"],
+            {"covered": 1, "count": 2, "percent": 50.0},
+        )
+        metrics["branches"]["covered"] = 3
+        report.write_text(json.dumps({"data": [{"totals": metrics}]}), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "invalid branches totals"):
+            selected_coverage.report_totals(report)
+
+    def test_fault_contract_summary_remains_target_only(self) -> None:
+        selected = selected_coverage.load_selected_rows(
+            ["fault-contract:bmp:fault"], self.matrix
+        )
+        output = (
+            "matrix row selection: selected=1 active=1 planned-not-executed=0; "
+            "canonical=fault-contract:bmp:fault [active]\n"
+            "MATRIX_ROW_EXECUTING fault-contract:bmp:fault\n"
+            "MATRIX_ROW_PASSED fault-contract:bmp:fault\n"
+            "Fault contracts: selected=1 executed=1 passed=1 failed=0 "
+            "planned-not-executed=0 oracle=not_applicable\n"
+        )
+        result = selected_coverage.parse_harness_output(output, selected)
+        self.assertEqual(
+            result["operations"]["fault-contract"]["oracle"], "not_applicable"
+        )
 
 
 class CoverageOriginTests(unittest.TestCase):

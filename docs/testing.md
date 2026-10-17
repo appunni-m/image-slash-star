@@ -26,6 +26,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Tests | `make test` | Rustdoc, all-feature tests, strict WASI Clippy, and feature/target lanes |
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
+| Selected coverage | `make coverage-selected COVERAGE_CASES='decode:webp:<id>'` | Runs exact matrix cases and writes a local LLVM report with execution evidence |
 | Complete coverage | `make coverage-complete` | Requires all four metrics to reach 100% |
 | Package inspection | `make package-verify` | Builds, extracts, and tests the distributable archive |
 | Documentation setup | `make docs-setup` | Creates an isolated environment and installs the hashed lock |
@@ -64,6 +65,34 @@ Use the repository's registered Coverage MCP flow for incremental source
 claims, with the exact selected fixture IDs and source revision. Report all
 four aggregate totals. Selected-case reports do not establish full coverage,
 and missing observations are not automatically regressions.
+
+For focused exploration, pass one or more exact manifest keys to
+`make coverage-selected`, separated by spaces:
+
+```sh
+make coverage-selected COVERAGE_CASES='decode:webp:lossy_vp8 encode:png:enc_rgb'
+```
+
+The runner rejects malformed, duplicate, unknown, and planned-only selections,
+then delegates canonical validation and execution to the existing Rust matrix
+harness. It writes a branch report, captured command log, and a machine-readable
+local evidence file under `target/release-evidence/selected/` (or the path
+provided by `SELECTED_COVERAGE_REPORT`). The local evidence binds the report to
+the Git revision, worktree state, relevant source and fixture hashes, toolchain,
+target, feature set, exact arguments, and qualified per-case execution results.
+It is not a Coverage MCP source/build receipt. After each focused run, query
+Coverage MCP with that report and retain its actual status and limitations;
+the current MCP interface has no local CLI bridge or receipt-registration
+action, so absent provider receipts remain `source=unverified` and
+`tests=unknown`. Do not apply full-suite floors or claim a marginal gain from
+incompatible reports. Use MCP `selected_tests` to inspect coordinate changes
+between focused reports; missing locations in a selection are not regressions.
+Use MCP `incremental` only when the focused report and full-suite baseline have
+matching source/build identity, instrumentation, denominator, and known test
+results. Without those provider receipts MCP returns a limited comparison, so
+the report cannot establish marginal gain or be unioned into the baseline.
+This command stays opt-in and is not part of push, release, or full-coverage CI
+jobs.
 
 The alpha floors are 59% lines, 46% branches, 52% functions, and 58% regions.
 No source exclusions are added to reach those floors. Complete coverage retains

@@ -6,6 +6,8 @@ RELEASE_CRATE = $(RELEASE_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 REGISTRY_CRATE = $(RELEASE_DIR)/registry/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 COVERAGE_TOOLCHAIN ?= nightly-2026-07-16
 COVERAGE_REPORT ?= target/release-evidence/coverage.json
+COVERAGE_CASES ?=
+SELECTED_COVERAGE_REPORT ?=
 COVERAGE_EXPORTER_PREFIX ?= $(CURDIR)/target/coverage-exporter/llvm22.1.8
 COVERAGE_EXPORTER_SOURCE ?=
 COVERAGE_EXPORTER_TARGET ?= coverage
@@ -37,6 +39,7 @@ help:
 	@printf "  make test             Run docs, tests, target feature lanes, and WASI Clippy\n"
 	@printf "  make supply-chain     Run cargo-deny\n"
 	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
+	@printf "  make coverage-selected COVERAGE_CASES='decode:webp:<id>' Run exact parity/fault cases with a local LLVM report\n"
 	@printf "  make coverage-exporter-setup Build the optional pinned native exporter (macOS ARM64; Git/CMake/Ninja, network on first setup)\n"
 	@printf "  make coverage-with-exporter Use the verified exporter; COVERAGE_EXPORTER_TARGET=coverage-complete retains strict 100%%\n"
 	@printf "  make package-verify   Build and consume a reproducible package\n"
@@ -126,6 +129,23 @@ coverage:
 	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --locked --json \
 		--output-path "$(COVERAGE_REPORT)" --no-fail-fast
 	$(MAKE) coverage-check
+
+.PHONY: coverage-selected
+coverage-selected:
+	@test -n "$(value COVERAGE_CASES)" || { printf "Set COVERAGE_CASES to one or more exact operation:format:row-id selectors.\\n" >&2; exit 2; }
+	$(if $(findstring $$,$(value COVERAGE_CASES)),$(error COVERAGE_CASES contains a dollar sign unsupported by the Make recipe))
+	$(if $(findstring `,$(value COVERAGE_CASES)),$(error COVERAGE_CASES contains a backtick unsupported by the Make recipe))
+	$(if $(findstring ",$(value COVERAGE_CASES)),$(error COVERAGE_CASES contains a double quote unsupported by the Make recipe))
+	$(if $(findstring \, $(value COVERAGE_CASES)),$(error COVERAGE_CASES contains a backslash unsupported by the Make recipe))
+	$(if $(findstring $(coverage_exporter_newline),$(value COVERAGE_CASES)),$(error COVERAGE_CASES contains a newline unsupported by the Make recipe))
+	$(if $(findstring $$,$(value SELECTED_COVERAGE_REPORT)),$(error SELECTED_COVERAGE_REPORT contains a dollar sign unsupported by the Make recipe))
+	$(if $(findstring `,$(value SELECTED_COVERAGE_REPORT)),$(error SELECTED_COVERAGE_REPORT contains a backtick unsupported by the Make recipe))
+	$(if $(findstring ",$(value SELECTED_COVERAGE_REPORT)),$(error SELECTED_COVERAGE_REPORT contains a double quote unsupported by the Make recipe))
+	$(if $(findstring \, $(value SELECTED_COVERAGE_REPORT)),$(error SELECTED_COVERAGE_REPORT contains a backslash unsupported by the Make recipe))
+	$(if $(findstring $(coverage_exporter_newline),$(value SELECTED_COVERAGE_REPORT)),$(error SELECTED_COVERAGE_REPORT contains a newline unsupported by the Make recipe))
+	$(PYTHON) scripts/run_selected_coverage.py --cases $(call coverage_exporter_quote,$(value COVERAGE_CASES)) \
+		--toolchain $(call coverage_exporter_quote,$(value COVERAGE_TOOLCHAIN)) \
+		$(if $(value SELECTED_COVERAGE_REPORT),--report $(call coverage_exporter_quote,$(value SELECTED_COVERAGE_REPORT)))
 
 .PHONY: coverage-exporter-setup coverage-with-exporter
 coverage-exporter-setup:
