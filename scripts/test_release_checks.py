@@ -29,6 +29,7 @@ import verify_llvm_coverage as coverage
 import check_workflows
 import prepare_crates_io_publish
 import publish_release
+import setup_benchmark_oracle
 import verify_claim_ledger as claim_ledger
 import verify_release_tag
 
@@ -1955,6 +1956,142 @@ class WorkflowArchiveCacheTests(unittest.TestCase):
             self.assertEqual(Path(destination), archive)
             self.assertEqual(archive.read_bytes(), data)
             self.assertFalse(Path(source).exists())
+
+
+class BenchmarkOracleArchiveTests(unittest.TestCase):
+    def test_valid_cache_is_reused_without_a_network_request(self) -> None:
+        archive_data = b"verified benchmark oracle archive"
+        checksum = hashlib.sha256(archive_data).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            archive.write_bytes(archive_data)
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", checksum),
+                patch.object(setup_benchmark_oracle.urllib.request, "urlopen") as urlopen,
+            ):
+                setup_benchmark_oracle.ensure_archive(archive)
+
+        urlopen.assert_not_called()
+
+    def test_corrupt_cache_is_replaced_by_a_verified_download_atomically(self) -> None:
+        archive_data = b"verified benchmark oracle archive"
+        checksum = hashlib.sha256(archive_data).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            archive.write_bytes(b"interrupted archive write")
+            real_replace = os.replace
+
+            def verify_atomic_replace(
+                source: str | os.PathLike[str],
+                destination: str | os.PathLike[str],
+            ) -> None:
+                temporary = Path(source)
+                self.assertEqual(temporary.parent, archive.parent)
+                self.assertEqual(Path(destination), archive)
+                self.assertFalse(archive.exists())
+                self.assertEqual(temporary.read_bytes(), archive_data)
+                real_replace(source, destination)
+
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", checksum),
+                patch.object(
+                    setup_benchmark_oracle.urllib.request,
+                    "urlopen",
+                    return_value=io.BytesIO(archive_data),
+                ) as urlopen,
+                patch.object(
+                    setup_benchmark_oracle.os,
+                    "replace",
+                    side_effect=verify_atomic_replace,
+                ),
+            ):
+                setup_benchmark_oracle.ensure_archive(archive)
+
+            self.assertEqual(archive.read_bytes(), archive_data)
+            self.assertEqual(list(Path(directory).iterdir()), [archive])
+            urlopen.assert_called_once()
+            request = urlopen.call_args.args[0]
+            self.assertEqual(request.full_url, setup_benchmark_oracle.URL)
+            self.assertEqual(urlopen.call_args.kwargs["timeout"], 60)
+
+    def test_transient_http_and_network_errors_use_bounded_backoff(self) -> None:
+        archive_data = b"verified benchmark oracle archive"
+        checksum = hashlib.sha256(archive_data).hexdigest()
+        timeout = urllib.error.URLError(TimeoutError("temporary connection timeout"))
+        unavailable = urllib.error.HTTPError(
+            setup_benchmark_oracle.URL,
+            503,
+            "Service Unavailable",
+            {},
+            io.BytesIO(b"temporary error"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", checksum),
+                patch.object(
+                    setup_benchmark_oracle.urllib.request,
+                    "urlopen",
+                    side_effect=[timeout, unavailable, io.BytesIO(archive_data)],
+                ) as urlopen,
+                patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
+            ):
+                setup_benchmark_oracle.ensure_archive(archive)
+
+            self.assertEqual(archive.read_bytes(), archive_data)
+            self.assertEqual(urlopen.call_count, 3)
+            self.assertEqual(
+                [call.args[0] for call in sleep.call_args_list], [1, 2]
+            )
+
+    def test_permanent_http_error_is_not_retried(self) -> None:
+        for status in (404, 501):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                archive = Path(directory) / "oracle.tar.gz"
+                error = urllib.error.HTTPError(
+                    setup_benchmark_oracle.URL,
+                    status,
+                    "permanent failure",
+                    {},
+                    io.BytesIO(b"error response"),
+                )
+                with (
+                    patch.object(
+                        setup_benchmark_oracle.urllib.request,
+                        "urlopen",
+                        side_effect=error,
+                    ) as urlopen,
+                    patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
+                ):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        setup_benchmark_oracle.download_archive(archive)
+
+                self.assertFalse(archive.exists())
+                self.assertEqual(list(Path(directory).iterdir()), [])
+                urlopen.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_checksum_invalid_download_is_never_cached_or_retried(self) -> None:
+        archive_data = b"unverified benchmark oracle archive"
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            archive.write_bytes(b"corrupt cached archive")
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", "0" * 64),
+                patch.object(
+                    setup_benchmark_oracle.urllib.request,
+                    "urlopen",
+                    return_value=io.BytesIO(archive_data),
+                ) as urlopen,
+                patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
+            ):
+                with self.assertRaisesRegex(SystemExit, "checksum mismatch"):
+                    setup_benchmark_oracle.ensure_archive(archive)
+
+            self.assertFalse(archive.exists())
+            self.assertEqual(list(Path(directory).iterdir()), [])
+            urlopen.assert_called_once()
+            sleep.assert_not_called()
 
 
 class CoverageCliTests(unittest.TestCase):
