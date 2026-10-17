@@ -7360,6 +7360,22 @@ def gen_webp():
         enlarge_alpha_anmf_width,
     )
 
+    def enlarge_alpha_anmf_height(data):
+        anmf = data.find(b"ANMF")
+        alpha = data.find(b"ALPH", anmf + 8)
+        if anmf < 0 or alpha < anmf + 24:
+            raise RuntimeError("animated alpha WebP did not contain an ALPH frame")
+        # Keep the 64-pixel width within the 64x64 canvas while declaring a
+        # 65-pixel frame height. Pillow decodes the unchanged nested bitstream.
+        data[anmf + 8 + 6 : anmf + 8 + 9] = (63).to_bytes(3, "little")
+        data[anmf + 8 + 9 : anmf + 8 + 12] = (64).to_bytes(3, "little")
+
+    write_mutated_webp(
+        "animated_alpha_anmf_height_mismatch.webp",
+        "animated_alpha_lossy.webp",
+        enlarge_alpha_anmf_height,
+    )
+
     def enlarge_vp8l_anmf_width(data):
         anmf = data.find(b"ANMF")
         if anmf < 0 or data[anmf + 8 + 16 : anmf + 8 + 20] != b"VP8L":

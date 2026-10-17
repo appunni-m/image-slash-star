@@ -183904,6 +183904,167 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "pillow_tolerated_malformed_animated_alpha_anmf_height_mismatch",
+          "type": "decode",
+          "format": "webp",
+          "category": "pillow",
+          "description": "Pillow composites the decoded alpha frame despite an oversized ANMF height declaration",
+          "asset": "animated_alpha_anmf_height_mismatch.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "abec454cf30c816b86b0e8ebd2df5c29bfd367cab850cfd3b839cb1789e6a252",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "463789df21bfd27fb11d3da0b4410b7c200befc4882d794a35ea9f71310eeeba",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_anmf_height_mismatch_webp.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              64,
+              64
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 0,
+            "loop_origin": "pillow_fixture",
+            "background": {
+              "rgba": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "origin": "specification_reference"
+            },
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "pillow_fixture",
+                "disposal": "keep",
+                "blend": "source",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_anmf_height_mismatch_webp_frame_0.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "463789df21bfd27fb11d3da0b4410b7c200befc4882d794a35ea9f71310eeeba",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "pillow_fixture",
+                "disposal": "keep",
+                "blend": "source",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_alpha_anmf_height_mismatch_webp_frame_1.bin",
+                "ref_bytes": 16384,
+                "ref_mode": "Rgba8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "36d9babcb74661f4f5556bf8daea05688e209454030fdaf8dd94c98fef86a7e4",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ]
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "specification_reference",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch",
           "type": "decode",
           "format": "webp",
@@ -193008,12 +193169,12 @@
     }
   },
   "summary": {
-    "total_rows": 2287,
-    "decode_rows": 1793,
+    "total_rows": 2288,
+    "decode_rows": 1794,
     "encode_rows": 494,
     "formats": 8,
-    "assets_available": 1790,
-    "decode_active": 1793,
+    "assets_available": 1791,
+    "decode_active": 1794,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

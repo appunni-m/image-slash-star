@@ -6,6 +6,29 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## WebP oversized alpha ANMF height parity — 2026-10-17
+
+Added the public `pillow_tolerated_malformed_animated_alpha_anmf_height_mismatch`
+row. Its deterministic 64x64 animated alpha WebP declares the first ANMF frame
+as 64x65 while retaining the original nested ALPH and VP8 bitstream. Pinned
+Pillow 12.2.0 verifies and decodes it as two 64x64 RGBA frames; the exact frame
+references match the existing oversized-width control. The selected
+`test_decode_matrix_webp` parity run passed 1/1.
+
+A selected branch-coverage report at
+`.coverage-mcp/local-evidence/20261017/webp-anmf-height-selected/coverage.json`
+has SHA-256
+`148e3c20d0ed7b8964e2538635f3d20aab480d348faa00d1a592e6bf41ec4b3a`.
+Coverage MCP reports both outcomes at
+`src/codecs/webp/inspect.rs:310` in this selected report. The report has no
+source/build receipt and test inventory is unknown; it is coordinate-only
+reachability evidence. The incremental comparison with the saved 2026-10-16
+full report is incomparable because its branch details do not reconcile with
+its totals. No aggregate coverage gain or full-suite regression conclusion is
+claimed. The current fixture matrix contains 2,288 total rows: 1,794 decode /
+inspect / verify rows and 494 encode rows. Of those, 1,794 decode rows and 462
+encode rows are active; the other 32 encode rows are planned.
+
 ## AVIF 12-bit I444 auxiliary-alpha parity — 2026-10-17
 
 Added the public `high_bitdepth_still_12bit_444_alpha_9x9` decode row. The
@@ -6599,7 +6622,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1cab9d6590097732b780fe932fa0d445355d0d488261e6763aea61a95fa19632`; matrix `7352c6df71c9480001fdde4b5c233c022644180eeff94e48edeabf43f03e7bff`.
+- Current fixture integrity only: manifest `202fcbe746e7e2fe83d83f14e7f622581b5f176ce734e446f4f0991f751b2293`; matrix `a95b69d1732464f02ee3117a69aecda0b6cfcefaf2700d528b915ce10efaae0c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

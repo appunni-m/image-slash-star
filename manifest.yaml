@@ -4261,6 +4261,10 @@ formats:
       description: Pillow composites the decoded alpha frame despite an oversized ANMF width declaration
       test_assets:
       - animated_alpha_anmf_width_mismatch.webp
+    - id: pillow_tolerated_malformed_animated_alpha_anmf_height_mismatch
+      description: Pillow composites the decoded alpha frame despite an oversized ANMF height declaration
+      test_assets:
+      - animated_alpha_anmf_height_mismatch.webp
     - id: pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch
       description: Pillow composites the nested VP8L frame despite an oversized ANMF width declaration
       test_assets:
