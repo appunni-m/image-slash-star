@@ -2222,15 +2222,37 @@ impl YcbcrTables {
         reason = "Validated TIFF rationals and libtiff's [-4096, 4096] table bounds keep all fixed-point products inside i32."
     )]
     fn new(conversion: super::inspect::YcbcrConversion) -> CodecResult<Option<Self>> {
+        if conversion.invalid_coefficients {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr coefficients have an unsupported field type".to_owned(),
+            ));
+        }
+
         if conversion.is_default {
             return Ok(None);
+        }
+
+        if rational_to_f32(conversion.coefficients[1]) == 0.0 {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr green coefficient must be nonzero".to_owned(),
+            ));
+        }
+
+        if conversion
+            .reference_black_white
+            .iter()
+            .copied()
+            .any(ycbcr_reference_exceeds_conversion_limit)
+        {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr reference value exceeds conversion limits".to_owned(),
+            ));
         }
 
         let coefficients = conversion.coefficients.map(rational_to_f32);
         let references = conversion.reference_black_white.map(rational_to_f32);
         let [red_luma, green_luma, blue_luma] = coefficients;
-        // The inspector rejects zero numerators and zero denominators before
-        // creating this conversion; valid u32 rationals remain finite in f32.
+        // libtiff maps zero-numerator and zero-denominator rationals to zero.
 
         let red_factor = 2.0_f32 - 2.0_f32 * red_luma;
         let green_from_red_factor = red_luma * red_factor / green_luma;
@@ -2295,8 +2317,38 @@ impl YcbcrTables {
     }
 }
 
-fn rational_to_f32((numerator, denominator): (u32, u32)) -> f32 {
-    numerator as f32 / denominator as f32
+fn rational_to_f32((numerator, denominator): (i64, i64)) -> f32 {
+    if numerator == 0 || denominator == 0 {
+        0.0
+    } else {
+        numerator as f32 / denominator as f32
+    }
+}
+
+fn ycbcr_reference_exceeds_conversion_limit(rational: (i64, i64)) -> bool {
+    // Pillow's libtiff path rejects ratios at 2^31 - 64 during pixel loading.
+    const REFERENCE_LIMIT: i128 = 2_147_483_584;
+    let (numerator, denominator) = rational;
+    if numerator == 0 || denominator == 0 {
+        return false;
+    }
+    let mut numerator = i128::from(numerator);
+    let mut denominator = i128::from(denominator);
+    if numerator < 0 && denominator < 0 {
+        let Some(positive_numerator) = numerator.checked_neg() else {
+            return false;
+        };
+        let Some(positive_denominator) = denominator.checked_neg() else {
+            return false;
+        };
+        numerator = positive_numerator;
+        denominator = positive_denominator;
+    } else if numerator <= 0 || denominator <= 0 {
+        return false;
+    }
+    REFERENCE_LIMIT
+        .checked_mul(denominator)
+        .is_some_and(|limit| numerator >= limit)
 }
 
 #[allow(
@@ -2309,7 +2361,7 @@ fn fixed_16_16(value: f32) -> i32 {
 
 #[allow(
     clippy::cast_possible_truncation,
-    reason = "The inspector bounds reference values below i32::MAX, and the final conversion clamps to [-4096, 4096]."
+    reason = "Table construction bounds reference values before integer conversion, and the final conversion clamps to [-4096, 4096]."
 )]
 fn libtiff_code_to_value(
     code: i32,
@@ -2965,6 +3017,13 @@ impl Endian {
         }
     }
 
+    fn i32_exact(self, bytes: [u8; 4]) -> i32 {
+        match self {
+            Endian::Little => i32::from_le_bytes(bytes),
+            Endian::Big => i32::from_be_bytes(bytes),
+        }
+    }
+
     fn write_u16(self, value: u16, destination: &mut [u8]) {
         let bytes = match self {
             Endian::Little => value.to_le_bytes(),
@@ -3196,7 +3255,7 @@ impl<'a> Directory<'a> {
                 "TIFF directory value is out of bounds",
             )?;
             let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
-            if field_type == 5 {
+            if matches!(field_type, 5 | 10) {
                 rationals.push(RationalEntry {
                     tag,
                     count: value_count,
@@ -3326,12 +3385,19 @@ impl<'a> Directory<'a> {
     pub(super) fn value_count(&self, tag: u16) -> Option<usize> {
         let field = self.fields.iter().find(|field| field.tag == tag)?;
         if matches!(field.field_type, 1 | 3 | 4)
-            || (matches!(tag, 529 | 532) && field.field_type == 5)
+            || (matches!(tag, 529 | 532) && matches!(field.field_type, 5 | 10))
         {
             Some(field.count)
         } else {
             None
         }
+    }
+
+    pub(super) fn field_count(&self, tag: u16) -> Option<usize> {
+        self.fields
+            .iter()
+            .find(|field| field.tag == tag)
+            .map(|field| field.count)
     }
 
     pub(super) fn values(&self, tag: u16) -> Option<Vec<usize>> {
@@ -3370,7 +3436,7 @@ impl<'a> Directory<'a> {
             .map(|field| field.field_type)
     }
 
-    pub(super) fn rational(&self, tag: u16, index: usize) -> Option<(u32, u32)> {
+    pub(super) fn rational(&self, tag: u16, index: usize) -> Option<(i64, i64)> {
         let entry = self.rationals.iter().find(|entry| entry.tag == tag)?;
         if index >= entry.count {
             return None;
@@ -3378,11 +3444,19 @@ impl<'a> Directory<'a> {
         let position = entry.value_position.checked_add(index.checked_mul(8)?)?;
         let value_end = position.checked_add(8)?;
         let value = self.data.get(position..value_end)?;
-        Some((
-            self.endian
-                .u32_exact([value[0], value[1], value[2], value[3]]),
-            self.endian
-                .u32_exact([value[4], value[5], value[6], value[7]]),
-        ))
+        let numerator_bytes = [value[0], value[1], value[2], value[3]];
+        let denominator_bytes = [value[4], value[5], value[6], value[7]];
+        // libtiff reads SRATIONAL numerators as signed but denominators as unsigned.
+        if self.field_type(tag) == Some(10) {
+            Some((
+                i64::from(self.endian.i32_exact(numerator_bytes)),
+                i64::from(self.endian.u32_exact(denominator_bytes)),
+            ))
+        } else {
+            Some((
+                i64::from(self.endian.u32_exact(numerator_bytes)),
+                i64::from(self.endian.u32_exact(denominator_bytes)),
+            ))
+        }
     }
 }

@@ -52,9 +52,41 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,322 total rows: 1,826 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,826 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,342 total rows: 1,846 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,846 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
+
+## TIFF YCbCr rational edge parity — 2026-10-18
+
+Added public Pillow parity cases for negative-equivalent `SRATIONAL` coefficient
+and reference values, plus exact-count `DOUBLE` coefficients. Pillow displays
+the negative-equivalent pairs as positive ratios, while libtiff consumes their
+stored numerator as signed and denominator as unsigned during YCbCr conversion;
+the fixtures retain the exact pixel bytes from that behavior. A `DOUBLE`
+coefficient tag with the required three values opens and verifies but fails
+during pixel decoding, while unsupported coefficient counts continue to use
+libtiff defaults. These are
+Pillow-reachable input cases, so they remain ordinary parity rows rather than
+target-only fault contracts.
+
+The final selected TIFF YCbCr rational matrix passed 25/25 active parity rows
+in `target/release-evidence/selected/tiff-ycbcr-rational-edges-final-v3.json`.
+Coverage MCP reports 260/31,512 branch observations for that report and lists
+remaining coordinates in `ycbcr_parameters` and `read_ycbcr_rationals` around
+`inspect.rs:441`, `:465`, `:469`, `:506`, and `:520`. The report has no recorded
+revision or build ID, an unverified source state, and unknown test attribution;
+these are exploration coordinates only and do not establish a measured source
+coverage gain.
+
+After the reference-limit comparison was rewritten with checked arithmetic to
+satisfy strict Clippy, the accepted and rejected boundary rows were rerun and
+passed 2/2 in
+`target/release-evidence/selected/tiff-ycbcr-reference-limit-checked-arithmetic-v1.json`.
+Coverage MCP lists ten missing branch coordinates in
+`ycbcr_reference_exceeds_conversion_limit`, including spans around
+`decode.rs:2332` and `:2337`. This selected report also has no source/build
+receipt or test attribution, so the coordinates remain exploratory rather
+than proof of current-source coverage.
 
 ## APNG duplicate control before the default image — 2026-10-17
 
@@ -6815,7 +6847,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f3b7a5f8b72be6311f8b1284882cd5a8676fed3a725ad58605f15b27d0f71b7b`; matrix `18edd2d43d1cbaea04318c6ca4d5e0cce95e2346541390dc44121283f9e2e4e3`.
+- Current fixture integrity only: manifest `fbfdf475514a1dce0f9335ed48095dcd0d87333a68ca300741cf3436faa6a37b`; matrix `b8ed3be09d8fec64a26a14a658c77a8855728c6eb589919278d63bee0fe8c50f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

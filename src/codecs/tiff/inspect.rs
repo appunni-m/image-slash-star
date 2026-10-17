@@ -277,8 +277,9 @@ pub(super) enum TiffLayout {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct YcbcrConversion {
-    pub(super) coefficients: [(u32, u32); 3],
-    pub(super) reference_black_white: [(u32, u32); 6],
+    pub(super) coefficients: [(i64, i64); 3],
+    pub(super) reference_black_white: [(i64, i64); 6],
+    pub(super) invalid_coefficients: bool,
     pub(super) is_default: bool,
 }
 
@@ -427,27 +428,13 @@ pub(super) fn layout_and_palette(
 /// interpretation. Libtiff's RGBA conversion uses one chroma pair for each
 /// clump for either valid positioning value.
 pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrParameters> {
-    const DEFAULT_COEFFICIENTS: [(u32, u32); 3] = [(299, 1000), (587, 1000), (114, 1000)];
-    const DEFAULT_REFERENCE_BLACK_WHITE: [(u32, u32); 6] =
+    const DEFAULT_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
+    const DEFAULT_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
         [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
-    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
-    let reference_black_white =
+    let (coefficients, invalid_coefficients) =
+        read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
+    let (reference_black_white, _) =
         read_ycbcr_rationals(directory, 532, DEFAULT_REFERENCE_BLACK_WHITE)?;
-    if coefficients[1].0 == 0 {
-        return Err(CodecError::Malformed(
-            "TIFF YCbCr green coefficient must be nonzero".to_owned(),
-        ));
-    }
-    if reference_black_white
-        .iter()
-        .any(|&(numerator, denominator)| {
-            f64::from(numerator) / f64::from(denominator) >= f64::from(i32::MAX) - 128.0
-        })
-    {
-        return Err(CodecError::Malformed(
-            "TIFF YCbCr reference value exceeds conversion limits".to_owned(),
-        ));
-    }
 
     let subsampling = match directory.field_type(530) {
         None => (2, 2),
@@ -499,6 +486,7 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
         conversion: YcbcrConversion {
             coefficients,
             reference_black_white,
+            invalid_coefficients,
             is_default,
         },
     })
@@ -507,39 +495,60 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
 fn read_ycbcr_rationals<const N: usize>(
     directory: &Directory<'_>,
     tag: u16,
-    defaults: [(u32, u32); N],
-) -> CodecResult<[(u32, u32); N]> {
+    defaults: [(i64, i64); N],
+) -> CodecResult<([(i64, i64); N], bool)> {
     let Some(field_type) = directory.field_type(tag) else {
-        return Ok(defaults);
+        return Ok((defaults, false));
     };
-    if field_type != 5 || directory.value_count(tag) != Some(N) {
-        return Err(CodecError::Malformed(format!(
-            "TIFF YCbCr tag {tag} has an unsupported field type or count"
-        )));
+    if directory.field_count(tag) != Some(N) {
+        return Ok((defaults, false));
+    }
+    if directory.value_count(tag) != Some(N) {
+        return Ok((defaults, tag == 529));
     }
     let mut values = defaults;
-    for (index, value) in values.iter_mut().enumerate() {
-        let (numerator, denominator) = directory
-            .rational(tag, index)
-            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated")))?;
-        if denominator == 0 {
-            return Err(CodecError::Malformed(format!(
-                "TIFF YCbCr tag {tag} has a zero rational denominator"
-            )));
+    match field_type {
+        5 | 10 => {
+            for (index, value) in values.iter_mut().enumerate() {
+                let (numerator, denominator) = directory.rational(tag, index).ok_or_else(|| {
+                    CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated"))
+                })?;
+                *value = (numerator, denominator);
+            }
         }
-        *value = (numerator, denominator);
+        3 | 4 => {
+            if tag == 529 && field_type == 3 {
+                return Ok((defaults, true));
+            }
+            let numeric_values = directory.values(tag).ok_or_else(|| {
+                CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated"))
+            })?;
+            for (value, numeric_value) in values.iter_mut().zip(numeric_values) {
+                let numerator = i64::try_from(numeric_value).map_err(|_| {
+                    CodecError::Malformed(format!("TIFF YCbCr tag {tag} value exceeds i64"))
+                })?;
+                *value = (numerator, 1);
+            }
+        }
+        _ => return Ok((defaults, tag == 529)),
     }
-    Ok(values)
+    Ok((values, false))
 }
 
 fn rational_values_match_default<const N: usize>(
-    actual: &[(u32, u32); N],
-    expected: &[(u32, u32); N],
+    actual: &[(i64, i64); N],
+    expected: &[(i64, i64); N],
 ) -> bool {
     actual.iter().zip(expected).all(
         |(&(numerator, denominator), &(expected_numerator, expected_denominator))| {
-            u64::from(numerator).checked_mul(u64::from(expected_denominator))
-                == u64::from(expected_numerator).checked_mul(u64::from(denominator))
+            let actual_is_zero = numerator == 0 || denominator == 0;
+            let expected_is_zero = expected_numerator == 0 || expected_denominator == 0;
+            if actual_is_zero || expected_is_zero {
+                actual_is_zero && expected_is_zero
+            } else {
+                i128::from(numerator).checked_mul(i128::from(expected_denominator))
+                    == i128::from(expected_numerator).checked_mul(i128::from(denominator))
+            }
         },
     )
 }
