@@ -17195,7 +17195,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
         // ample-budget byte identity; this wider fixture is reserved for the
         // interior sampling boundary and sink rollback.
         let sampling_probe_policy =
-            image_slash_star::EncodePolicy::new().with_max_work_units(600_000);
+            image_slash_star::EncodePolicy::new().with_max_work_units(400_000);
         let sampling_probe_error = match image_slash_star::encode_with_policy(
             &sampling_probe_image,
             ImageFormat::WebP,
@@ -17211,8 +17211,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 600_000,
-                observed: 600_001,
+                maximum: 400_000,
+                observed: 400_001,
             }
         ));
         let mut sampling_probe_sink = vec![0xB7];
@@ -17232,8 +17232,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 600_000,
-                observed: 600_001,
+                maximum: 400_000,
+                observed: 400_001,
             }
         ));
         assert_eq!(sampling_probe_sink, vec![0xB7]);

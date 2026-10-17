@@ -48,6 +48,15 @@ const BOX_CHAIN_CANDIDATE_CHECKPOINT_OFFSETS: usize = 64;
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
+#[derive(Clone, Copy)]
+pub(super) struct CandidateOptions {
+    pub(super) allow_cache: bool,
+    pub(super) quality: u32,
+    pub(super) max_cache_bits: u8,
+    pub(super) reference_low_effort: bool,
+    pub(super) hash_chain_low_effort: bool,
+}
+
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
@@ -172,8 +181,25 @@ fn checkpoint_without_cancellation(token: CheckpointToken<'_>) {
 }
 
 /// Builds the same best-distance/best-length table as `VP8LHashChainFill()`.
-#[cfg_attr(coverage, inline(never))]
+#[inline]
 fn fill_hash_chain(
+    pixels: &[u32],
+    width: usize,
+    quality: u32,
+    low_effort: bool,
+    chain: &mut Vec<(usize, usize)>,
+    first: &mut Vec<i32>,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<()> {
+    if low_effort {
+        fill_hash_chain_impl::<true>(pixels, width, quality, chain, first, token)
+    } else {
+        fill_hash_chain_impl::<false>(pixels, width, quality, chain, first, token)
+    }
+}
+
+#[cfg_attr(coverage, inline(never))]
+fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
     pixels: &[u32],
     width: usize,
     quality: u32,
@@ -300,7 +326,7 @@ fn fill_hash_chain(
         let mut best_distance = 0;
         let minimum = base.saturating_sub(window_size);
 
-        if base >= width {
+        if !LOW_EFFORT && base >= width {
             let current = match_length(pixels, base - width, base, max_length, token)?;
             if current > best_length {
                 best_length = current;
@@ -308,12 +334,14 @@ fn fill_hash_chain(
             }
             remaining -= 1;
         }
-        let current = match_length(pixels, base - 1, base, max_length, token)?;
-        if current > best_length {
-            best_length = current;
-            best_distance = 1;
+        if !LOW_EFFORT {
+            let current = match_length(pixels, base - 1, base, max_length, token)?;
+            if current > best_length {
+                best_length = current;
+                best_distance = 1;
+            }
+            remaining -= 1;
         }
-        remaining -= 1;
 
         let mut candidate = chain[base].0;
         let good_enough = max_length.min(256);
@@ -2153,12 +2181,17 @@ fn trace_backwards_impl_common(
 pub(super) fn candidates(
     pixels: &[u32],
     width: usize,
-    allow_cache: bool,
-    quality: u32,
-    max_cache_bits: u8,
+    options: CandidateOptions,
     scratch: &mut CandidateScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<Vec<(Vec<Token>, u8)>> {
+    let CandidateOptions {
+        allow_cache,
+        quality,
+        max_cache_bits,
+        reference_low_effort,
+        hash_chain_low_effort,
+    } = options;
     let mut result = core::mem::take(&mut scratch.result_list);
     result.clear();
     if pixels.is_empty() {
@@ -2169,6 +2202,7 @@ pub(super) fn candidates(
         pixels,
         width,
         quality,
+        hash_chain_low_effort,
         &mut scratch.chain,
         &mut scratch.first,
         token,
@@ -2182,11 +2216,20 @@ pub(super) fn candidates(
     // sequentially by cache selection. Retain one token buffer across those
     // source constructions instead of allocating a fresh vector for each.
     let source_scratch = &mut scratch.source;
+    if reference_low_effort {
+        lz77(pixels, width, chain, token, source_scratch)?;
+        result.push((core::mem::take(source_scratch), 0));
+        return Ok(result);
+    }
     let mut choose_cache = |source: &[Token],
                             scratch: &mut CostEstimateScratch,
                             cache_scratch: &mut CacheTransformScratch|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
-        let maximum = if allow_cache { max_cache_bits } else { 0 };
+        let maximum = if allow_cache && quality > 25 {
+            max_cache_bits
+        } else {
+            0
+        };
         if cache_scratch.output.capacity() < source.len()
             && let Some(mut reusable) = result_pool.pop()
         {

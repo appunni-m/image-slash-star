@@ -6599,7 +6599,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d46af7a9d552bf497fa7e04f6fad8dd9adefa8b6762cffd0ba60f0e192bdebfc`; matrix `4c21817b81b1212e87be6afc2097d5a83dbae34d025da7124e5d1c8abdff84da`.
+- Current fixture integrity only: manifest `bb195c932ceccb3725d8e70f8079c4dd1b95d2f6d1d200edba04b9c28f9e48c2`; matrix `5f53c7f532f4c4fafe152fdb8fe6df75b02d07f6857873c606946f71f45aa59f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7694,7 +7694,28 @@ gain.
 The current fixture matrix contains 2,277 total rows: 1,793 decode /
 inspect / verify rows and 484 encode rows. Of those, 1,793 decode rows and
 452 encode rows are active; 32 planned encode rows remain. The separate
-target-only fault lane contains 48 rows.
+target-only fault lane contains 49 rows.
+
+### WebP lossless options — 2026-10-17
+
+Added ten active Pillow-backed WebP encode rows for quality 0/100, method 0,
+partial and transparent alpha, method 5 quality boundaries, and method 6. The
+lossless path now forwards its quality and method options into the VP8L
+encoder. A histogram clamp correction matches libwebp's single-tile rule for
+small power-of-two frames. The exact selected option rows passed after
+reference generation.
+
+Coverage MCP identified the large-image histogram-growth path as an open gap.
+The attempted method-5 wide high-entropy row differed from Pillow by eight
+encoded bytes and was removed. A passing method-4 sampling fixture did not
+exercise the growth body. Focused LLVM reports have unverified source identity
+and unknown test attribution; they are useful for locating code only and do not
+establish aggregate coverage gains.
+
+The current fixture matrix contains 2,287 total rows: 1,793 decode /
+inspect / verify rows and 494 encode rows. Of those, 1,793 decode rows and
+462 encode rows are active; 32 planned encode rows remain. The separate
+target-only fault lane contains 49 rows.
 
 
 ### AVIF generic 12-bit I444 alpha length guard — 2026-10-17

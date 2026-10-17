@@ -4396,6 +4396,42 @@ formats:
     - id: enc_lossless
       description: 
       params: {'lossless': True}
+    - id: enc_lossless_quality_0
+      description: Lossless quality zero uses Pillow's fastest compression setting while preserving decoded pixels
+      params: {'lossless': True, 'quality': 0, 'method': 4}
+    - id: enc_lossless_quality_100
+      description: Lossless quality one hundred maximizes compression effort while preserving decoded pixels
+      params: {'lossless': True, 'quality': 100, 'method': 4}
+    - id: enc_lossless_method_0
+      description: VP8L method zero selects its low-effort lossless transform path
+      params: {'lossless': True, 'quality': 80, 'method': 0}
+    - id: enc_lossless_method_0_palette
+      description: VP8L method zero retains the sorted palette path for a 16-color input
+      source_format: webp
+      source_asset: lossless_palette16.webp
+      params: {'lossless': True, 'quality': 80, 'method': 0}
+    - id: enc_lossless_method_0_partial_alpha
+      description: VP8L method zero uses its fixed predictor path with partial-alpha RGBA input
+      source_format: png
+      source_asset: webp_lossless_rgba_red_green_mismatch.png
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_0_transparent_alpha
+      description: VP8L method zero preserves low-effort predictor parity for transparent pixels with hidden RGB
+      source_format: png
+      source_asset: alpha_partial.png
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_5_quality_74
+      description: VP8L method five below quality 75 uses its normal color-cache search
+      params: {'lossless': True, 'quality': 74, 'method': 5}
+    - id: enc_lossless_method_5_quality_80
+      description: VP8L method five at quality 80 also trials output without a color cache
+      params: {'lossless': True, 'quality': 80, 'method': 5}
+    - id: enc_lossless_method_6
+      description: VP8L method six increases lossless transform search effort
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_method_6_quality_100_token
+      description: VP8L method six at quality 100 uses exhaustive transform search with token-aware output parity
+      params: {'lossless': True, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_sampling_checkpoint
       description: A wide high-entropy RGB source checks token-aware lossless byte parity
       source_format: png

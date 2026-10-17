@@ -45,6 +45,13 @@ pub enum ColorType {
     Rgba8,
 }
 
+/// Compression effort selected by the caller for VP8L image streams.
+#[derive(Clone, Copy)]
+pub(crate) struct LosslessEncodeOptions {
+    pub(crate) quality: u8,
+    pub(crate) method: u8,
+}
+
 /// Error encountered while encoding lossless WebP data.
 #[derive(Debug)]
 pub enum EncodingError {
@@ -74,6 +81,10 @@ const VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_MAX_PALETTE_ENTRIES: usize = 256;
+const VP8L_MAX_HUFFMAN_IMAGE_SIZE: usize = 2_600;
+const VP8L_MIN_HUFFMAN_BITS: u8 = 2;
+const VP8L_MAX_HUFFMAN_BITS: u8 = 9;
+const VP8L_MAX_TRANSFORM_BITS: u8 = 6;
 const WEBP_ALPHA_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
 const WEBP_ALPHA_PALETTE_PACKING_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_PALETTE_CHECKPOINT_PIXELS: usize = 1_024;
@@ -1150,11 +1161,16 @@ fn channels(pixel: u32) -> [usize; 4] {
     ]
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the thin wrapper forwards explicit stream settings with disjoint reusable scratch buffers"
+)]
 fn write_image_stream<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
+    config: ImageStreamConfig,
     output_scratch: &mut Vec<u8>,
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
@@ -1164,8 +1180,7 @@ fn write_image_stream<C: BitWriterCheckpoint>(
         pixels,
         width,
         write_meta_huffman_bit,
-        3,
-        80,
+        config,
         11,
         output_scratch,
         token_scratch,
@@ -1184,8 +1199,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     pixels: &[u32],
     width: usize,
     write_meta_huffman_bit: bool,
-    histogram_bits: u8,
-    quality: u32,
+    config: ImageStreamConfig,
     max_cache_bits: u8,
     output_scratch: &mut Vec<u8>,
     token_scratch: &mut TokenStreamScratch,
@@ -1195,9 +1209,13 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
     let mut candidates = backward_refs::candidates(
         pixels,
         width,
-        write_meta_huffman_bit,
-        quality,
-        max_cache_bits,
+        backward_refs::CandidateOptions {
+            allow_cache: write_meta_huffman_bit,
+            quality: config.quality,
+            max_cache_bits,
+            reference_low_effort: config.reference_low_effort,
+            hash_chain_low_effort: config.hash_chain_low_effort,
+        },
         &mut token_scratch.candidates,
         token,
     )?;
@@ -1228,8 +1246,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
                     TokenStreamConfig {
                         write_meta_huffman_bit,
                         cache_bits,
-                        histogram_bits,
-                        quality,
+                        image: config,
                     },
                     token_scratch,
                     token,
@@ -1342,8 +1359,21 @@ struct ImageStreamScratch {
 struct TokenStreamConfig {
     write_meta_huffman_bit: bool,
     cache_bits: u8,
+    image: ImageStreamConfig,
+}
+
+#[derive(Clone, Copy)]
+struct ImageStreamConfig {
     histogram_bits: u8,
     quality: u32,
+    reference_low_effort: bool,
+    hash_chain_low_effort: bool,
+}
+
+struct PaletteInput {
+    width: usize,
+    height: usize,
+    colors: Vec<u32>,
 }
 
 #[cfg_attr(coverage, inline(never))]
@@ -1574,9 +1604,14 @@ fn write_token_stream<C: BitWriterCheckpoint>(
     let TokenStreamConfig {
         write_meta_huffman_bit,
         cache_bits,
+        image,
+    } = config;
+    let ImageStreamConfig {
         histogram_bits,
         quality,
-    } = config;
+        reference_low_effort,
+        hash_chain_low_effort,
+    } = image;
     w.write_bits(u64::from(cache_bits != 0), 1)?;
     if cache_bits != 0 {
         w.write_bits(u64::from(cache_bits), 4)?;
@@ -1642,8 +1677,12 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                 &scratch.meta_pixels,
                 meta_width,
                 false,
-                3,
-                quality,
+                ImageStreamConfig {
+                    histogram_bits: 3,
+                    quality,
+                    reference_low_effort,
+                    hash_chain_low_effort,
+                },
                 0,
                 &mut scratch.meta_output,
                 meta_scratch.as_mut(),
@@ -1853,6 +1892,57 @@ enum EntropyMode {
     SubtractGreen,
     SpatialSubtractGreen,
     Palette,
+}
+
+#[derive(Clone, Copy)]
+struct FrameEncodeConfig {
+    quality: u8,
+    method: u8,
+    histogram_bits: u8,
+    transform_bits: u8,
+}
+
+fn huffman_tile_count(width: usize, height: usize, bits: u8) -> usize {
+    width
+        .div_ceil(1 << bits)
+        .saturating_mul(height.div_ceil(1 << bits))
+}
+
+fn frame_encode_config(
+    width: usize,
+    height: usize,
+    has_palette: bool,
+    options: LosslessEncodeOptions,
+) -> FrameEncodeConfig {
+    let palette_bias: u8 = if has_palette { 9 } else { 7 };
+    let mut histogram_bits = palette_bias
+        .saturating_sub(options.method)
+        .clamp(VP8L_MIN_HUFFMAN_BITS, VP8L_MAX_HUFFMAN_BITS);
+    while histogram_bits < VP8L_MAX_HUFFMAN_BITS
+        && huffman_tile_count(width, height, histogram_bits) > VP8L_MAX_HUFFMAN_IMAGE_SIZE
+    {
+        histogram_bits += 1;
+    }
+    // Match libwebp's `ClampBits`: only step down while the next finer tile
+    // size still produces a single histogram tile. Checking the current size
+    // here drops one bit too far for exact power-of-two images (for example,
+    // 32×32 method-zero frames), changing the predictor sampling field.
+    while histogram_bits > VP8L_MIN_HUFFMAN_BITS
+        && huffman_tile_count(width, height, histogram_bits - 1) == 1
+    {
+        histogram_bits -= 1;
+    }
+    let max_transform_bits = match options.method {
+        0..=3 => VP8L_MAX_TRANSFORM_BITS,
+        4 => 5,
+        _ => 4,
+    };
+    FrameEncodeConfig {
+        quality: options.quality,
+        method: options.method,
+        histogram_bits,
+        transform_bits: histogram_bits.min(max_transform_bits),
+    }
 }
 
 fn pixels_are_grayscale(pixels: &[u32]) -> bool {
@@ -2178,17 +2268,25 @@ fn subtract_green_with_checkpoint(
 fn apply_palette<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &mut [u32],
-    width: usize,
-    height: usize,
-    mut palette: Vec<u32>,
+    input: PaletteInput,
+    config: ImageStreamConfig,
     scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<(), EncodingError> {
     check_token(token)?;
-    if let Some(token) = token {
-        minimize_palette_deltas_with_checkpoint(&mut palette, token)?;
-    } else {
-        minimize_palette_deltas(&mut palette);
+    let PaletteInput {
+        width,
+        height,
+        colors,
+    } = input;
+    let mut palette = colors;
+    let low_effort = config.reference_low_effort;
+    if !low_effort {
+        if let Some(token) = token {
+            minimize_palette_deltas_with_checkpoint(&mut palette, token)?;
+        } else {
+            minimize_palette_deltas(&mut palette);
+        }
     }
     let encoded_length = if palette.len() > 17 && palette.last() == Some(&0) {
         palette.len() - 1
@@ -2213,8 +2311,12 @@ fn apply_palette<C: BitWriterCheckpoint>(
         &palette_delta[..encoded_length],
         encoded_length,
         false,
-        3,
-        20,
+        ImageStreamConfig {
+            histogram_bits: 3,
+            quality: 20,
+            reference_low_effort: false,
+            hash_chain_low_effort: config.hash_chain_low_effort,
+        },
         0,
         &mut scratch.output,
         &mut scratch.tokens,
@@ -2283,8 +2385,7 @@ fn apply_palette<C: BitWriterCheckpoint>(
         &pixels[..packed_len],
         packed_width,
         true,
-        5,
-        80,
+        config,
         maximum_cache_bits,
         &mut scratch.output,
         &mut scratch.tokens,
@@ -2304,7 +2405,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     is_alpha: bool,
     entropy_mode: EntropyMode,
     red_and_blue_zero: bool,
-    transform_bits: u8,
+    config: FrameEncodeConfig,
     palette: Vec<u32>,
     token: Option<&crate::CancellationToken>,
     checkpoint: C,
@@ -2331,12 +2432,21 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
         w.write_bits(0x0, 3)?; // version
 
         if entropy_mode == EntropyMode::Palette {
+            let image_config = ImageStreamConfig {
+                histogram_bits: config.histogram_bits,
+                quality: u32::from(config.quality),
+                reference_low_effort: config.method == 0,
+                hash_chain_low_effort: config.method == 0,
+            };
             apply_palette(
                 w,
                 pixels,
-                width as usize,
-                height as usize,
-                palette,
+                PaletteInput {
+                    width: width as usize,
+                    height: height as usize,
+                    colors: palette,
+                },
+                image_config,
                 scratch,
                 token,
             )?;
@@ -2354,6 +2464,12 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 entropy_mode,
                 EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
             );
+            let image_config = ImageStreamConfig {
+                histogram_bits: config.histogram_bits,
+                quality: u32::from(config.quality),
+                reference_low_effort: config.method == 0,
+                hash_chain_low_effort: config.method == 0,
+            };
             if use_subtract_green {
                 w.write_bits(1, 1)?;
                 w.write_bits(2, 2)?;
@@ -2369,13 +2485,33 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 // Mode 12 is a fast predictor for grayscale RGB. Variable
                 // alpha changes the per-tile choice, so use the full selector
                 // for grayscale RGBA frames that contain nonopaque pixels.
-                let predictor_bits = if grayscale && !has_nonopaque_alpha {
-                    predictor::apply_fixed(
+                let predictor_bits = if config.method == 0 {
+                    predictor::apply_fixed::<true, false>(
                         pixels,
                         width as usize,
                         height as usize,
-                        transform_bits,
+                        config.transform_bits,
+                        11,
+                        &mut scratch.predictor,
+                        token,
+                    )?
+                } else if grayscale && !has_nonopaque_alpha {
+                    predictor::apply_fixed::<false, true>(
+                        pixels,
+                        width as usize,
+                        height as usize,
+                        config.transform_bits,
                         12,
+                        &mut scratch.predictor,
+                        token,
+                    )?
+                } else if config.method >= 5 {
+                    predictor::select_and_apply_for_method(
+                        pixels,
+                        width as usize,
+                        height as usize,
+                        config.transform_bits,
+                        config.method,
                         &mut scratch.predictor,
                         token,
                     )?
@@ -2384,7 +2520,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         pixels,
                         width as usize,
                         height as usize,
-                        transform_bits,
+                        config.transform_bits,
                         &mut scratch.predictor,
                         token,
                     )?
@@ -2399,6 +2535,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     scratch.predictor.modes(),
                     predictor_width,
                     false,
+                    image_config,
                     &mut scratch.output,
                     &mut scratch.tokens,
                     token,
@@ -2410,8 +2547,8 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     pixels,
                     width as usize,
                     height as usize,
-                    transform_bits,
-                    80,
+                    config.transform_bits,
+                    i32::from(config.quality),
                     &mut scratch.cross_color,
                     token,
                 )?;
@@ -2424,6 +2561,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     scratch.cross_color.image(),
                     color_width,
                     false,
+                    image_config,
                     &mut scratch.output,
                     &mut scratch.tokens,
                     token,
@@ -2436,6 +2574,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                 pixels,
                 width as usize,
                 true,
+                image_config,
                 &mut scratch.output,
                 &mut scratch.tokens,
                 token,
@@ -2585,6 +2724,7 @@ fn encode_frame(
     width: u32,
     height: u32,
     color: ColorType,
+    options: LosslessEncodeOptions,
     token: Option<&crate::CancellationToken>,
     scratch: &mut ImageStreamScratch,
 ) -> Result<Vec<u8>, EncodingError> {
@@ -2634,15 +2774,31 @@ fn encode_frame(
 
     let palette = collect_palette(&pixels, token)?;
     let palette_size = (palette.len() <= VP8L_MAX_PALETTE_ENTRIES).then_some(palette.len());
-    let transform_bits = if palette_size.is_some() { 5 } else { 3 };
-    let (entropy_mode, red_and_blue_zero) = analyze_entropy(
-        &pixels,
+    let config = frame_encode_config(
         width as usize,
         height as usize,
-        palette_size,
-        transform_bits,
-        token,
-    )?;
+        palette_size.is_some(),
+        options,
+    );
+    let (entropy_mode, red_and_blue_zero) = if options.method == 0 {
+        (
+            if palette_size.is_some() {
+                EntropyMode::Palette
+            } else {
+                EntropyMode::SpatialSubtractGreen
+            },
+            true,
+        )
+    } else {
+        analyze_entropy(
+            &pixels,
+            width as usize,
+            height as usize,
+            palette_size,
+            config.transform_bits,
+            token,
+        )?
+    };
     check_token(token)?;
 
     match token {
@@ -2653,7 +2809,7 @@ fn encode_frame(
             is_alpha,
             entropy_mode,
             red_and_blue_zero,
-            transform_bits,
+            config,
             palette,
             Some(token),
             TokenBitWriterCheckpoint {
@@ -2670,7 +2826,7 @@ fn encode_frame(
             is_alpha,
             entropy_mode,
             red_and_blue_zero,
-            transform_bits,
+            config,
             palette,
             None,
             NoopBitWriterCheckpoint,
@@ -2715,8 +2871,12 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         palette_delta,
         palette_len,
         false,
-        3,
-        20,
+        ImageStreamConfig {
+            histogram_bits: 3,
+            quality: 20,
+            reference_low_effort: false,
+            hash_chain_low_effort: false,
+        },
         0,
         output_scratch,
         token_scratch,
@@ -2729,8 +2889,12 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         packed,
         packed_width,
         true,
-        5,
-        32,
+        ImageStreamConfig {
+            histogram_bits: 5,
+            quality: 32,
+            reference_low_effort: false,
+            hash_chain_low_effort: false,
+        },
         2,
         output_scratch,
         token_scratch,
@@ -3122,8 +3286,32 @@ impl WebPEncoder {
         color: ColorType,
         token: Option<&crate::CancellationToken>,
     ) -> Result<Vec<u8>, EncodingError> {
+        self.encode_with_options_and_token(
+            data,
+            width,
+            height,
+            color,
+            LosslessEncodeOptions {
+                quality: 80,
+                method: 4,
+            },
+            token,
+        )
+    }
+
+    /// Encode image data with caller-selected VP8L quality and method.
+    #[cfg_attr(coverage, inline(never))]
+    pub(crate) fn encode_with_options_and_token(
+        &mut self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+        color: ColorType,
+        options: LosslessEncodeOptions,
+        token: Option<&crate::CancellationToken>,
+    ) -> Result<Vec<u8>, EncodingError> {
         let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
-        let mut frame = encode_frame(data, width, height, color, token, scratch)?;
+        let mut frame = encode_frame(data, width, height, color, options, token, scratch)?;
         check_token(token)?;
 
         // The ordinary path has no caller-visible checkpoint during the final

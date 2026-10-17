@@ -33,6 +33,7 @@
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 const SAMPLING_CHECKPOINT_PIXELS: usize = 1_024;
+const MAX_SAMPLING_BITS: u8 = 9;
 
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
@@ -431,13 +432,13 @@ pub(super) fn optimize_sampling(
     full_width: usize,
     full_height: usize,
     bits: u8,
+    max_bits: u8,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u8> {
-    const MAX_BITS: u8 = 9;
     let original_width = subsample_size(full_width, bits);
     let original_height = subsample_size(full_height, bits);
     let mut best_bits = bits;
-    while best_bits < MAX_BITS {
+    while best_bits < max_bits {
         checkpoint(token)?;
         let next_square = 1_usize << (best_bits + 1 - bits);
         let square = 1_usize << (best_bits - bits);
@@ -636,7 +637,14 @@ pub(super) fn select_and_apply(
             }
         }
     }
-    let best_bits = optimize_sampling(&mut scratch.image, width, height, bits, token)?;
+    let best_bits = optimize_sampling(
+        &mut scratch.image,
+        width,
+        height,
+        bits,
+        MAX_SAMPLING_BITS,
+        token,
+    )?;
     scratch
         .image
         .truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));

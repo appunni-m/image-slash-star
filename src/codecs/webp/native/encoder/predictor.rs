@@ -33,6 +33,10 @@ const ARGB_BLACK: u32 = 0xff00_0000;
 const MODE_COUNT: usize = 14;
 const HISTOGRAM_SIZE: usize = 4 * 256;
 const TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
+const MIN_TRANSFORM_BITS: u8 = 2;
+const MAX_TRANSFORM_BITS: u8 = 6;
+const MAX_LEGACY_SAMPLING_BITS: u8 = 9;
+const MAX_PREDICTOR_IMAGE_SIZE: usize = 1 << 14;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
@@ -46,6 +50,7 @@ type CheckpointResult<T> = Result<T, super::EncodingError>;
 #[derive(Default)]
 pub(crate) struct PredictorScratch {
     modes: Vec<u32>,
+    candidate_modes: Vec<u32>,
     original: Vec<u32>,
     upper: Vec<u32>,
     current: Vec<u32>,
@@ -186,41 +191,27 @@ fn tile_histogram(
     let end_x = (start_x + tile_size).min(width);
     let end_y = (start_y + tile_size).min(height);
     let mut histogram = [0_u32; HISTOGRAM_SIZE];
+    let max_x = end_x - start_x;
+    let have_left = usize::from(start_x > 0);
+    let context_start_x = start_x - have_left;
+    let context_width = max_x + have_left + 1;
     upper.resize(width + 1, 0);
     current.resize(width + 1, 0);
     if start_y > 0 {
-        upper[..width].copy_from_slice(&source[(start_y - 1) * width..start_y * width]);
-        if start_y < height {
-            upper[width] = source[start_y * width];
-        }
+        let row_start = (start_y - 1) * width + context_start_x;
+        upper[context_start_x..context_start_x + context_width]
+            .copy_from_slice(&source[row_start..row_start + context_width]);
     }
     for (row_index, y) in (start_y..end_y).enumerate() {
         if row_index.is_multiple_of(16) {
             checkpoint(token)?;
         }
-        // A token-aware tile scan must not hide an entire image-width row copy
-        // between checkpoints. Keep the ordinary no-token path on the
-        // original bulk copy because Pillow has no caller work budget.
-        if let Some(token) = token {
-            let mut copied = 0;
-            while copied < width {
-                let end = copied
-                    .saturating_add(TRANSFORM_CHECKPOINT_PIXELS)
-                    .min(width);
-                current[copied..end].copy_from_slice(&source[y * width + copied..y * width + end]);
-                copied = end;
-                if copied.is_multiple_of(TRANSFORM_CHECKPOINT_PIXELS) {
-                    checkpoint(Some(token))?;
-                }
-            }
-        } else {
-            current[..width].copy_from_slice(&source[y * width..(y + 1) * width]);
-        }
-        current[width] = if y + 1 < height {
-            source[(y + 1) * width]
-        } else {
-            0
-        };
+        // Copy only the tile and its predictor context. This matches the
+        // reference tile scan and avoids repeated full-row copies.
+        let row_copy_width = max_x + have_left + usize::from(y + 1 < height);
+        let row_start = y * width + context_start_x;
+        current[context_start_x..context_start_x + row_copy_width]
+            .copy_from_slice(&source[row_start..row_start + row_copy_width]);
         for (column_index, x) in (start_x..end_x).enumerate() {
             if column_index.is_multiple_of(256) {
                 checkpoint(token)?;
@@ -285,7 +276,7 @@ fn spatial_cost(
     clippy::arithmetic_side_effects,
     reason = "the caller validates the source length and matching mode grid before this reference traversal"
 )]
-fn apply_modes(
+fn apply_modes<const LOW_EFFORT: bool>(
     source: &mut [u32],
     width: usize,
     height: usize,
@@ -363,7 +354,11 @@ fn apply_modes(
                     predict(mode, current[x - 1], upper[x - 1], upper[x], upper[x + 1])
                 };
                 let mut residual = subtract_pixels(current[x], prediction);
-                if current[x] >> 24 == 0 {
+                // libwebp's low-effort path uses `PredictBatch` directly and
+                // does not run the hidden-RGB cleanup performed by
+                // `GetResidual`. Keep this compile-time selected so the
+                // method-four pixel loop has no added runtime branch.
+                if !LOW_EFFORT && current[x] >> 24 == 0 {
                     residual &= 0xff00_0000;
                     current[x] = prediction & 0x00ff_ffff;
                     if x == 0 && y != 0 {
@@ -403,6 +398,31 @@ pub(crate) fn select_and_apply(
     width: usize,
     height: usize,
     bits: u8,
+    scratch: &mut PredictorScratch,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u8> {
+    select_and_apply_with_sampling_limit(
+        source,
+        width,
+        height,
+        bits,
+        MAX_LEGACY_SAMPLING_BITS,
+        scratch,
+        token,
+    )
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "validated encoder geometry bounds tile arithmetic and the selected mode fits its stored byte"
+)]
+fn select_and_apply_with_sampling_limit(
+    source: &mut [u32],
+    width: usize,
+    height: usize,
+    bits: u8,
+    max_sampling_bits: u8,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u8> {
@@ -453,13 +473,175 @@ pub(crate) fn select_and_apply(
             }
         }
     }
-    apply_modes(source, width, height, bits, scratch, token)?;
+    apply_modes::<false>(source, width, height, bits, scratch, token)?;
     let modes = &mut scratch.modes;
-    let best_bits = optimize_sampling(modes, width, height, bits, token)?;
+    let best_bits = optimize_sampling(modes, width, height, bits, max_sampling_bits, token)?;
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
+    Ok(best_bits)
+}
+
+fn subsample_size(size: usize, bits: u8) -> usize {
+    size.div_ceil(1_usize << bits)
+}
+
+fn clamp_transform_bits(width: usize, height: usize, bits: u8) -> u8 {
+    let mut bits = bits.clamp(MIN_TRANSFORM_BITS, MAX_TRANSFORM_BITS);
+    let mut image_size = subsample_size(width, bits).saturating_mul(subsample_size(height, bits));
+    while bits < MAX_TRANSFORM_BITS && image_size > MAX_PREDICTOR_IMAGE_SIZE {
+        bits = bits.saturating_add(1);
+        image_size = subsample_size(width, bits).saturating_mul(subsample_size(height, bits));
+    }
+    while bits > MIN_TRANSFORM_BITS && image_size == 1 {
+        let finer_bits = bits.saturating_sub(1);
+        let finer_size =
+            subsample_size(width, finer_bits).saturating_mul(subsample_size(height, finer_bits));
+        if finer_size != 1 {
+            break;
+        }
+        bits = finer_bits;
+        image_size = finer_size;
+    }
+    bits
+}
+
+fn shannon_entropy(counts: &[u32]) -> u64 {
+    let total = counts.iter().copied().fold(0_u32, u32::saturating_add);
+    let mut entropy = super::backward_refs::fast_slog(total);
+    for &count in counts {
+        entropy = entropy.saturating_sub(super::backward_refs::fast_slog(count));
+    }
+    entropy
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "validated image geometry bounds sampling grids and VP8L predictor tile counts"
+)]
+fn select_sampling(
+    source: &[u32],
+    width: usize,
+    height: usize,
+    bits: u8,
+    scratch: &mut PredictorScratch,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u64> {
+    let tile_size = 1_usize << bits;
+    let tiles_per_row = subsample_size(width, bits);
+    let tiles_per_column = subsample_size(height, bits);
+    let PredictorScratch {
+        candidate_modes: modes,
+        upper,
+        current,
+        ..
+    } = scratch;
+    modes.resize(tiles_per_row * tiles_per_column, ARGB_BLACK);
+    modes.fill(ARGB_BLACK);
+
+    let mut accumulated = [0_u32; HISTOGRAM_SIZE];
+    let mut predictor_counts = [0_u32; MODE_COUNT];
+    for tile_y in 0..tiles_per_column {
+        for tile_x in 0..tiles_per_row {
+            checkpoint(token)?;
+            let index = tile_y * tiles_per_row + tile_x;
+            let left_mode = (tile_x > 0).then(|| ((modes[index - 1] >> 8) & 0xff) as usize);
+            let above_mode =
+                (tile_y > 0).then(|| ((modes[index - tiles_per_row] >> 8) & 0xff) as usize);
+            let mut best_mode = 0;
+            let mut best_cost = i64::MAX;
+            let mut best_histogram = [0_u32; HISTOGRAM_SIZE];
+            for mode in 0..MODE_COUNT {
+                let histogram = tile_histogram(
+                    source,
+                    width,
+                    height,
+                    tile_x * tile_size,
+                    tile_y * tile_size,
+                    tile_size,
+                    mode,
+                    upper,
+                    current,
+                    token,
+                )?;
+                let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
+                if cost < best_cost {
+                    best_cost = cost;
+                    best_mode = mode;
+                    best_histogram = histogram;
+                }
+            }
+            for (total, selected) in accumulated.iter_mut().zip(best_histogram) {
+                *total += selected;
+            }
+            modes[index] = ARGB_BLACK | ((best_mode as u32) << 8);
+            predictor_counts[best_mode] += 1;
+        }
+    }
+
+    let mut cost = shannon_entropy(&predictor_counts);
+    for plane in 0..4 {
+        cost = cost.saturating_add(shannon_entropy(
+            &accumulated[plane * 256..(plane + 1) * 256],
+        ));
+    }
+    Ok(cost)
+}
+
+/// Applies libwebp's bounded min/max sampling search for methods five and six.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "validated image geometry bounds sampling grids and VP8L predictor tile counts"
+)]
+pub(crate) fn select_and_apply_for_method(
+    source: &mut [u32],
+    width: usize,
+    height: usize,
+    bits: u8,
+    method: u8,
+    scratch: &mut PredictorScratch,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<u8> {
+    let max_bits = clamp_transform_bits(width, height, bits);
+    let min_hint = max_bits.saturating_sub(2_u8.saturating_mul(method.saturating_sub(4)));
+    let min_bits = clamp_transform_bits(width, height, min_hint);
+    if min_bits == max_bits {
+        return select_and_apply_with_sampling_limit(
+            source,
+            width,
+            height,
+            max_bits,
+            MAX_TRANSFORM_BITS,
+            scratch,
+            token,
+        );
+    }
+
+    let mut best_bits = min_bits;
+    let mut best_cost = u64::MAX;
+    for candidate_bits in min_bits..=max_bits {
+        let cost = select_sampling(source, width, height, candidate_bits, scratch, token)?;
+        if cost < best_cost {
+            best_cost = cost;
+            best_bits = candidate_bits;
+            std::mem::swap(&mut scratch.modes, &mut scratch.candidate_modes);
+        }
+    }
+    let best_bits = optimize_sampling(
+        &mut scratch.modes,
+        width,
+        height,
+        best_bits,
+        MAX_TRANSFORM_BITS,
+        token,
+    )?;
+    scratch
+        .modes
+        .truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));
+    apply_modes::<false>(source, width, height, best_bits, scratch, token)?;
     Ok(best_bits)
 }
 
@@ -470,7 +652,7 @@ pub(crate) fn select_and_apply(
     clippy::cast_possible_truncation,
     reason = "validated encoder geometry bounds tile arithmetic and the caller-selected mode fits its stored byte"
 )]
-pub(crate) fn apply_fixed(
+pub(crate) fn apply_fixed<const LOW_EFFORT: bool, const RESAMPLE_MODES: bool>(
     source: &mut [u32],
     width: usize,
     height: usize,
@@ -490,9 +672,13 @@ pub(crate) fn apply_fixed(
         );
         modes.fill(ARGB_BLACK | ((mode as u32) << 8));
     }
-    apply_modes(source, width, height, bits, scratch, token)?;
+    apply_modes::<LOW_EFFORT>(source, width, height, bits, scratch, token)?;
     let modes = &mut scratch.modes;
-    let best_bits = optimize_sampling(modes, width, height, bits, token)?;
+    let best_bits = if RESAMPLE_MODES {
+        optimize_sampling(modes, width, height, bits, MAX_LEGACY_SAMPLING_BITS, token)?
+    } else {
+        bits
+    };
     modes.truncate(
         ((width + (1 << best_bits) - 1) >> best_bits)
             * ((height + (1 << best_bits) - 1) >> best_bits),

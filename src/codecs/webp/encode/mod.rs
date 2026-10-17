@@ -230,7 +230,14 @@ fn encode_pixels(
     let prepared = prepare_pixels(img, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let encoded = if opts.lossless == Some(true) {
-        encode_lossless(&prepared, img.width, img.height, lossless_encoder, token)
+        encode_lossless(
+            &prepared,
+            img.width,
+            img.height,
+            opts,
+            lossless_encoder,
+            token,
+        )
     } else {
         encode_lossy(
             &prepared,
@@ -996,12 +1003,27 @@ fn encode_lossless(
     pixels: &PreparedPixels<'_>,
     width: u32,
     height: u32,
+    opts: &WebPEncodeOptions,
     encoder: &mut super::native::WebPEncoder,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
-    encoder
-        .encode_with_token(&pixels.bytes, width, height, pixels.color, token)
-        .map_err(encode_error)
+    let options = super::native::LosslessEncodeOptions {
+        quality: opts.quality.unwrap_or(80),
+        method: opts.method.unwrap_or(4),
+    };
+    let encoded = if options.quality == 80 && options.method == 4 {
+        encoder.encode_with_token(&pixels.bytes, width, height, pixels.color, token)
+    } else {
+        encoder.encode_with_options_and_token(
+            &pixels.bytes,
+            width,
+            height,
+            pixels.color,
+            options,
+            token,
+        )
+    };
+    encoded.map_err(encode_error)
 }
 
 /// Lossy VP8 encoding — own pure-Rust implementation.

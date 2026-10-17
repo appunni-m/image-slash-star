@@ -25,7 +25,7 @@
 )]
 
 pub(crate) use self::decoder::{DecodingError, LoopCount, WebPDecoder};
-pub(crate) use self::encoder::{ColorType, EncodingError, WebPEncoder};
+pub(crate) use self::encoder::{ColorType, EncodingError, LosslessEncodeOptions, WebPEncoder};
 
 mod alpha_blending;
 mod byteorder_lite;
