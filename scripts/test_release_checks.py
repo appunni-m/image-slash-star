@@ -2044,6 +2044,60 @@ class BenchmarkOracleArchiveTests(unittest.TestCase):
                 [call.args[0] for call in sleep.call_args_list], [1, 2]
             )
 
+    def test_truncated_content_length_response_retries_before_caching(self) -> None:
+        archive_data = b"verified benchmark oracle archive"
+        checksum = hashlib.sha256(archive_data).hexdigest()
+
+        class Response(io.BytesIO):
+            def __init__(self, body: bytes, content_length: int) -> None:
+                super().__init__(body)
+                self.headers = {"Content-Length": str(content_length)}
+
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", checksum),
+                patch.object(
+                    setup_benchmark_oracle.urllib.request,
+                    "urlopen",
+                    side_effect=[
+                        Response(archive_data[:8], len(archive_data)),
+                        Response(archive_data, len(archive_data)),
+                    ],
+                ) as urlopen,
+                patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
+            ):
+                setup_benchmark_oracle.ensure_archive(archive)
+
+            self.assertEqual(archive.read_bytes(), archive_data)
+            self.assertEqual(list(Path(directory).iterdir()), [archive])
+            self.assertEqual(urlopen.call_count, 2)
+            sleep.assert_called_once_with(1)
+
+    def test_close_delimited_truncated_response_retries_before_caching(self) -> None:
+        archive_data = b"verified benchmark oracle archive"
+        checksum = hashlib.sha256(archive_data).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "oracle.tar.gz"
+            with (
+                patch.object(setup_benchmark_oracle, "SHA256", checksum),
+                patch.object(
+                    setup_benchmark_oracle.urllib.request,
+                    "urlopen",
+                    side_effect=[
+                        io.BytesIO(archive_data[:8]),
+                        io.BytesIO(archive_data),
+                    ],
+                ) as urlopen,
+                patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
+            ):
+                setup_benchmark_oracle.ensure_archive(archive)
+
+            self.assertEqual(archive.read_bytes(), archive_data)
+            self.assertEqual(list(Path(directory).iterdir()), [archive])
+            self.assertEqual(urlopen.call_count, 2)
+            sleep.assert_called_once_with(1)
+
     def test_permanent_http_error_is_not_retried(self) -> None:
         for status in (404, 501):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
@@ -2071,7 +2125,7 @@ class BenchmarkOracleArchiveTests(unittest.TestCase):
                 urlopen.assert_called_once()
                 sleep.assert_not_called()
 
-    def test_checksum_invalid_download_is_never_cached_or_retried(self) -> None:
+    def test_checksum_invalid_download_is_retried_and_never_cached(self) -> None:
         archive_data = b"unverified benchmark oracle archive"
         with tempfile.TemporaryDirectory() as directory:
             archive = Path(directory) / "oracle.tar.gz"
@@ -2081,7 +2135,10 @@ class BenchmarkOracleArchiveTests(unittest.TestCase):
                 patch.object(
                     setup_benchmark_oracle.urllib.request,
                     "urlopen",
-                    return_value=io.BytesIO(archive_data),
+                    side_effect=[
+                        io.BytesIO(archive_data)
+                        for _ in range(setup_benchmark_oracle.DOWNLOAD_ATTEMPTS)
+                    ],
                 ) as urlopen,
                 patch.object(setup_benchmark_oracle.time, "sleep") as sleep,
             ):
@@ -2090,8 +2147,10 @@ class BenchmarkOracleArchiveTests(unittest.TestCase):
 
             self.assertFalse(archive.exists())
             self.assertEqual(list(Path(directory).iterdir()), [])
-            urlopen.assert_called_once()
-            sleep.assert_not_called()
+            self.assertEqual(urlopen.call_count, setup_benchmark_oracle.DOWNLOAD_ATTEMPTS)
+            self.assertEqual(
+                [call.args[0] for call in sleep.call_args_list], [1, 2]
+            )
 
 
 class CoverageCliTests(unittest.TestCase):

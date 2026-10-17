@@ -8,7 +8,6 @@ import http.client
 import json
 import os
 from pathlib import Path
-import shutil
 import socket
 import ssl
 import subprocess
@@ -43,6 +42,10 @@ TRANSIENT_NETWORK_ERRNOS = frozenset(
 )
 
 
+class DownloadChecksumMismatch(Exception):
+    """A downloaded response did not match the pinned archive checksum."""
+
+
 def sha256(path: Path) -> str:
     """Return the lowercase SHA-256 digest of an archive file."""
 
@@ -56,6 +59,8 @@ def sha256(path: Path) -> str:
 def is_transient_download_failure(error: BaseException) -> bool:
     """Return whether a download failure is likely to recover on retry."""
 
+    if isinstance(error, DownloadChecksumMismatch):
+        return True
     if isinstance(error, urllib.error.HTTPError):
         return error.code in TRANSIENT_HTTP_STATUS_CODES
     if isinstance(error, urllib.error.URLError):
@@ -88,16 +93,30 @@ def download_archive(archive: Path) -> None:
                     delete=False,
                 ) as temporary:
                     temporary_path = Path(temporary.name)
-                    shutil.copyfileobj(response, temporary)
+                    copied_bytes = 0
+                    while chunk := response.read(128 * 1024):
+                        copied_bytes += len(chunk)
+                        temporary.write(chunk)
+                    content_length = getattr(response, "headers", {}).get(
+                        "Content-Length"
+                    )
+                    if content_length is not None:
+                        expected_bytes = int(content_length)
+                        if copied_bytes < expected_bytes:
+                            raise http.client.IncompleteRead(
+                                b"", expected_bytes - copied_bytes
+                            )
                     temporary.flush()
                     os.fsync(temporary.fileno())
 
             actual = sha256(temporary_path)
             if actual != SHA256:
-                raise SystemExit("official TurboJPEG archive checksum mismatch")
+                raise DownloadChecksumMismatch(
+                    "official TurboJPEG archive checksum mismatch"
+                )
             os.replace(temporary_path, archive)
             return
-        except (http.client.HTTPException, OSError) as error:
+        except (DownloadChecksumMismatch, http.client.HTTPException, OSError) as error:
             retryable = is_transient_download_failure(error)
             if isinstance(error, urllib.error.HTTPError):
                 if error.fp is not None:
@@ -106,6 +125,8 @@ def download_archive(archive: Path) -> None:
             else:
                 failure = str(error)
             if not retryable or attempt == DOWNLOAD_ATTEMPTS:
+                if isinstance(error, DownloadChecksumMismatch):
+                    raise SystemExit(str(error)) from error
                 raise
         finally:
             if temporary_path is not None:
