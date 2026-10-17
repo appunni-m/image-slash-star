@@ -2191,7 +2191,7 @@
       "inspect_cursor_hotspot": null,
       "inspect_source_byte_order": "big",
       "inspect_source_byte_order_origin": "pillow_fixture",
-      "asset_sha256": "88d758ddbc04e3fab7c12ac38c14cb0e35c07bab67d74dfc997f10305a40b7d3",
+      "asset_sha256": "465f00da37c237c0b94fd6537a6cd2888c1bb1aa88c95821dcda4f0c98bd36a8",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -2225,7 +2225,7 @@
       "ref_bit_depth_origin": "pillow_fixture",
       "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_be_unsigned16_wraparound_predictor_tiff.bin",
       "ref_bytes": 16,
-      "ref_sha256": "07822398b6986233a08a9555cfde5e101e6482fa3107d37e4b76631197d46872",
+      "ref_sha256": "b6e268aab4491c42fd095133f3ea44c6dd1c4c455c027a7571943f6e1c93259a",
       "ref_mode": "I;16B",
       "ref_size": [
         4,

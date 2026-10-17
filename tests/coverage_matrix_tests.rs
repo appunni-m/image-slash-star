@@ -1,10 +1,9 @@
 //! Coverage matrix tests — driven by tests/fixtures/coverage_matrix.json
 //! Each row in the matrix is one test assertion.
-//! Decode: load asset → decode → compare Pillow samples in the public transfer layout.
+//! Decode: load asset → decode → compare pixel bytes with PIL reference bytes.
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
 use std::any::Any;
-use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::ffi::OsString;
 use std::fs;
@@ -4322,39 +4321,33 @@ fn assert_pixel_parity(
         ));
     }
 
-    let expected_bytes = pillow_pixel_bytes_for_transfer_mode(expected)?;
     let actual_bytes = actual.as_bytes();
-    if actual_bytes.len() != expected_bytes.len() {
+    if actual_bytes.len() != expected.bytes.len() {
         return Err(format!(
             "byte length mismatch: actual {}, expected {}",
             actual_bytes.len(),
-            expected_bytes.len()
+            expected.bytes.len()
         ));
     }
 
-    if actual_bytes == expected_bytes.as_ref() {
+    if actual_bytes == expected.bytes.as_slice() {
         return Ok(());
     }
 
     let bytes_per_pixel = mode_bytes_per_pixel(expected.mode.as_deref())
         .unwrap_or_else(|| usize::from(actual.color.bytes_per_pixel()));
     let width = expected.width.unwrap_or(actual.width).max(1);
-    let mismatch_count = count_mismatched_bytes(expected_bytes.as_ref(), actual_bytes);
-    let examples = first_pixel_mismatches(
-        expected_bytes.as_ref(),
-        actual_bytes,
-        width,
-        bytes_per_pixel,
-    )
-    .into_iter()
-    .map(|m| {
-        format!(
-            "byte {} pixel {} ({}, {}) channel {} expected {:02x} actual {:02x}",
-            m.byte_index, m.pixel_index, m.x, m.y, m.channel, m.expected, m.actual
-        )
-    })
-    .collect::<Vec<_>>()
-    .join("; ");
+    let mismatch_count = count_mismatched_bytes(&expected.bytes, actual_bytes);
+    let examples = first_pixel_mismatches(&expected.bytes, actual_bytes, width, bytes_per_pixel)
+        .into_iter()
+        .map(|m| {
+            format!(
+                "byte {} pixel {} ({}, {}) channel {} expected {:02x} actual {:02x}",
+                m.byte_index, m.pixel_index, m.x, m.y, m.channel, m.expected, m.actual
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
 
     Err(format!(
         "{} mismatched byte(s) out of {} for mode {}; first: {}",
@@ -4363,26 +4356,6 @@ fn assert_pixel_parity(
         expected.mode.as_deref().unwrap_or("?"),
         examples
     ))
-}
-
-fn pillow_pixel_bytes_for_transfer_mode(
-    expected: &PixelParityRef,
-) -> Result<Cow<'_, [u8]>, String> {
-    if expected.mode.as_deref() != Some("I;16B") {
-        return Ok(Cow::Borrowed(&expected.bytes));
-    }
-
-    // Pillow preserves TIFF's big-endian I;16B bytes. The public L16 transfer
-    // layout is little-endian, so compare the same samples in that layout.
-    if !expected.bytes.len().is_multiple_of(2) {
-        return Err("Pillow I;16B reference has an incomplete sample".to_owned());
-    }
-
-    let mut bytes = Vec::with_capacity(expected.bytes.len());
-    for sample in expected.bytes.chunks_exact(2) {
-        bytes.extend_from_slice(&[sample[1], sample[0]]);
-    }
-    Ok(Cow::Owned(bytes))
 }
 
 fn expected_frame_disposal(value: &str) -> Result<img::FrameDisposal, String> {

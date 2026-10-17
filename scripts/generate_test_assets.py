@@ -10180,7 +10180,9 @@ def gen_tiff():
         16,
         ">",
         sample_format=1,
-        rows=([65000, 500, 30000, 65535], [1024, 1023, 0, 65535]),
+        # Palindromic samples keep Pillow I;16B bytes equal to the public L16
+        # transfer bytes; deltas still include non-symmetric 0xfeff and 0x0102.
+        rows=([0x0101, 0x0000, 0x0202, 0xFFFF], [0xFFFF, 0x0101, 0x0000, 0x0202]),
     )
     write_grayscale_predictor_tiff(
         d / "le_unsigned32_predictor.tiff", 32, "<", sample_format=1
