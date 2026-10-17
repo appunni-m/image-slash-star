@@ -321,6 +321,14 @@ FAULT_CONTRACTS = {
         "point": "tiff.ycbcr.full_resolution_length_mismatch",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_ycbcr_full_resolution_length_mismatch_custom_tags": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags",
+        "source_case": "decode:tiff:ycbcr_custom_tags_full_resolution_lzw_1x1",
+        "point": "tiff.ycbcr.full_resolution_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_ycbcr_rgb_output_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

@@ -278,6 +278,20 @@ fault_contracts:
       point: tiff.ycbcr.full_resolution_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_full_resolution_length_mismatch_custom_tags
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_tags_full_resolution_lzw_1x1
+    fault:
+      point: tiff.ycbcr.full_resolution_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_rgb_output_reservation_failure
     type: fault-contract
     operation: decode
@@ -5154,6 +5168,22 @@ formats:
       description: Default 2-by-2 YCbCr clumps split across aligned LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_2x2_two_strips.tiff
+    - id: ycbcr_custom_coefficients_lzw_2x2
+      description: Rec. 709 YCbCr coefficients in a compressed 2-by-2 TIFF
+      test_assets:
+      - ycbcr_custom_coefficients_lzw_2x2.tiff
+    - id: ycbcr_custom_reference_black_white_lzw_2x2
+      description: Limited-range YCbCr reference values in a compressed 2-by-2 TIFF
+      test_assets:
+      - ycbcr_custom_reference_black_white_lzw_2x2.tiff
+    - id: ycbcr_custom_coefficients_reference_black_white_lzw_2x2
+      description: Custom YCbCr coefficients and limited-range references together
+      test_assets:
+      - ycbcr_custom_coefficients_and_reference_black_white_lzw_2x2.tiff
+    - id: ycbcr_custom_tags_full_resolution_lzw_1x1
+      description: Custom YCbCr coefficients and limited-range references on full-resolution samples
+      test_assets:
+      - ycbcr_custom_tags_full_resolution_lzw_1x1.tiff
     - id: ycbcr_full_resolution_lzw_1x1
       description: Full-resolution 1-by-1 YCbCr samples in an LZW strip
       test_assets:

@@ -55,6 +55,13 @@ TWO_STRIP_CLUMPS = (
     (4, 24, 44, 64, 210, 50),
 )
 
+BASE_CLUMPS = (
+    (0, 0, 100, 50, 0, 100),
+    (0, 50, 100, 50, 50, 100),
+    (0, 100, 100, 50, 100, 100),
+    (0, 150, 100, 50, 150, 100),
+)
+
 
 def lzw_blocks(
     width: int, height: int, rows_per_strip: int, clumps: tuple[tuple[int, ...], ...]
@@ -118,6 +125,8 @@ def build_tiff(
     *,
     subsampling: tuple[int, int] | None,
     positioning: int | None,
+    coefficients: tuple[tuple[int, int], ...] | None = None,
+    reference_black_white: tuple[tuple[int, int], ...] | None = None,
 ) -> bytes:
     """Write a compact contiguous YCbCr TIFF with independent LZW strips."""
     blocks = lzw_blocks(width, height, rows_per_strip, clumps)
@@ -137,14 +146,27 @@ def build_tiff(
         entries.append((530, 3, list(subsampling)))
     if positioning is not None:
         entries.append((531, 3, [positioning]))
+    if coefficients is not None:
+        if len(coefficients) != 3:
+            raise ValueError("YCbCr coefficients must contain three rationals")
+        entries.append((529, 5, [value for pair in coefficients for value in pair]))
+    if reference_black_white is not None:
+        if len(reference_black_white) != 6:
+            raise ValueError("YCbCr reference black and white must contain six rationals")
+        entries.append((532, 5, [value for pair in reference_black_white for value in pair]))
     entries.sort()
+
+    def pack_values(field_type: int, values: list[int]) -> bytes:
+        scalar_type = "H" if field_type == 3 else "I"
+        return struct.pack("<" + scalar_type * len(values), *values)
+
+    def value_count(field_type: int, values: list[int]) -> int:
+        return len(values) // 2 if field_type == 5 else len(values)
 
     cursor = 8 + 2 + 12 * len(entries) + 4
     buffers: dict[int, tuple[int, bytes]] = {}
     for tag, field_type, values in entries:
-        packed = struct.pack(
-            "<" + ("H" if field_type == 3 else "I") * len(values), *values
-        )
+        packed = pack_values(field_type, values)
         if len(packed) > 4:
             cursor += cursor % 2
             buffers[tag] = (cursor, packed)
@@ -166,15 +188,13 @@ def build_tiff(
     for tag, field_type, values in entries:
         if tag == 273:
             values = block_offsets
-        packed = struct.pack(
-            "<" + ("H" if field_type == 3 else "I") * len(values), *values
-        )
+        packed = pack_values(field_type, values)
         value = (
             struct.pack("<I", buffers[tag][0])
             if len(packed) > 4
             else packed.ljust(4, b"\0")
         )
-        output.extend(struct.pack("<HHI", tag, field_type, len(values)) + value)
+        output.extend(struct.pack("<HHI", tag, field_type, value_count(field_type, values)) + value)
     output.extend(bytes(4))
     for offset, buffer in sorted(buffers.values()):
         output.extend(bytes(offset - len(output)))
@@ -186,7 +206,14 @@ def build_tiff(
     return bytes(output)
 
 
-def build_full_resolution_lzw_tiff(width: int, height: int, pixels: bytes) -> bytes:
+def build_full_resolution_lzw_tiff(
+    width: int,
+    height: int,
+    pixels: bytes,
+    *,
+    coefficients: tuple[tuple[int, int], ...] | None = None,
+    reference_black_white: tuple[tuple[int, int], ...] | None = None,
+) -> bytes:
     """Create a deterministic contiguous 1-by-1 YCbCr LZW source."""
     if width <= 0 or height <= 0 or len(pixels) != width * height * 3:
         raise ValueError("full-resolution YCbCr samples do not match image geometry")
@@ -204,6 +231,17 @@ def build_full_resolution_lzw_tiff(width: int, height: int, pixels: bytes) -> by
         (284, 3, [1]),
         (530, 3, [1, 1]),
     ]
+    if coefficients is not None:
+        if len(coefficients) != 3:
+            raise ValueError("YCbCr coefficients must contain three rationals")
+        entries.append((529, 5, [value for pair in coefficients for value in pair]))
+    if reference_black_white is not None:
+        if len(reference_black_white) != 6:
+            raise ValueError("YCbCr reference black and white must contain six rationals")
+        entries.append(
+            (532, 5, [value for pair in reference_black_white for value in pair])
+        )
+    entries.sort()
     cursor = 8 + 2 + 12 * len(entries) + 4
     buffers: dict[int, tuple[int, bytes]] = {}
     for tag, field_type, values in entries:
@@ -229,7 +267,8 @@ def build_full_resolution_lzw_tiff(width: int, height: int, pixels: bytes) -> by
             if len(packed) > 4
             else packed.ljust(4, b"\0")
         )
-        output.extend(struct.pack("<HHI", tag, field_type, len(values)) + value)
+        value_count = len(values) // 2 if field_type == 5 else len(values)
+        output.extend(struct.pack("<HHI", tag, field_type, value_count) + value)
     output.extend(bytes(4))
     for offset, buffer in sorted(buffers.values()):
         output.extend(bytes(offset - len(output)))
@@ -259,6 +298,34 @@ def fixtures() -> dict[
         subsampling=(2, 2),
         positioning=2,
     )
+    custom_coefficients = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    custom_reference_black_white = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        reference_black_white=((16, 1), (235, 1), (128, 1), (240, 1), (128, 1), (240, 1)),
+    )
+    custom_coefficients_and_reference_black_white = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+        reference_black_white=((16, 1), (235, 1), (128, 1), (240, 1), (128, 1), (240, 1)),
+    )
     full_resolution_pixels = bytes(
         value
         for y in range(4)
@@ -266,6 +333,20 @@ def fixtures() -> dict[
         for value in (30 + 40 * x + 20 * y, 96 + 9 * x + 13 * y, 160 - 7 * x + 5 * y)
     )
     full_resolution = build_full_resolution_lzw_tiff(4, 4, full_resolution_pixels)
+    full_resolution_custom = build_full_resolution_lzw_tiff(
+        4,
+        4,
+        full_resolution_pixels,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+        reference_black_white=(
+            (16, 1),
+            (235, 1),
+            (128, 1),
+            (240, 1),
+            (128, 1),
+            (240, 1),
+        ),
+    )
     checkpoint_clumps = tuple(
         (
             (index * 17 + 11) % 256,
@@ -307,12 +388,69 @@ def fixtures() -> dict[
             {530: (2, 2), 531: 2},
             None,
         ),
+        "ycbcr_custom_coefficients_lzw_2x2.tiff": (
+            custom_coefficients,
+            (4, 4),
+            "fa0742fcea742c1e1ee51b4eedc289afe3dfe18e491ecb5cde9d669c2d97119c",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+            },
+            bytes.fromhex(
+                "002500002500001c00064e00388900065700388000064e000012003876300009"
+                "296a9fbf387630064400386d8d063b5b"
+            ),
+        ),
+        "ycbcr_custom_reference_black_white_lzw_2x2.tiff": (
+            custom_reference_black_white,
+            (4, 4),
+            "20ef7069dad35f4368a43e8a17d5106a274997632f16de33917740f30355f392",
+            {
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "003600003600002200005b0036a900006f00369500005b00000f0036822a"
+                "00001971aac736822a004800366f8c003552"
+            ),
+        ),
+        "ycbcr_custom_coefficients_and_reference_black_white_lzw_2x2.tiff": (
+            custom_coefficients_and_reference_black_white,
+            (4, 4),
+            "cc0b9abbf0f9741f8dd977611938d485be949664bb386c1b23a38abd1b52d66b",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "001800001800000d00004600308b00005100308000004600000200307527"
+                "00001b6ba6c9307527003b00306b8e003154"
+            ),
+        ),
         "ycbcr_full_resolution_lzw_1x1.tiff": (
             full_resolution,
             (4, 4),
             "a9ef8ac10e78a041a3b442685d6a85cc153d136972866ebd10fb03804bd13a7e",
             {530: (1, 1)},
             None,
+        ),
+        "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": (
+            full_resolution_custom,
+            (4, 4),
+            "23e5d86280e8ff4053b81cea57ba76715e5b21fd4fc56ee029936ed889d7d711",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (1, 1),
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "4906006a360e8c6651af97936818008c4842ad7882cfa9c4882933aa5a73cd8b"
+                "b4eebbf5a93c63cb6ca5ed9ce7ffccff"
+            ),
         ),
         "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": (
             checkpoint,
@@ -350,6 +488,8 @@ def verify_pillow_reference(
             284: tags.get(284, 1),
             530: tags.get(530),
             531: tags.get(531),
+            529: tags.get(529),
+            532: tags.get(532),
         }
         expected = {
             259: 5,
@@ -358,6 +498,8 @@ def verify_pillow_reference(
             284: 1,
             530: expected_tags.get(530),
             531: expected_tags.get(531),
+            529: expected_tags.get(529),
+            532: expected_tags.get(532),
         }
         if actual_tags != expected:
             raise RuntimeError(f"{name}: TIFF tags differ: {actual_tags!r}")
@@ -385,7 +527,11 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
+            "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
+            "ycbcr_custom_reference_black_white_lzw_2x2.tiff": "fc1dd50550aa040f323c221e107fb8edd30171e7889e86a7ae8b7244c0361122",
+            "ycbcr_custom_coefficients_and_reference_black_white_lzw_2x2.tiff": "c72ecf1c02ee1a18c9a7f41ae8917ce0668508de2555aee6172e486eb6103bb2",
             "ycbcr_full_resolution_lzw_1x1.tiff": "7a90e875697e13f98b23500bf9b4c9d5b83064b572daa102784bb84503cc167a",
+            "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": "ec170a210ddaf4c27f3cc69810a68ee666f57eb77001c860b8558583011e8248",
             "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
         }[name]
         actual_input_hash = sha256(data).hexdigest()

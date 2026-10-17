@@ -40,8 +40,8 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let sample_format = directory.one_or(339, 1);
     let color_map = directory.values(320);
     let extra_samples = directory.values(338);
-    let ycbcr_subsampling = if photometric == 6 && compression != 1 {
-        Some(ycbcr_subsampling(&directory)?)
+    let ycbcr_parameters = if photometric == 6 && compression != 1 {
+        Some(ycbcr_parameters(&directory)?)
     } else {
         None
     };
@@ -54,7 +54,8 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         color_map: color_map.as_deref(),
         extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar: directory.one_or(284, 1),
-        ycbcr_subsampling,
+        ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
+        ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
     verify_ignored_raw_band_count(&directory, width, height, layout)?;
     let (frame_count, complete_chain) = if basic {
@@ -255,8 +256,21 @@ pub(super) enum TiffLayout {
     Palette { bits: u8 },
     Cmyk8,
     Ycbcr8,
-    YcbcrFull8,
-    YcbcrSubsampled8,
+    YcbcrFull8 { conversion: YcbcrConversion },
+    YcbcrSubsampled8 { conversion: YcbcrConversion },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct YcbcrConversion {
+    pub(super) coefficients: [(u32, u32); 3],
+    pub(super) reference_black_white: [(u32, u32); 6],
+    pub(super) is_default: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct YcbcrParameters {
+    pub(super) subsampling: (usize, usize),
+    pub(super) conversion: YcbcrConversion,
 }
 
 impl TiffLayout {
@@ -273,8 +287,8 @@ impl TiffLayout {
             Self::Rgb8
             | Self::RgbIgnored8
             | Self::Ycbcr8
-            | Self::YcbcrFull8
-            | Self::YcbcrSubsampled8 => ImageMode::Rgb8,
+            | Self::YcbcrFull8 { .. }
+            | Self::YcbcrSubsampled8 { .. } => ImageMode::Rgb8,
             Self::Rgba8 => ImageMode::Rgba8,
             Self::Palette { .. } => ImageMode::P8,
             Self::Cmyk8 => ImageMode::Cmyk8,
@@ -292,6 +306,7 @@ pub(super) struct TiffLayoutParameters<'a> {
     pub(super) extra_samples: &'a [usize],
     pub(super) planar: usize,
     pub(super) ycbcr_subsampling: Option<(usize, usize)>,
+    pub(super) ycbcr_conversion: Option<YcbcrConversion>,
 }
 
 pub(super) fn layout_and_palette(
@@ -307,6 +322,7 @@ pub(super) fn layout_and_palette(
         extra_samples,
         planar,
         ycbcr_subsampling,
+        ycbcr_conversion,
     } = parameters;
     let invert = photometric == 0;
     let layout = match (photometric, samples, bits) {
@@ -334,15 +350,18 @@ pub(super) fn layout_and_palette(
         },
         (5, 4, 8) => TiffLayout::Cmyk8,
         (6, 3, 8) if compression == 1 => TiffLayout::Ycbcr8,
-        (6, 3, 8) => match ycbcr_subsampling.unwrap_or((2, 2)) {
-            (1, 1) => TiffLayout::YcbcrFull8,
-            (2, 2) => TiffLayout::YcbcrSubsampled8,
-            _ => {
-                return Err(CodecError::Malformed(
-                    "unsupported TIFF YCbCr subsampling".to_owned(),
-                ));
+        (6, 3, 8) => {
+            let conversion = ycbcr_conversion.malformed("TIFF YCbCr conversion is missing")?;
+            match ycbcr_subsampling.unwrap_or((2, 2)) {
+                (1, 1) => TiffLayout::YcbcrFull8 { conversion },
+                (2, 2) => TiffLayout::YcbcrSubsampled8 { conversion },
+                _ => {
+                    return Err(CodecError::Malformed(
+                        "unsupported TIFF YCbCr subsampling".to_owned(),
+                    ));
+                }
             }
-        },
+        }
         _ => {
             return Err(CodecError::Malformed(
                 "unsupported TIFF photometric/sample layout".to_owned(),
@@ -388,13 +407,28 @@ pub(super) fn layout_and_palette(
 /// default 2-by-2 clumps. Uncompressed files retain Pillow's legacy RGBX raw
 /// interpretation. Libtiff's RGBA conversion uses one chroma pair for each
 /// clump for either valid positioning value.
-pub(super) fn ycbcr_subsampling(directory: &Directory<'_>) -> CodecResult<(usize, usize)> {
-    validate_default_ycbcr_rationals(directory, 529, &[(299, 1000), (587, 1000), (114, 1000)])?;
-    validate_default_ycbcr_rationals(
-        directory,
-        532,
-        &[(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)],
-    )?;
+pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrParameters> {
+    const DEFAULT_COEFFICIENTS: [(u32, u32); 3] = [(299, 1000), (587, 1000), (114, 1000)];
+    const DEFAULT_REFERENCE_BLACK_WHITE: [(u32, u32); 6] =
+        [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
+    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
+    let reference_black_white =
+        read_ycbcr_rationals(directory, 532, DEFAULT_REFERENCE_BLACK_WHITE)?;
+    if coefficients[1].0 == 0 {
+        return Err(CodecError::Malformed(
+            "TIFF YCbCr green coefficient must be nonzero".to_owned(),
+        ));
+    }
+    if reference_black_white
+        .iter()
+        .any(|&(numerator, denominator)| {
+            f64::from(numerator) / f64::from(denominator) >= f64::from(i32::MAX) - 128.0
+        })
+    {
+        return Err(CodecError::Malformed(
+            "TIFF YCbCr reference value exceeds conversion limits".to_owned(),
+        ));
+    }
 
     let subsampling = match directory.field_type(530) {
         None => (2, 2),
@@ -438,23 +472,33 @@ pub(super) fn ycbcr_subsampling(directory: &Directory<'_>) -> CodecResult<(usize
         }
     }
 
-    Ok(subsampling)
+    let is_default = rational_values_match_default(&coefficients, &DEFAULT_COEFFICIENTS)
+        && rational_values_match_default(&reference_black_white, &DEFAULT_REFERENCE_BLACK_WHITE);
+    Ok(YcbcrParameters {
+        subsampling,
+        conversion: YcbcrConversion {
+            coefficients,
+            reference_black_white,
+            is_default,
+        },
+    })
 }
 
-fn validate_default_ycbcr_rationals(
+fn read_ycbcr_rationals<const N: usize>(
     directory: &Directory<'_>,
     tag: u16,
-    expected: &[(u32, u32)],
-) -> CodecResult<()> {
+    defaults: [(u32, u32); N],
+) -> CodecResult<[(u32, u32); N]> {
     let Some(field_type) = directory.field_type(tag) else {
-        return Ok(());
+        return Ok(defaults);
     };
-    if field_type != 5 || directory.value_count(tag) != Some(expected.len()) {
+    if field_type != 5 || directory.value_count(tag) != Some(N) {
         return Err(CodecError::Malformed(format!(
             "TIFF YCbCr tag {tag} has an unsupported field type or count"
         )));
     }
-    for (index, &(expected_numerator, expected_denominator)) in expected.iter().enumerate() {
+    let mut values = defaults;
+    for (index, value) in values.iter_mut().enumerate() {
         let (numerator, denominator) = directory
             .rational(tag, index)
             .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated")))?;
@@ -463,19 +507,21 @@ fn validate_default_ycbcr_rationals(
                 "TIFF YCbCr tag {tag} has a zero rational denominator"
             )));
         }
-        let actual_scaled = u64::from(numerator)
-            .checked_mul(u64::from(expected_denominator))
-            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} overflows")))?;
-        let expected_scaled = u64::from(expected_numerator)
-            .checked_mul(u64::from(denominator))
-            .ok_or_else(|| CodecError::Malformed(format!("TIFF YCbCr tag {tag} overflows")))?;
-        if actual_scaled != expected_scaled {
-            return Err(CodecError::Malformed(format!(
-                "custom TIFF YCbCr tag {tag} values are unsupported"
-            )));
-        }
+        *value = (numerator, denominator);
     }
-    Ok(())
+    Ok(values)
+}
+
+fn rational_values_match_default<const N: usize>(
+    actual: &[(u32, u32); N],
+    expected: &[(u32, u32); N],
+) -> bool {
+    actual.iter().zip(expected).all(
+        |(&(numerator, denominator), &(expected_numerator, expected_denominator))| {
+            u64::from(numerator).checked_mul(u64::from(expected_denominator))
+                == u64::from(expected_numerator).checked_mul(u64::from(denominator))
+        },
+    )
 }
 
 fn count_directories(data: &[u8], first_offset: usize, endian: Endian) -> (u32, bool) {

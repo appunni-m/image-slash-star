@@ -212,8 +212,8 @@ fn decode_ifd(
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
     let sample_format = directory.one_or(339, 1);
-    let ycbcr_subsampling = if photometric == 6 && compression != COMPRESSION_NONE {
-        Some(super::inspect::ycbcr_subsampling(&directory)?)
+    let ycbcr_parameters = if photometric == 6 && compression != COMPRESSION_NONE {
+        Some(super::inspect::ycbcr_parameters(&directory)?)
     } else {
         None
     };
@@ -239,7 +239,8 @@ fn decode_ifd(
         color_map: color_map.as_deref(),
         extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar,
-        ycbcr_subsampling,
+        ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
+        ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
     if fill_order == 2
         && compression == COMPRESSION_NONE
@@ -294,14 +295,14 @@ fn decode_ifd(
     let height_usize = height as usize;
     if matches!(
         layout,
-        TiffLayout::YcbcrFull8 | TiffLayout::YcbcrSubsampled8
+        TiffLayout::YcbcrFull8 { .. } | TiffLayout::YcbcrSubsampled8 { .. }
     ) && planar != 1
     {
         return Err(CodecError::Malformed(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
     }
-    if layout == TiffLayout::YcbcrSubsampled8 {
+    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
         let tiled = directory.field_type(324).is_some() || directory.field_type(325).is_some();
         if predictor != 1 || tiled {
             return Err(CodecError::Malformed(
@@ -334,7 +335,7 @@ fn decode_ifd(
         reason = "Validated dimensions, sample count, and bit depth bound this row-bit product."
     )]
     let row_bits = row_samples * usize::from(bits_per_sample);
-    let row_bytes = if layout == TiffLayout::YcbcrSubsampled8 {
+    let row_bytes = if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
         width_usize
             .div_ceil(2)
             .checked_mul(6)
@@ -346,7 +347,7 @@ fn decode_ifd(
         clippy::arithmetic_side_effects,
         reason = "The validated raster ceiling bounds the row-byte and height product."
     )]
-    let expected_total = if layout == TiffLayout::YcbcrSubsampled8 {
+    let expected_total = if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
         row_bytes
             .checked_mul(height_usize.div_ceil(2))
             .dimensions("TIFF YCbCr clump buffer size overflows")?
@@ -659,7 +660,7 @@ fn decode_ifd(
             .map(|strip_index| {
                 let first_row = strip_index.wrapping_mul(rows_per_strip);
                 let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
-                let stored_rows = if layout == TiffLayout::YcbcrSubsampled8 {
+                let stored_rows = if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
                     strip_rows.div_ceil(2)
                 } else {
                     strip_rows
@@ -723,7 +724,7 @@ fn decode_ifd(
         };
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
-        let stored_rows = if layout == TiffLayout::YcbcrSubsampled8 {
+        let stored_rows = if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
             strip_rows.div_ceil(2)
         } else {
             strip_rows
@@ -1608,14 +1609,14 @@ fn convert_pixels(
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
-        TiffLayout::YcbcrFull8 => {
-            convert_ycbcr_full_resolution(&mut pixels, (width, height), None)?;
+        TiffLayout::YcbcrFull8 { conversion } => {
+            convert_ycbcr_full_resolution(&mut pixels, (width, height), conversion, None)?;
             DecodedImage::new(width, height, pixels, ColorType::Rgb8)
         }
-        TiffLayout::YcbcrSubsampled8 => DecodedImage::new(
+        TiffLayout::YcbcrSubsampled8 { conversion } => DecodedImage::new(
             width,
             height,
-            convert_ycbcr_subsampled_2x2((width, height), &pixels, None)?,
+            convert_ycbcr_subsampled_2x2((width, height), &pixels, conversion, None)?,
             ColorType::Rgb8,
         ),
     };
@@ -1842,14 +1843,14 @@ fn convert_pixels_with_token(
             }
             DecodedImage::new(width, height, rgb, ColorType::Rgb8)
         }
-        TiffLayout::YcbcrFull8 => {
-            convert_ycbcr_full_resolution(&mut pixels, (width, height), Some(token))?;
+        TiffLayout::YcbcrFull8 { conversion } => {
+            convert_ycbcr_full_resolution(&mut pixels, (width, height), conversion, Some(token))?;
             DecodedImage::new(width, height, pixels, ColorType::Rgb8)
         }
-        TiffLayout::YcbcrSubsampled8 => DecodedImage::new(
+        TiffLayout::YcbcrSubsampled8 { conversion } => DecodedImage::new(
             width,
             height,
-            convert_ycbcr_subsampled_2x2((width, height), &pixels, Some(token))?,
+            convert_ycbcr_subsampled_2x2((width, height), &pixels, conversion, Some(token))?,
             ColorType::Rgb8,
         ),
     };
@@ -1868,7 +1869,24 @@ fn convert_pixels_with_token(
 fn convert_ycbcr_subsampled_2x2(
     dimensions: (u32, u32),
     samples: &[u8],
+    conversion: super::inspect::YcbcrConversion,
     token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    match YcbcrTables::new(conversion)?.as_ref() {
+        Some(tables) => {
+            convert_ycbcr_subsampled_2x2_with(dimensions, samples, token, |y, cb, cr| {
+                tables.to_rgb(y, cb, cr)
+            })
+        }
+        None => convert_ycbcr_subsampled_2x2_with(dimensions, samples, token, ycbcr_to_rgb_pixel),
+    }
+}
+
+fn convert_ycbcr_subsampled_2x2_with(
+    dimensions: (u32, u32),
+    samples: &[u8],
+    token: Option<&crate::CancellationToken>,
+    convert_pixel: impl Fn(u8, u8, u8) -> [u8; 3],
 ) -> CodecResult<Vec<u8>> {
     let (width, height) = dimensions;
     let width = width as usize;
@@ -1953,7 +1971,7 @@ fn convert_ycbcr_subsampled_2x2(
                     if x >= width {
                         continue;
                     }
-                    let pixel = ycbcr_to_rgb_pixel(y_sample, cb, cr);
+                    let pixel = convert_pixel(y_sample, cb, cr);
                     let pixel_index = y
                         .checked_mul(width)
                         .and_then(|row| row.checked_add(x))
@@ -1981,7 +1999,24 @@ fn convert_ycbcr_subsampled_2x2(
 fn convert_ycbcr_full_resolution(
     samples: &mut [u8],
     dimensions: (u32, u32),
+    conversion: super::inspect::YcbcrConversion,
     token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    match YcbcrTables::new(conversion)?.as_ref() {
+        Some(tables) => {
+            convert_ycbcr_full_resolution_with(samples, dimensions, token, |y, cb, cr| {
+                tables.to_rgb(y, cb, cr)
+            })
+        }
+        None => convert_ycbcr_full_resolution_with(samples, dimensions, token, ycbcr_to_rgb_pixel),
+    }
+}
+
+fn convert_ycbcr_full_resolution_with(
+    samples: &mut [u8],
+    dimensions: (u32, u32),
+    token: Option<&crate::CancellationToken>,
+    convert_pixel: impl Fn(u8, u8, u8) -> [u8; 3],
 ) -> CodecResult<()> {
     let (width, height) = dimensions;
     let pixel_count = (width as usize)
@@ -2014,9 +2049,133 @@ fn convert_ycbcr_full_resolution(
             crate::codecs::error::check_cancelled(token)?;
         }
         let [y, cb, cr] = [pixel[0], pixel[1], pixel[2]];
-        pixel.copy_from_slice(&ycbcr_to_rgb_pixel(y, cb, cr));
+        pixel.copy_from_slice(&convert_pixel(y, cb, cr));
     }
     Ok(())
+}
+
+/// Precomputed 8-bit conversion tables for non-default TIFF YCbCr tags.
+struct YcbcrTables {
+    red_from_cr: [i32; 256],
+    green_from_cb: [i32; 256],
+    green_from_cr: [i32; 256],
+    blue_from_cb: [i32; 256],
+    luma: [i32; 256],
+}
+
+impl YcbcrTables {
+    /// Build libtiff-compatible tables once for a page, outside its pixel loop.
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Validated TIFF rationals and libtiff's [-4096, 4096] table bounds keep all fixed-point products inside i32."
+    )]
+    fn new(conversion: super::inspect::YcbcrConversion) -> CodecResult<Option<Self>> {
+        if conversion.is_default {
+            return Ok(None);
+        }
+
+        let coefficients = conversion.coefficients.map(rational_to_f32);
+        let references = conversion.reference_black_white.map(rational_to_f32);
+        let [red_luma, green_luma, blue_luma] = coefficients;
+        // The inspector rejects zero numerators and zero denominators before
+        // creating this conversion; valid u32 rationals remain finite in f32.
+
+        let red_factor = 2.0_f32 - 2.0_f32 * red_luma;
+        let green_from_red_factor = red_luma * red_factor / green_luma;
+        let blue_factor = 2.0_f32 - 2.0_f32 * blue_luma;
+        let green_from_blue_factor = blue_luma * blue_factor / green_luma;
+        let red_scale = fixed_16_16(red_factor);
+        let green_from_red_scale = -fixed_16_16(green_from_red_factor);
+        let blue_scale = fixed_16_16(blue_factor);
+        let green_from_blue_scale = -fixed_16_16(green_from_blue_factor);
+
+        let mut tables = Self {
+            red_from_cr: [0; 256],
+            green_from_cb: [0; 256],
+            green_from_cr: [0; 256],
+            blue_from_cb: [0; 256],
+            luma: [0; 256],
+        };
+        for sample_code in u8::MIN..=u8::MAX {
+            let index = usize::from(sample_code);
+            let sample = i32::from(sample_code);
+            let chroma_code = sample - 128;
+            let cr = libtiff_code_to_value(
+                chroma_code,
+                references[4] - 128.0,
+                references[5] - 128.0,
+                127.0,
+            )?;
+            let cb = libtiff_code_to_value(
+                chroma_code,
+                references[2] - 128.0,
+                references[3] - 128.0,
+                127.0,
+            )?;
+            tables.red_from_cr[index] = (red_scale * cr + (1 << 15)) >> 16;
+            tables.blue_from_cb[index] = (blue_scale * cb + (1 << 15)) >> 16;
+            tables.green_from_cr[index] = green_from_red_scale * cr;
+            tables.green_from_cb[index] = green_from_blue_scale * cb + (1 << 15);
+            tables.luma[index] =
+                libtiff_code_to_value(sample, references[0], references[1], 255.0)?;
+        }
+        Ok(Some(tables))
+    }
+
+    /// Convert one pixel using only the precomputed component tables.
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Table construction bounds each component to [-4096, 4096] and all fixed-point channel sums fit i32."
+    )]
+    fn to_rgb(&self, y: u8, cb: u8, cr: u8) -> [u8; 3] {
+        let y = self.luma[usize::from(y)];
+        let cb_index = usize::from(cb);
+        let cr_index = usize::from(cr);
+        let red = (y + self.red_from_cr[cr_index]).clamp(0, 255);
+        let green = (y + ((self.green_from_cb[cb_index] + self.green_from_cr[cr_index]) >> 16))
+            .clamp(0, 255);
+        let blue = (y + self.blue_from_cb[cb_index]).clamp(0, 255);
+        [
+            red.to_le_bytes()[0],
+            green.to_le_bytes()[0],
+            blue.to_le_bytes()[0],
+        ]
+    }
+}
+
+fn rational_to_f32((numerator, denominator): (u32, u32)) -> f32 {
+    numerator as f32 / denominator as f32
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "Clamping to [0, 2] bounds the rounded fixed-point value to 131,073, which fits i32."
+)]
+fn fixed_16_16(value: f32) -> i32 {
+    ((value.clamp(0.0, 2.0) * (1 << 16) as f32) + 0.5).trunc() as i32
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "The inspector bounds reference values below i32::MAX, and the final conversion clamps to [-4096, 4096]."
+)]
+fn libtiff_code_to_value(
+    code: i32,
+    black: f32,
+    white: f32,
+    component_range: f32,
+) -> CodecResult<i32> {
+    let black_code = black.trunc() as i32;
+    let code_offset = code.checked_sub(black_code).ok_or_else(|| {
+        CodecError::Malformed("TIFF YCbCr sample offset exceeds conversion limits".to_owned())
+    })?;
+    let denominator = if white - black == 0.0 {
+        1.0
+    } else {
+        white - black
+    };
+    let value = code_offset as f32 * component_range / denominator;
+    Ok(value.clamp(-4096.0, 4096.0).trunc() as i32)
 }
 
 /// Apply libtiff's bounded 16-bit fixed-point conversion to one 8-bit sample.
