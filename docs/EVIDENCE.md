@@ -6575,7 +6575,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a0aa39a31a4cb519cc3ff4b3e54ced94846ce811d77e9ce9689f11844a36dcfb`; matrix `a60d8c91431253b5d6a92e9303a4a992be1a6bc640aaa45c8ea0b480819017e3`.
+- Current fixture integrity only: manifest `66a9e2ef962f27a41292108deccf1451988afc0673a9f5c1ca7296a295c7cfbf`; matrix `0e82dfd3f98f00a5a57b8a3e7b03ba36f56f07a4a98832b9ff1dc0c4c176150f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7640,5 +7640,34 @@ made.
 
 The current fixture matrix contains 2,275 total rows: 1,791 decode /
 inspect / verify rows and 484 encode rows. Of those, 1,791 decode rows and
+452 encode rows are active; 32 planned encode rows remain. The separate
+target-only fault lane contains 47 rows.
+
+### TIFF big-endian Gray16 LZW Predictor=2 parity — 2026-10-17
+
+Added active public row
+`decode:tiff:compression_lzw_be_unsigned16_predictor`. The fixture is a 4×2
+big-endian unsigned Gray16 TIFF using LZW compression and horizontal
+Predictor=2. The generated LZW stream contains the predictor bytes as literal
+codes; exact Pillow decoding validates the TIFF LZW stream and predictor
+reconstruction together. The input SHA-256 is
+`3599d2593242e2176e074e192728c47b4c0fe22ca57ed1bf58533affcb93cee8`.
+Pinned Pillow 12.2.0 reports mode `I;16B` and 16 output bytes with SHA-256
+`b6e268aab4491c42fd095133f3ea44c6dd1c4c455c027a7571943f6e1c93259a`.
+
+The palindromic samples preserve exact raw-byte parity between Pillow's
+big-endian mode and the public little-endian L16 transfer representation; the
+Predictor=2 deltas still exercise byte-asymmetric wraparound values `0xfeff`
+and `0x0102`. The selected public parity row passed 1/1. Coverage MCP's
+incremental comparison against the saved full report is incomparable: branch
+inventories differ (31,282 versus 31,392) and source/build receipts are absent.
+A selected-tests comparison against the matching big-endian Deflate case is
+limited and observes 32 additional branch locations, including TIFF LZW
+decode paths, but both reports have unverified source identity and unknown
+test attribution. These coordinates do not establish an aggregate coverage
+gain.
+
+The current fixture matrix contains 2,276 total rows: 1,792 decode /
+inspect / verify rows and 484 encode rows. Of those, 1,792 decode rows and
 452 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 47 rows.

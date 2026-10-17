@@ -9054,9 +9054,15 @@ def write_lzw_dictionary_saturation_tiff(path, pixel_count=4100):
 
 
 def write_grayscale_predictor_tiff(
-    path, bits, byte_order, photometric=1, sample_format=3, rows=None
+    path,
+    bits,
+    byte_order,
+    photometric=1,
+    sample_format=3,
+    rows=None,
+    compression=8,
 ):
-    """Write Deflate-compressed grayscale samples with horizontal prediction."""
+    """Write compressed grayscale samples with horizontal prediction."""
     width, height = 4, 2
     marker = b"II" if byte_order == "<" else b"MM"
     if bits == 16:
@@ -9079,12 +9085,19 @@ def write_grayscale_predictor_tiff(
         for value in row:
             predicted.extend(struct.pack(byte_order + format_code, (value - previous) & mask))
             previous = value
-    payload = zlib.compress(predicted)
+    if compression == 5:
+        # Direct literal codes keep fixture generation deterministic while the
+        # helper applies TIFF's code-width growth for longer sample streams.
+        payload = pack_lzw_codes_with_growth([256, *predicted, 257])
+    elif compression in (8, 32946):
+        payload = zlib.compress(predicted)
+    else:
+        raise ValueError(f"unsupported grayscale predictor compression {compression}")
     entries = [
         (256, 4, 1, width),
         (257, 4, 1, height),
         (258, 3, 1, bits),
-        (259, 3, 1, 8),
+        (259, 3, 1, compression),
         (262, 3, 1, photometric),
         (273, 4, 1, "pixels"),
         (277, 3, 1, 1),
@@ -10183,6 +10196,16 @@ def gen_tiff():
         # Palindromic samples keep Pillow I;16B bytes equal to the public L16
         # transfer bytes; deltas still include non-symmetric 0xfeff and 0x0102.
         rows=([0x0101, 0x0000, 0x0202, 0xFFFF], [0xFFFF, 0x0101, 0x0000, 0x0202]),
+    )
+    write_grayscale_predictor_tiff(
+        d / "be_unsigned16_lzw_predictor.tiff",
+        16,
+        ">",
+        sample_format=1,
+        # Palindromic samples preserve exact I;16B/L16 transfer bytes while
+        # deltas include non-symmetric 0xfeff/0x0102 and unsigned wraparound.
+        rows=([0x0101, 0x0000, 0x0202, 0xFFFF], [0xFFFF, 0x0101, 0x0000, 0x0202]),
+        compression=5,
     )
     write_grayscale_predictor_tiff(
         d / "le_unsigned32_predictor.tiff", 32, "<", sample_format=1

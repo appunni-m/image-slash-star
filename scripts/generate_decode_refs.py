@@ -1140,6 +1140,23 @@ def validate_tiff_claim(case_id, asset_name, data):
             actual not in expected if isinstance(expected, set) else actual != expected
         ):
             raise RuntimeError(f"TIFF compression is {actual}, expected {expected}")
+        if case_id == "compression_lzw_be_unsigned16_predictor":
+            bits = image.tag_v2.get(258, (8,))
+            bits = bits[0] if isinstance(bits, tuple) else bits
+            if (
+                data[:2] != b"MM"
+                or image.size != (4, 2)
+                or bits != 16
+                or actual != 5
+                or image.tag_v2.get(262) != 1
+                or image.tag_v2.get(277, 1) != 1
+                or image.tag_v2.get(317) != 2
+                or image.tag_v2.get(339, 1) != 1
+                or image.mode != "I;16B"
+            ):
+                raise RuntimeError(
+                    "TIFF big-endian Gray16 LZW predictor fixture differs from its claim"
+                )
         depth_claim = case_id.removeprefix("depth_")
         if case_id.startswith("depth_") and depth_claim.isdigit():
             expected_depth = int(depth_claim)
