@@ -99171,6 +99171,84 @@
           "error_contracts": {}
         },
         {
+          "id": "empty_dc_huffman_table_grayscale_fast",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "empty",
+          "description": "Baseline grayscale JPEG exercises Pillow recovery through the fast decoder's empty DC Huffman table",
+          "asset": "empty_dc_huffman_table_grayscale_fast.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "7fda920713bb5982e3dc04a8f1dc695189e8b62a22f2118e72a22a5efd5f96b8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1dad3cb56362cf934f41278fe27f561f388fe8284f70dda72f98035de1f4f2f",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_empty_dc_huffman_table_grayscale_fast_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "dqt_16bit",
           "type": "decode",
           "format": "jpeg",
@@ -192377,12 +192455,12 @@
     }
   },
   "summary": {
-    "total_rows": 2276,
-    "decode_rows": 1792,
+    "total_rows": 2277,
+    "decode_rows": 1793,
     "encode_rows": 484,
     "formats": 8,
-    "assets_available": 1789,
-    "decode_active": 1792,
+    "assets_available": 1790,
+    "decode_active": 1793,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

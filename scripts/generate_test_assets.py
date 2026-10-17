@@ -2810,6 +2810,9 @@ def gen_jpeg():
     d.joinpath("empty_dc_huffman_table.jpg").write_bytes(
         empty_jpeg_huffman_table(sampling_3x1, 0, 0)
     )
+    d.joinpath("empty_dc_huffman_table_grayscale_fast.jpg").write_bytes(
+        empty_jpeg_huffman_table(baseline_gray, 0, 0)
+    )
     d.joinpath("sampling_1x3.jpg").write_bytes(
         zero_sample_jpeg(baseline, 8, 24, 0x13)
     )

@@ -11589,6 +11589,58 @@
       ]
     },
     {
+      "id": "empty_dc_huffman_table_grayscale_fast",
+      "asset": "empty_dc_huffman_table_grayscale_fast.jpg",
+      "asset_sha256": "7fda920713bb5982e3dc04a8f1dc695189e8b62a22f2118e72a22a5efd5f96b8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/empty_dc_huffman_table_grayscale_fast.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "dqt_16bit",
       "asset": "dqt_16bit.jpg",
       "asset_sha256": "5bde1d952d80ca559924dddaf0d54d89e05977047ab87c1b44171eabd7bc1e8f",

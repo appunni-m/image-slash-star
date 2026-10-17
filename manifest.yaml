@@ -1197,6 +1197,10 @@ formats:
       description: Pillow recovers a zero symbol from an empty JPEG DC Huffman table
       test_assets:
       - empty_dc_huffman_table.jpg
+    - id: empty_dc_huffman_table_grayscale_fast
+      description: Baseline grayscale JPEG exercises Pillow recovery through the fast decoder's empty DC Huffman table
+      test_assets:
+      - empty_dc_huffman_table_grayscale_fast.jpg
     - id: dqt_16bit
       description: Baseline JPEG using sixteen-bit quantization table entries
       test_assets:

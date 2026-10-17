@@ -31,6 +31,30 @@ baseline is unavailable: its detailed observations do not reconcile with its
 reported totals, so Coverage MCP returns `incomparable`. No aggregate gain or
 full-suite regression conclusion is claimed.
 
+## JPEG empty DC Huffman table grayscale fast-path parity — 2026-10-17
+
+Added the public `empty_dc_huffman_table_grayscale_fast` decode row. Its full
+3,887-byte baseline grayscale JPEG replaces DC Huffman table 0 with a valid
+zero-symbol table. Pinned Pillow 12.2.0 verifies and decodes it as one 128x128
+`L` image. The complete input SHA-256 is
+`7fda920713bb5982e3dc04a8f1dc695189e8b62a22f2118e72a22a5efd5f96b8`; the
+exact 16,384-byte Pillow pixel reference SHA-256 is
+`f1dad3cb56362cf934f41278fe27f561f388fe8284f70dda72f98035de1f4f2f`.
+
+The selected `test_decode_matrix_jpeg` run passed exactly this row. A second
+selected run under `cargo +nightly-2026-07-16 llvm-cov` passed the same row and
+produced `target/release-evidence/coverage-jpeg-empty-dc-huffman-grayscale-fast-20261017.json`
+(SHA-256 `c43650e94a75e035742262fbb95f59c1322d99445ff798fa6e29c39c7b9975f3`).
+Coverage MCP reports 258/31,396 observed branches in this selected report and
+shows the optimized `decode_slow_fast` path reaching the overlong-code and
+empty-table recovery branches at lines 389–391. The saved 2026-10-16 full
+report lists `arm=true` at line 390 as missing; the selected report's LLVM
+branch data records the empty-values `arm=true` as taken. Both reports have
+unverified source/build identity and unknown test attribution, so this is
+coordinate-level reachability evidence only. The old report is stale and its
+observations do not reconcile with its totals; no aggregate coverage gain is
+claimed.
+
 ## Selected 10-bit I444 alpha coverage — 2026-10-17
 
 The existing `high_bitdepth_still_10bit_444_alpha_lossy_16x16` Pillow parity
@@ -6575,7 +6599,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e086f6a2973d944059841dd98859310be6d680a69898ebba10b6c4615f647c6f`; matrix `e65416861086c39eeda12ec1cdd80201a4b854f213fc4d59f9cca6ce74612e4c`.
+- Current fixture integrity only: manifest `f6f6fc9cba37da0f1fc9df380bf9e3af3d43e1c94b6769beb62785654791c928`; matrix `a197be809a619d270c5fcdb5f1ac1b736d12e133a8d1e67ed80353101bd99313`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7667,8 +7691,8 @@ decode paths, but both reports have unverified source identity and unknown
 test attribution. These coordinates do not establish an aggregate coverage
 gain.
 
-The current fixture matrix contains 2,276 total rows: 1,792 decode /
-inspect / verify rows and 484 encode rows. Of those, 1,792 decode rows and
+The current fixture matrix contains 2,277 total rows: 1,793 decode /
+inspect / verify rows and 484 encode rows. Of those, 1,793 decode rows and
 452 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 48 rows.
 
@@ -7700,7 +7724,7 @@ fault-injection branches in the conversion helper as missing. Source/build
 identity is unverified and test attribution is unknown, so these reports are
 coordinate evidence only; no aggregate coverage gain is claimed.
 
-The current fixture matrix contains 2,276 total rows: 1,792 decode /
-inspect / verify rows and 484 encode rows. Of those, 1,792 decode rows and
+The current fixture matrix contains 2,277 total rows: 1,793 decode /
+inspect / verify rows and 484 encode rows. Of those, 1,793 decode rows and
 452 encode rows are active; 32 planned encode rows remain. The separate
 target-only fault lane contains 48 rows.
