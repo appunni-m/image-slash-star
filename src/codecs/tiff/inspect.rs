@@ -105,7 +105,7 @@ fn verify_planar_offset_count(
     height: u32,
     samples: usize,
 ) -> CodecResult<()> {
-    // Missing TileByteCounts is accepted only for uncompressed tile offsets.
+    // Raw tile geometry supplies lengths for missing or nonnumeric byte counts.
     if directory.field_type(324).is_some() {
         let tile_width = directory
             .one(322)

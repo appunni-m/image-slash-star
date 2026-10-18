@@ -1398,6 +1398,12 @@ def validate_tiff_claim(case_id, asset_name, data):
             or image.tag_v2.tagtype.get(325) != 2
         ):
             raise RuntimeError("TIFF TileByteCounts is not ASCII on raw tiles")
+        if case_id == "tiled_undefined_byte_counts" and (
+            image.tag_v2.get(259, 1) != 1
+            or not all(image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325))
+            or image.tag_v2.tagtype.get(325) != 7
+        ):
+            raise RuntimeError("TIFF TileByteCounts is not UNDEFINED on raw tiles")
         if case_id == "tiled_predictor" and (
             image.tag_v2.get(259) not in (8, 32946) or image.tag_v2.get(317) != 2
         ):

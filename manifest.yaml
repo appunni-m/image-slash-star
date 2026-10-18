@@ -6137,6 +6137,10 @@ formats:
       description: Pillow derives uncompressed tile lengths when TileByteCounts has ASCII type
       test_assets:
       - ascii_tile_byte_counts.tiff
+    - id: tiled_undefined_byte_counts
+      description: Pillow derives uncompressed tile lengths when TileByteCounts has UNDEFINED type
+      test_assets:
+      - undefined_tile_byte_counts.tiff
     - id: tiled_predictor
       description: Deflate-compressed tiles with horizontal prediction
       test_assets:

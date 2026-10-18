@@ -157408,6 +157408,84 @@
           "error_contracts": {}
         },
         {
+          "id": "tiled_undefined_byte_counts",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "Pillow derives uncompressed tile lengths when TileByteCounts has UNDEFINED type",
+          "asset": "undefined_tile_byte_counts.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "6f4ed7b8e79a82e58c4edfed0a65407b251a480b116a3fc11a738966479d2131",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_undefined_tile_byte_counts_tiff.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "tiled_predictor",
           "type": "decode",
           "format": "tiff",
@@ -200583,12 +200661,12 @@
     }
   },
   "summary": {
-    "total_rows": 2381,
-    "decode_rows": 1885,
+    "total_rows": 2382,
+    "decode_rows": 1886,
     "encode_rows": 496,
     "formats": 8,
-    "assets_available": 1882,
-    "decode_active": 1885,
+    "assets_available": 1883,
+    "decode_active": 1886,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

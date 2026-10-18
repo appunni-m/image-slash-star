@@ -10492,6 +10492,7 @@ def gen_tiff():
         include_tile_byte_counts=False,
     )
     mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_byte_counts.tiff", 325, 2)
+    mutate_tiff_tag_type(d / "tiled.tiff", d / "undefined_tile_byte_counts.tiff", 325, 7)
     write_rgb_tiff(
         d / "tiled_deflate_plain.tiff",
         img,

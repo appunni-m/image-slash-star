@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,381 total rows: 1,885 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,885 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,382 total rows: 1,886 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,886 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF YCbCr rational edge parity — 2026-10-18
@@ -6892,7 +6892,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fb4304c23ee34a75bb4fe45ec1b311e2efd1e968a19ffe1e8684ae2c20ded0bc`; matrix `0fe2c5d8c930312e3b17c8f1e9fc676287e44200062d30743f041db081127e56`.
+- Current fixture integrity only: manifest `5bd916cb06d73f258cb5f3af2993a50fbeafe8216e741fcd6a4b0e302e1f2140`; matrix `013fc95c41c3dd0cba883bfc38fc732b4c3691df47e4401a9260ff908a2e35bb`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -383,7 +383,7 @@ fn decode_ifd(
         let byte_counts = match tile_byte_counts {
             Some(byte_counts) => byte_counts,
             None if compression == COMPRESSION_NONE
-                && matches!(directory.field_type(325), None | Some(2)) =>
+                && matches!(directory.field_type(325), None | Some(2 | 7)) =>
             {
                 Vec::new()
             }
@@ -3366,9 +3366,10 @@ fn validate_decode_field_types(directory: &Directory<'_>) -> CodecResult<()> {
         && directory.one_or(259, COMPRESSION_NONE) == COMPRESSION_NONE;
     for tag in [273, 278, 279, 284, 317, 324, 325] {
         let field_type = directory.field_type(tag);
-        let pillow_ignores_ascii_raw_tile_counts = tag == 325 && raw_tiles && field_type == Some(2);
+        let pillow_ignores_raw_tile_byte_counts =
+            tag == 325 && raw_tiles && matches!(field_type, Some(2 | 7));
         if field_type.is_some_and(|field_type| !matches!(field_type, 1 | 3 | 4))
-            && !pillow_ignores_ascii_raw_tile_counts
+            && !pillow_ignores_raw_tile_byte_counts
         {
             return Err(CodecError::Malformed(format!(
                 "TIFF tag {tag} has an unsupported field type"
