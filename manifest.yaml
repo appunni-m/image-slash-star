@@ -320,6 +320,20 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_general_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_4x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_1x2_clump_length_mismatch
     type: fault-contract
     operation: decode
@@ -8899,6 +8913,11 @@ formats:
       description: Two-frame 32x32 4:2:0 all-lossless AVIF sequence with a translated patch and supported large inter transform grid
       test_assets:
       - animated_lossless_inter_420_b32x32.avif
+      status: active
+    - id: animated_mixed_lossless_inter_b32_i420_64x64
+      description: Two-frame full-range 8-bit 4:2:0 AVIF sequence with lossy and qindex-zero lossless segments in a full-visible inter-coded B32x32 leaf
+      test_assets:
+      - animated_mixed_lossless_inter_b32_i420_64x64.avif
       status: active
     - id: animated_lossless_inter_420_b32x32_10bit
       description: Two-frame 32x32 10-bit full-range 4:2:0 all-lossless AVIF sequence with a translating patch and full-size B32x32 inter leaf

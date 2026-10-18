@@ -38870,6 +38870,166 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "animated_mixed_lossless_inter_b32_i420_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Two-frame full-range 8-bit 4:2:0 AVIF sequence with lossy and qindex-zero lossless segments in a full-visible inter-coded B32x32 leaf",
+          "asset": "animated_mixed_lossless_inter_b32_i420_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_mixed_lossless_inter_b32_i420_64x64_avif.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              64,
+              64
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 0,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_mixed_lossless_inter_b32_i420_64x64_avif_frame_0.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_mixed_lossless_inter_b32_i420_64x64_avif_frame_1.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "020f37d9f21d40884387bd7524feea9300b752eaf050f9a0282c977bdacd5c81",
+              "case": "mixed_lossless_inter_b32_i420_64x64",
+              "input_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
+              "repetition_count": -1
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "animated_lossless_inter_420_b32x32_10bit",
           "type": "decode",
           "format": "avif",
@@ -202043,12 +202203,12 @@
     }
   },
   "summary": {
-    "total_rows": 2398,
-    "decode_rows": 1898,
+    "total_rows": 2399,
+    "decode_rows": 1899,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1895,
-    "decode_active": 1898,
+    "assets_available": 1896,
+    "decode_active": 1899,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -202407,6 +202567,25 @@
       "verification": "fault-contract",
       "input": {
         "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_general_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_4x2"
       },
       "fault": {
         "point": "tiff.ycbcr.rgb_output_reservation",
