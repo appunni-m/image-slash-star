@@ -369,18 +369,12 @@ pub(super) fn layout_and_palette(
         (6, 3, 8) => {
             let conversion = ycbcr_conversion.malformed("TIFF YCbCr conversion is missing")?;
             let subsampling = ycbcr_subsampling.unwrap_or((2, 2));
-            match subsampling {
-                (1, 1) => TiffLayout::YcbcrFull8 { conversion },
-                (1, 2) | (2, 1) | (2, 2) | (4, 1) | (4, 2) | (4, 4) => {
-                    TiffLayout::YcbcrSubsampled8 {
-                        conversion,
-                        subsampling,
-                    }
-                }
-                _ => {
-                    return Err(CodecError::Malformed(
-                        "unsupported TIFF YCbCr subsampling".to_owned(),
-                    ));
+            if subsampling == (1, 1) {
+                TiffLayout::YcbcrFull8 { conversion }
+            } else {
+                TiffLayout::YcbcrSubsampled8 {
+                    conversion,
+                    subsampling,
                 }
             }
         }
@@ -439,31 +433,21 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
         read_ycbcr_rationals(directory, 532, DEFAULT_REFERENCE_BLACK_WHITE)?;
 
     let subsampling = match directory.field_type(530) {
-        None => (2, 2),
-        Some(3) if directory.value_count(530) == Some(2) => {
+        Some(1 | 3 | 4 | 6 | 8 | 9) if directory.value_count(530) == Some(2) => {
             let values = directory.values(530).ok_or_else(|| {
                 CodecError::Malformed("TIFF YCbCr subsampling is malformed".to_owned())
             })?;
             match values.as_slice() {
-                [1, 1] => (1, 1),
-                [1, 2] => (1, 2),
-                [2, 2] => (2, 2),
-                [2, 1] => (2, 1),
-                [4, 1] => (4, 1),
-                [4, 2] => (4, 2),
-                [4, 4] => (4, 4),
-                _ => {
-                    return Err(CodecError::Malformed(
-                        "unsupported TIFF YCbCr subsampling".to_owned(),
-                    ));
+                // Pillow ignores negative signed tag values and uses its 2-by-2
+                // default. Signed directory accessors represent those values
+                // with usize::MAX so they cannot enter decode geometry.
+                [horizontal, vertical] if *horizontal != usize::MAX && *vertical != usize::MAX => {
+                    (*horizontal, *vertical)
                 }
+                _ => (2, 2),
             }
         }
-        Some(_) => {
-            return Err(CodecError::Malformed(
-                "TIFF YCbCr subsampling must contain two SHORT values".to_owned(),
-            ));
-        }
+        _ => (2, 2),
     };
 
     let is_default = rational_values_match_default(&coefficients, &DEFAULT_COEFFICIENTS)

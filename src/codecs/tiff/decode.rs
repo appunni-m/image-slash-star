@@ -297,6 +297,16 @@ fn decode_ifd(
         TiffLayout::YcbcrSubsampled8 { subsampling, .. } => Some(subsampling),
         _ => None,
     };
+    if ycbcr_subsampling.is_some_and(|subsampling| {
+        !matches!(
+            subsampling,
+            (1, 1) | (1, 2) | (2, 1) | (2, 2) | (4, 1) | (4, 2) | (4, 4)
+        )
+    }) {
+        return Err(CodecError::Malformed(
+            "unsupported TIFF YCbCr subsampling".to_owned(),
+        ));
+    }
     if matches!(
         layout,
         TiffLayout::YcbcrFull8 { .. } | TiffLayout::YcbcrSubsampled8 { .. }
@@ -3174,6 +3184,13 @@ impl Endian {
         }
     }
 
+    fn i16_exact(self, bytes: [u8; 2]) -> i16 {
+        match self {
+            Endian::Little => i16::from_le_bytes(bytes),
+            Endian::Big => i16::from_be_bytes(bytes),
+        }
+    }
+
     pub(super) fn u32_exact(self, bytes: [u8; 4]) -> u32 {
         match self {
             Endian::Little => u32::from_le_bytes(bytes),
@@ -3244,6 +3261,13 @@ enum NumericKind {
     Bytes,
     Shorts,
     Longs,
+    SignedBytes,
+    SignedShorts,
+    SignedLongs,
+}
+
+fn signed_integer_as_usize(value: i64) -> usize {
+    usize::try_from(value).unwrap_or(usize::MAX)
 }
 
 /// Tags the TIFF model interprets and therefore never retains as container
@@ -3379,6 +3403,9 @@ impl<'a> Directory<'a> {
                 1 => Some(NumericKind::Bytes),
                 3 => Some(NumericKind::Shorts),
                 4 => Some(NumericKind::Longs),
+                6 if tag == 530 => Some(NumericKind::SignedBytes),
+                8 if tag == 530 => Some(NumericKind::SignedShorts),
+                9 if tag == 530 => Some(NumericKind::SignedLongs),
                 _ => None,
             };
             let type_size = match field_type {
@@ -3523,9 +3550,20 @@ impl<'a> Directory<'a> {
         };
         match entry.numeric_kind {
             NumericKind::Bytes => self.data.get(position).copied().map(usize::from),
+            NumericKind::SignedBytes => self
+                .data
+                .get(position)
+                .copied()
+                .map(|value| signed_integer_as_usize(i64::from(i8::from_ne_bytes([value])))),
             NumericKind::Shorts => {
                 let bytes = self.data.get(position..position.saturating_add(2))?;
                 Some(usize::from(self.endian.u16_exact([bytes[0], bytes[1]])))
+            }
+            NumericKind::SignedShorts => {
+                let bytes = self.data.get(position..position.saturating_add(2))?;
+                Some(signed_integer_as_usize(i64::from(
+                    self.endian.i16_exact([bytes[0], bytes[1]]),
+                )))
             }
             NumericKind::Longs => {
                 let bytes = self.data.get(position..position.saturating_add(4))?;
@@ -3534,6 +3572,13 @@ impl<'a> Directory<'a> {
                         .u32_exact([bytes[0], bytes[1], bytes[2], bytes[3]])
                         as usize,
                 )
+            }
+            NumericKind::SignedLongs => {
+                let bytes = self.data.get(position..position.saturating_add(4))?;
+                Some(signed_integer_as_usize(i64::from(
+                    self.endian
+                        .i32_exact([bytes[0], bytes[1], bytes[2], bytes[3]]),
+                )))
             }
         }
     }
@@ -3549,6 +3594,7 @@ impl<'a> Directory<'a> {
     pub(super) fn value_count(&self, tag: u16) -> Option<usize> {
         let field = self.fields.iter().find(|field| field.tag == tag)?;
         if matches!(field.field_type, 1 | 3 | 4)
+            || (tag == 530 && matches!(field.field_type, 6 | 8 | 9))
             || (matches!(tag, 529 | 532) && matches!(field.field_type, 5 | 10))
         {
             Some(field.count)
@@ -3575,9 +3621,21 @@ impl<'a> Directory<'a> {
         let mut values = Vec::with_capacity(entry.count);
         match entry.numeric_kind {
             NumericKind::Bytes => values.extend(bytes.iter().map(|&value| usize::from(value))),
+            NumericKind::SignedBytes => values.extend(
+                bytes
+                    .iter()
+                    .map(|&value| signed_integer_as_usize(i64::from(i8::from_ne_bytes([value])))),
+            ),
             NumericKind::Shorts => {
                 for chunk in bytes.as_chunks::<2>().0 {
                     values.push(usize::from(self.endian.u16_exact([chunk[0], chunk[1]])));
+                }
+            }
+            NumericKind::SignedShorts => {
+                for chunk in bytes.as_chunks::<2>().0 {
+                    values.push(signed_integer_as_usize(i64::from(
+                        self.endian.i16_exact([chunk[0], chunk[1]]),
+                    )));
                 }
             }
             NumericKind::Longs => {
@@ -3587,6 +3645,14 @@ impl<'a> Directory<'a> {
                             .u32_exact([chunk[0], chunk[1], chunk[2], chunk[3]])
                             as usize,
                     );
+                }
+            }
+            NumericKind::SignedLongs => {
+                for chunk in bytes.as_chunks::<4>().0 {
+                    values.push(signed_integer_as_usize(i64::from(
+                        self.endian
+                            .i32_exact([chunk[0], chunk[1], chunk[2], chunk[3]]),
+                    )));
                 }
             }
         }

@@ -21011,6 +21011,70 @@
         "verify_status": "ok"
       },
       {
+        "asset": "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff",
+        "class": "ycbcr_subsampling_unsupported_pair_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Unsupported YCbCr subsampling opens and verifies but fails during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_subsampling_zero_pair_lzw_2x2.tiff",
+        "class": "ycbcr_subsampling_zero_pair_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Zero YCbCr subsampling values fail during pixel decoding without panicking",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "ycbcr_zero_green_coefficient_denominator_lzw_2x2.tiff",
         "class": "ycbcr_zero_green_coefficient_denominator_lzw_2x2",
         "contracts": {
@@ -26664,21 +26728,21 @@
       "ico": 30,
       "jpeg": 100,
       "png": 61,
-      "tiff": 123,
+      "tiff": 125,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 631,
+      "pillow_fixture": 633,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 365,
+      "spec_violation": 367,
       "tolerated": 0,
       "truncated": 192
     },
-    "classes": 631,
+    "classes": 633,
     "formats": 8
   }
 }

@@ -340,6 +340,37 @@ def mutate_ifd_tag(
     raise ValueError(f"generated TIFF does not contain tag {tag}")
 
 
+def set_ifd_subsampling_values(data: bytes, field_type: int, values: tuple[int, ...]) -> bytes:
+    """Set tag 530 to supported integer or ASCII values."""
+    scalar_type = {1: "B", 2: "B", 3: "H", 4: "I", 6: "b", 8: "h", 9: "i"}.get(
+        field_type
+    )
+    if scalar_type is None:
+        raise ValueError("unsupported YCbCr subsampling fixture field type")
+    packed = struct.pack("<" + scalar_type * len(values), *values)
+    output = bytearray(data)
+    if output[:4] != b"II*\0":
+        raise ValueError("subsampling mutations require a generated little-endian TIFF")
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        if struct.unpack_from("<H", output, entry_offset)[0] != 530:
+            continue
+        struct.pack_into("<H", output, entry_offset + 2, field_type)
+        struct.pack_into("<I", output, entry_offset + 4, len(values))
+        if len(packed) <= 4:
+            output[entry_offset + 8 : entry_offset + 12] = packed.ljust(4, b"\0")
+        else:
+            payload_offset = len(output) + len(output) % 2
+            if payload_offset > len(output):
+                output.append(0)
+            output.extend(packed)
+            struct.pack_into("<I", output, entry_offset + 8, payload_offset)
+        return bytes(output)
+    raise ValueError("generated TIFF does not contain tag 530")
+
+
 def set_ifd_short_value(data: bytes, tag: int, value: int) -> bytes:
     """Replace one inline SHORT value in a generated little-endian TIFF."""
     if data[:4] != b"II*\0":
@@ -715,12 +746,117 @@ def fixtures() -> dict[
         coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
     )
 
+    byte_subsampling = set_ifd_subsampling_values(REFERENCE_CANDIDATE, 1, (2, 2))
+    long_subsampling = set_ifd_subsampling_values(REFERENCE_CANDIDATE, 4, (2, 2))
+    short_count_subsampling = set_ifd_subsampling_values(REFERENCE_CANDIDATE, 3, (2,))
+    unsupported_pair_subsampling = set_ifd_subsampling_values(
+        REFERENCE_CANDIDATE, 3, (3, 1)
+    )
+    zero_pair_subsampling = set_ifd_subsampling_values(REFERENCE_CANDIDATE, 3, (0, 0))
+    signed_byte_subsampling = set_ifd_subsampling_values(one_by_two, 6, (1, 2))
+    signed_short_subsampling = set_ifd_subsampling_values(one_by_two, 8, (1, 2))
+    signed_long_subsampling = set_ifd_subsampling_values(one_by_two, 9, (1, 2))
+    signed_short_negative_subsampling = set_ifd_subsampling_values(
+        REFERENCE_CANDIDATE, 8, (-1, 2)
+    )
+    signed_short_negative_vertical_subsampling = set_ifd_subsampling_values(
+        REFERENCE_CANDIDATE, 8, (1, -2)
+    )
+    ascii_subsampling = set_ifd_subsampling_values(REFERENCE_CANDIDATE, 2, (49, 49))
+    short_count_three_subsampling = set_ifd_subsampling_values(
+        REFERENCE_CANDIDATE, 3, (1, 2, 2)
+    )
+
     return {
         "ycbcr_subsampled_lzw_2x2.tiff": (
             REFERENCE_CANDIDATE,
             (4, 4),
             REFERENCE_PIXEL_SHA256,
             {530: (2, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_byte_type_lzw_2x2.tiff": (
+            byte_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: b"\x02\x02", 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_long_type_lzw_2x2.tiff": (
+            long_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: (2, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_short_count_lzw_2x2.tiff": (
+            short_count_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: (2,), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff": (
+            unsupported_pair_subsampling,
+            (4, 4),
+            None,
+            {530: (3, 1), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampling_zero_pair_lzw_2x2.tiff": (
+            zero_pair_subsampling,
+            (4, 4),
+            None,
+            {530: (0, 0), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampling_signed_byte_type_lzw_1x2.tiff": (
+            signed_byte_subsampling,
+            (4, 4),
+            "1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6",
+            {530: (1, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampling_signed_short_type_lzw_1x2.tiff": (
+            signed_short_subsampling,
+            (4, 4),
+            "1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6",
+            {530: (1, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampling_signed_long_type_lzw_1x2.tiff": (
+            signed_long_subsampling,
+            (4, 4),
+            "1ddadfe41e070962f7991dda8e8d26efc8c43a7352227b45154387a9991c5fb6",
+            {530: (1, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampling_signed_short_negative_lzw_2x2.tiff": (
+            signed_short_negative_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: (-1, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_signed_short_negative_vertical_lzw_2x2.tiff": (
+            signed_short_negative_vertical_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: (1, -2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_ascii_type_lzw_2x2.tiff": (
+            ascii_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: ("11",), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampling_short_count_three_lzw_2x2.tiff": (
+            short_count_three_subsampling,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: (1, 2, 2), 531: 1},
             REFERENCE_PIXELS,
         ),
         "ycbcr_subsampled_lzw_1x2.tiff": (
@@ -1265,6 +1401,18 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_subsampling_byte_type_lzw_2x2.tiff": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",
+            "ycbcr_subsampling_long_type_lzw_2x2.tiff": "a3bc8d6110c272f34180e6e6231f88aa229ce5c87ee026464e6996a4523631cd",
+            "ycbcr_subsampling_short_count_lzw_2x2.tiff": "f46aa199d9253f5dda799917e7223cab8005858df402ff8f5dc3916ecb254f5b",
+            "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff": "afc8480db4452d713f4e5d10198c3bb0e35a981c9e8b2689456cff9eff5aeee8",
+            "ycbcr_subsampling_zero_pair_lzw_2x2.tiff": "0c4d64f3d62266d6ba9fccbac32f4e2189991e8c211ac65998c2e33663a74fc8",
+            "ycbcr_subsampling_signed_byte_type_lzw_1x2.tiff": "c080016f25b312985ac17df0c313806b6126c227ff6d2e56ea95994c5908dead",
+            "ycbcr_subsampling_signed_short_type_lzw_1x2.tiff": "dfe209d2861f63f8b393079059aadf8d5b3840916d58d3200a56510d5acbdd3b",
+            "ycbcr_subsampling_signed_long_type_lzw_1x2.tiff": "5fa78a9777e5e7e4b21f2d433352a66b7a3974d19aaa6a96af5a3ed01b99a08f",
+            "ycbcr_subsampling_signed_short_negative_lzw_2x2.tiff": "d6cf543c98afe9fc083cd7d5fd3edfa4ebcc8eee212d4458e139187b1a63ad9a",
+            "ycbcr_subsampling_signed_short_negative_vertical_lzw_2x2.tiff": "f5d7516b4d712a0b70df26f0bfc2db851beeeb0890c42b971073a358a30d155d",
+            "ycbcr_subsampling_ascii_type_lzw_2x2.tiff": "dedbfec3b02eacedb00f936c11a2f00af510cd875b23b2b2b546db5225f8a808",
+            "ycbcr_subsampling_short_count_three_lzw_2x2.tiff": "701521f18c666bc757bd68835e0bd6f90316ceb1e1b549a90ec63545fe3bfd26",
             "ycbcr_subsampled_lzw_1x2.tiff": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
             "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",

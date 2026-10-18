@@ -5207,6 +5207,56 @@ formats:
       description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_subsampling_byte_type_lzw_2x2
+      description: Pillow accepts BYTE YCbCr subsampling values in a compressed TIFF
+      test_assets:
+      - ycbcr_subsampling_byte_type_lzw_2x2.tiff
+    - id: ycbcr_subsampling_long_type_lzw_2x2
+      description: Pillow accepts LONG YCbCr subsampling values in a compressed TIFF
+      test_assets:
+      - ycbcr_subsampling_long_type_lzw_2x2.tiff
+    - id: ycbcr_subsampling_short_count_lzw_2x2
+      description: Pillow defaults incomplete SHORT YCbCr subsampling values
+      test_assets:
+      - ycbcr_subsampling_short_count_lzw_2x2.tiff
+    - id: ycbcr_subsampling_unsupported_pair_lzw_2x2
+      description: Unsupported YCbCr subsampling opens and verifies but fails during pixel decoding
+      test_assets:
+      - ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_subsampling_zero_pair_lzw_2x2
+      description: Zero YCbCr subsampling values fail during pixel decoding without panicking
+      test_assets:
+      - ycbcr_subsampling_zero_pair_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_subsampling_signed_short_type_lzw_1x2
+      description: Pillow accepts signed SHORT YCbCr subsampling values in compressed TIFF
+      test_assets:
+      - ycbcr_subsampling_signed_short_type_lzw_1x2.tiff
+    - id: ycbcr_subsampling_signed_byte_type_lzw_1x2
+      description: Pillow accepts signed BYTE YCbCr subsampling values in compressed TIFF
+      test_assets:
+      - ycbcr_subsampling_signed_byte_type_lzw_1x2.tiff
+    - id: ycbcr_subsampling_signed_long_type_lzw_1x2
+      description: Pillow accepts signed LONG YCbCr subsampling values in compressed TIFF
+      test_assets:
+      - ycbcr_subsampling_signed_long_type_lzw_1x2.tiff
+    - id: ycbcr_subsampling_signed_short_negative_lzw_2x2
+      description: Pillow defaults negative signed SHORT YCbCr subsampling values
+      test_assets:
+      - ycbcr_subsampling_signed_short_negative_lzw_2x2.tiff
+    - id: ycbcr_subsampling_signed_short_negative_vertical_lzw_2x2
+      description: Pillow defaults negative vertical signed SHORT YCbCr subsampling values
+      test_assets:
+      - ycbcr_subsampling_signed_short_negative_vertical_lzw_2x2.tiff
+    - id: ycbcr_subsampling_ascii_type_lzw_2x2
+      description: Pillow defaults non-integer ASCII YCbCr subsampling values
+      test_assets:
+      - ycbcr_subsampling_ascii_type_lzw_2x2.tiff
+    - id: ycbcr_subsampling_short_count_three_lzw_2x2
+      description: Pillow defaults SHORT YCbCr subsampling arrays longer than two values
+      test_assets:
+      - ycbcr_subsampling_short_count_three_lzw_2x2.tiff
     - id: ycbcr_subsampled_lzw_1x2
       description: Horizontally full-resolution YCbCr samples in vertically subsampled LZW clumps
       test_assets:
