@@ -2726,6 +2726,11 @@ formats:
       - apng_palette_over.png
       - apng_adam7.png
       - apng_long_actl.png
+    - id: apng_default_image_interrupted_idat
+      description: A CRC-valid ancillary chunk interrupts the default image IDAT run; verify succeeds while loading reports truncated image data
+      test_assets:
+      - apng_default_image_interrupted_idat.png
+      expect_error: true
     - id: apng_sequence_open_error
       description: APNG structural errors encountered before the default image
       test_assets:

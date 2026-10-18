@@ -13545,6 +13545,38 @@
     ],
     "png": [
       {
+        "asset": "apng_default_image_interrupted_idat.png",
+        "class": "apng_default_image_interrupted_idat",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A CRC-valid ancillary chunk interrupts the default image IDAT run; verify succeeds while loading reports truncated image data",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (0 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "apng_fdat_sequence_mismatch_before_idat.png",
         "class": "apng_fdat_sequence_mismatch_before_idat",
         "contracts": {
@@ -26999,12 +27031,12 @@
       "gif": 48,
       "ico": 30,
       "jpeg": 102,
-      "png": 62,
+      "png": 63,
       "tiff": 130,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 641,
+      "pillow_fixture": 642,
       "specification_reference": 60
     },
     "by_spec_status": {
@@ -27012,9 +27044,9 @@
       "not_the_format": 39,
       "spec_violation": 373,
       "tolerated": 0,
-      "truncated": 194
+      "truncated": 195
     },
-    "classes": 641,
+    "classes": 642,
     "formats": 8
   }
 }

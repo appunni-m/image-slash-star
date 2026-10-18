@@ -127893,6 +127893,83 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "apng_default_image_interrupted_idat",
+          "type": "decode",
+          "format": "png",
+          "category": "apng",
+          "description": "A CRC-valid ancillary chunk interrupts the default image IDAT run; verify succeeds while loading reports truncated image data",
+          "asset": "apng_default_image_interrupted_idat.png",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "6bd28537198e97b9fd61f8b27b7dedc28f130935f951317043bc4fa46b3228cb",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "apng_sequence_open_error",
           "type": "decode",
           "format": "png",
@@ -202203,12 +202280,12 @@
     }
   },
   "summary": {
-    "total_rows": 2399,
-    "decode_rows": 1899,
+    "total_rows": 2400,
+    "decode_rows": 1900,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1896,
-    "decode_active": 1899,
+    "assets_available": 1897,
+    "decode_active": 1900,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

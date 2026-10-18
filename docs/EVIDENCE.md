@@ -40,9 +40,9 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The matrix now has 2,399 rows (1,899 decode / inspect / verify and 500 encode);
-1,899 decode and 468 encode rows are active, while 32 encode rows are planned.
-The separate fault-contract lane contains 55 rows. The coverage-origin
+The matrix now has 2,400 rows (1,900 decode / inspect / verify and 500 encode);
+1,900 decode and 468 encode rows are active, while 32 encode rows are planned.
+The separate fault-contract lane contains 61 rows. The coverage-origin
 inventory records 177 exact `cfg(coverage)` guards across 27 Rust files.
 
 ## BMP decoded-pixel reservation fault contract — 2026-10-17
@@ -91,8 +91,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,399 total rows: 1,899 decode / inspect / verify rows and 500 encode rows.
-Of those, 1,899 decode rows and 468 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,400 total rows: 1,900 decode / inspect / verify rows and 500 encode rows.
+Of those, 1,900 decode rows and 468 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF equivalent-default YCbCr rational parity — 2026-10-18
@@ -7008,7 +7008,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `61e0ee5b0db2c367d97b681f16a2f6c9b331228073e9ce8bc2c02b8bd019147d`; matrix `79b140c2628d21692c984544cb9741ca268c3235d8a5aed85a8ed105b839a7e4`.
+- Current fixture integrity only: manifest `b67d4a69e95c14eb7181cce5016ecb93efddb2ca27568a83ff46e7b6f2f7f956`; matrix `8caf54de51da6ddbd0adb29f6d3d0a0160a8bce87fb1b7d959eab76355b7b88e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

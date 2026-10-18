@@ -545,6 +545,8 @@ pub fn decode(
     let mut alpha_offset = None;
     let mut saw_trns = false;
     let mut saw_idat = false;
+    // Keep structural ordering separate from Pillow's first contiguous IDAT run.
+    let mut idat_run_closed = false;
     let mut idat_offset = None;
     let mut saw_post_idat_control = false;
     let mut next_sequence = Some(0);
@@ -562,11 +564,16 @@ pub fn decode(
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
         record_apng_length_diagnostic(&chunk, &mut diagnostics);
+        if saw_idat && chunk.kind != *b"IDAT" {
+            idat_run_closed = true;
+        }
         match &chunk.kind {
             b"IDAT" => {
                 idat_offset.get_or_insert(chunk.offset);
                 saw_idat = true;
-                compressed.extend_from_slice(chunk.data);
+                if !idat_run_closed {
+                    compressed.extend_from_slice(chunk.data);
+                }
             }
             b"PLTE" => {
                 if palette_rgb.is_none() {
@@ -993,6 +1000,8 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut palette_alpha = Vec::new();
     let mut alpha_offset = None;
     let mut default_compressed = Vec::new();
+    // Continue parsing later chunks after closing the default image data run.
+    let mut idat_run_closed = false;
     let mut default_control = None;
     let mut current = None::<ApngCompressedFrame>;
     let mut current_has_data = false;
@@ -1012,6 +1021,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
         record_post_idat_ancillary_diagnostic(&chunk, saw_idat, &mut diagnostics);
         record_apng_declaration_diagnostic(&chunk, saw_idat, saw_actl, &mut diagnostics);
         record_apng_length_diagnostic(&chunk, &mut diagnostics);
+        if saw_idat && chunk.kind != *b"IDAT" {
+            idat_run_closed = true;
+        }
         match &chunk.kind {
             b"PLTE" if !saw_idat && palette_rgb.is_none() => {
                 palette_offset = Some(chunk.offset);
@@ -1068,7 +1080,9 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             b"IDAT" => {
                 idat_offset.get_or_insert(chunk.offset);
                 saw_idat = true;
-                default_compressed.extend_from_slice(chunk.data);
+                if !idat_run_closed {
+                    default_compressed.extend_from_slice(chunk.data);
+                }
             }
             b"fdAT" if animation.is_some() => {
                 if chunk.data.len() < 4 {
