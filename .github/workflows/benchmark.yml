@@ -18,8 +18,6 @@ on:
       - '.github/workflows/benchmark.yml'
       - 'benchmarks/jpeg-production/**'
       - 'scripts/setup_benchmark_oracle.py'
-      - 'scripts/docs_evidence.py'
-      - 'docs.mk'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'Makefile'

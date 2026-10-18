@@ -960,6 +960,13 @@ jobs:
         ):
             with self.subTest(path=path):
                 self.assertIn(f"- '{path}'", paths)
+        for path in ("docs.mk", "scripts/docs_evidence.py"):
+            with self.subTest(path=path):
+                self.assertNotIn(
+                    f"- '{path}'",
+                    paths,
+                    "docs-only changes are exercised by Documentation, not the x86 benchmark",
+                )
 
         jobs = check_workflows.workflow_jobs(contents)
         self.assertIsNotNone(jobs)
