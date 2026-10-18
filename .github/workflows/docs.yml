@@ -142,6 +142,7 @@ jobs:
         run: make docs-test docs-lint docs-build PYTHON=.venv-docs/bin/python
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: target/site
 
   deploy:
@@ -191,6 +192,8 @@ jobs:
         continue-on-error: true
         if: steps.freshness.outputs.deploy == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
       - name: Wait for a previous Pages deployment to clear
         if: steps.freshness.outputs.deploy == 'true' && steps.deployment.outcome == 'failure'
@@ -200,6 +203,8 @@ jobs:
         id: deployment_retry
         if: steps.freshness.outputs.deploy == 'true' && steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
   examples:
     if: >-

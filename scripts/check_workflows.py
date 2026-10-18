@@ -1421,6 +1421,8 @@ def artifact_upload_rerun_violations(contents: str) -> list[str]:
     """Require every uploaded workflow artifact to be replaceable on retries."""
 
     violations = []
+    pages_artifact_names = []
+    pages_deployment_names = []
     steps = re.finditer(
         r"(?ms)^      - (?P<header>[^\n]*)\n"
         r"(?P<body>.*?)(?=^      - |\Z)",
@@ -1433,15 +1435,45 @@ def artifact_upload_rerun_violations(contents: str) -> list[str]:
         if uses is None:
             uses_match = re.search(r"(?m)^        uses:\s*(.+)$", body)
             uses = uses_match.group(1) if uses_match is not None else None
-        if uses is None or not uses.startswith("actions/upload-artifact@"):
+        if uses is None:
             continue
 
         artifact_match = re.search(r"(?m)^          name:\s*(.+)$", body)
         artifact_name = artifact_match.group(1) if artifact_match is not None else "<unnamed>"
-        if re.search(r"(?m)^          overwrite:\s*true\s*$", body) is None:
+        if uses.startswith("actions/upload-pages-artifact@"):
+            pages_artifact_names.append(artifact_name)
+            if "${{ github.run_attempt }}" not in artifact_name:
+                violations.append(
+                    "GitHub Pages artifact name must include github.run_attempt "
+                    "for same-run retries"
+                )
+        elif uses.startswith("actions/deploy-pages@"):
+            deployment_match = re.search(
+                r"(?m)^          artifact_name:\s*(.+)$", body
+            )
+            pages_deployment_names.append(
+                deployment_match.group(1).strip() if deployment_match else None
+            )
+        elif uses.startswith("actions/upload-artifact@") and re.search(
+            r"(?m)^          overwrite:\s*true\s*$", body
+        ) is None:
             violations.append(
                 f"artifact {artifact_name!r} must set overwrite: true for same-run retries"
             )
+
+    if pages_deployment_names and not pages_artifact_names:
+        violations.append("GitHub Pages deployment must have an uploaded artifact")
+    if pages_artifact_names and not pages_deployment_names:
+        violations.append("GitHub Pages artifact must have a deployment step")
+    if len(pages_artifact_names) > 1:
+        violations.append("workflow must upload exactly one GitHub Pages artifact")
+    if pages_artifact_names:
+        artifact_name = pages_artifact_names[0].strip()
+        for deployment_name in pages_deployment_names:
+            if deployment_name != artifact_name:
+                violations.append(
+                    "GitHub Pages deployment artifact_name must match the uploaded artifact"
+                )
     return violations
 
 

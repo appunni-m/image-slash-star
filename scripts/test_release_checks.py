@@ -802,6 +802,42 @@ jobs:
             group,
         )
 
+    def test_pages_artifacts_are_unique_per_attempt_and_match_deployments(self) -> None:
+        workflow_path = (
+            Path(__file__).resolve().parent.parent
+            / ".github"
+            / "workflows"
+            / "docs.yml"
+        )
+        workflow = workflow_path.read_text(encoding="utf-8")
+        self.assertEqual(check_workflows.artifact_upload_rerun_violations(workflow), [])
+
+        static_upload_name = workflow.replace(
+            "name: github-pages-${{ github.run_attempt }}",
+            "name: github-pages",
+            1,
+        )
+        self.assertTrue(
+            any(
+                violation.startswith(
+                    "GitHub Pages artifact name must include github.run_attempt"
+                )
+                for violation in check_workflows.artifact_upload_rerun_violations(
+                    static_upload_name
+                )
+            )
+        )
+
+        mismatched_deployment = workflow.replace(
+            "artifact_name: github-pages-${{ github.run_attempt }}",
+            "artifact_name: github-pages",
+            1,
+        )
+        self.assertIn(
+            "GitHub Pages deployment artifact_name must match the uploaded artifact",
+            check_workflows.artifact_upload_rerun_violations(mismatched_deployment),
+        )
+
     def test_ci_supply_chain_job_has_bounded_timeout(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "ci.yml")
