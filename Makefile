@@ -79,6 +79,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_itxt_missing_keyword_separator.py --check
 	$(PYTHON) scripts/generate_png_idat_split_zlib_header_fixture.py --check
 	$(PYTHON) scripts/generate_png_apng_duplicate_actl.py --check
+	$(PYTHON) scripts/generate_png_apng_fdat_sequence_mismatch_before_idat.py --check
 	$(PYTHON) scripts/generate_png_apng_gray16_partial_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check

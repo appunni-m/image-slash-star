@@ -115,6 +115,10 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                     "PNG fdAT chunk has no preceding acTL chunk".to_owned(),
                 ));
             }
+            b"fdAT" => {
+                let sequence = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
+                consume_sequence(sequence, &mut next_sequence)?;
+            }
             b"IDAT" => {
                 if animation_declared && !saw_frame_control {
                     frame_count = frame_count.saturating_add(1);

@@ -2684,6 +2684,11 @@ formats:
       description: An empty fdAT before IDAT preserves default-frame pixels while reaching the early APNG chunk guard
       test_assets:
       - apng_empty_fdat_before_idat.png
+    - id: apng_fdat_sequence_mismatch_before_idat
+      description: Pillow rejects a pre-IDAT fdAT with a mismatched APNG sequence number
+      test_assets:
+      - apng_fdat_sequence_mismatch_before_idat.png
+      expect_error: true
     - id: apng_unknown_ancillary
       description: APNG retains exact frames when an unknown ancillary chunk precedes the image data
       test_assets:

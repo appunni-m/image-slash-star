@@ -13545,6 +13545,54 @@
     ],
     "png": [
       {
+        "asset": "apng_fdat_sequence_mismatch_before_idat.png",
+        "class": "apng_fdat_sequence_mismatch_before_idat",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a pre-IDAT fdAT with a mismatched APNG sequence number",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "apng_fdat_without_fctl_bad_sequence.png",
         "class": "apng_orphan_fdat_invalid_sequence",
         "contracts": {
@@ -26951,22 +26999,22 @@
       "gif": 48,
       "ico": 30,
       "jpeg": 102,
-      "png": 61,
+      "png": 62,
       "tiff": 130,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 640,
+      "pillow_fixture": 641,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 372,
+      "spec_violation": 373,
       "tolerated": 0,
       "truncated": 194
     },
-    "classes": 640,
+    "classes": 641,
     "formats": 8
   }
 }
