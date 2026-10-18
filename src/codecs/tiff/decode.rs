@@ -2406,25 +2406,49 @@ impl YcbcrTables {
             return Ok(None);
         }
 
-        if rational_to_f32(conversion.coefficients[1]) == 0.0 {
+        let coefficients = conversion.floating_coefficients.map_or_else(
+            || conversion.coefficients.map(rational_to_f32),
+            |values| values.map(ycbcr_float_to_f32),
+        );
+        let references = conversion.floating_reference_black_white.map_or_else(
+            || conversion.reference_black_white.map(rational_to_f32),
+            |values| values.map(ycbcr_float_to_f32),
+        );
+
+        if coefficients[1] == 0.0 {
             return Err(CodecError::Malformed(
                 "TIFF YCbCr green coefficient must be nonzero".to_owned(),
             ));
         }
 
-        if conversion
-            .reference_black_white
-            .iter()
-            .copied()
-            .any(ycbcr_reference_exceeds_conversion_limit)
-        {
+        let reference_exceeds_limit = conversion.floating_reference_black_white.map_or_else(
+            || {
+                conversion
+                    .reference_black_white
+                    .iter()
+                    .copied()
+                    .any(ycbcr_reference_exceeds_conversion_limit)
+            },
+            |values| {
+                values
+                    .iter()
+                    .any(|value| !value.is_finite() || *value >= 2_147_483_584.0)
+            },
+        );
+        if reference_exceeds_limit {
             return Err(CodecError::Malformed(
                 "TIFF YCbCr reference value exceeds conversion limits".to_owned(),
             ));
         }
 
-        let coefficients = conversion.coefficients.map(rational_to_f32);
-        let references = conversion.reference_black_white.map(rational_to_f32);
+        if conversion
+            .floating_coefficients
+            .is_some_and(|values| values.iter().any(|value| value.is_nan()))
+        {
+            return Err(CodecError::Malformed(
+                "TIFF YCbCr coefficients contain NaN".to_owned(),
+            ));
+        }
         let [red_luma, green_luma, blue_luma] = coefficients;
         // libtiff maps zero-numerator and zero-denominator rationals to zero.
 
@@ -2497,6 +2521,14 @@ fn rational_to_f32((numerator, denominator): (i64, i64)) -> f32 {
     } else {
         numerator as f32 / denominator as f32
     }
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "libtiff builds YCbCr conversion tables from FLOAT and DOUBLE tag values using f32 arithmetic"
+)]
+fn ycbcr_float_to_f32(value: f64) -> f32 {
+    value as f32
 }
 
 fn ycbcr_reference_exceeds_conversion_limit(rational: (i64, i64)) -> bool {
@@ -3198,6 +3230,13 @@ impl Endian {
         }
     }
 
+    fn u64_exact(self, bytes: [u8; 8]) -> u64 {
+        match self {
+            Endian::Little => u64::from_le_bytes(bytes),
+            Endian::Big => u64::from_be_bytes(bytes),
+        }
+    }
+
     fn i32_exact(self, bytes: [u8; 4]) -> i32 {
         match self {
             Endian::Little => i32::from_le_bytes(bytes),
@@ -3228,6 +3267,7 @@ pub(super) struct Directory<'a> {
     fields: Vec<Field>,
     entries: Vec<Entry>,
     rationals: Vec<RationalEntry>,
+    floating_entries: Vec<FloatingEntry>,
     fill_order_rational: (usize, (u32, u32)),
     next_offset: usize,
     pub(super) opaque_blocks: Vec<crate::types::OpaqueBlock>,
@@ -3243,6 +3283,13 @@ struct Field {
 
 struct RationalEntry {
     tag: u16,
+    count: usize,
+    value_position: usize,
+}
+
+struct FloatingEntry {
+    tag: u16,
+    field_type: u16,
     count: usize,
     value_position: usize,
 }
@@ -3379,6 +3426,7 @@ impl<'a> Directory<'a> {
         let mut fields = Vec::with_capacity(count);
         let mut entries = Vec::with_capacity(count);
         let mut rationals = Vec::new();
+        let mut floating_entries = Vec::new();
         let mut fill_order_rational = None;
         let mut opaque_blocks = Vec::new();
         let mut metadata = Vec::new();
@@ -3453,6 +3501,14 @@ impl<'a> Directory<'a> {
                     value_position,
                 });
             }
+            if matches!(tag, 529 | 532) && matches!(field_type, 11 | 12) {
+                floating_entries.push(FloatingEntry {
+                    tag,
+                    field_type,
+                    count: value_count,
+                    value_position,
+                });
+            }
             if tag == 266 && field_type == 5 {
                 let rational = if value_count == 0 {
                     (0, 0)
@@ -3517,6 +3573,7 @@ impl<'a> Directory<'a> {
             fields,
             entries,
             rationals,
+            floating_entries,
             fill_order_rational: fill_order_rational.unwrap_or_default(),
             next_offset: endian.u32_exact([next[0], next[1], next[2], next[3]]) as usize,
             opaque_blocks,
@@ -3595,7 +3652,7 @@ impl<'a> Directory<'a> {
         let field = self.fields.iter().find(|field| field.tag == tag)?;
         if matches!(field.field_type, 1 | 3 | 4)
             || (tag == 530 && matches!(field.field_type, 6 | 8 | 9))
-            || (matches!(tag, 529 | 532) && matches!(field.field_type, 5 | 10))
+            || (matches!(tag, 529 | 532) && matches!(field.field_type, 5 | 10 | 11 | 12))
         {
             Some(field.count)
         } else {
@@ -3687,6 +3744,35 @@ impl<'a> Directory<'a> {
                 i64::from(self.endian.u32_exact(numerator_bytes)),
                 i64::from(self.endian.u32_exact(denominator_bytes)),
             ))
+        }
+    }
+
+    pub(super) fn floating_value(&self, tag: u16, index: usize) -> Option<f64> {
+        let entry = self
+            .floating_entries
+            .iter()
+            .find(|entry| entry.tag == tag)?;
+        if index >= entry.count {
+            return None;
+        }
+        match entry.field_type {
+            11 => {
+                let position = entry.value_position.checked_add(index.checked_mul(4)?)?;
+                let value = self.data.get(position..position.checked_add(4)?)?;
+                let bits = self
+                    .endian
+                    .u32_exact([value[0], value[1], value[2], value[3]]);
+                Some(f64::from(f32::from_bits(bits)))
+            }
+            12 => {
+                let position = entry.value_position.checked_add(index.checked_mul(8)?)?;
+                let value = self.data.get(position..position.checked_add(8)?)?;
+                let bits = self.endian.u64_exact([
+                    value[0], value[1], value[2], value[3], value[4], value[5], value[6], value[7],
+                ]);
+                Some(f64::from_bits(bits))
+            }
+            _ => None,
         }
     }
 }

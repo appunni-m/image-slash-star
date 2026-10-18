@@ -371,6 +371,39 @@ def set_ifd_subsampling_values(data: bytes, field_type: int, values: tuple[int, 
     raise ValueError("generated TIFF does not contain tag 530")
 
 
+def set_ifd_float_values(
+    data: bytes, tag: int, field_type: int, values: tuple[float, ...]
+) -> bytes:
+    """Set an existing YCbCr FLOAT or DOUBLE payload to actual IEEE values."""
+    scalar_type = {11: "f", 12: "d"}.get(field_type)
+    expected_count = {529: 3, 532: 6}.get(tag)
+    if scalar_type is None or expected_count is None or len(values) != expected_count:
+        raise ValueError("invalid YCbCr floating-value fixture")
+    packed = struct.pack("<" + scalar_type * len(values), *values)
+    output = bytearray(data)
+    if output[:4] != b"II*\0":
+        raise ValueError("floating-value mutations require a generated little-endian TIFF")
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        if struct.unpack_from("<H", output, entry_offset)[0] != tag:
+            continue
+        payload_offset = struct.unpack_from("<I", output, entry_offset + 8)[0]
+        payload_end = payload_offset + len(packed)
+        if payload_end > len(output):
+            raise ValueError("YCbCr floating-value payload exceeds the generated TIFF")
+        struct.pack_into("<HI", output, entry_offset + 2, field_type, len(values))
+        output[payload_offset:payload_end] = packed
+        return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
+
+
+def float32_values(values: tuple[float, ...]) -> tuple[float, ...]:
+    """Return the exact Python values Pillow exposes for a TIFF FLOAT array."""
+    return tuple(struct.unpack("<f", struct.pack("<f", value))[0] for value in values)
+
+
 def set_ifd_short_value(data: bytes, tag: int, value: int) -> bytes:
     """Replace one inline SHORT value in a generated little-endian TIFF."""
     if data[:4] != b"II*\0":
@@ -574,6 +607,53 @@ def fixtures() -> dict[
         positioning=1,
         coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
         reference_black_white=((16, 1), (235, 1), (128, 1), (240, 1), (128, 1), (240, 1)),
+    )
+    custom_coefficients_only = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    custom_reference_only = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        reference_black_white=((16, 1), (235, 1), (128, 1), (240, 1), (128, 1), (240, 1)),
+    )
+    float_coefficients = (0.2126, 0.7152, 0.0722)
+    float_reference_black_white = (16.0, 235.0, 128.0, 240.0, 128.0, 240.0)
+    coefficients_float_type = set_ifd_float_values(
+        custom_coefficients_only, 529, 11, float_coefficients
+    )
+    coefficients_double_values = set_ifd_float_values(
+        custom_coefficients_only, 529, 12, float_coefficients
+    )
+    coefficients_double_infinity = set_ifd_float_values(
+        custom_coefficients_only, 529, 12, (float("inf"), 0.7152, 0.0722)
+    )
+    reference_float_type = set_ifd_float_values(
+        custom_reference_only, 532, 11, float_reference_black_white
+    )
+    reference_double_type = set_ifd_float_values(
+        custom_reference_only, 532, 12, float_reference_black_white
+    )
+    coefficients_float_nan = set_ifd_float_values(
+        custom_coefficients_only, 529, 11, (float("nan"), 0.7152, 0.0722)
+    )
+    coefficients_double_nan = set_ifd_float_values(
+        custom_coefficients_only, 529, 12, (float("nan"), 0.7152, 0.0722)
+    )
+    reference_float_non_finite = set_ifd_float_values(
+        custom_reference_only, 532, 11, (16.0, float("inf"), 128.0, 240.0, 128.0, 240.0)
+    )
+    reference_double_non_finite = set_ifd_float_values(
+        custom_reference_only, 532, 12, (16.0, float("inf"), 128.0, 240.0, 128.0, 240.0)
     )
     coefficients_short_type = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 529, field_type=3
@@ -1127,6 +1207,104 @@ def fixtures() -> dict[
             },
             None,
         ),
+        "ycbcr_coefficients_float_type_lzw_2x2.tiff": (
+            coefficients_float_type,
+            (4, 4),
+            "fa0742fcea742c1e1ee51b4eedc289afe3dfe18e491ecb5cde9d669c2d97119c",
+            {
+                529: float32_values(float_coefficients),
+                530: (2, 2),
+                531: 1,
+            },
+            bytes.fromhex(
+                "002500002500001c00064e00388900065700388000064e000012003876300009"
+                "296a9fbf387630064400386d8d063b5b"
+            ),
+        ),
+        "ycbcr_coefficients_double_values_lzw_2x2.tiff": (
+            coefficients_double_values,
+            (4, 4),
+            "fa0742fcea742c1e1ee51b4eedc289afe3dfe18e491ecb5cde9d669c2d97119c",
+            {529: float_coefficients, 530: (2, 2), 531: 1},
+            bytes.fromhex(
+                "002500002500001c00064e00388900065700388000064e000012003876300009"
+                "296a9fbf387630064400386d8d063b5b"
+            ),
+        ),
+        "ycbcr_coefficients_double_infinity_lzw_2x2.tiff": (
+            coefficients_double_infinity,
+            (4, 4),
+            "dd618e329d17bac3db6f66f654b2b7a3a08fdd47255f8848e0f2081ac1e979cc",
+            {529: (float("inf"), 0.7152, 0.0722), 530: (2, 2), 531: 1},
+            bytes.fromhex(
+                "001800001800000f00324100647c00324a00647300324100000500646930"
+                "0000299692bf64693032370064608d322e5b"
+            ),
+        ),
+        "ycbcr_reference_float_type_lzw_2x2.tiff": (
+            reference_float_type,
+            (4, 4),
+            "20ef7069dad35f4368a43e8a17d5106a274997632f16de33917740f30355f392",
+            {530: (2, 2), 531: 1, 532: float_reference_black_white},
+            bytes.fromhex(
+                "003600003600002200005b0036a900006f00369500005b00000f0036822a"
+                "00001971aac736822a004800366f8c003552"
+            ),
+        ),
+        "ycbcr_reference_double_type_lzw_2x2.tiff": (
+            reference_double_type,
+            (4, 4),
+            "20ef7069dad35f4368a43e8a17d5106a274997632f16de33917740f30355f392",
+            {530: (2, 2), 531: 1, 532: float_reference_black_white},
+            bytes.fromhex(
+                "003600003600002200005b0036a900006f00369500005b00000f0036822a"
+                "00001971aac736822a004800366f8c003552"
+            ),
+        ),
+        "ycbcr_coefficients_float_nan_lzw_2x2.tiff": (
+            coefficients_float_nan,
+            (4, 4),
+            None,
+            {
+                529: float32_values((float("nan"), 0.7152, 0.0722)),
+                530: (2, 2),
+                531: 1,
+            },
+            None,
+        ),
+        "ycbcr_coefficients_double_nan_lzw_2x2.tiff": (
+            coefficients_double_nan,
+            (4, 4),
+            None,
+            {
+                529: (float("nan"), 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+            },
+            None,
+        ),
+        "ycbcr_reference_float_infinity_lzw_2x2.tiff": (
+            reference_float_non_finite,
+            (4, 4),
+            None,
+            {
+                530: (2, 2),
+                531: 1,
+                532: (16.0, float("inf"), 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
+        "ycbcr_reference_double_infinity_lzw_2x2.tiff": (
+            reference_double_non_finite,
+            (4, 4),
+            None,
+            {
+                530: (2, 2),
+                531: 1,
+                532: (16.0, float("inf"), 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
         "ycbcr_coefficients_short_count_lzw_2x2.tiff": (
             coefficients_short_count,
             (4, 4),
@@ -1435,6 +1613,15 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_coefficients_negative_srational_lzw_2x2.tiff": "1f8ef67d9b888d251f862e9a9e94036c42e51188e3cc1befc201ea22882d6b49",
             "ycbcr_reference_negative_srational_lzw_2x2.tiff": "91501422161e6b325c724836acfb0dbeb45baf415af9420d5b007fe672f476fb",
             "ycbcr_coefficients_double_type_lzw_2x2.tiff": "146ece179798e6c975a3ceceef83d029c24d3608f244a5f3c9282e62fccdd318",
+            "ycbcr_coefficients_float_type_lzw_2x2.tiff": "8013c341878b41988870bd9da47b30fd0cb8d9d37bec2d520796b86faf8bc8f9",
+            "ycbcr_coefficients_double_values_lzw_2x2.tiff": "86021e46c9e268d38077bb0ce37dace13d792c73530195e40dffe31688f091b9",
+            "ycbcr_coefficients_double_infinity_lzw_2x2.tiff": "798aa5745ea7146883324287482b5d01cb29940796075677d5103e435f5a4857",
+            "ycbcr_reference_float_type_lzw_2x2.tiff": "4fedf6f18aba1a16e3b4be43b2ccdb4fd2e1ce560c11ee638f82d38dad5021c2",
+            "ycbcr_reference_double_type_lzw_2x2.tiff": "44360eed61346ece234b4d905f43a0087ee2af40396fbcf092c006ea5ab9d7aa",
+            "ycbcr_coefficients_float_nan_lzw_2x2.tiff": "b5528738ef256e3b2bbbe7fee599132d0c351bc30e27e79983e4842d26ddb31b",
+            "ycbcr_coefficients_double_nan_lzw_2x2.tiff": "94b0daf8bfefd5110240870628e67459b534217939026e91e6013ecab064aecb",
+            "ycbcr_reference_float_infinity_lzw_2x2.tiff": "1e4bf6a92a8c6ecde82d1b7ac2c729ed10ba6043b9a3bbee2bd5fb4a5b61c2da",
+            "ycbcr_reference_double_infinity_lzw_2x2.tiff": "9252570e68a6fe82e71ad202d45a3164b5d49543cc18d192e605d20ab00b63d2",
             "ycbcr_coefficients_short_count_lzw_2x2.tiff": "6bc1a1a005f0599bb4e9aab5895c9318df8687b755384134bd10df1352b0b7ed",
             "ycbcr_coefficients_long_count_lzw_2x2.tiff": "9b3d9fe558a5d730ee9f7d50020d7b69e193458148c10c676421215dca76de2d",
             "ycbcr_reference_short_count_lzw_2x2.tiff": "30721b73b9f1df772294e0ecc23ae05187ef1d49ad89ebe1b90ba7ecaf32dcba",

@@ -239,7 +239,7 @@ fn required_dimension(directory: &Directory<'_>, tag: u16, name: &'static str) -
         .ok_or_else(|| CodecError::Malformed(format!("TIFF {name} is missing")))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum TiffLayout {
     Bilevel {
         invert: bool,
@@ -275,15 +275,24 @@ pub(super) enum TiffLayout {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct YcbcrConversion {
     pub(super) coefficients: [(i64, i64); 3],
     pub(super) reference_black_white: [(i64, i64); 6],
+    pub(super) floating_coefficients: Option<[f64; 3]>,
+    pub(super) floating_reference_black_white: Option<[f64; 6]>,
     pub(super) invalid_coefficients: bool,
     pub(super) is_default: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
+struct YcbcrNumericValues<const N: usize> {
+    rational: [(i64, i64); N],
+    floating: Option<[f64; N]>,
+    invalid: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct YcbcrParameters {
     pub(super) subsampling: (usize, usize),
     pub(super) conversion: YcbcrConversion,
@@ -427,9 +436,8 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
     const DEFAULT_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
     const DEFAULT_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
         [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
-    let (coefficients, invalid_coefficients) =
-        read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
-    let (reference_black_white, _) =
+    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
+    let reference_black_white =
         read_ycbcr_rationals(directory, 532, DEFAULT_REFERENCE_BLACK_WHITE)?;
 
     let subsampling = match directory.field_type(530) {
@@ -450,14 +458,21 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
         _ => (2, 2),
     };
 
-    let is_default = rational_values_match_default(&coefficients, &DEFAULT_COEFFICIENTS)
-        && rational_values_match_default(&reference_black_white, &DEFAULT_REFERENCE_BLACK_WHITE);
+    let is_default = coefficients.floating.is_none()
+        && reference_black_white.floating.is_none()
+        && rational_values_match_default(&coefficients.rational, &DEFAULT_COEFFICIENTS)
+        && rational_values_match_default(
+            &reference_black_white.rational,
+            &DEFAULT_REFERENCE_BLACK_WHITE,
+        );
     Ok(YcbcrParameters {
         subsampling,
         conversion: YcbcrConversion {
-            coefficients,
-            reference_black_white,
-            invalid_coefficients,
+            coefficients: coefficients.rational,
+            reference_black_white: reference_black_white.rational,
+            floating_coefficients: coefficients.floating,
+            floating_reference_black_white: reference_black_white.floating,
+            invalid_coefficients: coefficients.invalid,
             is_default,
         },
     })
@@ -467,15 +482,40 @@ fn read_ycbcr_rationals<const N: usize>(
     directory: &Directory<'_>,
     tag: u16,
     defaults: [(i64, i64); N],
-) -> CodecResult<([(i64, i64); N], bool)> {
+) -> CodecResult<YcbcrNumericValues<N>> {
     let Some(field_type) = directory.field_type(tag) else {
-        return Ok((defaults, false));
+        return Ok(YcbcrNumericValues {
+            rational: defaults,
+            floating: None,
+            invalid: false,
+        });
     };
     if directory.field_count(tag) != Some(N) {
-        return Ok((defaults, false));
+        return Ok(YcbcrNumericValues {
+            rational: defaults,
+            floating: None,
+            invalid: false,
+        });
     }
     if directory.value_count(tag) != Some(N) {
-        return Ok((defaults, tag == 529));
+        return Ok(YcbcrNumericValues {
+            rational: defaults,
+            floating: None,
+            invalid: tag == 529,
+        });
+    }
+    if matches!(field_type, 11 | 12) {
+        let mut values = [0.0; N];
+        for (index, value) in values.iter_mut().enumerate() {
+            *value = directory.floating_value(tag, index).ok_or_else(|| {
+                CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated"))
+            })?;
+        }
+        return Ok(YcbcrNumericValues {
+            rational: defaults,
+            floating: Some(values),
+            invalid: false,
+        });
     }
     let mut values = defaults;
     match field_type {
@@ -489,7 +529,11 @@ fn read_ycbcr_rationals<const N: usize>(
         }
         3 | 4 => {
             if tag == 529 && field_type == 3 {
-                return Ok((defaults, true));
+                return Ok(YcbcrNumericValues {
+                    rational: defaults,
+                    floating: None,
+                    invalid: true,
+                });
             }
             let numeric_values = directory.values(tag).ok_or_else(|| {
                 CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated"))
@@ -501,9 +545,19 @@ fn read_ycbcr_rationals<const N: usize>(
                 *value = (numerator, 1);
             }
         }
-        _ => return Ok((defaults, tag == 529)),
+        _ => {
+            return Ok(YcbcrNumericValues {
+                rational: defaults,
+                floating: None,
+                invalid: tag == 529,
+            });
+        }
     }
-    Ok((values, false))
+    Ok(YcbcrNumericValues {
+        rational: values,
+        floating: None,
+        invalid: false,
+    })
 }
 
 fn rational_values_match_default<const N: usize>(

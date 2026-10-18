@@ -34,7 +34,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 548 rows total, 548 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,364 rows total, 1,868 active decode rows, 464 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 347 decode rows. Typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,373 rows total, 1,877 active decode rows, 464 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 356 decode rows. Typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

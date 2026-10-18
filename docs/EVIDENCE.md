@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,364 total rows: 1,868 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,868 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,373 total rows: 1,877 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,877 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF YCbCr rational edge parity — 2026-10-18
@@ -87,6 +87,29 @@ Coverage MCP lists ten missing branch coordinates in
 `decode.rs:2332` and `:2337`. This selected report also has no source/build
 receipt or test attribution, so the coordinates remain exploratory rather
 than proof of current-source coverage.
+
+## TIFF YCbCr FLOAT and DOUBLE parity — 2026-10-18
+
+Added five valid public parity rows for IEEE FLOAT/DOUBLE coefficient and
+reference-black-white tags, including an accepted infinite DOUBLE coefficient.
+Four error-parity rows cover NaN coefficients and infinite reference values.
+The generated TIFFs contain real IEEE payloads;
+the malformed existing DOUBLE-coefficient row, which retains RATIONAL bytes,
+is unchanged. Pinned Pillow 12.2.0 produced the exact RGB bytes and decoder
+errors. These are ordinary parity cases because complete TIFF inputs reach each
+behavior; no target-only fault contract was needed for these paths.
+
+The focused run selected all nine new parity rows, the retained malformed
+DOUBLE-coefficient row, and the five existing TIFF YCbCr fault contracts. All
+10/10 parity rows and 5/5 target-only contracts passed.
+The LLVM report is
+`.coverage-mcp/local-evidence/20261018/tiff-ycbcr-float-double-v3/coverage.json`.
+Coverage MCP reports 277/31,568 branch observations in this selected report,
+but marks source identity unverified and test attribution unknown; it is not an
+aggregate coverage gain or full-suite claim. Its remaining
+`floating_value` index-bound arm is defensive: `read_ycbcr_rationals` checks
+exact field counts before requesting each array index, so no public TIFF input
+reaches an out-of-range call.
 
 ## TIFF YCbCr subsampling and positioning parity — 2026-10-18
 
@@ -6869,7 +6892,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `56cdb67cb9a71aee7271a7d8ec7efca94ae9d2b011b430179998b0e70b0bfdc5`; matrix `d1f0e92e7cbf63020239678b3ad496546c965ee42542ab3931de4946c7c29e98`.
+- Current fixture integrity only: manifest `b31c30fea67ca0a3015cf0d89186df032b4fdec7d600de7ebc2306253abe3f82`; matrix `d6ad4f8ad47e219b9148e3b170989ef938f3808b38eef6d42f48a666a6ef2005`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -5390,6 +5390,46 @@ formats:
       test_assets:
       - ycbcr_coefficients_double_type_lzw_2x2.tiff
       expect_error: true
+    - id: ycbcr_coefficients_float_type_lzw_2x2
+      description: FLOAT YCbCr coefficients decode with their IEEE values
+      test_assets:
+      - ycbcr_coefficients_float_type_lzw_2x2.tiff
+    - id: ycbcr_coefficients_double_values_lzw_2x2
+      description: DOUBLE YCbCr coefficients decode with their IEEE values
+      test_assets:
+      - ycbcr_coefficients_double_values_lzw_2x2.tiff
+    - id: ycbcr_coefficients_double_infinity_lzw_2x2
+      description: Infinite DOUBLE YCbCr coefficients remain decodable
+      test_assets:
+      - ycbcr_coefficients_double_infinity_lzw_2x2.tiff
+    - id: ycbcr_reference_float_type_lzw_2x2
+      description: FLOAT YCbCr reference values decode with their IEEE values
+      test_assets:
+      - ycbcr_reference_float_type_lzw_2x2.tiff
+    - id: ycbcr_reference_double_type_lzw_2x2
+      description: DOUBLE YCbCr reference values decode with their IEEE values
+      test_assets:
+      - ycbcr_reference_double_type_lzw_2x2.tiff
+    - id: ycbcr_coefficients_float_nan_lzw_2x2
+      description: NaN FLOAT YCbCr coefficients fail during pixel decoding
+      test_assets:
+      - ycbcr_coefficients_float_nan_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_coefficients_double_nan_lzw_2x2
+      description: NaN DOUBLE YCbCr coefficients fail during pixel decoding
+      test_assets:
+      - ycbcr_coefficients_double_nan_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_reference_float_infinity_lzw_2x2
+      description: Infinite FLOAT YCbCr reference values fail during pixel decoding
+      test_assets:
+      - ycbcr_reference_float_infinity_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_reference_double_infinity_lzw_2x2
+      description: Infinite DOUBLE YCbCr reference values fail during pixel decoding
+      test_assets:
+      - ycbcr_reference_double_infinity_lzw_2x2.tiff
+      expect_error: true
     - id: ycbcr_coefficients_short_count_lzw_2x2
       description: Short YCbCr coefficient arrays fall back to libtiff defaults
       test_assets:

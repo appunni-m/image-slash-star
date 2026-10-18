@@ -20915,6 +20915,38 @@
         "verify_status": "error"
       },
       {
+        "asset": "ycbcr_coefficients_double_nan_lzw_2x2.tiff",
+        "class": "ycbcr_coefficients_double_nan_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "NaN DOUBLE YCbCr coefficients fail during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "ycbcr_coefficients_double_type_lzw_2x2.tiff",
         "class": "ycbcr_coefficients_double_type_lzw_2x2",
         "contracts": {
@@ -20936,6 +20968,38 @@
           }
         },
         "description": "Exact-count DOUBLE YCbCr coefficients open and verify but fail during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_coefficients_float_nan_lzw_2x2.tiff",
+        "class": "ycbcr_coefficients_float_nan_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "NaN FLOAT YCbCr coefficients fail during pixel decoding",
         "inspect_status": "ok",
         "origins": [
           "pillow_fixture"
@@ -20976,6 +21040,70 @@
         "pillow_status": "error",
         "pillow_type": "builtins.OSError",
         "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_reference_double_infinity_lzw_2x2.tiff",
+        "class": "ycbcr_reference_double_infinity_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Infinite DOUBLE YCbCr reference values fail during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_reference_float_infinity_lzw_2x2.tiff",
+        "class": "ycbcr_reference_float_infinity_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Infinite FLOAT YCbCr reference values fail during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
         "verify_status": "ok"
       },
       {
@@ -26728,21 +26856,21 @@
       "ico": 30,
       "jpeg": 100,
       "png": 61,
-      "tiff": 125,
+      "tiff": 129,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 633,
+      "pillow_fixture": 637,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 367,
+      "spec_violation": 371,
       "tolerated": 0,
       "truncated": 192
     },
-    "classes": 633,
+    "classes": 637,
     "formats": 8
   }
 }
