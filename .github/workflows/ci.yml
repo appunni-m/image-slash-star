@@ -154,6 +154,9 @@ jobs:
           cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
             --output-path target/release-evidence/coverage-avif-encode-x86_64-avx2.json \
             --test coverage_matrix_tests test_encode_matrix_avif
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-fault-contract-x86_64-avx2.json \
+            --test coverage_matrix_tests test_fault_contract_matrix
       - name: Verify all x86 coverage reports were produced
         run: |
           for report in \
@@ -162,6 +165,7 @@ jobs:
             target/release-evidence/coverage-avif-x86_64.json \
             target/release-evidence/coverage-avif-encode-x86_64.json \
             target/release-evidence/coverage-fault-contract-x86_64.json \
+            target/release-evidence/coverage-fault-contract-x86_64-avx2.json \
             target/release-evidence/coverage-jpeg-x86_64-avx2.json \
             target/release-evidence/coverage-jpeg-encode-x86_64-avx2.json \
             target/release-evidence/coverage-avif-x86_64-avx2.json \
@@ -184,6 +188,7 @@ jobs:
             target/release-evidence/coverage-avif-x86_64.json
             target/release-evidence/coverage-avif-encode-x86_64.json
             target/release-evidence/coverage-fault-contract-x86_64.json
+            target/release-evidence/coverage-fault-contract-x86_64-avx2.json
             target/release-evidence/coverage-avif-x86_64-avx2.json
             target/release-evidence/coverage-avif-encode-x86_64-avx2.json
           if-no-files-found: warn

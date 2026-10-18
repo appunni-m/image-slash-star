@@ -292,6 +292,84 @@ def ci_coverage_gate_violations(contents: str) -> list[str]:
     return violations
 
 
+def ci_x86_fault_coverage_violations(contents: str) -> list[str]:
+    """Require the AVX2 lane to retain its separate fault-contract report."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["CI workflow has no jobs section"]
+
+    job = jobs.get("x86-simd-lint")
+    if job is None:
+        return ["CI workflow has no x86 SIMD job"]
+
+    report = "coverage-fault-contract-x86_64-avx2.json"
+    steps = re.split(r"(?m)^      - ", job)
+    avx2_step = next(
+        (
+            step
+            for step in steps
+            if re.search(
+                r"(?m)^name: Run AVX2 public JPEG and AVIF parity with branch coverage$",
+                step,
+            )
+        ),
+        None,
+    )
+    if avx2_step is None:
+        return ["CI x86 SIMD job has no AVX2 parity step"]
+
+    avx2_script = run_script(avx2_step)
+    if avx2_script is None:
+        return ["CI AVX2 parity step must run its coverage commands"]
+    normalized_script = " ".join(avx2_script.replace("\\\n", " ").split())
+    expected_command = (
+        'cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch '
+        "--locked --json --output-path "
+        f"target/release-evidence/{report} --test coverage_matrix_tests "
+        "test_fault_contract_matrix"
+    )
+    violations = []
+    if expected_command not in normalized_script:
+        violations.append(
+            "CI AVX2 parity step must produce the separate fault-contract coverage report"
+        )
+
+    report_check = next(
+        (
+            run_script(step)
+            for step in steps
+            if re.search(
+                r"(?m)^name: Verify all x86 coverage reports were produced$",
+                step,
+            )
+        ),
+        None,
+    )
+    if (
+        report_check is None
+        or report_check.count(report) != 1
+        or 'test -s "$report"' not in report_check
+    ):
+        violations.append(
+            "CI coverage verification must require the AVX2 fault-contract report"
+        )
+
+    upload_step = next(
+        (
+            step
+            for step in steps
+            if re.search(r"(?m)^uses: actions/upload-artifact@", step)
+        ),
+        None,
+    )
+    if upload_step is None or upload_step.count(report) != 1:
+        violations.append(
+            "CI x86 artifact must retain the AVX2 fault-contract report separately"
+        )
+    return violations
+
+
 DOCS_TRUSTED_WORKFLOW_RUN_GATE = (
     "github.event.workflow_run.conclusion == 'success' && "
     "github.event.workflow_run.head_repository.full_name == github.repository && "
@@ -1497,6 +1575,12 @@ def main() -> int:
     ci_workflow = ROOT / ".github" / "workflows" / "ci.yml"
     if not verify_workflow_policy(
         ci_workflow, ci_coverage_gate_violations, "CI coverage"
+    ):
+        return 1
+    if not verify_workflow_policy(
+        ci_workflow,
+        ci_x86_fault_coverage_violations,
+        "CI x86 fault-contract coverage",
     ):
         return 1
     if not verify_apple_arm64_runner_policy():
