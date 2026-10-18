@@ -21043,6 +21043,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "ycbcr_reference_double_at_limit_lzw_2x2.tiff",
+        "class": "ycbcr_reference_double_at_limit_lzw_2x2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "DOUBLE YCbCr reference values at the conversion limit fail during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "ycbcr_reference_double_infinity_lzw_2x2.tiff",
         "class": "ycbcr_reference_double_infinity_lzw_2x2",
         "contracts": {
@@ -26856,21 +26888,21 @@
       "ico": 30,
       "jpeg": 100,
       "png": 61,
-      "tiff": 129,
+      "tiff": 130,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 637,
+      "pillow_fixture": 638,
       "specification_reference": 60
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 371,
+      "spec_violation": 372,
       "tolerated": 0,
       "truncated": 192
     },
-    "classes": 637,
+    "classes": 638,
     "formats": 8
   }
 }

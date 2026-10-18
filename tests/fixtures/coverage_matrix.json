@@ -144087,6 +144087,161 @@
           "error_contracts": {}
         },
         {
+          "id": "ycbcr_reference_double_below_limit_lzw_2x2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "DOUBLE YCbCr reference values below the conversion limit decode with exact pixels",
+          "asset": "ycbcr_reference_double_below_limit_lzw_2x2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "cce30fcae9daeb4fda7d0d5f4e888798667e781c1175f2e0db6aa6a8836a40cd",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "092d2582801c2796d0e5bd3d0cad1ccf194f68cd71f2b75660ff8c7cb259941f",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_reference_double_below_limit_lzw_2x2_tiff.bin",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_reference_double_at_limit_lzw_2x2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "DOUBLE YCbCr reference values at the conversion limit fail during pixel decoding",
+          "asset": "ycbcr_reference_double_at_limit_lzw_2x2.tiff",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "1dbbe503d82d2ed6b2e8af411e3059ca5ff250644f5796e0ddd497b342e1b264",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "decoder error -2",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "decoder error -2",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "decoder error -2",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "ycbcr_coefficients_float_nan_lzw_2x2",
           "type": "decode",
           "format": "tiff",
@@ -199960,12 +200115,12 @@
     }
   },
   "summary": {
-    "total_rows": 2373,
-    "decode_rows": 1877,
+    "total_rows": 2375,
+    "decode_rows": 1879,
     "encode_rows": 496,
     "formats": 8,
-    "assets_available": 1874,
-    "decode_active": 1877,
+    "assets_available": 1876,
+    "decode_active": 1879,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

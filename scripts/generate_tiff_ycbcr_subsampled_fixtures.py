@@ -643,6 +643,18 @@ def fixtures() -> dict[
     reference_double_type = set_ifd_float_values(
         custom_reference_only, 532, 12, float_reference_black_white
     )
+    reference_double_below_limit = set_ifd_float_values(
+        custom_reference_only,
+        532,
+        12,
+        (16.0, 2_147_483_583.0, 128.0, 240.0, 128.0, 240.0),
+    )
+    reference_double_at_limit = set_ifd_float_values(
+        custom_reference_only,
+        532,
+        12,
+        (16.0, 2_147_483_584.0, 128.0, 240.0, 128.0, 240.0),
+    )
     coefficients_float_nan = set_ifd_float_values(
         custom_coefficients_only, 529, 11, (float("nan"), 0.7152, 0.0722)
     )
@@ -1261,6 +1273,31 @@ def fixtures() -> dict[
                 "00001971aac736822a004800366f8c003552"
             ),
         ),
+        "ycbcr_reference_double_below_limit_lzw_2x2.tiff": (
+            reference_double_below_limit,
+            (4, 4),
+            "092d2582801c2796d0e5bd3d0cad1ccf194f68cd71f2b75660ff8c7cb259941f",
+            {
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 2_147_483_583.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "004800004800003400003400004800004800003400003400002100002100"
+                "000e2b000e2b002100002100000e2b000e2b"
+            ),
+        ),
+        "ycbcr_reference_double_at_limit_lzw_2x2.tiff": (
+            reference_double_at_limit,
+            (4, 4),
+            None,
+            {
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 2_147_483_584.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            None,
+        ),
         "ycbcr_coefficients_float_nan_lzw_2x2.tiff": (
             coefficients_float_nan,
             (4, 4),
@@ -1618,6 +1655,8 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_coefficients_double_infinity_lzw_2x2.tiff": "798aa5745ea7146883324287482b5d01cb29940796075677d5103e435f5a4857",
             "ycbcr_reference_float_type_lzw_2x2.tiff": "4fedf6f18aba1a16e3b4be43b2ccdb4fd2e1ce560c11ee638f82d38dad5021c2",
             "ycbcr_reference_double_type_lzw_2x2.tiff": "44360eed61346ece234b4d905f43a0087ee2af40396fbcf092c006ea5ab9d7aa",
+            "ycbcr_reference_double_below_limit_lzw_2x2.tiff": "cce30fcae9daeb4fda7d0d5f4e888798667e781c1175f2e0db6aa6a8836a40cd",
+            "ycbcr_reference_double_at_limit_lzw_2x2.tiff": "1dbbe503d82d2ed6b2e8af411e3059ca5ff250644f5796e0ddd497b342e1b264",
             "ycbcr_coefficients_float_nan_lzw_2x2.tiff": "b5528738ef256e3b2bbbe7fee599132d0c351bc30e27e79983e4842d26ddb31b",
             "ycbcr_coefficients_double_nan_lzw_2x2.tiff": "94b0daf8bfefd5110240870628e67459b534217939026e91e6013ecab064aecb",
             "ycbcr_reference_float_infinity_lzw_2x2.tiff": "1e4bf6a92a8c6ecde82d1b7ac2c729ed10ba6043b9a3bbee2bd5fb4a5b61c2da",

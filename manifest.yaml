@@ -5410,6 +5410,15 @@ formats:
       description: DOUBLE YCbCr reference values decode with their IEEE values
       test_assets:
       - ycbcr_reference_double_type_lzw_2x2.tiff
+    - id: ycbcr_reference_double_below_limit_lzw_2x2
+      description: DOUBLE YCbCr reference values below the conversion limit decode with exact pixels
+      test_assets:
+      - ycbcr_reference_double_below_limit_lzw_2x2.tiff
+    - id: ycbcr_reference_double_at_limit_lzw_2x2
+      description: DOUBLE YCbCr reference values at the conversion limit fail during pixel decoding
+      test_assets:
+      - ycbcr_reference_double_at_limit_lzw_2x2.tiff
+      expect_error: true
     - id: ycbcr_coefficients_float_nan_lzw_2x2
       description: NaN FLOAT YCbCr coefficients fail during pixel decoding
       test_assets:
