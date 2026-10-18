@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Generate two complete BMP/GIF public parity edge fixtures."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import io
+from pathlib import Path
+import struct
+
+
+ROOT = Path(__file__).resolve().parents[1]
+BMP_OUTPUT = ROOT / "tests/fixtures/input/images/bmp/os2_core_indexed_4bit_odd_width.bmp"
+GIF_SOURCE = ROOT / "tests/fixtures/input/images/gif/1x1.gif"
+GIF_OUTPUT = ROOT / "tests/fixtures/input/images/gif/plain_text_extension.gif"
+EXPECTED_BMP_SHA256 = "465ab978034f4ef09c5f67bbf5687e6a2c31c5194bdc71bedae7d26e1150aca3"
+EXPECTED_BMP_PIXELS_SHA256 = "7b9453f4b6c2ef939d3959400b0ef356025da295b5402bab5e3ec0312f166c52"
+EXPECTED_BMP_PALETTE_SHA256 = "516c964c65deaccbe453906b66b38f8727de2f306f25650834a2942ef0006020"
+EXPECTED_GIF_SOURCE_SHA256 = "54b2b3705b7d5e3f8e4b6d3744463cf15ce8374565c6c5dec27b6c586a7fe8d6"
+EXPECTED_GIF_SHA256 = "66fbb5841004947d0a6ea9460c909af3d3df8fa2bd24946ef12a04daf5bfc7a0"
+EXPECTED_GIF_PIXELS_SHA256 = "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+PLAIN_TEXT_EXTENSION = bytes.fromhex(
+    "21 01 0c 00 00 01 01 01 01 00 00 00 00 00 00 03 70 6c 61 00"
+)
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def generate_bmp() -> bytes:
+    """Build an OS/2 core-header BMP with a 16-entry RGBTRIPLE palette."""
+    # RGBQUAD data is BGR with a fourth reserved byte. OS/2 core palettes use
+    # three-byte RGBTRIPLE entries and 4-bit pixels are high-nibble first.
+    palette = bytes((0, 0, 255, 0, 255, 0)) + bytes(14 * 3)
+    # The file stores bottom-up rows: (1, 0, 1), followed by (0, 1, 0).
+    pixels = bytes.fromhex("10 10 00 00 01 00 00 00")
+    dib = struct.pack("<IHHHH", 12, 3, 2, 1, 4)
+    pixel_offset = 14 + len(dib) + len(palette)
+    file_header = struct.pack("<2sIHHI", b"BM", pixel_offset + len(pixels), 0, 0, pixel_offset)
+    encoded = file_header + dib + palette + pixels
+    if sha256(encoded) != EXPECTED_BMP_SHA256:
+        raise RuntimeError("generated BMP SHA-256 differs from its pinned fixture")
+    return encoded
+
+
+def generate_gif() -> bytes:
+    """Insert a Plain Text Extension before the source GIF image descriptor."""
+    source = GIF_SOURCE.read_bytes()
+    if sha256(source) != EXPECTED_GIF_SOURCE_SHA256:
+        raise RuntimeError("source 1x1 GIF SHA-256 differs from its pinned fixture")
+    if len(source) < 19 or source[19:20] != b"\x2c":
+        raise RuntimeError("source GIF no longer has its image descriptor at offset 19")
+    encoded = source[:19] + PLAIN_TEXT_EXTENSION + source[19:]
+    if sha256(encoded) != EXPECTED_GIF_SHA256:
+        raise RuntimeError("generated GIF SHA-256 differs from its pinned fixture")
+    return encoded
+
+
+def verify_pillow_references(bmp: bytes, gif: bytes) -> None:
+    """Confirm full-file verification and exact decoded results with Pillow."""
+    import PIL
+    from PIL import Image
+
+    if PIL.__version__ != "12.2.0":
+        raise RuntimeError(f"Pillow 12.2.0 is required, found {PIL.__version__}")
+
+    with Image.open(io.BytesIO(bmp)) as image:
+        image.verify()
+    with Image.open(io.BytesIO(bmp)) as image:
+        image.load()
+        pixels = image.tobytes()
+        palette = image.getpalette()
+        if image.format != "BMP" or image.mode != "P" or image.size != (3, 2):
+            raise RuntimeError("Pillow returned an unexpected OS/2 BMP result")
+        if pixels != bytes((0, 1, 0, 1, 0, 1)) or palette is None:
+            raise RuntimeError("Pillow returned unexpected OS/2 BMP samples or palette")
+        if sha256(pixels) != EXPECTED_BMP_PIXELS_SHA256:
+            raise RuntimeError("Pillow OS/2 BMP pixel SHA-256 differs from its reference")
+        if sha256(bytes(palette)) != EXPECTED_BMP_PALETTE_SHA256:
+            raise RuntimeError("Pillow OS/2 BMP palette SHA-256 differs from its reference")
+
+    with Image.open(io.BytesIO(gif)) as image:
+        image.verify()
+    with Image.open(io.BytesIO(gif)) as image:
+        image.load()
+        pixels = image.tobytes()
+        if image.format != "GIF" or image.mode != "P" or image.size != (1, 1):
+            raise RuntimeError("Pillow returned an unexpected Plain Text GIF result")
+        if pixels != b"\x00" or sha256(pixels) != EXPECTED_GIF_PIXELS_SHA256:
+            raise RuntimeError("Pillow Plain Text GIF pixel reference differs")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify the committed fixtures without rewriting them",
+    )
+    args = parser.parse_args()
+
+    bmp = generate_bmp()
+    gif = generate_gif()
+
+    if args.check:
+        for path, expected in ((BMP_OUTPUT, bmp), (GIF_OUTPUT, gif)):
+            if not path.is_file() or path.read_bytes() != expected:
+                raise RuntimeError(f"{path.relative_to(ROOT)} differs from generated bytes")
+        print("BMP and GIF fixtures match their pinned full-file and Pillow references")
+        return 0
+
+    verify_pillow_references(bmp, gif)
+    BMP_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    GIF_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    BMP_OUTPUT.write_bytes(bmp)
+    GIF_OUTPUT.write_bytes(gif)
+    print(f"Wrote {BMP_OUTPUT.relative_to(ROOT)} ({len(bmp)} bytes)")
+    print(f"Wrote {GIF_OUTPUT.relative_to(ROOT)} ({len(gif)} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

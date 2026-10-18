@@ -13283,6 +13283,167 @@
       }
     },
     {
+      "id": "apng_gray16_partial_frame",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "ed7171393de78d2373745669ce8ed3b8cb715c6cadcfdae66f42467d25e33c4f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "specification_reference",
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 16,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_gray16_partial_frame_png.bin",
+      "ref_bytes": 4,
+      "ref_sha256": "2196d24a989fee982488070afd64307bbcc2b64ff5c7aecffc3850657e9eefe0",
+      "ref_mode": "I;16",
+      "ref_size": [
+        2,
+        1
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          2,
+          1
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              2,
+              1
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": true,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_gray16_partial_frame_png_frame_0.bin",
+            "ref_bytes": 4,
+            "ref_mode": "I;16",
+            "ref_size": [
+              2,
+              1
+            ],
+            "ref_sha256": "2196d24a989fee982488070afd64307bbcc2b64ff5c7aecffc3850657e9eefe0",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              1,
+              0,
+              1,
+              1
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_gray16_partial_frame_png_frame_1.bin",
+            "ref_bytes": 4,
+            "ref_mode": "I;16",
+            "ref_size": [
+              2,
+              1
+            ],
+            "ref_sha256": "5d985624217caa89becf86421e648670b52352f63fd672080e070faa89195725",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
       "id": "apng_empty_fdat_before_idat",
       "status": "ok",
       "error_type": null,

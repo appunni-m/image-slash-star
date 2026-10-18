@@ -9423,6 +9423,70 @@
         "verify_status": "ok"
       },
       {
+        "asset": "baseline_444_single_scan_trailing_dht_truncated_counts.jpg",
+        "class": "baseline_444_single_scan_trailing_dht_truncated_counts",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:4:4 JPEG has truncated Huffman symbol counts in its trailing DHT segment",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "baseline_444_single_scan_trailing_dht_truncated_values.jpg",
+        "class": "baseline_444_single_scan_trailing_dht_truncated_values",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:4:4 JPEG declares a Huffman symbol beyond its trailing DHT payload",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "corrupt.jpg",
         "class": "corrupt_header",
         "contracts": {
@@ -26886,13 +26950,13 @@
       "bmp": 68,
       "gif": 48,
       "ico": 30,
-      "jpeg": 100,
+      "jpeg": 102,
       "png": 61,
       "tiff": 130,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 638,
+      "pillow_fixture": 640,
       "specification_reference": 60
     },
     "by_spec_status": {
@@ -26900,9 +26964,9 @@
       "not_the_format": 39,
       "spec_violation": 372,
       "tolerated": 0,
-      "truncated": 192
+      "truncated": 194
     },
-    "classes": 638,
+    "classes": 640,
     "formats": 8
   }
 }

@@ -25771,6 +25771,161 @@
       }
     },
     {
+      "id": "multi_page_rgba_transparency",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "TIFF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": "little",
+      "inspect_source_byte_order_origin": "pillow_fixture",
+      "asset_sha256": "445c160373a2391d3e090179cf9e5b3959382c1753b9ed762b0a653ec81bf5e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "pillow_fixture",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgba_animation_transparency_tiff.bin",
+      "ref_bytes": 8,
+      "ref_sha256": "de26580c9c8e44939f8cd579892585f615705d2dc7be0b6ad8fe1d2adcf91338",
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        2,
+        1
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": "little",
+      "decoded_source_byte_order_origin": "pillow_fixture",
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          2,
+          1
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              2,
+              1
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgba_animation_transparency_tiff_frame_0.bin",
+            "ref_bytes": 8,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              2,
+              1
+            ],
+            "ref_sha256": "de26580c9c8e44939f8cd579892585f615705d2dc7be0b6ad8fe1d2adcf91338",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              2,
+              1
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgba_animation_transparency_tiff_frame_1.bin",
+            "ref_bytes": 8,
+            "ref_mode": "Rgba8",
+            "ref_size": [
+              2,
+              1
+            ],
+            "ref_sha256": "d426679f8ae5eee2512f726eed4bec14383c97887dc943e62095cedf493b6b3c",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
       "id": "cyclic_ifd_leniency",
       "status": "ok",
       "error_type": null,

@@ -78,7 +78,11 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_1bit_odd_width_fixture.py --check
 	$(PYTHON) scripts/generate_png_itxt_missing_keyword_separator.py --check
 	$(PYTHON) scripts/generate_png_apng_duplicate_actl.py --check
+	$(PYTHON) scripts/generate_png_apng_gray16_partial_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_trailing_dht_malformed_fixtures.py --check
+	$(PYTHON) scripts/generate_bmp_gif_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_custom_active_ac_chroma_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check

@@ -987,6 +987,7 @@ pub(crate) fn encode_with_token(
                 max_h,
                 max_v,
                 &params,
+                restart_rows,
                 Some(token),
                 &mut checkpoint,
                 &mut scan_checkpoint,
@@ -999,6 +1000,7 @@ pub(crate) fn encode_with_token(
                 max_h,
                 max_v,
                 &params,
+                restart_rows,
             )?;
         }
     }
@@ -1077,6 +1079,7 @@ fn encode_progressive_without_token(
     maximum_horizontal_sampling: u8,
     maximum_vertical_sampling: u8,
     params: &quant::EncodeParams,
+    restart_rows: u32,
 ) -> CodecResult<()> {
     let mut checkpoint = NoopEntropyOutputCheckpoint;
     let mut scan_checkpoint = NoopProgressiveScanCheckpoint::new();
@@ -1087,6 +1090,7 @@ fn encode_progressive_without_token(
         maximum_horizontal_sampling,
         maximum_vertical_sampling,
         params,
+        restart_rows,
         None,
         &mut checkpoint,
         &mut scan_checkpoint,
@@ -4895,6 +4899,7 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
 enum ProgressiveEvent {
     Symbol { table: usize, value: u8 },
     Bits { value: u32, width: u8 },
+    Restart { number: u8 },
 }
 
 #[allow(
@@ -4905,18 +4910,26 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
     output: &mut Vec<u8>,
     components: &[CompData],
     component_count: u8,
-    _maximum_horizontal_sampling: u8,
+    maximum_horizontal_sampling: u8,
     _maximum_vertical_sampling: u8,
     _params: &quant::EncodeParams,
+    restart_rows: u32,
     token: Option<&crate::CancellationToken>,
     checkpoint: &mut P,
     scan_checkpoint: &mut C,
 ) -> CodecResult<()> {
     // ✅ VERIFIED: libjpeg-turbo 3.1.4.1 jcphuff.c:179-1075 and
     // jcmaster.c's jpeg_simple_progression scan script.
+    let mut current_restart_interval = None;
     for scan in default_progression_script(component_count) {
         crate::codecs::error::check_cancelled(token)?;
-        let events = progressive_events(&scan, components, scan_checkpoint)?;
+        let restart_interval = progressive_scan_restart_interval(
+            &scan,
+            components,
+            maximum_horizontal_sampling,
+            restart_rows,
+        );
+        let events = progressive_events(&scan, components, restart_interval, scan_checkpoint)?;
         let mut frequencies = [[0u64; 256]; 4];
         for &event in &events {
             if let ProgressiveEvent::Symbol { table, value } = event {
@@ -4954,6 +4967,12 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
                 (component.id, dc_table, ac_table)
             })
             .collect::<Vec<_>>();
+        if current_restart_interval != Some(restart_interval) {
+            if restart_interval != 0 || current_restart_interval.is_some() {
+                marker::write_dri(output, restart_interval);
+            }
+            current_restart_interval = Some(restart_interval);
+        }
         marker::write_sos(output, &scan_components, scan.ss, scan.se, scan.ah, scan.al);
 
         let mut writer = huffman::BitWriter::with_output(std::mem::take(output));
@@ -4976,6 +4995,10 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
                     );
                 }
                 ProgressiveEvent::Bits { value, width } => writer.write_bits(value, width),
+                ProgressiveEvent::Restart { number } => {
+                    writer.flush();
+                    marker::write_rst(&mut writer.out, number);
+                }
             }
             checkpoint.observe(writer.out.len().saturating_sub(entropy_start))?;
         }
@@ -4988,16 +5011,232 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
     Ok(())
 }
 
+fn progressive_scan_restart_interval(
+    scan: &ProgScan,
+    components: &[CompData],
+    maximum_horizontal_sampling: u8,
+    restart_rows: u32,
+) -> u16 {
+    let mcu_columns = if scan.comps.len() > 1 {
+        let maximum_horizontal_sampling = usize::from(maximum_horizontal_sampling).max(1);
+        components[0]
+            .blocks_per_row
+            .saturating_mul(8)
+            .div_ceil(maximum_horizontal_sampling.saturating_mul(8))
+    } else {
+        components[scan.comps[0]].blocks_per_row
+    };
+    restart_interval_from_rows(restart_rows, mcu_columns)
+}
+
 fn progressive_events<C: ProgressiveScanCheckpoint>(
     scan: &ProgScan,
     components: &[CompData],
+    restart_interval: u16,
     checkpoint: &mut C,
 ) -> CodecResult<Vec<ProgressiveEvent>> {
-    if scan.ss == 0 {
-        dc_progressive_events(scan, components, checkpoint)
+    if restart_interval == 0 {
+        if scan.ss == 0 {
+            dc_progressive_events(scan, components, checkpoint)
+        } else {
+            ac_progressive_events(scan, components, checkpoint)
+        }
+    } else if scan.ss == 0 {
+        dc_progressive_events_with_restarts(scan, components, restart_interval, checkpoint)
     } else {
-        ac_progressive_events(scan, components, checkpoint)
+        ac_progressive_events_with_restarts(scan, components, restart_interval, checkpoint)
     }
+}
+
+fn advance_progressive_restart_interval(
+    restart_interval: u16,
+    mcus_until_restart: &mut usize,
+    processed_mcus: usize,
+    total_mcus: usize,
+) -> bool {
+    *mcus_until_restart = mcus_until_restart.saturating_sub(1);
+    if *mcus_until_restart != 0 {
+        return false;
+    }
+
+    *mcus_until_restart = usize::from(restart_interval);
+    processed_mcus < total_mcus
+}
+
+fn push_progressive_restart(events: &mut Vec<ProgressiveEvent>, next_restart: &mut u8) {
+    events.push(ProgressiveEvent::Restart {
+        number: *next_restart,
+    });
+    *next_restart = next_restart.wrapping_add(1) & 7;
+}
+
+fn append_progressive_dc_event(
+    events: &mut Vec<ProgressiveEvent>,
+    predictors: &mut [i32],
+    scan: &ProgScan,
+    scan_index: usize,
+    component_index: usize,
+    components: &[CompData],
+    block: &[i16; 64],
+) {
+    let component = &components[component_index];
+    let raw = i32::from(block[0]);
+    if scan.ah == 0 {
+        let transformed = raw.wrapping_shr(u32::from(scan.al));
+        let difference = transformed.saturating_sub(predictors[scan_index]);
+        predictors[scan_index] = transformed;
+        let width = jpeg_nbits(difference);
+        events.push(ProgressiveEvent::Symbol {
+            table: usize::from(component.dc_tbl),
+            value: width.to_le_bytes()[0],
+        });
+        if width != 0 {
+            events.push(ProgressiveEvent::Bits {
+                value: mag_bits(difference, width),
+                width: width.to_le_bytes()[0],
+            });
+        }
+    } else {
+        events.push(ProgressiveEvent::Bits {
+            value: (raw.wrapping_shr(u32::from(scan.al)) & 1).cast_unsigned(),
+            width: 1,
+        });
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "component MCU dimensions and a nonzero restart interval bound all indexes and countdowns"
+)]
+fn dc_progressive_events_with_restarts<C: ProgressiveScanCheckpoint>(
+    scan: &ProgScan,
+    components: &[CompData],
+    restart_interval: u16,
+    checkpoint: &mut C,
+) -> CodecResult<Vec<ProgressiveEvent>> {
+    let mut events = Vec::new();
+    let interleaved = scan.comps.len() > 1;
+    let maximum_horizontal_sampling = components.iter().map(|c| c.h_samp).max().unwrap_or(1);
+    let maximum_vertical_sampling = components.iter().map(|c| c.v_samp).max().unwrap_or(1);
+    let mcu_width = usize::from(maximum_horizontal_sampling).saturating_mul(8);
+    let mcu_height = usize::from(maximum_vertical_sampling).saturating_mul(8);
+    let mcu_columns = components[0]
+        .blocks_per_row
+        .saturating_mul(8)
+        .div_ceil(mcu_width.max(1));
+    let mcu_rows = components[0]
+        .block_rows
+        .saturating_mul(8)
+        .div_ceil(mcu_height.max(1));
+    let total_mcus = if interleaved {
+        mcu_columns.saturating_mul(mcu_rows)
+    } else {
+        components[scan.comps[0]].blocks.len()
+    };
+    let mut predictors = vec![0i32; scan.comps.len()];
+    let mut previous_dc_values = vec![0i32; scan.comps.len()];
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut processed_mcus = 0usize;
+    let mut next_restart = 0u8;
+
+    if interleaved {
+        for mcu_row in 0..mcu_rows {
+            checkpoint.row()?;
+            for mcu_column in 0..mcu_columns {
+                for (scan_index, &component_index) in scan.comps.iter().enumerate() {
+                    let component = &components[component_index];
+                    for vertical in 0..usize::from(component.v_samp) {
+                        for horizontal in 0..usize::from(component.h_samp) {
+                            let block_row = mcu_row
+                                .saturating_mul(usize::from(component.v_samp))
+                                .saturating_add(vertical);
+                            let block_column = mcu_column
+                                .saturating_mul(usize::from(component.h_samp))
+                                .saturating_add(horizontal);
+                            if block_row < component.block_rows
+                                && block_column < component.blocks_per_row
+                            {
+                                let block_index = block_row
+                                    .saturating_mul(component.blocks_per_row)
+                                    .saturating_add(block_column);
+                                let block = &component.blocks[block_index];
+                                append_progressive_dc_event(
+                                    &mut events,
+                                    &mut predictors,
+                                    scan,
+                                    scan_index,
+                                    component_index,
+                                    components,
+                                    block,
+                                );
+                                previous_dc_values[scan_index] = i32::from(block[0]);
+                            } else if scan.ah == 0 {
+                                // Interleaved JPEG DC scans include dummy blocks
+                                // that fill a partial MCU. Their zero DC
+                                // difference still contributes a Huffman symbol.
+                                events.push(ProgressiveEvent::Symbol {
+                                    table: usize::from(component.dc_tbl),
+                                    value: 0,
+                                });
+                            } else {
+                                // Dummy blocks preserve the prior DC predictor,
+                                // so refinement repeats its low bit.
+                                events.push(ProgressiveEvent::Bits {
+                                    value: (previous_dc_values[scan_index]
+                                        .wrapping_shr(u32::from(scan.al))
+                                        & 1)
+                                    .cast_unsigned(),
+                                    width: 1,
+                                });
+                            }
+                            checkpoint.block()?;
+                        }
+                    }
+                }
+                processed_mcus = processed_mcus.saturating_add(1);
+                if advance_progressive_restart_interval(
+                    restart_interval,
+                    &mut mcus_until_restart,
+                    processed_mcus,
+                    total_mcus,
+                ) {
+                    push_progressive_restart(&mut events, &mut next_restart);
+                    predictors.fill(0);
+                    previous_dc_values.fill(0);
+                }
+            }
+        }
+    } else {
+        let component_index = scan.comps[0];
+        let component = &components[component_index];
+        for (block_index, block) in component.blocks.iter().enumerate() {
+            if block_index % component.blocks_per_row.max(1) == 0 {
+                checkpoint.row()?;
+            }
+            append_progressive_dc_event(
+                &mut events,
+                &mut predictors,
+                scan,
+                0,
+                component_index,
+                components,
+                block,
+            );
+            checkpoint.block()?;
+            processed_mcus = processed_mcus.saturating_add(1);
+            if advance_progressive_restart_interval(
+                restart_interval,
+                &mut mcus_until_restart,
+                processed_mcus,
+                total_mcus,
+            ) {
+                push_progressive_restart(&mut events, &mut next_restart);
+                predictors.fill(0);
+                previous_dc_values.fill(0);
+            }
+        }
+    }
+    Ok(events)
 }
 
 #[allow(
@@ -5136,6 +5375,67 @@ fn ac_progressive_events<C: ProgressiveScanCheckpoint>(
             )?;
         }
         checkpoint.block()?;
+    }
+    flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
+    Ok(events)
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the dispatcher supplies a nonzero interval and each block is one scan MCU"
+)]
+fn ac_progressive_events_with_restarts<C: ProgressiveScanCheckpoint>(
+    scan: &ProgScan,
+    components: &[CompData],
+    restart_interval: u16,
+    checkpoint: &mut C,
+) -> CodecResult<Vec<ProgressiveEvent>> {
+    let component = &components[scan.comps[0]];
+    let table = usize::from(component.ac_tbl);
+    let mut events = Vec::new();
+    let mut eob_run = 0u32;
+    let mut correction_bits = Vec::<u8>::new();
+    let mut mcus_until_restart = usize::from(restart_interval);
+    let mut processed_mcus = 0usize;
+    let total_mcus = component.blocks.len();
+    let mut next_restart = 0u8;
+
+    for (block_index, block) in component.blocks.iter().enumerate() {
+        if block_index % component.blocks_per_row.max(1) == 0 {
+            checkpoint.row()?;
+        }
+        if scan.ah == 0 {
+            append_ac_first_events(
+                &mut events,
+                block,
+                scan,
+                table,
+                &mut eob_run,
+                &mut correction_bits,
+                checkpoint,
+            )?;
+        } else {
+            append_ac_refine_events(
+                &mut events,
+                block,
+                scan,
+                table,
+                &mut eob_run,
+                &mut correction_bits,
+                checkpoint,
+            )?;
+        }
+        checkpoint.block()?;
+        processed_mcus = processed_mcus.saturating_add(1);
+        if advance_progressive_restart_interval(
+            restart_interval,
+            &mut mcus_until_restart,
+            processed_mcus,
+            total_mcus,
+        ) {
+            flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
+            push_progressive_restart(&mut events, &mut next_restart);
+        }
     }
     flush_progressive_eob(&mut events, table, &mut eob_run, &mut correction_bits);
     Ok(events)

@@ -942,6 +942,20 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid COM segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_com.jpg
+    - id: baseline_444_single_scan_trailing_dht
+      description: Baseline 4:4:4 JPEG has a valid DHT segment after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_dht.jpg
+    - id: baseline_444_single_scan_trailing_dht_truncated_counts
+      description: Baseline 4:4:4 JPEG has truncated Huffman symbol counts in its trailing DHT segment
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_truncated_counts.jpg
+      expect_error: true
+    - id: baseline_444_single_scan_trailing_dht_truncated_values
+      description: Baseline 4:4:4 JPEG declares a Huffman symbol beyond its trailing DHT payload
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_truncated_values.jpg
+      expect_error: true
     - id: baseline_444_single_scan_dqt_marker_fill
       description: Baseline 4:4:4 JPEG adds a fill byte before its trailing DQT marker
       test_assets:
@@ -1877,6 +1891,15 @@ formats:
     - id: enc_progressive
       description: 
       params: {'progressive': True}
+    - id: enc_progressive_restart_rows
+      description: Progressive JPEG emits restart markers at every MCU row
+      params: {'progressive': true, 'restart_interval': 1}
+      source_asset: baseline_444.jpg
+    - id: enc_progressive_restart_rows_partial_mcu_420
+      description: Odd 33x33 RGB input exercises progressive 4:2:0 restart rows across partial MCUs
+      params: {'progressive': true, 'subsampling': '420', 'quality': 85, 'restart_interval': 1}
+      source_format: jpeg
+      source_asset: 33x33.jpg
     - id: enc_baseline
       description: 
       params: {'progressive': False}
@@ -1936,6 +1959,10 @@ formats:
     - id: enc_cmyk_progressive
       description: Progressive Adobe CMYK JPEG uses the generic four-component scan script
       params: {'color': 'cmyk', 'progressive': True, 'optimize': False}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_progressive_restart_rows
+      description: Progressive Adobe CMYK scans emit restart markers at their MCU-row intervals
+      params: {'color': 'cmyk', 'progressive': true, 'optimize': false, 'restart_interval': 1}
       source_asset: baseline_cmyk.jpg
     - id: enc_cmyk_restart_rows
       description: Baseline CMYK streaming emits restart markers at each configured MCU row interval
@@ -2043,6 +2070,10 @@ formats:
     - id: enc_progressive_grayscale
       description: Progressive grayscale scan script
       params: {'progressive': True, 'grayscale': True}
+      source_asset: baseline_gray.jpg
+    - id: enc_progressive_grayscale_restart_rows
+      description: Progressive grayscale DC and AC scans emit restart markers at every block row
+      params: {'progressive': true, 'grayscale': true, 'restart_interval': 1}
       source_asset: baseline_gray.jpg
     - id: enc_progressive_eob_limit
       description: Progressive EOB run flush at the JPEG limit
@@ -2641,6 +2672,10 @@ formats:
       description: APNG with multiple frames
       test_assets:
       - apng_animated.png
+    - id: apng_gray16_partial_frame
+      description: 16-bit grayscale APNG composes a one-sample SOURCE frame update
+      test_assets:
+      - apng_gray16_partial_frame.png
     - id: apng_empty_fdat_before_idat
       description: An empty fdAT before IDAT preserves default-frame pixels while reaching the early APNG chunk guard
       test_assets:
@@ -3149,6 +3184,10 @@ formats:
       test_assets:
       - comment_extension.gif
       - unknown_application.gif
+    - id: plain_text_extension
+      description: Plain Text Extension sub-blocks are skipped before image data
+      test_assets:
+      - plain_text_extension.gif
     - id: alternate_loop_extension
       description: Pillow leaves ANIMEXTS1.0 opaque and accepts malformed or short loop payloads
       test_assets:
@@ -3690,6 +3729,10 @@ formats:
       description: OS/2 BMP v1 header
       test_assets:
       - os2v1.bmp
+    - id: os2_core_indexed_4bit_odd_width
+      description: OS/2 core header with RGBTRIPLE palette, packed 4-bit indices, and odd-width bottom-up rows
+      test_assets:
+      - os2_core_indexed_4bit_odd_width.bmp
     - id: v4_header
       description: BITMAPV4HEADER (color space info)
       test_assets:
@@ -6174,6 +6217,10 @@ formats:
       - multipage.tiff
       - multipage_three.tiff
       - multipage_mixed.tiff
+    - id: multi_page_rgba_transparency
+      description: Multi-page RGBA TIFF preserves straight-alpha samples on each page
+      test_assets:
+      - rgba_animation_transparency.tiff
     - id: cyclic_ifd_leniency
       description: Pillow stops a self-referential IFD chain after the first unique page
       test_assets:

@@ -52,9 +52,45 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,383 total rows: 1,887 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,887 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,394 total rows: 1,894 decode / inspect / verify rows and 500 encode rows.
+Of those, 1,894 decode rows and 468 encode rows are active; the other 32 encode
 rows are planned.
+
+## Codec edge and progressive JPEG restart parity — 2026-10-18
+
+Added public Pillow parity rows for OS/2 core 4-bit BMP padding, GIF Plain Text
+Extension handling, two-page transparent TIFF output, 16-bit partial-frame
+APNG composition, and a trailing DHT after a single-scan baseline JPEG. Added
+progressive JPEG restart-row parity for RGB, grayscale, and CMYK, plus a 33x33
+4:2:0 input that ends on partial MCUs. Two malformed trailing-DHT cases verify
+that Pillow accepts the JPEG structure but rejects truncated Huffman counts or
+symbol payloads during pixel loading.
+
+The 33x33 case exposed missing dummy-block DC symbols in interleaved scans and
+missing inherited DC refinement bits. The encoder now emits the padded MCU
+events Pillow expects. The selected decoder matrix passed 5/5 format-edge rows
+and the focused trailing-DHT matrix passed 3/3 rows. The selected progressive
+JPEG matrix passed 4/4 rows with 20 public encode calls and zero panics. The
+new partial-MCU output is 1,331 bytes; its source SHA-256
+is `afdec16d964c39b1d8f8329f72d798669ce507bf0904f96388fd273ddf65cc45` and
+its Pillow encoded-reference SHA-256 is
+`0185f9326f806ea684d69619abaa48e1abebf62d1d511ba0ca349017a8566f29`.
+
+The selected target-only JPEG coefficient-reservation fault contract also
+passed 1/1 with `oracle_status: not_applicable`, separately from Pillow parity.
+Coverage MCP reports 726/31,634 branch observations in the final format-edge
+decoder report, 292/31,634 in the trailing-DHT report, and 715/31,634 in the
+progressive JPEG report. Its targeted query found no missing branch arms at
+the new partial-MCU block-bound checks. It still lists the internal malformed
+DHT bounds at `decode.rs:2596` and `:2602` as unobserved, despite the public
+error-parity rows; those coordinates need further reachability analysis. The
+reports have unverified source identity and unknown test attribution, so these
+are exploration coordinates, not measured coverage gains. Reports:
+`target/release-evidence/selected/20261018-edge-decode-final.json`,
+`target/release-evidence/selected/20261018-progressive-jpeg-restarts-final.json`,
+`target/release-evidence/selected/20261018-jpeg-trailing-dht-boundaries.json`,
+and `target/release-evidence/selected/20261018-jpeg-fault-contract-coverage.json`.
+No full coverage campaign was run.
 
 ## TIFF YCbCr rational edge parity — 2026-10-18
 
@@ -6910,7 +6946,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `cb977a4638e964b42afdaa20c335a1e8fd6c60cf2cbb469b5f6dbbda183a60cd`; matrix `6fd9fc7db39eb4f47088294840a6b1ee1574f648c77474de92e881be740c4bba`.
+- Current fixture integrity only: manifest `3c5bec8515ef415917dbc1fe8004e8f9f9f7156407493ae8bee07d427b46ea6e`; matrix `386926b1527efb9de8575e8a623fe37e3738384e5426f921b9eb47d8602bb98a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

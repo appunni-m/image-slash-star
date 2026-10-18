@@ -11,7 +11,7 @@ use super::huffman::HuffTable;
 #[cfg(target_arch = "aarch64")]
 use super::huffman::HuffTableStorage;
 use super::idct::{self, YccColorConverter, extend, jpeg_idct_islow};
-use super::parser::{JpegInfo, M_COM, M_DQT, M_EOI, parse_jpeg};
+use super::parser::{JpegInfo, M_COM, M_DHT, M_DQT, M_EOI, parse_jpeg};
 use super::progressive::progressive_reconstruct;
 use super::upsample::{crop_component, fancy_upsample};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -2567,7 +2567,7 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
         }
         let marker_code = *data.get(code_pos)?;
         let marker = u16::from_be_bytes([0xFF, marker_code]);
-        if !matches!(marker, M_COM | M_DQT) {
+        if !matches!(marker, M_COM | M_DHT | M_DQT) {
             // Other markers may follow malformed entropy and must still go
             // through generic extraction's validation path.
             return None;
@@ -2580,17 +2580,39 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
         if segment_length < 2 {
             return None;
         }
-        marker_start = length_start.checked_add(segment_length)?;
-        if marker_start > info.eoi_pos {
+        let segment_end = length_start.checked_add(segment_length)?;
+        if segment_end > info.eoi_pos {
             return None;
         }
+
+        if marker == M_DHT {
+            let mut table_start = length_end;
+            while table_start < segment_end {
+                // parse_dht handles table semantics; keep its fast-path caller
+                // from treating bytes past this DHT segment as table contents.
+                data.get(table_start)?;
+                let counts_start = table_start.checked_add(1)?;
+                let counts_end = counts_start.checked_add(16)?;
+                if counts_end > segment_end {
+                    return None;
+                }
+                let counts = data.get(counts_start..counts_end)?;
+                let value_count = counts.iter().copied().map(usize::from).sum::<usize>();
+                table_start = counts_end.checked_add(value_count)?;
+                if table_start > segment_end {
+                    return None;
+                }
+            }
+        }
+
+        marker_start = segment_end;
     }
 
     if marker_start != info.eoi_pos {
         return None;
     }
     // Keep extraction bounded at the validated entropy boundary when only
-    // supported COM or DQT segments follow this single scan.
+    // supported COM, DHT, or DQT segments follow this single scan.
     Some(scan.entropy_end)
 }
 
