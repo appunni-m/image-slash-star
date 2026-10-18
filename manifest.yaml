@@ -942,6 +942,10 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid COM segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_com.jpg
+    - id: baseline_444_single_scan_trailing_app1
+      description: Baseline 4:4:4 JPEG has a valid APP1 segment after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_app1.jpg
     - id: baseline_444_single_scan_trailing_dht
       description: Baseline 4:4:4 JPEG has a valid DHT segment after its only entropy scan
       test_assets:

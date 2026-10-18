@@ -15,6 +15,7 @@ pub(crate) const M_DHT: u16 = 0xFFC4;
 pub(crate) const M_DQT: u16 = 0xFFDB;
 pub(crate) const M_DRI: u16 = 0xFFDD;
 pub(crate) const M_COM: u16 = 0xFFFE;
+pub(crate) const M_APP1: u16 = 0xFFE1;
 pub(crate) const M_APP14: u16 = 0xFFEE;
 
 // ── JPEG Structures ───────────────────────────────────────────────────────
