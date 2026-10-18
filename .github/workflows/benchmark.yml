@@ -22,6 +22,7 @@ on:
       - 'Cargo.lock'
       - 'Makefile'
       - 'rust-toolchain.toml'
+      - 'src/encode_options.rs'
       - 'src/lib.rs'
       - 'src/types/**'
       - 'src/codecs/mod.rs'
