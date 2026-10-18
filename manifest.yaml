@@ -5064,6 +5064,10 @@ formats:
       - lzw_long_phrase_checkpoint_1024.tiff
       - lzw_post_ifd_empty_count.tiff
       - lzw_extra_zero_output_strip.tiff
+    - id: lzw_midstream_clear_width_reset
+      description: LZW CLEAR after crossing the 9-to-10-bit code-width boundary resets the stream to 9 bits
+      test_assets:
+      - lzw_midstream_clear_width_reset.tiff
     - id: compression_deflate
       description: Deflate/ZIP compression
       test_assets:

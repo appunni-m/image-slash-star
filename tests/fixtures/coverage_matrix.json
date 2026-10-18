@@ -135339,6 +135339,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "lzw_midstream_clear_width_reset",
+          "type": "decode",
+          "format": "tiff",
+          "category": "lzw",
+          "description": "LZW CLEAR after crossing the 9-to-10-bit code-width boundary resets the stream to 9 bits",
+          "asset": "lzw_midstream_clear_width_reset.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f47c68140ab65932b4aec86edb0cfb5c6b16ef079653205e9e87e5ac0db153a6",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "a50858b23acd18e82d5012a8a115b2a905f22610822f86e5622aef99ebfa3cf4",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lzw_midstream_clear_width_reset_tiff.bin",
+          "ref_bytes": 330,
+          "ref_mode": "L8",
+          "ref_size": [
+            330,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "deflate.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/deflate.tiff",
           "category": "compression",
@@ -200661,12 +200739,12 @@
     }
   },
   "summary": {
-    "total_rows": 2382,
-    "decode_rows": 1886,
+    "total_rows": 2383,
+    "decode_rows": 1887,
     "encode_rows": 496,
     "formats": 8,
-    "assets_available": 1883,
-    "decode_active": 1886,
+    "assets_available": 1884,
+    "decode_active": 1887,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

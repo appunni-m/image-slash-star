@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,382 total rows: 1,886 decode / inspect / verify rows and 496 encode rows.
-Of those, 1,886 decode rows and 464 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,383 total rows: 1,887 decode / inspect / verify rows and 496 encode rows.
+Of those, 1,887 decode rows and 464 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF YCbCr rational edge parity — 2026-10-18
@@ -87,6 +87,24 @@ Coverage MCP lists ten missing branch coordinates in
 `decode.rs:2332` and `:2337`. This selected report also has no source/build
 receipt or test attribution, so the coordinates remain exploratory rather
 than proof of current-source coverage.
+
+## TIFF LZW mid-stream CLEAR parity — 2026-10-18
+
+Added `decode:tiff:lzw_midstream_clear_width_reset`, a complete grayscale TIFF
+whose LZW codes cross the 9-to-10-bit early-change boundary, issue CLEAR at
+10 bits, and continue with 9-bit literals. The generator verifies the code
+width at the boundary and after CLEAR, then checks Pillow 12.2.0's mode `L`,
+330×1 dimensions, exact pixels, and SHA-256
+`a50858b23acd18e82d5012a8a115b2a905f22610822f86e5622aef99ebfa3cf4`.
+The selected public parity row passed 1/1.
+
+Coverage MCP's selected LLVM report records 193/31,586 branch observations
+overall and has no missing branch groups on the LZW CLEAR conditions at
+`decode.rs:2960` and `decode.rs:3055`. The report has unverified source and
+unknown test attribution. Its incremental comparison to the saved full report
+is incomparable because the baseline lacks compatible detail; no aggregate
+coverage gain or full-suite result is claimed. Report:
+`target/release-evidence/selected/20261018T035838Z/coverage.json`.
 
 ## TIFF YCbCr FLOAT and DOUBLE parity — 2026-10-18
 
@@ -6892,7 +6910,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5bd916cb06d73f258cb5f3af2993a50fbeafe8216e741fcd6a4b0e302e1f2140`; matrix `013fc95c41c3dd0cba883bfc38fc732b4c3691df47e4401a9260ff908a2e35bb`.
+- Current fixture integrity only: manifest `cb977a4638e964b42afdaa20c335a1e8fd6c60cf2cbb469b5f6dbbda183a60cd`; matrix `6fd9fc7db39eb4f47088294840a6b1ee1574f648c77474de92e881be740c4bba`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

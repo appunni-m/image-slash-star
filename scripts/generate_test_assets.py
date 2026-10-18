@@ -9280,14 +9280,14 @@ def pack_lzw_codes(codes):
     return int(bits, 2).to_bytes(len(bits) // 8, "big")
 
 
-def pack_lzw_codes_with_growth(codes):
-    """Pack a TIFF LZW stream with the format's early-change code widths."""
-    fields = []
+def tiff_lzw_code_widths(codes):
+    """Return the TIFF early-change bit width used for each LZW code."""
+    widths = []
     code_width = 9
     next_code = 258
     has_previous = False
     for code in codes:
-        fields.append((code, code_width))
+        widths.append(code_width)
         if code == 256:
             code_width = 9
             next_code = 258
@@ -9300,6 +9300,14 @@ def pack_lzw_codes_with_growth(codes):
             next_code += 1
             if code_width < 12 and next_code == (1 << code_width) - 1:
                 code_width += 1
+    return widths
+
+
+def pack_lzw_codes_with_growth(codes):
+    """Pack a TIFF LZW stream with the format's early-change code widths."""
+    codes = list(codes)
+    widths = tiff_lzw_code_widths(codes)
+    fields = list(zip(codes, widths))
 
     bits = "".join(f"{code:0{width}b}" for code, width in fields)
     bits += "0" * (-len(bits) % 8)
@@ -9376,6 +9384,45 @@ def write_lzw_dictionary_saturation_tiff(path, pixel_count=4100):
     bits += "0" * (-len(bits) % 8)
     payload = int(bits, 2).to_bytes(len(bits) // 8, "big")
     write_compressed_grayscale_tiff(path, payload, 5, pixel_count)
+
+
+def write_lzw_midstream_clear_width_reset_tiff(path):
+    """Write a Pillow-parity TIFF with CLEAR at 10 bits then a 9-bit restart."""
+    if PILLOW_VERSION != "12.2.0":
+        raise RuntimeError(f"Pillow 12.2.0 is required, found {PILLOW_VERSION}")
+
+    first_run = [((index * 37) + 11) & 0xFF for index in range(300)]
+    second_run = [((index * 19) + 7) & 0xFF for index in range(30)]
+    codes = [256, *first_run, 256, *second_run, 257]
+    widths = tiff_lzw_code_widths(codes)
+    midstream_clear = len(first_run) + 1
+    if (
+        widths[255] != 10
+        or widths[midstream_clear] != 10
+        or widths[midstream_clear + 1] != 9
+    ):
+        raise RuntimeError("TIFF LZW CLEAR fixture does not cross and reset code widths")
+
+    write_compressed_grayscale_tiff(
+        path,
+        pack_lzw_codes_with_growth(codes),
+        5,
+        width=len(first_run) + len(second_run),
+    )
+
+    expected_pixels = bytes(first_run + second_run)
+    with Image.open(path) as oracle:
+        oracle.load()
+        actual_pixels = oracle.tobytes()
+        if (
+            oracle.format != "TIFF"
+            or oracle.mode != "L"
+            or oracle.size != (330, 1)
+            or actual_pixels != expected_pixels
+            or hashlib.sha256(actual_pixels).hexdigest()
+            != "a50858b23acd18e82d5012a8a115b2a905f22610822f86e5622aef99ebfa3cf4"
+        ):
+            raise RuntimeError("mid-stream CLEAR TIFF fixture changed its Pillow output")
 
 
 def write_grayscale_predictor_tiff(
@@ -10313,6 +10360,9 @@ def gen_tiff():
     write_lzw_tiff(d / "lzw_end_only.tiff", [256, 257])
     write_lzw_extra_zero_output_strip(d / "lzw_extra_zero_output_strip.tiff")
     write_lzw_dictionary_saturation_tiff(d / "lzw_dictionary_saturation.tiff")
+    write_lzw_midstream_clear_width_reset_tiff(
+        d / "lzw_midstream_clear_width_reset.tiff"
+    )
     write_lzw_long_phrase_checkpoint_tiff(
         d / "lzw_long_phrase_checkpoint_1024.tiff"
     )
@@ -19412,16 +19462,28 @@ def main():
         action="store_true",
         help="generate only the qindex-4 following Horizontal16x8 chroma fixture",
     )
+    parser.add_argument(
+        "--tiff-lzw-midstream-clear-width-reset",
+        action="store_true",
+        help="generate only the TIFF LZW mid-stream CLEAR parity fixture",
+    )
     args = parser.parse_args()
     selected_avif_fixture = (
         args.avif_iinf_entry_count_zero or args.avif_h16x8_following_chroma
     )
-    if selected_avif_fixture:
+    if selected_avif_fixture or args.tiff_lzw_midstream_clear_width_reset:
         if args.format is not None:
-            parser.error("focused AVIF fixture generation cannot be combined with --format")
+            parser.error("focused fixture generation cannot be combined with --format")
+        if selected_avif_fixture and args.tiff_lzw_midstream_clear_width_reset:
+            parser.error("focused AVIF and TIFF fixture options cannot be combined")
         if args.avif_iinf_entry_count_zero and args.avif_h16x8_following_chroma:
             parser.error("focused AVIF fixture options cannot be combined")
-        if args.avif_iinf_entry_count_zero:
+        if args.tiff_lzw_midstream_clear_width_reset:
+            fixture = OUT / "tiff" / "lzw_midstream_clear_width_reset.tiff"
+            fixture.parent.mkdir(parents=True, exist_ok=True)
+            write_lzw_midstream_clear_width_reset_tiff(fixture)
+            print(f"Generated TIFF LZW mid-stream CLEAR fixture: {fixture}")
+        elif args.avif_iinf_entry_count_zero:
             gen_avif_iinf_entry_count_zero()
             print("Generated AVIF iinf zero-count parity input")
         else:
