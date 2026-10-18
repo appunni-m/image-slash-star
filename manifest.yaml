@@ -6129,6 +6129,14 @@ formats:
       rust_decode_with_metadata_limit: 146
       test_assets:
       - empty_tile_byte_counts.tiff
+    - id: tiled_without_byte_counts
+      description: Pillow derives uncompressed tile lengths when TileByteCounts is absent
+      test_assets:
+      - tiled_without_byte_counts.tiff
+    - id: tiled_ascii_byte_counts
+      description: Pillow derives uncompressed tile lengths when TileByteCounts has ASCII type
+      test_assets:
+      - ascii_tile_byte_counts.tiff
     - id: tiled_predictor
       description: Deflate-compressed tiles with horizontal prediction
       test_assets:

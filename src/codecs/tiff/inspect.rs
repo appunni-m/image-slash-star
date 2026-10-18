@@ -105,7 +105,7 @@ fn verify_planar_offset_count(
     height: u32,
     samples: usize,
 ) -> CodecResult<()> {
-    // `verify_directory` has already rejected unmatched tile-offset/count tags.
+    // Missing TileByteCounts is accepted only for uncompressed tile offsets.
     if directory.field_type(324).is_some() {
         let tile_width = directory
             .one(322)
@@ -194,7 +194,10 @@ pub(super) fn verify_directory(directory: &Directory<'_>) -> CodecResult<()> {
     }
     let tile_offsets_present = directory.field_type(324).is_some();
     let tile_byte_counts_present = directory.field_type(325).is_some();
-    if tile_offsets_present != tile_byte_counts_present {
+    // Raw tile lengths follow from the tile geometry; compressed lengths do not.
+    if (tile_byte_counts_present && !tile_offsets_present)
+        || (tile_offsets_present && !tile_byte_counts_present && compression != 1)
+    {
         return Err(CodecError::Malformed(
             "TIFF tile offsets and byte counts must be present together".to_owned(),
         ));

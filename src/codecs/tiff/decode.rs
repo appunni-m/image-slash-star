@@ -380,7 +380,19 @@ fn decode_ifd(
     let tile_byte_counts = directory.values(325);
     if tile_offsets.is_some() || tile_byte_counts.is_some() {
         let offsets = tile_offsets.malformed("TIFF tile offsets are missing")?;
-        let byte_counts = tile_byte_counts.malformed("TIFF tile byte counts are missing")?;
+        let byte_counts = match tile_byte_counts {
+            Some(byte_counts) => byte_counts,
+            None if compression == COMPRESSION_NONE
+                && matches!(directory.field_type(325), None | Some(2)) =>
+            {
+                Vec::new()
+            }
+            None => {
+                return Err(CodecError::Malformed(
+                    "TIFF tile byte counts are missing".to_owned(),
+                ));
+            }
+        };
         let tile_width = directory
             .one(322)
             .dimensions("TIFF tile width is missing")?;
@@ -3350,10 +3362,13 @@ fn validate_baseline_field_type(tag: u16, field_type: u16) -> CodecResult<()> {
 }
 
 fn validate_decode_field_types(directory: &Directory<'_>) -> CodecResult<()> {
+    let raw_tiles = directory.field_type(324).is_some()
+        && directory.one_or(259, COMPRESSION_NONE) == COMPRESSION_NONE;
     for tag in [273, 278, 279, 284, 317, 324, 325] {
-        if directory
-            .field_type(tag)
-            .is_some_and(|field_type| !matches!(field_type, 1 | 3 | 4))
+        let field_type = directory.field_type(tag);
+        let pillow_ignores_ascii_raw_tile_counts = tag == 325 && raw_tiles && field_type == Some(2);
+        if field_type.is_some_and(|field_type| !matches!(field_type, 1 | 3 | 4))
+            && !pillow_ignores_ascii_raw_tile_counts
         {
             return Err(CodecError::Malformed(format!(
                 "TIFF tag {tag} has an unsupported field type"

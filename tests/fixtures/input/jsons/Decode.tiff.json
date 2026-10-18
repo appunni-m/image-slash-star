@@ -16964,6 +16964,110 @@
       ]
     },
     {
+      "id": "tiled_without_byte_counts",
+      "asset": "tiled_without_byte_counts.tiff",
+      "asset_sha256": "072aa8500b111f876be3e9ca8e8b5ab9f458664463781eedf2c884f5ff01d286",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/tiled_without_byte_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "tiled_ascii_byte_counts",
+      "asset": "ascii_tile_byte_counts.tiff",
+      "asset_sha256": "8bdafdfc0ecd3fb2d582760036034fb5a7c98493d2db653a7852c3d22b27bc51",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/ascii_tile_byte_counts.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "tiled_predictor",
       "asset": "tiled_deflate_predictor.tiff",
       "asset_sha256": "3acbccf44ab313e6c33301513989ca73487834b5418b23a3999ee992c2416904",

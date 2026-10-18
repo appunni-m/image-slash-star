@@ -8223,7 +8223,13 @@ def gen_webp_lossless_copy_out_of_bounds(directory):
 
 
 def write_rgb_tiff(
-    path, image, byte_order="<", tile_size=None, compression=1, predictor=1
+    path,
+    image,
+    byte_order="<",
+    tile_size=None,
+    compression=1,
+    predictor=1,
+    include_tile_byte_counts=True,
 ):
     """Write a minimal classic RGB TIFF with explicit byte order/organization."""
     width, height = image.size
@@ -8248,6 +8254,8 @@ def write_rgb_tiff(
         entry(278, 4, 1, height)
         entry(279, 4, 1, len(pixels))
     else:
+        if not include_tile_byte_counts and compression != 1:
+            raise ValueError("only uncompressed tiles can omit TileByteCounts")
         tiles_across = (width + tile_size - 1) // tile_size
         tiles_down = (height + tile_size - 1) // tile_size
         tile_payloads = []
@@ -8287,7 +8295,8 @@ def write_rgb_tiff(
         entry(322, 4, 1, tile_size)
         entry(323, 4, 1, tile_size)
         entry(324, 4, len(tile_payloads), "tile_offsets")
-        entry(325, 4, len(tile_payloads), "tile_counts")
+        if include_tile_byte_counts:
+            entry(325, 4, len(tile_payloads), "tile_counts")
 
     entries.sort()
     ifd_size = 2 + len(entries) * 12 + 4
@@ -8301,8 +8310,9 @@ def write_rgb_tiff(
     else:
         offsets_offset = cursor
         cursor += len(tile_payloads) * 4
-        counts_offset = cursor
-        cursor += len(tile_payloads) * 4
+        if include_tile_byte_counts:
+            counts_offset = cursor
+            cursor += len(tile_payloads) * 4
         tile_offsets = []
         for payload in tile_payloads:
             tile_offsets.append(cursor)
@@ -8332,12 +8342,13 @@ def write_rgb_tiff(
         output.extend(pixels)
     else:
         output.extend(struct.pack(byte_order + f"{len(tile_offsets)}I", *tile_offsets))
-        output.extend(
-            struct.pack(
-                byte_order + f"{len(tile_payloads)}I",
-                *(len(payload) for payload in tile_payloads),
+        if include_tile_byte_counts:
+            output.extend(
+                struct.pack(
+                    byte_order + f"{len(tile_payloads)}I",
+                    *(len(payload) for payload in tile_payloads),
+                )
             )
-        )
         for payload in tile_payloads:
             output.extend(payload)
     path.write_bytes(output)
@@ -10474,6 +10485,13 @@ def gen_tiff():
         0,
     )
     write_rgb_tiff(d / "tiled.tiff", img, tile_size=32)
+    write_rgb_tiff(
+        d / "tiled_without_byte_counts.tiff",
+        img,
+        tile_size=32,
+        include_tile_byte_counts=False,
+    )
+    mutate_tiff_tag_type(d / "tiled.tiff", d / "ascii_tile_byte_counts.tiff", 325, 2)
     write_rgb_tiff(
         d / "tiled_deflate_plain.tiff",
         img,
