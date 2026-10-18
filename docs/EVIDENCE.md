@@ -52,8 +52,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,397 total rows: 1,897 decode / inspect / verify rows and 500 encode rows.
-Of those, 1,897 decode rows and 468 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,398 total rows: 1,898 decode / inspect / verify rows and 500 encode rows.
+Of those, 1,898 decode rows and 468 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF equivalent-default YCbCr rational parity — 2026-10-18
