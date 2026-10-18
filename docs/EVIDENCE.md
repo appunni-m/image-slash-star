@@ -52,9 +52,32 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,394 total rows: 1,894 decode / inspect / verify rows and 500 encode rows.
-Of those, 1,894 decode rows and 468 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,395 total rows: 1,895 decode / inspect / verify rows and 500 encode rows.
+Of those, 1,895 decode rows and 468 encode rows are active; the other 32 encode
 rows are planned.
+
+## TIFF equivalent-default YCbCr rational parity — 2026-10-18
+
+Added `decode:tiff:ycbcr_equivalent_default_rational_lzw_2x2`, a complete
+4×4 LZW TIFF with explicit coefficient and reference fractions that equal the
+YCbCr defaults but use noncanonical numerator/denominator pairs. Pinned Pillow
+12.2.0 accepts the input as RGB and returns the same exact 48 bytes as the
+default-tag fixture. The input SHA-256 is
+`06a8a28ba0ebe1359d107ca2d7c442eb02dcc27cba8b85b06c16eaa610e7fa65`; the
+pixel-reference SHA-256 is
+`af15457a9372a158dd276ced4109b650b99def573093a49f70dbb469c2262668`.
+
+The focused selected matrix run passed 1/1. Its report is
+`target/release-evidence/selected/ycbcr_equivalent_default_rational_final.json`.
+Coverage MCP reports 234/31,634 observed branches for that selected report.
+The selected-tests comparison with three existing YCbCr rows found zero newly
+observed branch coordinates and three coordinates not observed by the new
+case. Both reports are source-unverified with unknown test attribution, so
+this is limited coordinate evidence, not a measured aggregate coverage gain.
+The old full report predates the current source and is not combined with this
+selection. The case remains useful as a distinct parity contract for explicit
+fractions equivalent to defaults; no fault injection or full coverage run was
+needed.
 
 ## Codec edge and progressive JPEG restart parity — 2026-10-18
 
@@ -6946,7 +6969,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3c5bec8515ef415917dbc1fe8004e8f9f9f7156407493ae8bee07d427b46ea6e`; matrix `386926b1527efb9de8575e8a623fe37e3738384e5426f921b9eb47d8602bb98a`.
+- Current fixture integrity only: manifest `bec9a04954aa6b6226dacbfab1e6e5910c4576835ae7bc5966bee910741ad5f4`; matrix `b5d79f1ac224b059e08aca0ba8a9c63f8236df141aec9cbd9d07622597081f15`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

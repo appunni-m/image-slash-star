@@ -4407,6 +4407,58 @@
       ]
     },
     {
+      "id": "ycbcr_equivalent_default_rational_lzw_2x2",
+      "asset": "ycbcr_equivalent_default_rational_lzw_2x2.tiff",
+      "asset_sha256": "06a8a28ba0ebe1359d107ca2d7c442eb02dcc27cba8b85b06c16eaa610e7fa65",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/ycbcr_equivalent_default_rational_lzw_2x2.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "ycbcr_subsampling_byte_type_lzw_2x2",
       "asset": "ycbcr_subsampling_byte_type_lzw_2x2.tiff",
       "asset_sha256": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",

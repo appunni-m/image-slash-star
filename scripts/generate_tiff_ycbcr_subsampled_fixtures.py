@@ -617,6 +617,23 @@ def fixtures() -> dict[
         positioning=1,
         coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
     )
+    equivalent_default_rational = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        coefficients=((598, 2000), (1174, 2000), (228, 2000)),
+        reference_black_white=(
+            (0, 2),
+            (510, 2),
+            (256, 2),
+            (510, 2),
+            (256, 2),
+            (510, 2),
+        ),
+    )
     custom_reference_only = build_tiff(
         4,
         4,
@@ -877,6 +894,18 @@ def fixtures() -> dict[
             (4, 4),
             REFERENCE_PIXEL_SHA256,
             {530: (2, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_equivalent_default_rational_lzw_2x2.tiff": (
+            equivalent_default_rational,
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {
+                529: (0.299, 0.587, 0.114),
+                530: (2, 2),
+                531: 1,
+                532: (0.0, 255.0, 128.0, 255.0, 128.0, 255.0),
+            },
             REFERENCE_PIXELS,
         ),
         "ycbcr_subsampling_byte_type_lzw_2x2.tiff": (
@@ -1688,6 +1717,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_equivalent_default_rational_lzw_2x2.tiff": "06a8a28ba0ebe1359d107ca2d7c442eb02dcc27cba8b85b06c16eaa610e7fa65",
             "ycbcr_subsampling_byte_type_lzw_2x2.tiff": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",
             "ycbcr_subsampling_long_type_lzw_2x2.tiff": "a3bc8d6110c272f34180e6e6231f88aa229ce5c87ee026464e6996a4523631cd",
             "ycbcr_subsampling_short_count_lzw_2x2.tiff": "f46aa199d9253f5dda799917e7223cab8005858df402ff8f5dc3916ecb254f5b",

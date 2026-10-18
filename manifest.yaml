@@ -5282,6 +5282,10 @@ formats:
       description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_equivalent_default_rational_lzw_2x2
+      description: Explicit noncanonical rational tags exactly equal to YCbCr defaults
+      test_assets:
+      - ycbcr_equivalent_default_rational_lzw_2x2.tiff
     - id: ycbcr_subsampling_byte_type_lzw_2x2
       description: Pillow accepts BYTE YCbCr subsampling values in a compressed TIFF
       test_assets:
