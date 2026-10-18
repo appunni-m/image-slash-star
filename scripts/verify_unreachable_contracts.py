@@ -345,6 +345,22 @@ FAULT_CONTRACTS = {
         "point": "tiff.ycbcr.rgb_output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_ycbcr_1x2_clump_length_mismatch": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch",
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_1x2",
+        "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "tiff_ycbcr_1x2_rgb_output_reservation_failure": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure",
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_1x2",
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "png_decoded_sample_buffer_reservation_failure": {
         "format": "png",
         "category": "structured-diagnostics",

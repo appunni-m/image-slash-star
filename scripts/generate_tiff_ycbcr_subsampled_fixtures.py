@@ -670,6 +670,12 @@ def fixtures() -> dict[
     coefficients_short_type = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 529, field_type=3
     )
+    coefficients_ascii_type = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 529, field_type=2
+    )
+    coefficients_undefined_type = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 529, field_type=7
+    )
     coefficients_long_type = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 529, field_type=4
     )
@@ -678,6 +684,12 @@ def fixtures() -> dict[
     )
     reference_short_type = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 532, field_type=3
+    )
+    reference_ascii_type = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 532, field_type=2
+    )
+    reference_undefined_type = mutate_ifd_tag(
+        custom_coefficients_and_reference_black_white, 532, field_type=7
     )
     reference_long_type = mutate_ifd_tag(
         custom_coefficients_and_reference_black_white, 532, field_type=4
@@ -1098,6 +1110,36 @@ def fixtures() -> dict[
             },
             None,
         ),
+        "ycbcr_coefficients_ascii_type_lzw_2x2.tiff": (
+            coefficients_ascii_type,
+            (4, 4),
+            "20ef7069dad35f4368a43e8a17d5106a274997632f16de33917740f30355f392",
+            {
+                529: ("\xbc\0",),
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "003600003600002200005b0036a900006f00369500005b00000f0036822a"
+                "00001971aac736822a004800366f8c003552"
+            ),
+        ),
+        "ycbcr_coefficients_undefined_type_lzw_2x2.tiff": (
+            coefficients_undefined_type,
+            (4, 4),
+            "20ef7069dad35f4368a43e8a17d5106a274997632f16de33917740f30355f392",
+            {
+                529: (b"\xbc\0\0",),
+                530: (2, 2),
+                531: 1,
+                532: (16.0, 235.0, 128.0, 240.0, 128.0, 240.0),
+            },
+            bytes.fromhex(
+                "003600003600002200005b0036a900006f00369500005b00000f0036822a"
+                "00001971aac736822a004800366f8c003552"
+            ),
+        ),
         "ycbcr_coefficients_long_type_lzw_2x2.tiff": (
             coefficients_long_type,
             (4, 4),
@@ -1141,6 +1183,36 @@ def fixtures() -> dict[
             bytes.fromhex(
                 "ffc6ffffc6ffffff0000c10000000000000000000000c100ffff00000000"
                 "ffff0000000000000000c10000000000c100"
+            ),
+        ),
+        "ycbcr_reference_ascii_type_lzw_2x2.tiff": (
+            reference_ascii_type,
+            (4, 4),
+            "fa0742fcea742c1e1ee51b4eedc289afe3dfe18e491ecb5cde9d669c2d97119c",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+                532: ("\x10\0\0\0\x01",),
+            },
+            bytes.fromhex(
+                "002500002500001c00064e00388900065700388000064e00001200387630"
+                "0009296a9fbf387630064400386d8d063b5b"
+            ),
+        ),
+        "ycbcr_reference_undefined_type_lzw_2x2.tiff": (
+            reference_undefined_type,
+            (4, 4),
+            "fa0742fcea742c1e1ee51b4eedc289afe3dfe18e491ecb5cde9d669c2d97119c",
+            {
+                529: (0.2126, 0.7152, 0.0722),
+                530: (2, 2),
+                531: 1,
+                532: (b"\x10\0\0\0\x01\0",),
+            },
+            bytes.fromhex(
+                "002500002500001c00064e00388900065700388000064e00001200387630"
+                "0009296a9fbf387630064400386d8d063b5b"
             ),
         ),
         "ycbcr_reference_long_type_lzw_2x2.tiff": (
@@ -1642,9 +1714,13 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_reference_limit_accepted_lzw_2x2.tiff": "f6666b8bde65045252de34833702e767c42e88c9e8f1235ad22231529f611402",
             "ycbcr_reference_limit_rejected_lzw_2x2.tiff": "ffef9e28dfe7b6bc3d91b47993cd3696ecf6dcebc8a1391c0d7f650f4610f655",
             "ycbcr_coefficients_short_type_lzw_2x2.tiff": "f7438184eef0098cf58df7bd679613710738331ebfc4c0d57a7fe21eff680a41",
+            "ycbcr_coefficients_ascii_type_lzw_2x2.tiff": "d36675d549f16bf745e88302f6cab7986a962180b38e54c13a5db2a9284aee2a",
+            "ycbcr_coefficients_undefined_type_lzw_2x2.tiff": "11628766f85ea5fe0fa92471cea69c545fe9dc4808732939b527eef0cdb0c989",
             "ycbcr_coefficients_long_type_lzw_2x2.tiff": "dd66f2e9d3efd927ca21528770322f947eb47b55b9ccd48902449b4ad2570991",
             "ycbcr_coefficients_srational_type_lzw_2x2.tiff": "42a51687d68eb2abcdca68333afffc15028c8a076a42f9cbf392d9a0d0bf1923",
             "ycbcr_reference_short_type_lzw_2x2.tiff": "823d6faf5e938a69b22c7a9d4096cdfbe7fa2bc201ed80555105c92582cb0678",
+            "ycbcr_reference_ascii_type_lzw_2x2.tiff": "5aa054faf7f5540b22c2cffeb0101556aa4f0711a8ff96d893d8953aeab4f68f",
+            "ycbcr_reference_undefined_type_lzw_2x2.tiff": "ad28be2769b4c12802f4efe3f70e537827224bfe21c6bba924462504870f7768",
             "ycbcr_reference_long_type_lzw_2x2.tiff": "e09b7787f8ed2ee5b975633e23f1019c537a6fcd8815931cabec3edd00ffa5be",
             "ycbcr_reference_srational_type_lzw_2x2.tiff": "1eea7554aef894c4e2f470b7091047fb8aaaa6e10b2db11e7404e21b4b09cefb",
             "ycbcr_coefficients_negative_srational_lzw_2x2.tiff": "1f8ef67d9b888d251f862e9a9e94036c42e51188e3cc1befc201ea22882d6b49",

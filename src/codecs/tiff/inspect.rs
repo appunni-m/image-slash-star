@@ -501,7 +501,7 @@ fn read_ycbcr_rationals<const N: usize>(
         return Ok(YcbcrNumericValues {
             rational: defaults,
             floating: None,
-            invalid: tag == 529,
+            invalid: false,
         });
     }
     if matches!(field_type, 11 | 12) {

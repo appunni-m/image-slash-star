@@ -320,6 +320,34 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_1x2_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_1x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_1x2_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_1x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: png_decoded_sample_buffer_reservation_failure
     type: fault-contract
     operation: decode
@@ -5357,6 +5385,14 @@ formats:
       test_assets:
       - ycbcr_coefficients_short_type_lzw_2x2.tiff
       expect_error: true
+    - id: ycbcr_coefficients_ascii_type_lzw_2x2
+      description: ASCII YCbCr coefficients use Pillow's default conversion values
+      test_assets:
+      - ycbcr_coefficients_ascii_type_lzw_2x2.tiff
+    - id: ycbcr_coefficients_undefined_type_lzw_2x2
+      description: UNDEFINED YCbCr coefficients use Pillow's default conversion values
+      test_assets:
+      - ycbcr_coefficients_undefined_type_lzw_2x2.tiff
     - id: ycbcr_coefficients_long_type_lzw_2x2
       description: LONG YCbCr coefficients retain Pillow's raw numeric interpretation
       test_assets:
@@ -5369,6 +5405,14 @@ formats:
       description: SHORT YCbCr reference values retain Pillow's raw numeric interpretation
       test_assets:
       - ycbcr_reference_short_type_lzw_2x2.tiff
+    - id: ycbcr_reference_ascii_type_lzw_2x2
+      description: ASCII YCbCr reference values use Pillow's default conversion values
+      test_assets:
+      - ycbcr_reference_ascii_type_lzw_2x2.tiff
+    - id: ycbcr_reference_undefined_type_lzw_2x2
+      description: UNDEFINED YCbCr reference values use Pillow's default conversion values
+      test_assets:
+      - ycbcr_reference_undefined_type_lzw_2x2.tiff
     - id: ycbcr_reference_long_type_lzw_2x2
       description: LONG YCbCr reference values retain Pillow's raw numeric interpretation
       test_assets:
