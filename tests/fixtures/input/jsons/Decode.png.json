@@ -172,6 +172,59 @@
       ]
     },
     {
+      "id": "idat_split_zlib_header_byte_1",
+      "asset": "idat_split_zlib_header_byte_1.png",
+      "asset_sha256": "0026074bebac404e7b9f28f3b55497abae304baa4f9398093f5cf1fec9ae4f52",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/idat_split_zlib_header_byte_1.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "idat_trailing_zlib_member",
       "asset": "idat_trailing_zlib_member.png",
       "asset_sha256": "87ff2d31b9347be6faeebf36c8be6dd5299950afde71a4b4e98385b052d9eb73",

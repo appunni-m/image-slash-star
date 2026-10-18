@@ -112563,6 +112563,90 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "idat_split_zlib_header_byte_1",
+          "type": "decode",
+          "format": "png",
+          "category": "idat",
+          "description": "The PNG zlib header is split after its first byte across adjacent IDAT chunks",
+          "asset": "idat_split_zlib_header_byte_1.png",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "0026074bebac404e7b9f28f3b55497abae304baa4f9398093f5cf1fec9ae4f52",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_idat_split_zlib_header_byte_1_png.bin",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": {
+            "srgb": null,
+            "gamma": null,
+            "chromaticities": null,
+            "icc_profile_present": false
+          },
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "decoded_source_color": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "idat_trailing_zlib_member",
           "type": "decode",
           "format": "png",
@@ -201788,12 +201872,12 @@
     }
   },
   "summary": {
-    "total_rows": 2395,
-    "decode_rows": 1895,
+    "total_rows": 2396,
+    "decode_rows": 1896,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1892,
-    "decode_active": 1895,
+    "assets_available": 1893,
+    "decode_active": 1896,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

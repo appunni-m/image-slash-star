@@ -2300,6 +2300,10 @@ formats:
       description: RGB (color type 2)
       test_assets:
       - rgb.png
+    - id: idat_split_zlib_header_byte_1
+      description: The PNG zlib header is split after its first byte across adjacent IDAT chunks
+      test_assets:
+      - idat_split_zlib_header_byte_1.png
     - id: idat_trailing_zlib_member
       description: RGB image data followed by a valid empty zlib member in the same IDAT chunk
       test_assets:
