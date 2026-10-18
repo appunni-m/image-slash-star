@@ -953,8 +953,6 @@ jobs:
         paths = pull_request.group("body")
         for path in (
             "benchmarks/jpeg-production/**",
-            "docs.mk",
-            "scripts/docs_evidence.py",
             "src/codecs/jpeg/**",
             "src/codecs/mod.rs",
             "src/lib.rs",
@@ -974,6 +972,20 @@ jobs:
             check_workflows.workflow_job_condition(jobs["x86-simd"]),
             "the paired x86 benchmark must run for matching pull requests",
         )
+
+    def test_main_benchmark_refreshes_after_docs_exporter_changes(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "benchmark.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        push = re.search(
+            r"(?ms)^  push:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|^  pull_request:)",
+            contents,
+        )
+        self.assertIsNotNone(push, "benchmark must refresh on relevant main pushes")
+        paths = push.group("body")
+        for path in ("docs.mk", "scripts/docs_evidence.py"):
+            with self.subTest(path=path):
+                self.assertIn(f"- '{path}'", paths)
 
     def test_benchmark_cancels_only_superseded_pull_request_runs(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
