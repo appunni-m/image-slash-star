@@ -953,6 +953,8 @@ jobs:
         paths = pull_request.group("body")
         for path in (
             "benchmarks/jpeg-production/**",
+            "docs.mk",
+            "scripts/docs_evidence.py",
             "src/codecs/jpeg/**",
             "src/codecs/mod.rs",
             "src/lib.rs",
@@ -971,6 +973,16 @@ jobs:
         self.assertIsNone(
             check_workflows.workflow_job_condition(jobs["x86-simd"]),
             "the paired x86 benchmark must run for matching pull requests",
+        )
+
+    def test_benchmark_cancels_only_superseded_pull_request_runs(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "benchmark.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        self.assertRegex(
+            contents,
+            r"(?m)^  cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}$",
+            "only superseded PR benchmarks should be canceled",
         )
 
     def test_release_coverage_is_required_before_publishing(self) -> None:
