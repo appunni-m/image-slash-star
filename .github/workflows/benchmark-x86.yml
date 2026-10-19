@@ -26,6 +26,7 @@ on:
       - 'src/lib.rs'
       - 'src/types/**'
       - 'src/codecs/mod.rs'
+      - 'src/codecs/error.rs'
       - 'src/codecs/jpeg/**'
   workflow_dispatch:
   schedule:
