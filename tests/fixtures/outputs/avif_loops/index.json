@@ -471,9 +471,9 @@
   ],
   "artifacts": [
     {
-      "bytes": 13414,
+      "bytes": 13787,
       "path": "README.md",
-      "sha256": "caf0d3b0373a1782c8689c9be3fa3b2efb3a033cc4182c26366d2bca81ca896e"
+      "sha256": "e10604d685baac156e2e68c8d97c4b1d00ceb5d5a2936af181cb73ca48b0de4d"
     },
     {
       "bytes": 2267,
@@ -489,6 +489,16 @@
       "bytes": 1239,
       "path": "inputs/animated_co64_chunk_offsets.avif",
       "sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021"
+    },
+    {
+      "bytes": 1263,
+      "path": "inputs/animated_duplicate_stsc.avif",
+      "sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0"
+    },
+    {
+      "bytes": 1263,
+      "path": "inputs/animated_duplicate_stsc_override_four.avif",
+      "sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589"
     },
     {
       "bytes": 1245,
@@ -1049,6 +1059,51 @@
       "bytes": 67500,
       "path": "pixels/animated_co64_chunk_offsets/frame_4.bin",
       "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc_override_four/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc_override_four/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc_override_four/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_duplicate_stsc_override_four/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
     },
     {
       "bytes": 67500,
@@ -8538,6 +8593,165 @@
       "repeat_equal": true,
       "source": "lossy_wide_i444_mode2_mixed_b128x128",
       "source_sha256": "0e72f7d47e8e83e0a6e13a76a816cb98974cdb2976fff72857901712e2633d61"
+    },
+    {
+      "input_bytes": 1263,
+      "input_path": "inputs/animated_duplicate_stsc.avif",
+      "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
+      "media_payloads_equal": true,
+      "mutation": {
+        "duplicate_box": "stsc",
+        "identical_payload": true
+      },
+      "name": "animated_duplicate_stsc",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated",
+      "source_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+    },
+    {
+      "input_bytes": 1263,
+      "input_path": "inputs/animated_duplicate_stsc_override_four.avif",
+      "input_sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
+      "media_payloads_equal": true,
+      "mutation": {
+        "duplicate_box": "stsc",
+        "identical_payload": false,
+        "overridden_field": "samples_per_chunk",
+        "samples_per_chunk": 4
+      },
+      "name": "animated_duplicate_stsc_override_four",
+      "native": {
+        "decoded_frames": 4,
+        "diagnostic": "",
+        "frame_count": 4,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated",
+      "source_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
     }
   ],
   "incremental_collections": [
@@ -8593,6 +8807,110 @@
       "observer_binary_sha256": "ef7c45fd5168d8e1472a2ced0240fab5c885a24806813487682b6ba7895bbf5f",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df",
       "source_tree_provenance_limitation": "Surviving libavif header matches the committed oracle pin exactly; a clean full native source checkout is unavailable. No fresh whole-source-tree identity is claimed."
+    },
+    {
+      "avif_binary_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+      "build_argv": [
+        "c++",
+        "-std=c++17",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-dynamiclib",
+        "-I<pinned-libavif-header>/include",
+        "<work>/observer.cc",
+        "-o",
+        "<work>/observer.dylib"
+      ],
+      "build_exit_code": 0,
+      "case": "animated_duplicate_stsc",
+      "header_sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e",
+      "imaging_binary_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+      "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
+      "native_observations": [
+        {
+          "diagnostic": "",
+          "fields": [
+            0,
+            0,
+            5,
+            5,
+            16,
+            1
+          ],
+          "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
+          "return_code": 0
+        },
+        {
+          "diagnostic": "",
+          "fields": [
+            0,
+            0,
+            5,
+            5,
+            16,
+            1
+          ],
+          "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
+          "return_code": 0
+        }
+      ],
+      "observer_binary_sha256": "0705fdc776a248aff4a4c1dd837f25b7d49c571e1cc4a041a8af29754e06e0d2",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df",
+      "source_tree_provenance_limitation": "The exact pinned libavif header and Pillow-bundled libavif 1.4.1 runtime were verified. A clean full source checkout was unavailable, so no fresh source-tree identity is claimed."
+    },
+    {
+      "avif_binary_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+      "build_argv": [
+        "c++",
+        "-std=c++17",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-dynamiclib",
+        "-I<pinned-libavif-header>/include",
+        "<work>/observer.cc",
+        "-o",
+        "<work>/observer.dylib"
+      ],
+      "build_exit_code": 0,
+      "case": "animated_duplicate_stsc_override_four",
+      "header_sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e",
+      "imaging_binary_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+      "input_sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
+      "native_observations": [
+        {
+          "diagnostic": "",
+          "fields": [
+            0,
+            0,
+            4,
+            4,
+            16,
+            1
+          ],
+          "input_sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
+          "return_code": 0
+        },
+        {
+          "diagnostic": "",
+          "fields": [
+            0,
+            0,
+            4,
+            4,
+            16,
+            1
+          ],
+          "input_sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
+          "return_code": 0
+        }
+      ],
+      "observer_binary_sha256": "500db2e5214abb3764f06a96c1085bf9fd1597c41635c8a4abdfa7c5dce90a74",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df",
+      "source_tree_provenance_limitation": "The exact pinned libavif header and Pillow-bundled libavif 1.4.1 runtime were verified. A clean full source checkout was unavailable, so no fresh source-tree identity is claimed."
     }
   ],
   "oracle": {

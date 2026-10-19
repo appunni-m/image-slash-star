@@ -48,6 +48,14 @@ FIXTURES = {
         "animated_stsc_two_chunk_mapping.avif",
         "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c",
     ),
+    "animated_duplicate_stsc": (
+        "animated_duplicate_stsc.avif",
+        "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
+    ),
+    "animated_duplicate_stsc_override_four": (
+        "animated_duplicate_stsc_override_four.avif",
+        "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
+    ),
     "animated_primary_item_irot": (
         "animated_primary_item_irot.avif",
         "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",

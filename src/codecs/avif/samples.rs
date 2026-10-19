@@ -2278,9 +2278,7 @@ fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
                 table.chunk_offsets = parse_chunk_offsets(input, child, &mut table, budget)?;
             }
             kind if kind == *b"stsc" => {
-                if stsc_seen {
-                    return Err(parse_failure!());
-                }
+                // libavif parses every table and lets the last valid mapping win.
                 stsc_seen = true;
                 table.mappings = parse_stsc(input, child.payload, budget)?;
             }
@@ -2612,7 +2610,7 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
             sample_index = sample_index.saturating_add(1);
         }
     }
-    if sample_index != table.sample_sizes.len() || samples.is_empty() {
+    if samples.is_empty() {
         return Err(parse_failure!());
     }
     Ok(EncodedPlane { samples })

@@ -8766,6 +8766,16 @@ formats:
       test_assets:
       - animated_stsc_two_chunk_mapping.avif
       status: active
+    - id: animated_duplicate_stsc
+      description: Five-frame AVIF with an identical duplicate sample-to-chunk box and exact frame parity
+      test_assets:
+      - animated_duplicate_stsc.avif
+      status: active
+    - id: animated_duplicate_stsc_override_four
+      description: Later duplicate AVIF stsc table overrides the sample count with exact four-frame parity
+      test_assets:
+      - animated_duplicate_stsc_override_four.avif
+      status: active
     - id: animated_stts_zero_delta
       description: Five-frame AVIF with zero stts sample_delta preserves exact pixels and zero-duration timing
       test_assets:

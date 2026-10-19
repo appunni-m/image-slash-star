@@ -1,18 +1,23 @@
 # Native AVIF repetition evidence
 
-This bundle records 104 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. Ninety-six accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 323 hashed artifacts total
-11,544,309 bytes, including 104 inputs, the compiled observer source, and
-10,966,928 bytes of Pillow-decoded frame outputs. Mutation cases share the
+This bundle records 106 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. Ninety-eight accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 334 hashed artifacts total
+12,154,708 bytes, including 106 inputs, the compiled observer source, and
+11,574,428 bytes of Pillow-decoded frame outputs. Mutation cases share the
 original frame artifacts; each observation records complete per-frame pixel
 hashes and durations.
 
-The 73 unchanged fixture sources are declared in
+The 75 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
 33 ms timings, and native repetition observation match `animated.avif`.
+The duplicate-`stsc` companions append a second sample-to-chunk table to that
+sequence. The identical table retains five Pillow frames; a later four-sample
+mapping yields four. Both match the native repetition observations. The loop
+evidence records the exact runtime and header identities because a clean
+libavif source checkout was unavailable when these observations were made.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
 large 4:2:0 source covers large inter blocks. The 4:2:0 4x4 source includes a
