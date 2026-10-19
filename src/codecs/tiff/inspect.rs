@@ -390,8 +390,9 @@ pub(super) fn layout_and_palette(
             if sample_format == 1
                 && fill_order == 1
                 && predictor == 1
-                && !sample_formats.is_empty()
-                && sample_formats.iter().all(|&format| format == 1)
+                // Pillow treats a zero-count SampleFormat tag like an absent tag.
+                && (sample_formats.is_empty()
+                    || sample_formats.iter().all(|&format| format == 1))
                 && extra_samples.is_empty()
                 && ((matches!(compression, 1 | 8) && planar == 1 && !tiled)
                     || (compression == 8 && planar == 2 && tiled)) =>

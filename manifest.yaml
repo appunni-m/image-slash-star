@@ -5449,6 +5449,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - rgb16_be_uncompressed_strips.tiff
+    - id: rgb16_be_zero_count_sample_format
+      description: Big-endian 16-bit RGB samples with a zero-count SampleFormat tag; Pillow treats the tag as absent and exports the high byte of each sample
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_be_zero_count_sample_format.tiff
     - id: rgb16_separate_planar_tiled_deflate_edges
       description: Little-endian unsigned 16-bit RGB in separate Deflate-compressed 16x16 tiles with clipped right and bottom edges; Pillow exports each sample's high byte
       rust_decode_with_token: true
