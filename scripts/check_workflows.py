@@ -192,6 +192,11 @@ CI_COVERAGE_CONDITION = (
 )
 CI_REQUIRED_CHECK_RESULTS = RESULT_ENV_BY_JOB
 CI_REQUIRED_CHECK_JOB_ID = "required-checks"
+CI_DOCUMENTATION_REQUIRED_COMMANDS = (
+    "make docs-test docs-lint docs-build PYTHON=.venv-docs/bin/python",
+    "make docs-examples",
+    "make docs-registry-examples PYTHON=python",
+)
 APPLE_ARM64_ORACLE_JOBS = {
     "ci.yml": ("quality", "coverage"),
     "benchmark.yml": ("benchmark",),
@@ -316,6 +321,12 @@ def ci_required_checks_violations(contents: str) -> list[str]:
             f"{unclassified_jobs}"
         )
 
+    documentation_job = jobs.get("documentation")
+    if documentation_job is None:
+        violations.append("CI workflow has no documentation job")
+    else:
+        violations.extend(ci_documentation_job_violations(documentation_job))
+
     condition = workflow_job_condition(job)
     if condition is None or normalized_expression(condition) != "always()":
         violations.append("CI required-checks job must run with if: always()")
@@ -395,6 +406,40 @@ def ci_required_checks_violations(contents: str) -> list[str]:
         violations.append(
             "CI required-checks must invoke the tested result gate directly"
         )
+    return violations
+
+
+def ci_documentation_job_violations(job: str) -> list[str]:
+    """Keep every required documentation check active and fail-closed on PRs."""
+
+    violations = []
+    condition = workflow_job_condition(job)
+    if (
+        condition is None
+        or normalized_expression(condition)
+        != "github.event_name == 'pull_request'"
+    ):
+        violations.append(
+            "CI documentation job must run only for pull_request events"
+        )
+
+    if re.search(r"(?m)^ {4,8}continue-on-error:", job):
+        violations.append("CI documentation job and steps must not allow errors")
+
+    steps = re.split(r"(?m)^      - ", job)
+    for command in CI_DOCUMENTATION_REQUIRED_COMMANDS:
+        command_steps = [step for step in steps if run_script(step) == command]
+        if len(command_steps) != 1:
+            violations.append(
+                "CI documentation job must execute exactly once: "
+                f"{command}"
+            )
+        elif re.search(r"(?m)^        if:", command_steps[0]):
+            violations.append(
+                "CI documentation job must not conditionally skip: "
+                f"{command}"
+            )
+
     return violations
 
 
