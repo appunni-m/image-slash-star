@@ -57,10 +57,22 @@ class RequiredCiResultGateTests(unittest.TestCase):
                     changed = results.copy()
                     changed[job_id] = state
                     violations = verify_ci_results.check_ci_results("push", changed)
+                    if job_id == "documentation" and state == "skipped":
+                        self.assertEqual(violations, [])
+                        continue
                     self.assertTrue(
                         any(f"concluded '{state}'" in item for item in violations),
                         violations,
                     )
+
+    def test_documentation_is_required_for_pull_requests(self) -> None:
+        results = self.complete_results()
+        results["documentation"] = "skipped"
+        violations = verify_ci_results.check_ci_results("pull_request", results)
+        self.assertTrue(
+            any("Documentation build and examples" in item for item in violations),
+            violations,
+        )
 
     def test_coverage_is_required_only_for_full_coverage_events(self) -> None:
         results = self.complete_results()

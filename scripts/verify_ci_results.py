@@ -14,6 +14,7 @@ RESULT_ENV_BY_JOB = {
     "x86-simd-lint": "X86_RESULT",
     "windows-msvc": "WINDOWS_RESULT",
     "supply-chain": "SUPPLY_CHAIN_RESULT",
+    "documentation": "DOCS_RESULT",
     "coverage": "COVERAGE_RESULT",
 }
 JOB_LABELS = {
@@ -22,6 +23,7 @@ JOB_LABELS = {
     "x86-simd-lint": "x86 SSE2 and AVX2 checks",
     "windows-msvc": "Windows MSVC runtime and strict lint",
     "supply-chain": "Dependencies and licenses",
+    "documentation": "Documentation build and examples",
     "coverage": "Coverage report",
 }
 SUPPORTED_EVENTS = frozenset({"push", "pull_request", "schedule", "workflow_dispatch"})
@@ -39,6 +41,12 @@ def check_ci_results(event_name: str, results: Mapping[str, str]) -> list[str]:
         if job_id == "coverage":
             continue
         result = results.get(job_id, "missing")
+        if (
+            job_id == "documentation"
+            and event_name != "pull_request"
+            and result == "skipped"
+        ):
+            continue
         if result != "success":
             violations.append(
                 f"Required CI job '{JOB_LABELS[job_id]}' concluded '{result}'."

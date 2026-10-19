@@ -254,6 +254,37 @@ jobs:
           persist-credentials: false
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
+  documentation:
+    name: Documentation build and examples
+    # Put PR documentation checks in this workflow so the stable CI aggregate
+    # waits for them on the same SHA. The Documentation workflow handles
+    # main, scheduled, and manual site publications.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pinned npm
+        run: npm install --global "npm@$NPM_VERSION"
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal && rustup default "$RUST_TOOLCHAIN"
+      - name: Install hash-locked documentation tools
+        run: make docs-setup PYTHON=python
+      - name: Check documentation and build the public site
+        run: make docs-test docs-lint docs-build PYTHON=.venv-docs/bin/python
+      - name: Execute the documented Rust quickstart
+        run: make docs-examples
+      - name: Execute examples using published packages
+        run: make docs-registry-examples PYTHON=python
+
   coverage:
     name: Coverage report
     # Per-push CI keeps focused parity and x86 coverage. Run the full suite
@@ -317,6 +348,7 @@ jobs:
       - x86-simd-lint
       - windows-msvc
       - supply-chain
+      - documentation
       - coverage
     runs-on: ubuntu-24.04
     timeout-minutes: 2
@@ -332,5 +364,6 @@ jobs:
           X86_RESULT: ${{ needs.x86-simd-lint.result }}
           WINDOWS_RESULT: ${{ needs.windows-msvc.result }}
           SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
+          DOCS_RESULT: ${{ needs.documentation.result }}
           COVERAGE_RESULT: ${{ needs.coverage.result }}
         run: python3 scripts/verify_ci_results.py

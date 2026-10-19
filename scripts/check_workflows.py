@@ -503,12 +503,15 @@ DOCS_JOB_CONDITIONS = {
         f"({DOCS_WORKFLOW_RUN_GUARD})"
     ),
     "build": (
+        "github.event_name != 'pull_request' && "
         "always() && "
-        "(needs.benchmark-data.result == 'success' || "
-        "github.event_name == 'pull_request') && "
+        "needs.benchmark-data.result == 'success' && "
         f"({DOCS_WORKFLOW_RUN_GUARD})"
     ),
-    "examples": DOCS_WORKFLOW_RUN_GUARD,
+    "examples": (
+        "github.event_name != 'pull_request' && "
+        f"({DOCS_WORKFLOW_RUN_GUARD})"
+    ),
     "deploy": (
         "github.ref == 'refs/heads/main' && "
         "github.event_name != 'pull_request' && "
