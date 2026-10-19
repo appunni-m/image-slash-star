@@ -2168,6 +2168,83 @@
           "inspect_cursor_hotspot": null
         },
         {
+          "id": "error_iloc_file_extent_out_of_bounds",
+          "type": "decode",
+          "format": "avif",
+          "category": "error",
+          "description": "A complete AVIF declares a file-backed primary-item extent one byte past EOF; Pillow inspection and verification succeed before frame decoding reports truncated data",
+          "asset": "error_iloc_file_extent_out_of_bounds.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "764f4205c7b60acd296e37e9d2e45968c66aafd4fc84102366d67e9903d237ad",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.SyntaxError",
+          "oracle_error_message": "Failed to decode frame 0: Truncated data",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.SyntaxError",
+              "pillow_message": "Failed to decode frame 0: Truncated data",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.SyntaxError",
+              "pillow_message": "Failed to decode frame 0: Truncated data",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "ipma_wide_property_associations",
           "type": "decode",
           "format": "avif",
@@ -204961,12 +205038,12 @@
     }
   },
   "summary": {
-    "total_rows": 2429,
-    "decode_rows": 1929,
+    "total_rows": 2430,
+    "decode_rows": 1930,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1926,
-    "decode_active": 1929,
+    "assets_available": 1927,
+    "decode_active": 1930,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

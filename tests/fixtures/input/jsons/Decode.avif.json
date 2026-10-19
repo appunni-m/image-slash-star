@@ -1566,6 +1566,75 @@
       ]
     },
     {
+      "id": "error_iloc_file_extent_out_of_bounds",
+      "asset": "error_iloc_file_extent_out_of_bounds.avif",
+      "asset_sha256": "764f4205c7b60acd296e37e9d2e45968c66aafd4fc84102366d67e9903d237ad",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "Failed to decode frame 0: Truncated data",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "Failed to decode frame 0: Truncated data",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/error_iloc_file_extent_out_of_bounds.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "ipma_wide_property_associations",
       "asset": "ipma_wide_associations.avif",
       "asset_sha256": "7bef3a5c1db6196b199c03406719f5dcd4b0bb6a7320de44b39a7daa52e6116b",

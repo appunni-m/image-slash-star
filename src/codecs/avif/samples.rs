@@ -1169,7 +1169,18 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
             declared_extents.push(AvifItemExtent::new(relative, extent_length));
             let span = match source {
                 ExtentSource::File => {
-                    ByteSpan::from_bounded_offset_size(relative, extent_length, input.len(), true)?
+                    if CHECK_ITEM_BOUNDS {
+                        ByteSpan::from_bounded_offset_size(
+                            relative,
+                            extent_length,
+                            input.len(),
+                            true,
+                        )?
+                    } else {
+                        // Inspection keeps file-backed declarations lazy; the
+                        // validated decoder path checks bounds before reading.
+                        ByteSpan::from_offset_size(relative, extent_length)?
+                    }
                 }
                 ExtentSource::Idat => {
                     let idat = idat.ok_or_else(|| parse_failure!())?;
