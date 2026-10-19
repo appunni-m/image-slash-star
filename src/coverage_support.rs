@@ -94,6 +94,8 @@ pub enum CoverageFaultPoint {
     ApngSequenceCounterExhaustion,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
+    /// Force TIFF RGB16 conversion output reservation to fail.
+    TiffRgb16OutputReservation,
     /// Report a TIFF subsampled YCbCr clump-buffer length mismatch.
     TiffYcbcrClumpLengthMismatch,
     /// Force specialized TIFF YCbCr RGB output reservation to fail.

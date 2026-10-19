@@ -250,6 +250,20 @@ fault_contracts:
       point: tiff.strip_assembly.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_rgb16_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:rgb16_le_uncompressed_strips
+    fault:
+      point: tiff.rgb16.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_clump_length_mismatch
     type: fault-contract
     operation: decode
@@ -5114,6 +5128,16 @@ formats:
       description: Big-endian TIFF (MM)
       test_assets:
       - be.tiff
+    - id: rgb16_le_uncompressed_strips
+      description: Little-endian 16-bit RGB samples in two uncompressed strips; Pillow exports the high byte of each sample
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_le_uncompressed_strips.tiff
+    - id: rgb16_be_uncompressed_strips
+      description: Big-endian 16-bit RGB samples with explicit unsigned SampleFormat tags in two uncompressed strips; Pillow exports the high byte of each sample
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_be_uncompressed_strips.tiff
     - id: registered_header_variants_over_classic_ifd
       description: Pillow accepts legacy swapped-magic and BigTIFF signatures over these classic IFD payloads
       test_assets:

@@ -1455,6 +1455,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.rgb16.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffRgb16OutputReservation,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.ycbcr.clump_length_mismatch", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffYcbcrClumpLengthMismatch,
                 false,
@@ -1616,6 +1622,9 @@ fn execute_fault_contract(
         }
         "tiff.ycbcr.rgb_output_reservation" => {
             Some("decode: unable to allocate TIFF YCbCr RGB buffer")
+        }
+        "tiff.rgb16.output_reservation" => {
+            Some("decode: unable to allocate TIFF RGB16 output buffer")
         }
         "tiff.ycbcr.full_resolution_length_mismatch" => {
             Some("decode: TIFF YCbCr sample buffer has an invalid length")

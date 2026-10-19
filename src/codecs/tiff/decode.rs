@@ -211,7 +211,8 @@ fn decode_ifd(
     let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
-    let sample_format = directory.one_or(339, 1);
+    let sample_formats = directory.values_or(339, &[1]);
+    let sample_format = sample_formats.first().copied().unwrap_or(1);
     let ycbcr_parameters = if photometric == 6 && compression != COMPRESSION_NONE {
         Some(super::inspect::ycbcr_parameters(&directory)?)
     } else {
@@ -235,10 +236,14 @@ fn decode_ifd(
         samples: samples_per_pixel,
         bits: usize::from(bits_per_sample),
         sample_format,
+        sample_formats: &sample_formats,
         compression,
+        fill_order,
+        predictor,
         color_map: color_map.as_deref(),
         extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar,
+        tiled: directory.field_type(324).is_some() || directory.field_type(325).is_some(),
         ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
         ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
@@ -339,19 +344,9 @@ fn decode_ifd(
     } else {
         samples_per_pixel
     };
-    // `layout_and_palette` limits a supported layout to four stored bytes per
-    // pixel. Pillow's decompression-bomb ceiling limits the complete raster to
-    // 178,956,970 pixels, so these products fit 32-bit and 64-bit `usize`.
-    #[allow(
-        clippy::arithmetic_side_effects,
-        reason = "Validated dimensions and a maximum of four samples bound this row-sample product."
-    )]
-    let row_samples = width_usize * stored_samples;
-    #[allow(
-        clippy::arithmetic_side_effects,
-        reason = "Validated dimensions, sample count, and bit depth bound this row-bit product."
-    )]
-    let row_bits = row_samples * usize::from(bits_per_sample);
+    let row_samples = width_usize
+        .checked_mul(stored_samples)
+        .dimensions("TIFF row sample count overflows")?;
     let row_bytes = if let Some((horizontal, vertical)) = ycbcr_subsampling {
         let clump_bytes = horizontal
             .checked_mul(vertical)
@@ -361,19 +356,25 @@ fn decode_ifd(
             .div_ceil(horizontal)
             .checked_mul(clump_bytes)
             .dimensions("TIFF YCbCr clump row byte size overflows")?
+    } else if bits_per_sample.is_multiple_of(8) {
+        row_samples
+            .checked_mul(usize::from(bits_per_sample / 8))
+            .dimensions("TIFF row byte size overflows")?
     } else {
-        row_bits.div_ceil(8)
+        row_samples
+            .checked_mul(usize::from(bits_per_sample))
+            .and_then(|row_bits| row_bits.checked_add(7))
+            .map(|row_bits| row_bits / 8)
+            .dimensions("TIFF row bit size overflows")?
     };
-    #[allow(
-        clippy::arithmetic_side_effects,
-        reason = "The validated raster ceiling bounds the row-byte and height product."
-    )]
     let expected_total = if let Some((_, vertical)) = ycbcr_subsampling {
         row_bytes
             .checked_mul(height_usize.div_ceil(vertical))
             .dimensions("TIFF YCbCr clump buffer size overflows")?
     } else {
-        row_bytes * height_usize
+        row_bytes
+            .checked_mul(height_usize)
+            .dimensions("TIFF raster buffer size overflows")?
     };
 
     let tile_offsets = directory.values(324);
@@ -1529,6 +1530,64 @@ fn unassociate_rgba_pixel(pixel: &mut [u8; 4]) {
     }
 }
 
+fn reserve_rgb16_output(output_len: usize) -> CodecResult<Vec<u8>> {
+    let mut rgb = Vec::new();
+    #[cfg(coverage)]
+    let reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffRgb16OutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_len
+    };
+    #[cfg(not(coverage))]
+    let reservation = output_len;
+    rgb.try_reserve_exact(reservation).map_err(|_| {
+        CodecError::Dimensions("unable to allocate TIFF RGB16 output buffer".to_owned())
+    })?;
+    Ok(rgb)
+}
+
+fn convert_rgb16_to_rgb8(pixels: &[u8], endian: Endian) -> CodecResult<Vec<u8>> {
+    let high_byte_index = match endian {
+        Endian::Little => 1,
+        Endian::Big => 0,
+    };
+    let mut rgb = reserve_rgb16_output(pixels.len() / 2)?;
+    rgb.extend(
+        pixels
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|sample| sample[high_byte_index]),
+    );
+    Ok(rgb)
+}
+
+fn convert_rgb16_to_rgb8_with_token(
+    pixels: &[u8],
+    width: usize,
+    endian: Endian,
+    token: &crate::CancellationToken,
+) -> CodecResult<Vec<u8>> {
+    crate::codecs::error::check_cancelled(Some(token))?;
+    let row_bytes = width
+        .checked_mul(6)
+        .dimensions("TIFF RGB16 row byte size overflows")?;
+    let high_byte_index = match endian {
+        Endian::Little => 1,
+        Endian::Big => 0,
+    };
+    let mut rgb = reserve_rgb16_output(pixels.len() / 2)?;
+    for row in pixels.chunks_exact(row_bytes) {
+        for samples in row.as_chunks::<2>().0.chunks(1_024) {
+            crate::codecs::error::check_cancelled(Some(token))?;
+            rgb.extend(samples.iter().map(|sample| sample[high_byte_index]));
+        }
+    }
+    Ok(rgb)
+}
+
 fn convert_pixels(
     dimensions: (u32, u32),
     mut pixels: Vec<u8>,
@@ -1607,6 +1666,12 @@ fn convert_pixels(
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
         TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
+        TiffLayout::Rgb16 => DecodedImage::new(
+            width,
+            height,
+            convert_rgb16_to_rgb8(&pixels, endian)?,
+            ColorType::Rgb8,
+        ),
         TiffLayout::Rgba8 => {
             if alpha.unassociate {
                 for pixel in pixels.as_chunks_mut::<4>().0 {
@@ -1832,6 +1897,12 @@ fn convert_pixels_with_token(
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
         TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
+        TiffLayout::Rgb16 => DecodedImage::new(
+            width,
+            height,
+            convert_rgb16_to_rgb8_with_token(&pixels, width_usize, endian, token)?,
+            ColorType::Rgb8,
+        ),
         TiffLayout::Rgba8 => {
             if alpha.unassociate {
                 for chunk in pixels.chunks_mut(1_024) {

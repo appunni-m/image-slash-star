@@ -305,6 +305,14 @@ FAULT_CONTRACTS = {
         "point": "tiff.strip_assembly.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_rgb16_output_reservation_failure": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_rgb16_output_reservation_failure",
+        "source_case": "decode:tiff:rgb16_le_uncompressed_strips",
+        "point": "tiff.rgb16.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_ycbcr_clump_length_mismatch": {
         "format": "tiff",
         "category": "structured-diagnostics",

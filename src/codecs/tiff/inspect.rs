@@ -22,7 +22,7 @@ pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
 fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let (endian, first_offset) = super::decode::parse_header(data)?;
     let directory = Directory::parse(data, first_offset, endian)?;
-    super::decode::validate_fill_order(&directory)?;
+    let fill_order = super::decode::validate_fill_order(&directory)?;
 
     let (width, height) = validate_primary_dimensions(&directory)?;
     verify_directory(&directory)?;
@@ -37,7 +37,8 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let bit_depth = bits[0];
     let compression = directory.one_or(259, 1);
     let photometric = directory.one_or(262, 1);
-    let sample_format = directory.one_or(339, 1);
+    let sample_formats = directory.values_or(339, &[1]);
+    let sample_format = sample_formats.first().copied().unwrap_or(1);
     let color_map = directory.values(320);
     let extra_samples = directory.values(338);
     let ycbcr_parameters = if photometric == 6 && compression != 1 {
@@ -50,10 +51,14 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         samples,
         bits: bit_depth,
         sample_format,
+        sample_formats: &sample_formats,
         compression,
+        fill_order,
+        predictor: directory.one_or(317, 1),
         color_map: color_map.as_deref(),
         extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar: directory.one_or(284, 1),
+        tiled: directory.field_type(324).is_some() || directory.field_type(325).is_some(),
         ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
         ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
@@ -262,6 +267,7 @@ pub(super) enum TiffLayout {
     I32,
     F32,
     Rgb8,
+    Rgb16,
     RgbIgnored8,
     Rgba8,
     Palette {
@@ -313,6 +319,7 @@ impl TiffLayout {
             Self::I32 => ImageMode::I32,
             Self::F32 => ImageMode::F32,
             Self::Rgb8
+            | Self::Rgb16
             | Self::RgbIgnored8
             | Self::Ycbcr8
             | Self::YcbcrFull8 { .. }
@@ -329,10 +336,14 @@ pub(super) struct TiffLayoutParameters<'a> {
     pub(super) samples: usize,
     pub(super) bits: usize,
     pub(super) sample_format: usize,
+    pub(super) sample_formats: &'a [usize],
     pub(super) compression: usize,
+    pub(super) fill_order: usize,
+    pub(super) predictor: usize,
     pub(super) color_map: Option<&'a [usize]>,
     pub(super) extra_samples: &'a [usize],
     pub(super) planar: usize,
+    pub(super) tiled: bool,
     pub(super) ycbcr_subsampling: Option<(usize, usize)>,
     pub(super) ycbcr_conversion: Option<YcbcrConversion>,
 }
@@ -345,10 +356,14 @@ pub(super) fn layout_and_palette(
         samples,
         bits,
         sample_format,
+        sample_formats,
         compression,
+        fill_order,
+        predictor,
         color_map,
         extra_samples,
         planar,
+        tiled,
         ycbcr_subsampling,
         ycbcr_conversion,
     } = parameters;
@@ -371,6 +386,19 @@ pub(super) fn layout_and_palette(
         (1, 2, 8) if extra_samples == [2] => TiffLayout::GrayAlpha8,
         (1, 2, 8) if planar == 2 && extra_samples == [0] => TiffLayout::GrayIgnored8,
         (2, 3, 8) => TiffLayout::Rgb8,
+        (2, 3, 16)
+            if sample_format == 1
+                && compression == 1
+                && fill_order == 1
+                && predictor == 1
+                && planar == 1
+                && !sample_formats.is_empty()
+                && sample_formats.iter().all(|&format| format == 1)
+                && extra_samples.is_empty()
+                && !tiled =>
+        {
+            TiffLayout::Rgb16
+        }
         (2, 4, 8) if extra_samples == [0] => TiffLayout::RgbIgnored8,
         (2, 4, 8) => TiffLayout::Rgba8,
         (3, 1, bits @ (1 | 2 | 4 | 8)) => TiffLayout::Palette {

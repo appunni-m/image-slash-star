@@ -6,6 +6,37 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## TIFF unsigned RGB16 strip parity and allocation fault contract — 2026-10-19
+
+Added little- and big-endian, uncompressed 2×2 RGB16 TIFF fixtures with two
+one-row strips. The little-endian input relies on TIFF's default unsigned
+sample format, while the big-endian input stores `SampleFormat=1` for all
+three channels. Pinned Pillow 12.2.0 converts each unsigned sample to RGB8 by
+retaining its high byte; both files produce the exact 12-byte pixel sequence
+`12569aab00ff0080ffff017f`. The input SHA-256 values are
+`aebc7d664d848fe2d4e5054c4926ea6b38b99665d2d31bd6c86419aa07b7874b` (little
+endian) and
+`9b91240255da2d849d12be62e59c3d868721112253ed46f1284578597567b0e3` (big
+endian).
+
+The selected matrix run passed both parity rows and the target-only
+`fault-contract:tiff:tiff_rgb16_output_reservation_failure` row. The fault
+returns the structured TIFF RGB16 output allocation error, then a retry
+matches a fresh decode. This contract has `oracle_status: not_applicable` and
+is reported outside Pillow parity. Its source case is the little-endian parity
+fixture.
+
+The selected branch report is
+`target/release-evidence/selected/20261019T040515Z/coverage.json` (SHA-256
+`249d565c2daacb13aa16001744aa85e33a07f4ba451c30bded8cbf94f9c69ef9`). Coverage
+MCP records 174/31,674 observed branches and no missing branch groups in the
+RGB16 conversion or output-reservation helpers; it reports 24 missing branches
+in the shared TIFF layout function. The report has unverified source/build
+identity and unknown test attribution, so these are coordinate-only
+observations and do not establish an aggregate coverage gain. The focused
+runner log records 2/2 Pillow decode rows and 1/1 fault contracts passing. No
+full coverage campaign was run.
+
 ## AVIF mixed-segment inter parity and TIFF YCbCr fault contract — 2026-10-18
 
 Added the active public parity case
@@ -40,10 +71,10 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The matrix now has 2,402 rows (1,902 decode / inspect / verify and 500 encode);
-1,902 decode and 468 encode rows are active, while 32 encode rows are planned.
-The separate fault-contract lane contains 61 rows. The coverage-origin
-inventory records 177 exact `cfg(coverage)` guards across 27 Rust files.
+The matrix now has 2,404 rows (1,904 decode / inspect / verify and 500 encode);
+1,904 decode and 468 encode rows are active, while 32 encode rows are planned.
+The separate fault-contract lane contains 62 rows. The coverage-origin
+inventory records 178 exact `cfg(coverage)` guards across 27 Rust files.
 
 ## BMP decoded-pixel reservation fault contract — 2026-10-17
 
@@ -91,8 +122,8 @@ branch group spanning `src/codecs/gif/decode.rs:175`,
 `src/codecs/gif/decode.rs:420`, or `src/codecs/gif/inspect.rs:143`, covering
 still/sequence parsing, metadata measurement, and inspection padding paths.
 The report has no source/build receipt and unknown test inventory, so these
-remain coordinate-only observations. The current fixture matrix contains 2,402 total rows: 1,902 decode / inspect / verify rows and 500 encode rows.
-Of those, 1,902 decode rows and 468 encode rows are active; the other 32 encode
+remain coordinate-only observations. The current fixture matrix contains 2,404 total rows: 1,904 decode / inspect / verify rows and 500 encode rows.
+Of those, 1,904 decode rows and 468 encode rows are active; the other 32 encode
 rows are planned.
 
 ## TIFF equivalent-default YCbCr rational parity — 2026-10-18
@@ -7008,7 +7039,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `cbd0e61ad492e2501c17826c7065c245eba7e838f91e5a573048bfb705f0879d`; matrix `2e66a8985bcc0913e71bb17a3515e8fef2c4554fe947fba0c85b776eca144059`.
+- Current fixture integrity only: manifest `9c7ffdaf3405bb14dba79cbf1583902263390971d73e7c438eacb8349bd6b4c5`; matrix `fa6f5fcad8bedc70c73ba7f81323d1d19dab1ea4b1cb0d16baf681a5222e88e7`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -7386,7 +7417,7 @@ Pillow-backed input.
 | `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
-| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure` | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, bounded native concurrent verification, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |

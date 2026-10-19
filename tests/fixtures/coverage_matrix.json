@@ -135869,6 +135869,164 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "rgb16_le_uncompressed_strips",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb16",
+          "description": "Little-endian 16-bit RGB samples in two uncompressed strips; Pillow exports the high byte of each sample",
+          "asset": "rgb16_le_uncompressed_strips.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "aebc7d664d848fe2d4e5054c4926ea6b38b99665d2d31bd6c86419aa07b7874b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 16,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "d7973d0ab7bfd18e2fe3666bcdb5367d84d3b854b58bab793799d0803fb63c1b",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb16_le_uncompressed_strips_tiff.bin",
+          "ref_bytes": 12,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "rust_decode_with_token": true
+        },
+        {
+          "id": "rgb16_be_uncompressed_strips",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb16",
+          "description": "Big-endian 16-bit RGB samples with explicit unsigned SampleFormat tags in two uncompressed strips; Pillow exports the high byte of each sample",
+          "asset": "rgb16_be_uncompressed_strips.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "9b91240255da2d849d12be62e59c3d868721112253ed46f1284578597567b0e3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 16,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "big",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "d7973d0ab7bfd18e2fe3666bcdb5367d84d3b854b58bab793799d0803fb63c1b",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb16_be_uncompressed_strips_tiff.bin",
+          "ref_bytes": 12,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "big",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "rust_decode_with_token": true
+        },
+        {
           "id": "registered_header_variants_over_classic_ifd",
           "type": "decode",
           "format": "tiff",
@@ -202750,12 +202908,12 @@
     }
   },
   "summary": {
-    "total_rows": 2402,
-    "decode_rows": 1902,
+    "total_rows": 2404,
+    "decode_rows": 1904,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1899,
-    "decode_active": 1902,
+    "assets_available": 1901,
+    "decode_active": 1904,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -203022,6 +203180,25 @@
       },
       "fault": {
         "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_rgb16_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:rgb16_le_uncompressed_strips"
+      },
+      "fault": {
+        "point": "tiff.rgb16.output_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

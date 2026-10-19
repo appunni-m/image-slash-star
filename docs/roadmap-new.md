@@ -16,7 +16,7 @@ counts, and Coverage MCP attribution limits are recorded in
 [Evidence](EVIDENCE.md). The LLVM percentages below remain the historical
 managed baseline; they use a separate report and denominator.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 177 exact `cfg(coverage)` guards across 27 files.
+The origin verifier passes for 178 exact `cfg(coverage)` guards across 27 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -34,7 +34,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 551 rows total, 551 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,402 rows total, 1,902 active decode rows, 468 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 368 decode rows. Typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,404 rows total, 1,904 active decode rows, 468 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 370 decode rows. Typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
