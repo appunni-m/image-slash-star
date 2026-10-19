@@ -327,6 +327,17 @@ def ci_required_checks_violations(contents: str) -> list[str]:
     else:
         violations.extend(ci_documentation_job_violations(documentation_job))
 
+    for required_job_name in CI_REQUIRED_CHECK_RESULTS:
+        if required_job_name == "documentation":
+            continue
+        required_job = jobs.get(required_job_name)
+        if required_job is not None and re.search(
+            r"(?m)^ {4,8}continue-on-error:", required_job
+        ):
+            violations.append(
+                f"CI required job {required_job_name} and steps must not allow errors"
+            )
+
     condition = workflow_job_condition(job)
     if condition is None or normalized_expression(condition) != "always()":
         violations.append("CI required-checks job must run with if: always()")
@@ -443,8 +454,29 @@ def ci_documentation_job_violations(job: str) -> list[str]:
     return violations
 
 
-def ci_x86_fault_coverage_violations(contents: str) -> list[str]:
-    """Require the AVX2 lane to retain its separate fault-contract report."""
+CI_X86_COVERAGE_PROFILES = (
+    (
+        "SSE2",
+        "Run x86-64 public JPEG and AVIF parity with branch coverage",
+        "",
+    ),
+    (
+        "AVX2",
+        "Run AVX2 public JPEG and AVIF parity with branch coverage",
+        "-avx2",
+    ),
+)
+CI_X86_COVERAGE_RUNS = (
+    ("coverage-jpeg", "test_decode_matrix_jpeg"),
+    ("coverage-jpeg-encode", "test_encode_matrix_jpeg"),
+    ("coverage-avif", "test_decode_matrix_avif"),
+    ("coverage-avif-encode", "test_encode_matrix_avif"),
+    ("coverage-fault-contract", "test_fault_contract_matrix"),
+)
+
+
+def ci_x86_coverage_violations(contents: str) -> list[str]:
+    """Require every SSE2 and AVX2 parity report to be run, checked, and uploaded."""
 
     jobs = workflow_jobs(contents)
     if jobs is None:
@@ -454,37 +486,38 @@ def ci_x86_fault_coverage_violations(contents: str) -> list[str]:
     if job is None:
         return ["CI workflow has no x86 SIMD job"]
 
-    report = "coverage-fault-contract-x86_64-avx2.json"
     steps = re.split(r"(?m)^      - ", job)
-    avx2_step = next(
-        (
+    violations = []
+
+    reports = []
+    for profile, step_name, suffix in CI_X86_COVERAGE_PROFILES:
+        matching_steps = [
             step
             for step in steps
-            if re.search(
-                r"(?m)^name: Run AVX2 public JPEG and AVIF parity with branch coverage$",
-                step,
-            )
-        ),
-        None,
-    )
-    if avx2_step is None:
-        return ["CI x86 SIMD job has no AVX2 parity step"]
+            if re.search(rf"(?m)^name: {re.escape(step_name)}$", step)
+        ]
+        if len(matching_steps) != 1:
+            violations.append(f"CI x86 SIMD job must define one {profile} parity step")
+            continue
 
-    avx2_script = run_script(avx2_step)
-    if avx2_script is None:
-        return ["CI AVX2 parity step must run its coverage commands"]
-    normalized_script = " ".join(avx2_script.replace("\\\n", " ").split())
-    expected_command = (
-        'cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch '
-        "--locked --json --output-path "
-        f"target/release-evidence/{report} --test coverage_matrix_tests "
-        "test_fault_contract_matrix"
-    )
-    violations = []
-    if expected_command not in normalized_script:
-        violations.append(
-            "CI AVX2 parity step must produce the separate fault-contract coverage report"
-        )
+        script = run_script(matching_steps[0])
+        if script is None:
+            violations.append(f"CI {profile} parity step must run its coverage commands")
+            continue
+        normalized_script = " ".join(script.replace("\\\n", " ").split())
+        for report_prefix, test_name in CI_X86_COVERAGE_RUNS:
+            report = f"{report_prefix}-x86_64{suffix}.json"
+            reports.append(report)
+            expected_command = (
+                'cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch '
+                "--locked --json --output-path "
+                f"target/release-evidence/{report} --test coverage_matrix_tests "
+                f"{test_name}"
+            )
+            if normalized_script.count(expected_command) != 1:
+                violations.append(
+                    f"CI {profile} parity step must produce exactly once: {report}"
+                )
 
     report_check = next(
         (
@@ -497,14 +530,13 @@ def ci_x86_fault_coverage_violations(contents: str) -> list[str]:
         ),
         None,
     )
-    if (
-        report_check is None
-        or report_check.count(report) != 1
-        or 'test -s "$report"' not in report_check
-    ):
-        violations.append(
-            "CI coverage verification must require the AVX2 fault-contract report"
-        )
+    if report_check is None or 'test -s "$report"' not in report_check:
+        violations.append("CI coverage verification must reject missing or empty reports")
+    else:
+        for report in reports:
+            path = f"target/release-evidence/{report}"
+            if report_check.count(path) != 1:
+                violations.append(f"CI coverage verification must require {report}")
 
     upload_step = next(
         (
@@ -514,10 +546,13 @@ def ci_x86_fault_coverage_violations(contents: str) -> list[str]:
         ),
         None,
     )
-    if upload_step is None or upload_step.count(report) != 1:
-        violations.append(
-            "CI x86 artifact must retain the AVX2 fault-contract report separately"
-        )
+    if upload_step is None:
+        violations.append("CI x86 artifact upload step is missing")
+    else:
+        for report in reports:
+            path = f"target/release-evidence/{report}"
+            if upload_step.count(path) != 1:
+                violations.append(f"CI x86 artifact must retain {report}")
     return violations
 
 
@@ -1765,8 +1800,8 @@ def main() -> int:
         return 1
     if not verify_workflow_policy(
         ci_workflow,
-        ci_x86_fault_coverage_violations,
-        "CI x86 fault-contract coverage",
+        ci_x86_coverage_violations,
+        "CI x86 parity coverage",
     ):
         return 1
     if not verify_workflow_policy(

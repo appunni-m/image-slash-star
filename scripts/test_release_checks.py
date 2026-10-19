@@ -950,6 +950,20 @@ jobs:
                 "CI required-checks job must run with if: always()",
             ),
             (
+                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n",
+                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n"
+                "    continue-on-error: true\n",
+                "CI required job quality and steps must not allow errors",
+            ),
+            (
+                "      - name: Confirm Apple silicon runner\n"
+                "        run: test \"$(uname -m)\" = arm64\n",
+                "      - name: Confirm Apple silicon runner\n"
+                "        continue-on-error: true\n"
+                "        run: test \"$(uname -m)\" = arm64\n",
+                "CI required job quality and steps must not allow errors",
+            ),
+            (
                 "      - name: Require every applicable CI job to pass\n",
                 "      - name: Require every applicable CI job to pass\n"
                 "        if: false\n",
@@ -1403,49 +1417,48 @@ jobs:
             check_workflows.ci_coverage_gate_violations(skipped_coverage),
         )
 
-    def test_ci_avx2_fault_contract_coverage_is_verified_and_uploaded(self) -> None:
+    def test_ci_x86_parity_coverage_is_verified_and_uploaded(self) -> None:
         root = Path(__file__).resolve().parent.parent
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
         self.assertEqual(
-            check_workflows.ci_x86_fault_coverage_violations(workflow), []
+            check_workflows.ci_x86_coverage_violations(workflow), []
         )
 
-        fault_command = r'''          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
-            --output-path target/release-evidence/coverage-fault-contract-x86_64-avx2.json \
-            --test coverage_matrix_tests test_fault_contract_matrix
-'''
-        without_fault_run = workflow.replace(fault_command, "", 1)
+        for profile, _, suffix in check_workflows.CI_X86_COVERAGE_PROFILES:
+            for report_prefix, test_name in check_workflows.CI_X86_COVERAGE_RUNS:
+                report = f"{report_prefix}-x86_64{suffix}.json"
+                command = (
+                    '          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test '
+                    "--all-features --branch --locked --json \\\n"
+                    f"            --output-path target/release-evidence/{report} \\\n"
+                    f"            --test coverage_matrix_tests {test_name}\n"
+                )
+                without_run = workflow.replace(command, "", 1)
+                with self.subTest(profile=profile, report=report, gate="run"):
+                    self.assertNotEqual(without_run, workflow)
+                    self.assertIn(
+                        f"CI {profile} parity step must produce exactly once: {report}",
+                        check_workflows.ci_x86_coverage_violations(without_run),
+                    )
+
+        unchecked_report = "coverage-jpeg-encode-x86_64.json"
+        without_report_check = workflow.replace(
+            f"            target/release-evidence/{unchecked_report} \\\n", "", 1
+        )
         self.assertIn(
-            "CI AVX2 parity step must produce the separate fault-contract coverage report",
-            check_workflows.ci_x86_fault_coverage_violations(without_fault_run),
+            f"CI coverage verification must require {unchecked_report}",
+            check_workflows.ci_x86_coverage_violations(without_report_check),
         )
 
-        fault_check_entry = r'''            target/release-evidence/coverage-fault-contract-x86_64.json \
-            target/release-evidence/coverage-fault-contract-x86_64-avx2.json \
-            target/release-evidence/coverage-jpeg-x86_64-avx2.json \
-'''
-        without_fault_check = workflow.replace(
-            fault_check_entry,
-            r'''            target/release-evidence/coverage-fault-contract-x86_64.json \
-            target/release-evidence/coverage-jpeg-x86_64-avx2.json \
-''',
-            1,
+        unuploaded_report = "coverage-avif-encode-x86_64-avx2.json"
+        without_report_upload = workflow.replace(
+            f"            target/release-evidence/{unuploaded_report}\n", "", 1
         )
         self.assertIn(
-            "CI coverage verification must require the AVX2 fault-contract report",
-            check_workflows.ci_x86_fault_coverage_violations(without_fault_check),
-        )
-
-        without_fault_upload = workflow.replace(
-            "            target/release-evidence/coverage-fault-contract-x86_64-avx2.json\n",
-            "",
-            1,
-        )
-        self.assertIn(
-            "CI x86 artifact must retain the AVX2 fault-contract report separately",
-            check_workflows.ci_x86_fault_coverage_violations(without_fault_upload),
+            f"CI x86 artifact must retain {unuploaded_report}",
+            check_workflows.ci_x86_coverage_violations(without_report_upload),
         )
 
     def test_documentation_publication_uses_the_trusted_workflow_run_gate(self) -> None:
