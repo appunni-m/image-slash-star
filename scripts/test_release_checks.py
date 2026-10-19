@@ -969,10 +969,8 @@ jobs:
         self.assertIn("-o APT::Update::Error-Mode=any", job)
         self.assertIn('update --snapshot "$UBUNTU_APT_SNAPSHOT"', job)
         self.assertIn("for attempt in 1 2 3; do", job)
-        self.assertIn(
-            "sudo find /var/lib/apt/lists -mindepth 1 -maxdepth 1", job
-        )
-        self.assertIn("! -name lock -exec rm -rf -- {} +", job)
+        self.assertIn("Keep Release metadata between attempts", job)
+        self.assertNotIn("find /var/lib/apt/lists", job)
         self.assertIn(
             "sudo apt-get --simulate --yes --snapshot \"$UBUNTU_APT_SNAPSHOT\" install",
             job,
