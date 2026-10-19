@@ -377,6 +377,14 @@ FAULT_CONTRACTS = {
         "point": "tiff.strip_assembly.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_unaligned_strip_assembly_reservation_failure": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure",
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3",
+        "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_rgb16_output_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

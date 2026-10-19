@@ -56,6 +56,11 @@ TWO_STRIP_CLUMPS = (
     (4, 24, 44, 64, 210, 50),
 )
 
+UNALIGNED_STRIP_CLUMPS = TWO_STRIP_CLUMPS + (
+    (17, 33, 49, 65, 230, 60),
+    (81, 97, 113, 129, 250, 40),
+)
+
 BASE_CLUMPS = (
     (0, 0, 100, 50, 0, 100),
     (0, 50, 100, 50, 50, 100),
@@ -72,20 +77,24 @@ def lzw_blocks(
     *,
     subsampling: tuple[int, int] = (2, 2),
 ) -> list[bytes]:
-    """Encode one TIFF LZW stream for each strip of complete clump rows."""
+    """Encode TIFF LZW strips with each strip rounded to complete clump rows."""
     if width <= 0 or height <= 0:
         raise ValueError("YCbCr image dimensions must be positive")
     horizontal, vertical = subsampling
     if horizontal <= 0 or vertical <= 0:
         raise ValueError("YCbCr subsampling factors must be positive")
-    if rows_per_strip <= 0 or rows_per_strip % vertical != 0:
-        raise ValueError("YCbCr RowsPerStrip must align to subsampled rows")
+    if rows_per_strip <= 0:
+        raise ValueError("YCbCr RowsPerStrip must be positive")
     clump_columns = (width + horizontal - 1) // horizontal
-    clump_rows = (height + vertical - 1) // vertical
-    clump_rows_per_strip = rows_per_strip // vertical
+    strip_starts = range(0, height, rows_per_strip)
+    clump_rows_per_strip = tuple(
+        (min(rows_per_strip, height - first_row) + vertical - 1) // vertical
+        for first_row in strip_starts
+    )
+    expected_clump_count = clump_columns * sum(clump_rows_per_strip)
     samples_per_clump = horizontal * vertical + 2
-    if len(clumps) != clump_columns * clump_rows:
-        raise ValueError("YCbCr clump count does not match image geometry")
+    if len(clumps) != expected_clump_count:
+        raise ValueError("YCbCr clump count does not match strip geometry")
     if any(
         len(clump) != samples_per_clump
         or any(not 0 <= sample <= 255 for sample in clump)
@@ -96,11 +105,13 @@ def lzw_blocks(
         )
 
     blocks = []
-    for first_row in range(0, clump_rows, clump_rows_per_strip):
-        start = first_row * clump_columns
-        end = min(first_row + clump_rows_per_strip, clump_rows) * clump_columns
+    first_clump_row = 0
+    for clump_rows in clump_rows_per_strip:
+        start = first_clump_row * clump_columns
+        end = (first_clump_row + clump_rows) * clump_columns
         samples = bytes(value for clump in clumps[start:end] for value in clump)
         blocks.append(pack_lzw_codes_with_growth([256, *samples, 257]))
+        first_clump_row += clump_rows
     return blocks
 
 
@@ -571,6 +582,14 @@ def fixtures() -> dict[
         TWO_STRIP_CLUMPS,
         subsampling=(2, 2),
         positioning=2,
+    )
+    unaligned_rows_per_strip = build_tiff(
+        4,
+        4,
+        3,
+        UNALIGNED_STRIP_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
     )
     custom_coefficients = build_tiff(
         4,
@@ -1190,6 +1209,16 @@ def fixtures() -> dict[
             "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
             {530: (2, 2), 531: 2},
             None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": (
+            unaligned_rows_per_strip,
+            (4, 4),
+            "ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a",
+            {530: (2, 2), 531: 1},
+            bytes.fromhex(
+                "4111005525000098c000acd46939007d4d0003c0e817d4fcff7c82ff9096001f"
+                "950033a9001ec6002ed60066ff0076ff"
+            ),
         ),
         "ycbcr_custom_coefficients_lzw_2x2.tiff": (
             custom_coefficients,
@@ -1894,6 +1923,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
+            "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
             "ycbcr_zero_green_coefficient_lzw_2x2.tiff": "ff382d3f6afa3fb5f14fba10bb2df80d1aaa820e68f75883de097387bfa047d4",
             "ycbcr_zero_red_coefficient_denominator_lzw_2x2.tiff": "046eff0e1e9ededa25698a2e7e8b27f92685ff9b5daa474a1b20ef23d0466ea8",

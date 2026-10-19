@@ -326,14 +326,6 @@ fn decode_ifd(
                 "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
             ));
         }
-        let vertical_subsampling = ycbcr_subsampling.map(|(_, vertical)| vertical);
-        if vertical_subsampling.is_some_and(|vertical| {
-            height_usize > rows_per_strip && !rows_per_strip.is_multiple_of(vertical)
-        }) {
-            return Err(CodecError::Malformed(
-                "TIFF YCbCr strip boundaries must align to subsampled rows".to_owned(),
-            ));
-        }
     }
     // Pillow's baseline YCbCr TIFF raw mode is RGBX: the IFD declares three
     // samples, but each stored pixel occupies four bytes.
@@ -373,6 +365,15 @@ fn decode_ifd(
         row_bytes
             .checked_mul(height_usize)
             .dimensions("TIFF raster buffer size overflows")?
+    };
+    let unaligned_ycbcr = match layout {
+        TiffLayout::YcbcrSubsampled8 {
+            conversion,
+            subsampling,
+        } if height_usize > rows_per_strip && !rows_per_strip.is_multiple_of(subsampling.1) => {
+            Some((conversion, subsampling))
+        }
+        _ => None,
     };
 
     let tile_offsets = directory.values(324);
@@ -713,6 +714,96 @@ fn decode_ifd(
             declared_byte_counts
         }
     };
+    if let Some((conversion, subsampling)) = unaligned_ycbcr {
+        let output_len = width_usize
+            .checked_mul(height_usize)
+            .and_then(|pixels| pixels.checked_mul(3))
+            .dimensions("TIFF YCbCr RGB buffer size overflows")?;
+        let mut rgb_pixels = Vec::new();
+        #[cfg(coverage)]
+        let reservation = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffStripAssemblyReservation,
+        ) {
+            usize::MAX
+        } else {
+            output_len
+        };
+        #[cfg(not(coverage))]
+        let reservation = output_len;
+        rgb_pixels.try_reserve_exact(reservation).map_err(|_| {
+            CodecError::Dimensions("unable to allocate TIFF strip buffer".to_owned())
+        })?;
+
+        for (strip_index, (&offset, &declared_byte_count)) in
+            offsets.iter().zip(&byte_counts).enumerate()
+        {
+            crate::codecs::error::check_cancelled(token)?;
+            let byte_count = if compression != COMPRESSION_NONE && declared_byte_count == 0 {
+                derive_compressed_byte_count(strip_index, offset)?
+            } else {
+                declared_byte_count
+            };
+            #[cfg(target_pointer_width = "32")]
+            let encoded_end = offset
+                .checked_add(byte_count)
+                .malformed("TIFF strip payload is out of bounds")?;
+            #[cfg(not(target_pointer_width = "32"))]
+            let encoded_end = offset.saturating_add(byte_count);
+            let encoded = if encoded_end <= data.len() {
+                &data[offset..encoded_end]
+            } else {
+                return Err(CodecError::NeedMore {
+                    minimum: encoded_end,
+                    message: "TIFF strip payload is out of bounds".to_owned(),
+                });
+            };
+            let first_row = strip_index.saturating_mul(rows_per_strip);
+            let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
+            if strip_rows == 0 {
+                continue;
+            }
+            let stored_rows = strip_rows.div_ceil(subsampling.1);
+            let expected = row_bytes
+                .checked_mul(stored_rows)
+                .dimensions("TIFF strip buffer size overflows")?;
+            let decoded;
+            let samples = if compression == COMPRESSION_NONE {
+                encoded
+            } else {
+                decoded = decode_block(compression, encoded, expected, token)
+                    .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+                &decoded
+            };
+            let strip_height = u32::try_from(strip_rows).map_err(|_| {
+                CodecError::Dimensions("TIFF strip height exceeds image dimensions".to_owned())
+            })?;
+            let strip_rgb = convert_ycbcr_subsampled(
+                (width, strip_height),
+                samples,
+                subsampling,
+                conversion,
+                token,
+            )?;
+            rgb_pixels.extend_from_slice(&strip_rgb);
+        }
+        rgb_pixels.resize(output_len, 0);
+        let image = convert_pixels_for_token(
+            (width, height),
+            rgb_pixels,
+            TiffLayout::Rgb8,
+            endian,
+            palette,
+            alpha,
+            token,
+        )?;
+        return Ok((
+            image
+                .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+                .with_metadata(std::mem::take(&mut directory.metadata)),
+            next_offset,
+            directory_end,
+        ));
+    }
     let mut pixels = Vec::new();
     #[cfg(coverage)]
     let reservation = if crate::coverage_support::take_fault_point(

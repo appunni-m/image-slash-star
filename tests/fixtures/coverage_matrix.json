@@ -146244,6 +146244,84 @@
           "error_contracts": {}
         },
         {
+          "id": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Default 2-by-2 YCbCr clumps split across LZW strips at an unaligned row boundary",
+          "asset": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_tiff.bin",
+          "ref_sha256": "ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "ycbcr_custom_coefficients_lzw_2x2",
           "type": "decode",
           "format": "tiff",
@@ -205384,12 +205462,12 @@
     }
   },
   "summary": {
-    "total_rows": 2434,
-    "decode_rows": 1934,
+    "total_rows": 2435,
+    "decode_rows": 1935,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1931,
-    "decode_active": 1934,
+    "assets_available": 1932,
+    "decode_active": 1935,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -205653,6 +205731,25 @@
       "verification": "fault-contract",
       "input": {
         "source_case": "decode:tiff:compression_none"
+      },
+      "fault": {
+        "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_unaligned_strip_assembly_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3"
       },
       "fault": {
         "point": "tiff.strip_assembly.output_reservation",

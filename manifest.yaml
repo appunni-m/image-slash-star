@@ -250,6 +250,20 @@ fault_contracts:
       point: tiff.strip_assembly.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_unaligned_strip_assembly_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3
+    fault:
+      point: tiff.strip_assembly.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_rgb16_output_reservation_failure
     type: fault-contract
     operation: decode
@@ -5742,6 +5756,10 @@ formats:
       description: Default 2-by-2 YCbCr clumps split across aligned LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_2x2_two_strips.tiff
+    - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3
+      description: Default 2-by-2 YCbCr clumps split across LZW strips at an unaligned row boundary
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff
     - id: ycbcr_custom_coefficients_lzw_2x2
       description: Rec. 709 YCbCr coefficients in a compressed 2-by-2 TIFF
       test_assets:
