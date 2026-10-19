@@ -1182,6 +1182,20 @@ def validate_bmp_claim(case_id, asset_name, data):
         masks = struct.unpack_from("<III", data, 54)
         if (depth, compression, masks) != (32, 3, (0, 0, 0)):
             raise RuntimeError("BMP is not the all-zero 32-bit BI_BITFIELDS case")
+    if asset_name == "v4_bitfields_alpha_mask_0.bmp":
+        masks = (
+            *struct.unpack_from("<III", data, 54),
+            struct.unpack_from("<I", data, 66)[0],
+        )
+        pixel_offset = struct.unpack_from("<I", data, 10)[0]
+        if (
+            (dib_size, depth, compression, masks)
+            != (108, 32, 3, (0x00FF0000, 0x0000FF00, 0x000000FF, 0))
+            or data[pixel_offset : pixel_offset + 4] != bytes((0x33, 0x22, 0x11, 0xA5))
+        ):
+            raise RuntimeError(
+                "BMP is not the V4 BI_BITFIELDS RGB case with an unused nonzero fourth byte"
+            )
     if asset_name == "bitfields_16_rgb565.bmp":
         masks = struct.unpack_from("<III", data, 54)
         if (depth, compression, masks) != (16, 3, (0xF800, 0x07E0, 0x001F)):
