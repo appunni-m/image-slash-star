@@ -43,7 +43,7 @@ help:
 	@printf "  make coverage-exporter-setup Build the optional pinned native exporter (macOS ARM64; Git/CMake/Ninja, network on first setup)\n"
 	@printf "  make coverage-with-exporter Use the verified exporter; COVERAGE_EXPORTER_TARGET=coverage-complete retains strict 100%%\n"
 	@printf "  make package-verify   Build and consume a reproducible package\n"
-	@printf "  make ci               Run all local CI gates\n"
+	@printf "  make ci               Run all local CI gates, including workflow validation\n"
 	@printf "  make release-verify   Require a clean, complete release candidate\n"
 	@printf "  make dependency-update Update one dependency in both lockfiles (DEPENDENCY, DEPENDENCY_VERSION)\n"
 	@printf "  make release-lock-update Refresh both workspace lockfiles after a version bump\n"
@@ -186,7 +186,7 @@ package-verify:
 	$(PYTHON) scripts/verify_release_archive.py
 
 .PHONY: ci
-ci: fmt verify lint test supply-chain coverage package-verify
+ci: workflows-check fmt verify lint test supply-chain coverage package-verify
 
 .PHONY: release-verify
 release-verify:
