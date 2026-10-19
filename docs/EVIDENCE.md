@@ -6,6 +6,37 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## JPEG trailing JFIF APP0 parity — 2026-10-19
+
+Added `decode:jpeg:baseline_444_single_scan_trailing_app0`, a complete baseline
+4:4:4 JPEG with a valid JFIF APP0 segment after its only entropy scan. Pinned
+Pillow 12.2.0 accepts the file in both `verify()` and `load()`; it decodes to
+8×8 RGB and the exact 192-byte pixel output matches the existing trailing-COM
+and trailing-APP1 cases. The input SHA-256 is
+`507c2cf54fb8d6c38bf75020b6371df6e74b639eefc5c8e7091b6657b1c9e646`; the
+pixel SHA-256 is
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+
+The JPEG parser already accepts APP0 segments. The baseline single-scan fast
+boundary recognizer now treats APP0 like the supported APP1, COM, DHT, and DQT
+segments, keeping valid metadata after the scan out of entropy extraction.
+This is a bounded marker match with no extra allocation or pixel-loop work.
+The selected coverage run passed 1/1 and checked that decoded opaque metadata
+retains the exact APP0, COM, APP0 order and bytes. Coverage MCP's line-filtered
+branch query reports only the invalid-marker (`true`) arm at
+`decode.rs:2774` as missing in this selection, consistent with APP0 taking the
+accepted (`false`) arm. The incremental comparison with
+`coverage-main-20261019.json` is incomparable because its branch detail does
+not reconcile with the totals. Both MCP measurements lack source/build
+receipts, and MCP test attribution is unknown. The local selected-run receipt
+records the exact case, source and fixture hashes, and passing test process.
+No aggregate coverage gain or full-suite claim is made; no full coverage
+campaign was run.
+
+The focused report is
+`target/release-evidence/selected/20261019-jpeg-trailing-app0-metadata-retry-f4e98437/coverage.json`
+(SHA-256 `794d1a26db18695b00d61fa6caff90e178c12540a3b9d66811806abb968bfcbb`).
+
 ## TIFF unsigned RGB16 strip parity and allocation fault contract — 2026-10-19
 
 Added little- and big-endian, uncompressed 2×2 RGB16 TIFF fixtures with two
@@ -99,8 +130,8 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The current fixture matrix contains 2,426 total rows: 1,926 decode / inspect /
-verify rows and 500 encode rows. Of those, 1,926 decode rows and 468 encode
+The current fixture matrix contains 2,427 total rows: 1,927 decode / inspect /
+verify rows and 500 encode rows. Of those, 1,927 decode rows and 468 encode
 rows are active; the other 32 encode rows are planned.
 The separate fault-contract lane contains 71 rows. The coverage-origin
 inventory records 188 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7107,7 +7138,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5258e5084f3689f1f7597f9d6863b7e9d21dce2e4c59b7938ea0643359253eac`; matrix `8d2a302c81afa9ea29faf25ff7f27a1c5ee11299e9ac3f3891f81092c0c76533`.
+- Current fixture integrity only: manifest `0acf88d27868e6cd5da349532a0c03ae014eaf98bd7b655fcf71f6a170f0709d`; matrix `2e03895f5851edc8337cb17814bb81a8c65d344dc5fc7f029b1428f758bea017`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -87021,6 +87021,98 @@
           "error_contracts": {}
         },
         {
+          "id": "baseline_444_single_scan_trailing_app0",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:4:4 JPEG has a valid JFIF APP0 segment after its only entropy scan",
+          "asset": "baseline_444_single_scan_trailing_app0.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "507c2cf54fb8d6c38bf75020b6371df6e74b639eefc5c8e7091b6657b1c9e646",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_single_scan_trailing_app0_jpg.bin",
+          "ref_sha256": "7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "rust_expected_metadata": [
+            {
+              "kind_hex": "e0",
+              "data_hex": "4a46494600010100000100010000"
+            },
+            {
+              "kind_hex": "fe",
+              "data_hex": "6f6b"
+            },
+            {
+              "kind_hex": "e0",
+              "data_hex": "4a46494600010100000100010000"
+            }
+          ]
+        },
+        {
           "id": "baseline_444_single_scan_trailing_dht",
           "type": "decode",
           "format": "jpeg",
@@ -204712,12 +204804,12 @@
     }
   },
   "summary": {
-    "total_rows": 2426,
-    "decode_rows": 1926,
+    "total_rows": 2427,
+    "decode_rows": 1927,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1923,
-    "decode_active": 1926,
+    "assets_available": 1924,
+    "decode_active": 1927,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

@@ -144,6 +144,18 @@ fn require_ok<T, E: std::fmt::Debug>(value: Result<T, E>, context: &str) -> T {
     }
 }
 
+#[track_caller]
+fn decode_hex_bytes(hex: &str, context: &str) -> Vec<u8> {
+    assert_eq!(hex.len() % 2, 0, "{context} must contain complete bytes");
+    hex.as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let pair = require_ok(std::str::from_utf8(pair), context);
+            require_ok(u8::from_str_radix(pair, 16), context)
+        })
+        .collect()
+}
+
 fn coverage_matrix() -> Option<&'static CoverageMatrix> {
     COVERAGE_MATRIX
         .get_or_init(|| {
@@ -245,6 +257,7 @@ struct DecodeRow {
     ref_is_animated: Option<bool>,
     inspect_palette: Option<PaletteParityRef>,
     decoded_palette: Option<PaletteParityRef>,
+    rust_expected_metadata: Option<Vec<RustExpectedMetadataRef>>,
     decoded_source_byte_order: Option<String>,
     decoded_source_byte_order_origin: Option<String>,
     decoded_source_color: Option<SourceColorParityRef>,
@@ -260,6 +273,12 @@ struct DecodeRow {
     sequence: Option<SequenceParityRef>,
     frame_request: Option<FrameRequestContractRef>,
     frame_request_result: Option<FrameRequestResultRef>,
+}
+
+#[derive(Debug)]
+struct RustExpectedMetadataRef {
+    kind_hex: String,
+    data_hex: String,
 }
 
 #[derive(Debug)]
@@ -2581,6 +2600,7 @@ impl FromJson for DecodeRow {
             ref_is_animated: object.take("ref_is_animated")?,
             inspect_palette: object.take("inspect_palette")?,
             decoded_palette: object.take("decoded_palette")?,
+            rust_expected_metadata: object.take("rust_expected_metadata")?,
             decoded_source_byte_order: object.take("decoded_source_byte_order")?,
             decoded_source_byte_order_origin: object.take("decoded_source_byte_order_origin")?,
             decoded_source_color: object.take("decoded_source_color")?,
@@ -2665,6 +2685,7 @@ json_object!(PaletteParityRef {
     alpha_bytes,
     alpha_sha256,
 });
+json_object!(RustExpectedMetadataRef { kind_hex, data_hex });
 json_object!(SourceColorParityRef {
     srgb,
     gamma,
@@ -6378,6 +6399,23 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
             let decoded = decoded.into_inner();
+            if let Some(expected_metadata) = row.rust_expected_metadata.as_ref() {
+                let expected_metadata = expected_metadata
+                    .iter()
+                    .map(|metadata| img::OpaqueMetadata {
+                        kind: decode_hex_bytes(&metadata.kind_hex, "opaque metadata kind_hex"),
+                        data: decode_hex_bytes(&metadata.data_hex, "opaque metadata data_hex"),
+                    })
+                    .collect::<Vec<_>>();
+                if decoded.metadata != expected_metadata {
+                    eprintln!(
+                        "  FAIL [{}]: retained opaque metadata differs: expected {:?}, got {:?}",
+                        row.id, expected_metadata, decoded.metadata
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
             if row.id == "metadata_software_tag" {
                 // TIFF stores tag 305 as its two little-endian bytes; the
                 // ASCII value includes its trailing NUL in the raw metadata.

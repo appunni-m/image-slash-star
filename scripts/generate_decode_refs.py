@@ -292,6 +292,10 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
                     "status": case.get("status", "active"),
                 }
             )
+            if case.get("rust_expected_metadata") is None:
+                row.pop("rust_expected_metadata", None)
+            else:
+                row["rust_expected_metadata"] = case["rust_expected_metadata"]
             if case.get("avif_mdcv") is None:
                 row.pop("avif_mdcv", None)
             else:
@@ -325,6 +329,8 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
         ),
         "status": "active",
     }
+    if case.get("rust_expected_metadata") is not None:
+        row["rust_expected_metadata"] = case["rust_expected_metadata"]
     if case.get("avif_mdcv") is not None:
         row["avif_mdcv"] = case["avif_mdcv"]
     if case.get("frame_request") is not None:
@@ -392,6 +398,10 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                         "status": case_status,
                     }
                 )
+                if case.get("rust_expected_metadata") is None:
+                    row.pop("rust_expected_metadata", None)
+                else:
+                    row["rust_expected_metadata"] = case["rust_expected_metadata"]
                 pixel_reference_case = case.get("pixel_reference_case")
                 if pixel_reference_case is not None:
                     if (

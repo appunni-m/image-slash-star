@@ -11,7 +11,7 @@ use super::huffman::HuffTable;
 #[cfg(target_arch = "aarch64")]
 use super::huffman::HuffTableStorage;
 use super::idct::{self, YccColorConverter, extend, jpeg_idct_islow};
-use super::parser::{JpegInfo, M_APP1, M_COM, M_DHT, M_DQT, M_EOI, parse_jpeg};
+use super::parser::{JpegInfo, M_APP0, M_APP1, M_COM, M_DHT, M_DQT, M_EOI, parse_jpeg};
 use super::progressive::progressive_reconstruct;
 use super::upsample::{UpsampleComponent, crop_component, fancy_upsample, fancy_upsample_row};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -2771,7 +2771,7 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
         }
         let marker_code = *data.get(code_pos)?;
         let marker = u16::from_be_bytes([0xFF, marker_code]);
-        if !matches!(marker, M_APP1 | M_COM | M_DHT | M_DQT) {
+        if !matches!(marker, M_APP0 | M_APP1 | M_COM | M_DHT | M_DQT) {
             // Other markers may follow malformed entropy and must still go
             // through generic extraction's validation path.
             return None;
@@ -2816,7 +2816,7 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
         return None;
     }
     // Keep extraction bounded at the validated entropy boundary when only
-    // supported APP1, COM, DHT, or DQT segments follow this single scan.
+    // supported APP0, APP1, COM, DHT, or DQT segments follow this single scan.
     Some(scan.entropy_end)
 }
 
