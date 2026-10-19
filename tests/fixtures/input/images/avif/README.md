@@ -25,6 +25,7 @@ generation provenance follow.
 | `high_bitdepth_still_12bit_444_lossless.avif` | Deterministic 16x16 RGB source encoded as a single-frame 12-bit 4:4:4 witness | libavif 1.4.1 / `6543b22`; libaom 3.13.2 fixture build | `8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd` | MIT/Apache-2.0 (repository-generated) |
 | `high_bitdepth_still_12bit_444_alpha_9x9.avif` | Deterministic 9x9 12-bit YUV444 still with a monochrome 12-bit auxiliary alpha item; both AV1 frames are all-lossless | `scripts/generate_av1_encoder_refs.py` case `high12_444_alpha_9x9`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `f7eb5b9edfdd7b11d00094aadb91320e7cc6cc01961470e3c2040d91e68610aa` | MIT/Apache-2.0 (repository-generated) |
 | `profile2_identity_12bit_444.avif` | Deterministic 16x16 RGB source encoded as a profile-2 12-bit full-range 4:4:4 identity-CICP still | `scripts/generate_avif_profile2_identity.py`; libavif 1.4.1 / libaom 3.13.2; `--qcolor 100 --cicp 1/13/0 --range full --speed 8 --jobs 1` | `1ce2aae5539074e3a65092f185c4db34537462d637859d4fd85449bb15557931` | MIT/Apache-2.0 (repository-generated) |
+| `profile2_identity_12bit_444_9x9.avif` | The pinned 16x16 identity-CICP still with its AV1 sequence and item spatial extent reduced to 9x9 | `scripts/generate_avif_profile2_identity_tail.py`; Pillow 12.2.0 exact RGB reference; frame payload preserved | `2329ba1c0b8cb384727b1a3c0b817998fee4da5a3aa0254801afdcefb2f70c0d` | MIT/Apache-2.0 (repository-generated mutation) |
 | `high_bitdepth_still_10bit_420_lossy_16x16.avif` | Deterministic 16x16 planar 10-bit I420 source encoded as a single-frame lossy profile-0 AVIF | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `60c40a86c0409add22d7ab678b579ea4ccf979624bf3b127a4448d0a83e18d18` | MIT/Apache-2.0 (repository-generated) |
 | `high_bitdepth_still_10bit_420_alpha_lossless_16x16.avif` | Deterministic 16x16 planar 10-bit YUV420 still with a monochrome 10-bit auxiliary alpha item; both AV1 frames all-lossless | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `8c3cb86055e1003d91897d986995dd2ee030d0278b82d3d7c9ddc783189eb76f` | MIT/Apache-2.0 (repository-generated) |
 | `high_bitdepth_still_10bit_422_alpha_lossless_16x16.avif` | Deterministic 16x16 planar 10-bit YUV422 still with a monochrome 10-bit auxiliary alpha item; both AV1 frames all-lossless | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `eef1ffae7961354032dad642c1ebfc146cbcb28f7147c4dce6d9b8a4de17d392` | MIT/Apache-2.0 (repository-generated) |
@@ -444,6 +445,20 @@ Generate it with the pinned local `avifenc` build:
 ```sh
 .oracle-venv/bin/python scripts/generate_avif_profile2_identity.py \
   --avifenc target/oracle-staging/avif-profile-probe/libavif-build/avifenc
+```
+
+`profile2_identity_12bit_444_9x9.avif` is a deterministic full-file mutation
+of the 16x16 identity-CICP still above. The generator updates the AV1 sequence
+dimensions and primary item's `ispe` spatial extent to 9x9 while preserving the
+frame payload and all identity-color declarations. It checks the source and
+output hashes, verifies the AV1 sequence fields, and checks Pillow 12.2.0
+open, verify, and load behavior. Pillow returns 243 RGB8 bytes with SHA-256
+`081589477332f1b32b6175028a983d88a15fc1b995b32abcfe4280cfcdb8d2d8`. The 81
+color samples exercise ten complete eight-lane batches and a one-sample scalar
+remainder in the identity RGB converter. Regenerate it with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_profile2_identity_tail.py
 ```
 
 The existing `error_sequence_identity_color_matrix_profile2_8bit.avif` is a

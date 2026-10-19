@@ -8808,6 +8808,12 @@ formats:
       - profile2_identity_12bit_444.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: profile2_identity_12bit_444_9x9
+      description: Single-frame 9x9 profile-2 12-bit full-range 4:4:4 AVIF with identity CICP, cropped from the pinned 16x16 frame to exercise the RGB scalar tail
+      test_assets:
+      - profile2_identity_12bit_444_9x9.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: with_alpha
       description: AVIF with alpha channel
       test_assets:
