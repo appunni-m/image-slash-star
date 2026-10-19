@@ -5063,6 +5063,11 @@ formats:
     - id: enc_lossless_method_5_quality_80
       description: VP8L method five at quality 80 also trials output without a color cache
       params: {'lossless': True, 'quality': 80, 'method': 5}
+    - id: enc_lossless_method_5_grayscale_alpha_predictor
+      description: Method-five predictor sampling coalesces grayscale-alpha modes to the VP8L field limit
+      source_format: png
+      source_asset: webp_lossless_gray_alpha_predictor.png
+      params: {'lossless': True, 'quality': 80, 'method': 5, 'rust_encode_with_token': true}
     - id: enc_lossless_method_6
       description: VP8L method six increases lossless transform search effort
       params: {'lossless': True, 'quality': 80, 'method': 6}

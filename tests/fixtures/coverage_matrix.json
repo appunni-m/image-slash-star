@@ -196650,8 +196650,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_sequence_lossy_rgb_keyframes.bin",
           "encoded_ref_bytes": 7034,
           "encoded_ref_sha256": "0037af0c9aecf86db20e382ff2906229f96aae653a1f27b9b6e4efa1ff6bee45",
-          "ref_sha256": "2220d8f545eebd6ab8bda7543c3d77111d8a546b882a531e50ba4a0201649a49",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_sequence_lossy_rgb_keyframes.bin",
+          "ref_sha256": "2220d8f545eebd6ab8bda7543c3d77111d8a546b882a531e50ba4a0201649a49",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -196791,8 +196791,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_sequence_lossless_rgb_background.bin",
           "encoded_ref_bytes": 160,
           "encoded_ref_sha256": "37b5b832ee6586e2d820f2195148934cffd7fc1f2d7646fb8003d2d2c843b035",
-          "ref_sha256": "ba1897db6a16522aca021433abf095ed845bacf941a6257e4b9a33ce98b85f45",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_sequence_lossless_rgb_background.bin",
+          "ref_sha256": "ba1897db6a16522aca021433abf095ed845bacf941a6257e4b9a33ce98b85f45",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -196940,8 +196940,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_sequence_lossy_rgba_keyframes.bin",
           "encoded_ref_bytes": 224,
           "encoded_ref_sha256": "956f6c9134a77d302b819fc3c50dc33102034dbeefea5db0700911e836d29838",
-          "ref_sha256": "ce00f2dee17d451760d8b1e7979a6063556d34d73a24535f95a38f903d38977c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_sequence_lossy_rgba_keyframes.bin",
+          "ref_sha256": "ce00f2dee17d451760d8b1e7979a6063556d34d73a24535f95a38f903d38977c",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197088,8 +197088,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_sequence_lossless_rgba_keyframes.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_sequence_lossless_rgba_keyframes.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197232,8 +197232,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_sequence_lossless_default_controls.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_sequence_lossless_default_controls.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197388,8 +197388,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_loop_overflow.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_loop_overflow.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197604,8 +197604,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_frame_mode.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_frame_mode.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197760,8 +197760,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_palette_background.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_palette_background.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -197916,8 +197916,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_icc.bin",
           "encoded_ref_bytes": 156,
           "encoded_ref_sha256": "b037477cfd142f9963029159ad114fa4c03c026525df00fad74c0b7a37fe68b3",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_icc.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198072,8 +198072,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_exif.bin",
           "encoded_ref_bytes": 160,
           "encoded_ref_sha256": "2adaa4849fcc7861ede21474699580cdd67efcb519b592984e444f0316e0419c",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_exif.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198228,8 +198228,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_xmp.bin",
           "encoded_ref_bytes": 160,
           "encoded_ref_sha256": "c3f5861747e2a37e3ac793d64cb234559ac330a7ee3867e5e3fefedc03a8772b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_xmp.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198384,8 +198384,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_kmax.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_kmax.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198540,8 +198540,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_minimize_size.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_minimize_size.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198695,8 +198695,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_kmin.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_kmin.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -198851,8 +198851,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_allow_mixed.bin",
           "encoded_ref_bytes": 144,
           "encoded_ref_sha256": "246cb6998ff767eb885e7e220e7863fe9a18e09c98b3afbf2b4dff426019403b",
-          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_allow_mixed.bin",
+          "ref_sha256": "45926d276c048a7ba3e552d36ed3841b0861eb16886488cb3ffe8e80a74e3acd",
           "ref_bytes": 252,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -199014,8 +199014,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_left.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_left.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199177,8 +199177,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_top.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_top.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199336,8 +199336,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_width.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_width.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199495,8 +199495,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_height.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_height.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199651,8 +199651,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_interlace.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_interlace.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199807,8 +199807,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_default_image.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_default_image.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -199963,8 +199963,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_reserved_disposal.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_reserved_disposal.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200119,8 +200119,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_reserved_blend.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_reserved_blend.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200278,8 +200278,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_fractional_duration.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_fractional_duration.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200437,8 +200437,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_zero_duration_denominator.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_zero_duration_denominator.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200593,8 +200593,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_sequence_duration_overflow.bin",
           "encoded_ref_bytes": 48224,
           "encoded_ref_sha256": "77eeb32fbaccdb8f2a9f8a2c62c04c115d0ec9224af6339f87b6a21825e1d632",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_sequence_duration_overflow.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200749,8 +200749,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_error_public_mode_contract.bin",
           "encoded_ref_bytes": 64,
           "encoded_ref_sha256": "2cc220bbd93e81289d8e500aed33b9014113588ba33b4cfb5e3d2214c26d49d1",
-          "ref_sha256": "c00048f3a43afba063c10e60de59d756b8266ad8300e6a88d5934f67a19f814c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_error_public_mode_contract.bin",
+          "ref_sha256": "c00048f3a43afba063c10e60de59d756b8266ad8300e6a88d5934f67a19f814c",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200803,8 +200803,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q100.bin",
           "encoded_ref_bytes": 6892,
           "encoded_ref_sha256": "98660000a1cbc531ec182c051214918dcd0f868707ccc6e07cac8b5f7f45b91e",
-          "ref_sha256": "7b6edaefe59ef11b96849e1936f5c58939e3156a05397ba1ed4a7a5a6c3274c7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q100.bin",
+          "ref_sha256": "7b6edaefe59ef11b96849e1936f5c58939e3156a05397ba1ed4a7a5a6c3274c7",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200857,8 +200857,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q80.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q80.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200912,8 +200912,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q50.bin",
           "encoded_ref_bytes": 2584,
           "encoded_ref_sha256": "f412a5cab3b06fbef090e98bacf2dc91932279efb42b5c74af414d1554a5fdba",
-          "ref_sha256": "efbce951edb3c56301c16b644c1a00d31f5e2193476c9ee701704595b79f6f1a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q50.bin",
+          "ref_sha256": "efbce951edb3c56301c16b644c1a00d31f5e2193476c9ee701704595b79f6f1a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -200966,8 +200966,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q10.bin",
           "encoded_ref_bytes": 1408,
           "encoded_ref_sha256": "2b876df869b3f91b0245223224bdfa7dabafe0cc8c1bd61679bd6ac69bba00e9",
-          "ref_sha256": "cae03e2949688e8a921dfd0f78f1905bdf3a363bcf2b26d3e520024dde523b7f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q10.bin",
+          "ref_sha256": "cae03e2949688e8a921dfd0f78f1905bdf3a363bcf2b26d3e520024dde523b7f",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201020,8 +201020,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_q1.bin",
           "encoded_ref_bytes": 878,
           "encoded_ref_sha256": "dd3956e9b49b97f6bcdac8b4b23c58a747311d78e1d957bba3bde85daaeaa707",
-          "ref_sha256": "980ca11d0eb85be2f4fd00c033689409b3986cc899afc66c8359305ffaeafefe",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q1.bin",
+          "ref_sha256": "980ca11d0eb85be2f4fd00c033689409b3986cc899afc66c8359305ffaeafefe",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201073,8 +201073,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless.bin",
           "encoded_ref_bytes": 3578,
           "encoded_ref_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201128,8 +201128,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_quality_0.bin",
           "encoded_ref_bytes": 3860,
           "encoded_ref_sha256": "5c3057dfb67d57db10f36bc1e9ddb23e1d4edb80b00f5777234385c84f61f9b4",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_quality_0.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201183,8 +201183,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_quality_100.bin",
           "encoded_ref_bytes": 3612,
           "encoded_ref_sha256": "f0b4cf28b929642b8fd8fa52091c4a189b4297bffebc5658b375361b8015ae98",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_quality_100.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201238,8 +201238,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0.bin",
           "encoded_ref_bytes": 3268,
           "encoded_ref_sha256": "a58cc46419f6e9259a27ec08996372bc16b297abf397f6e7f70a322bcf635c6d",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201293,8 +201293,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_palette.bin",
           "encoded_ref_bytes": 140,
           "encoded_ref_sha256": "18b7e9a968507216c394276bddd32dde7653e41726a14914b10a254ab3ab2dbd",
-          "ref_sha256": "9775372327179b48ff6b3532111ea20ae45c453b0bc7c874ba00ac0711970dda",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_palette.bin",
+          "ref_sha256": "9775372327179b48ff6b3532111ea20ae45c453b0bc7c874ba00ac0711970dda",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201349,8 +201349,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_partial_alpha.bin",
           "encoded_ref_bytes": 1046,
           "encoded_ref_sha256": "fe960bf88e92078d82aaff773db0ff4b9f21ba74c42e320505447ead0d3fd029",
-          "ref_sha256": "afc5f12f1a09509bf6c5af9c1a2abc39f8c91c3c3f2486d7c2b2008ce7eafb92",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_partial_alpha.bin",
+          "ref_sha256": "afc5f12f1a09509bf6c5af9c1a2abc39f8c91c3c3f2486d7c2b2008ce7eafb92",
           "ref_bytes": 4096,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -201405,8 +201405,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_transparent_alpha.bin",
           "encoded_ref_bytes": 2594,
           "encoded_ref_sha256": "a9644e3b18cd259629fab13e11437c8ac3a61d9e78023af700f29da83aa8cb78",
-          "ref_sha256": "581afe28a932f7998f126178286fa734638f707340809fe743f9c914c8c4d870",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_transparent_alpha.bin",
+          "ref_sha256": "581afe28a932f7998f126178286fa734638f707340809fe743f9c914c8c4d870",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -201460,8 +201460,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_5_quality_74.bin",
           "encoded_ref_bytes": 3002,
           "encoded_ref_sha256": "3782a0b0c43b67ef0771f41bdff7576420dfaf55b40b77baff4ecfc3f8544fe1",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_5_quality_74.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201515,8 +201515,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_5_quality_80.bin",
           "encoded_ref_bytes": 3004,
           "encoded_ref_sha256": "b327665ac7110c9738a7a695cfc955d745adc700039195a06ba318b16b5ed013",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_5_quality_80.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201525,6 +201525,62 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_method_5_grayscale_alpha_predictor",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-five predictor sampling coalesces grayscale-alpha modes to the VP8L field limit",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 5,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_gray_alpha_predictor.png",
+          "source_sha256": "af90b0cd4ab588fbc276bbf25db7692edf7b31ec6464ddfe6eff9cab8eee63a9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_5_grayscale_alpha_predictor.bin",
+          "encoded_ref_bytes": 122296,
+          "encoded_ref_sha256": "8378ffed0bc2d7269dea0e0edec7b4df37d2fe2bfb8a8bb04eb28d1740022f3a",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_5_grayscale_alpha_predictor.bin",
+          "ref_sha256": "fb8dbb11b678ecca3ecef1f571105d4d886355527c7ae01abc0915423af7c694",
+          "ref_bytes": 524288,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            8192,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "enc_lossless_method_6",
@@ -201570,8 +201626,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6.bin",
           "encoded_ref_bytes": 3004,
           "encoded_ref_sha256": "b327665ac7110c9738a7a695cfc955d745adc700039195a06ba318b16b5ed013",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201626,8 +201682,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_quality_100_token.bin",
           "encoded_ref_bytes": 3010,
           "encoded_ref_sha256": "487b93cbdb8583f5f730aaf4b79fce6305d183a8fb8553a7d124331e902f2c40",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_quality_100_token.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201682,8 +201738,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_checkpoint.bin",
           "encoded_ref_bytes": 15234,
           "encoded_ref_sha256": "d40f9c8aca12614e1f641328af850ed38951919cd9934712429e3d0b4db86715",
-          "ref_sha256": "ec89ea2936a4b6562d01a5242126424cd26ff80242f6fa117142ad020b586088",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_sampling_checkpoint.bin",
+          "ref_sha256": "ec89ea2936a4b6562d01a5242126424cd26ff80242f6fa117142ad020b586088",
           "ref_bytes": 393216,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201738,8 +201794,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_multi_group_checkpoint.bin",
           "encoded_ref_bytes": 98388,
           "encoded_ref_sha256": "cc92a5c28e780be64ef34a104ddeeb92e76c967f8e3f8f1a16fb42a01ca907a4",
-          "ref_sha256": "47bff2675f228265154df24a0fd87eb4359d113046229be3281033b59cd0730a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_sampling_multi_group_checkpoint.bin",
+          "ref_sha256": "47bff2675f228265154df24a0fd87eb4359d113046229be3281033b59cd0730a",
           "ref_bytes": 393216,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201794,8 +201850,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_equal_rows_checkpoint.bin",
           "encoded_ref_bytes": 134180,
           "encoded_ref_sha256": "3da23b0660aba09c176a17b552913c14e33f2ac943a265582bdbfb5a0529b92f",
-          "ref_sha256": "047062aaf078b1d8297f49c4760626306b58e2d14cccce573b2fe726b70ce44d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_sampling_equal_rows_checkpoint.bin",
+          "ref_sha256": "047062aaf078b1d8297f49c4760626306b58e2d14cccce573b2fe726b70ce44d",
           "ref_bytes": 393216,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201850,8 +201906,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_row_compaction_checkpoint.bin",
           "encoded_ref_bytes": 395738,
           "encoded_ref_sha256": "5d216ba74978fb381c518359f11db60861b8ce6a25ab2c30edd4bdcd8e1ed012",
-          "ref_sha256": "cf100642b0efdb0d2da8a6476a9ec55398d96286e0f7f1537669ad8a21b4015e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_sampling_row_compaction_checkpoint.bin",
+          "ref_sha256": "cf100642b0efdb0d2da8a6476a9ec55398d96286e0f7f1537669ad8a21b4015e",
           "ref_bytes": 1572864,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -201906,8 +201962,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_grayscale_alpha_predictor.bin",
           "encoded_ref_bytes": 122296,
           "encoded_ref_sha256": "8378ffed0bc2d7269dea0e0edec7b4df37d2fe2bfb8a8bb04eb28d1740022f3a",
-          "ref_sha256": "fb8dbb11b678ecca3ecef1f571105d4d886355527c7ae01abc0915423af7c694",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_grayscale_alpha_predictor.bin",
+          "ref_sha256": "fb8dbb11b678ecca3ecef1f571105d4d886355527c7ae01abc0915423af7c694",
           "ref_bytes": 524288,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -201962,8 +202018,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_rgba_red_green_mismatch.bin",
           "encoded_ref_bytes": 942,
           "encoded_ref_sha256": "e854f4a32181303bd66a0deb29ece18b681cb9132ee8daab874154cc356bc563",
-          "ref_sha256": "afc5f12f1a09509bf6c5af9c1a2abc39f8c91c3c3f2486d7c2b2008ce7eafb92",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_rgba_red_green_mismatch.bin",
+          "ref_sha256": "afc5f12f1a09509bf6c5af9c1a2abc39f8c91c3c3f2486d7c2b2008ce7eafb92",
           "ref_bytes": 4096,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202018,8 +202074,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_rgba_green_blue_mismatch.bin",
           "encoded_ref_bytes": 954,
           "encoded_ref_sha256": "55cbe4e4ed6b4798a642453a18237b8f65f6952ff9363f99e42300f7dc09d7c7",
-          "ref_sha256": "e8588df302db121b13864b6963b86eadcc37ebcb33ff9d07deede86a49901fbd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_rgba_green_blue_mismatch.bin",
+          "ref_sha256": "e8588df302db121b13864b6963b86eadcc37ebcb33ff9d07deede86a49901fbd",
           "ref_bytes": 4096,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202073,8 +202129,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_luminance_alpha_opaque_token.bin",
           "encoded_ref_bytes": 3404,
           "encoded_ref_sha256": "0b6020c724542f341b16f30477e12dbe6b89fbc835d815fecf80d99e8c7d4af6",
-          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_luminance_alpha_opaque_token.bin",
+          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202127,8 +202183,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_grayscale.bin",
           "encoded_ref_bytes": 2146,
           "encoded_ref_sha256": "a66d4c402fb8b0bfcffe9e10b25861ff7194d8c4f01b630981a8d822f4fa55c5",
-          "ref_sha256": "805e0d6fb33a81d702b73b19e32878a0b6236921a92f1f91016d92d11fec21d2",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_grayscale.bin",
+          "ref_sha256": "805e0d6fb33a81d702b73b19e32878a0b6236921a92f1f91016d92d11fec21d2",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202181,8 +202237,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_grayscale.bin",
           "encoded_ref_bytes": 3404,
           "encoded_ref_sha256": "0b6020c724542f341b16f30477e12dbe6b89fbc835d815fecf80d99e8c7d4af6",
-          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_grayscale.bin",
+          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202235,8 +202291,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_l16.bin",
           "encoded_ref_bytes": 54,
           "encoded_ref_sha256": "eddea14e78dc12416a89857cfaac4b3f27eb98805ef9e849708d0556b2cf4ac1",
-          "ref_sha256": "95e97ceed5dfa46dc3b8b7be780dca052db37f4c77c859214e58d01d04f548a8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_l16.bin",
+          "ref_sha256": "95e97ceed5dfa46dc3b8b7be780dca052db37f4c77c859214e58d01d04f548a8",
           "ref_bytes": 24,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202288,8 +202344,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_l16.bin",
           "encoded_ref_bytes": 56,
           "encoded_ref_sha256": "e46b74fd4d1a824f52549900fdb013705a0fcbb8bed230965f0d035b6debc360",
-          "ref_sha256": "a53b2c87a40305a1e9f320ad6df955c00d1fdf0c02096dff0a3bab1a4d856153",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_l16.bin",
+          "ref_sha256": "a53b2c87a40305a1e9f320ad6df955c00d1fdf0c02096dff0a3bab1a4d856153",
           "ref_bytes": 24,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202342,8 +202398,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bilevel.bin",
           "encoded_ref_bytes": 10896,
           "encoded_ref_sha256": "955bec6f559b336b8c6ef57b07db78a5ff9cf6d86dff58652c709d3114932bed",
-          "ref_sha256": "6eae57f3824978fe3976d62b772f0cdb01c29d673808a7ea237f2616ba0fc27a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bilevel.bin",
+          "ref_sha256": "6eae57f3824978fe3976d62b772f0cdb01c29d673808a7ea237f2616ba0fc27a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202396,8 +202452,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_bilevel.bin",
           "encoded_ref_bytes": 1726,
           "encoded_ref_sha256": "a33e659e47baa4a4e5b877cbae049a7116867edf16d884dd9e37333df350c351",
-          "ref_sha256": "ec08e5b66f47c87deb39f8639694b351c73f31a53e6ffd87200d8962fab669ce",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_bilevel.bin",
+          "ref_sha256": "ec08e5b66f47c87deb39f8639694b351c73f31a53e6ffd87200d8962fab669ce",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202450,8 +202506,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_indexed.bin",
           "encoded_ref_bytes": 6932,
           "encoded_ref_sha256": "5bb9a3be1ac22fed641fc2b0f993235f3714c7a0e5ec3076c26d693b38fccacc",
-          "ref_sha256": "568813894039b032b9e97d921ce04725e57468309b29ca787ea97c622a0ba757",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_indexed.bin",
+          "ref_sha256": "568813894039b032b9e97d921ce04725e57468309b29ca787ea97c622a0ba757",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202505,8 +202561,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_indexed.bin",
           "encoded_ref_bytes": 9190,
           "encoded_ref_sha256": "fc35d688c00c25e149daee2fc8716ca3e6fcd671a67430db0169671c0dc39b34",
-          "ref_sha256": "589579c365ba1aee1b7f5eb46af957d2d5f9dc32c22bc35c8f5d331263ebb4fb",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_indexed.bin",
+          "ref_sha256": "589579c365ba1aee1b7f5eb46af957d2d5f9dc32c22bc35c8f5d331263ebb4fb",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202559,8 +202615,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_indexed_alpha.bin",
           "encoded_ref_bytes": 3954,
           "encoded_ref_sha256": "59542cb7c1d5c0e9b125f364367a14e05df58ef1eaf9866f3f738e254b5e653d",
-          "ref_sha256": "9a293bb44f65220a2456d2c911b300e46eaea236a5da30f22ec07d264725d40c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_indexed_alpha.bin",
+          "ref_sha256": "9a293bb44f65220a2456d2c911b300e46eaea236a5da30f22ec07d264725d40c",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202614,8 +202670,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_indexed_alpha.bin",
           "encoded_ref_bytes": 2022,
           "encoded_ref_sha256": "5e8dfcc6d3fab8655405b166a951cbb1885400c7b6966945e112cc0473d0c339",
-          "ref_sha256": "f622a7e1dbe429f8414c6081c3d79c93573e37b18538dc828c497f13fa8b3659",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_indexed_alpha.bin",
+          "ref_sha256": "f622a7e1dbe429f8414c6081c3d79c93573e37b18538dc828c497f13fa8b3659",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202668,8 +202724,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_luminance_alpha.bin",
           "encoded_ref_bytes": 2146,
           "encoded_ref_sha256": "a66d4c402fb8b0bfcffe9e10b25861ff7194d8c4f01b630981a8d822f4fa55c5",
-          "ref_sha256": "805e0d6fb33a81d702b73b19e32878a0b6236921a92f1f91016d92d11fec21d2",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_luminance_alpha.bin",
+          "ref_sha256": "805e0d6fb33a81d702b73b19e32878a0b6236921a92f1f91016d92d11fec21d2",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202722,8 +202778,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_luminance_alpha_partial.bin",
           "encoded_ref_bytes": 72,
           "encoded_ref_sha256": "1e32acd2234ad41250050e35444cf81e1b3a80f975f61442fbbf93ed8a9cddbd",
-          "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_luminance_alpha_partial.bin",
+          "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
           "ref_bytes": 4,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202776,8 +202832,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_luminance_alpha.bin",
           "encoded_ref_bytes": 3404,
           "encoded_ref_sha256": "0b6020c724542f341b16f30477e12dbe6b89fbc835d815fecf80d99e8c7d4af6",
-          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_luminance_alpha.bin",
+          "ref_sha256": "623a5bb6d270c132a1117fc21b0aceddc3efa7514c9326a553885fa81d64ad7e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202830,8 +202886,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_luminance_alpha_partial.bin",
           "encoded_ref_bytes": 38,
           "encoded_ref_sha256": "b2a2905016596773cf793ff88e8e0bb37fde0da29217c5c407e5acab90e38c84",
-          "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_luminance_alpha_partial.bin",
+          "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
           "ref_bytes": 4,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202884,8 +202940,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha.bin",
           "encoded_ref_bytes": 2858,
           "encoded_ref_sha256": "a26a2c2b38a76ee3f7dcd7945763da8adbb11c06ca24966c36f36ca23faa416e",
-          "ref_sha256": "9d70452dad4caaf9697916275827c1cb43bcdc0f2790647017a1624c43503d03",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha.bin",
+          "ref_sha256": "9d70452dad4caaf9697916275827c1cb43bcdc0f2790647017a1624c43503d03",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202939,8 +202995,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_compressed.bin",
           "encoded_ref_bytes": 140,
           "encoded_ref_sha256": "9528b8edc7bbf5d2010bcaa1492f07feeef7d9004073c4ef3fdf8127f5a5a307",
-          "ref_sha256": "56512df3f66c81190dfdda294e8a0596c99c2178f737fd394a07ec88200195bb",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_compressed.bin",
+          "ref_sha256": "56512df3f66c81190dfdda294e8a0596c99c2178f737fd394a07ec88200195bb",
           "ref_bytes": 16384,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -202994,8 +203050,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_raw.bin",
           "encoded_ref_bytes": 4210,
           "encoded_ref_sha256": "c3fed186ee97cc2418fd1815880646118e73fdaa3fed896bf977118972b13e4d",
-          "ref_sha256": "6d1fcd1bc197f3a196ca06828f2bae3a97d22f7902c85f5685ecfe354a019f92",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_raw.bin",
+          "ref_sha256": "6d1fcd1bc197f3a196ca06828f2bae3a97d22f7902c85f5685ecfe354a019f92",
           "ref_bytes": 16384,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203050,8 +203106,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_size_tie.bin",
           "encoded_ref_bytes": 100,
           "encoded_ref_sha256": "f99e6b76bea04b1263728c6f4c6d275db57a7e9e1636887f6da8df0f1d84b594",
-          "ref_sha256": "b10845e2e1eaa231a6325efc716b5886d4aa37631bd5cbb82ed0b307dd5a9408",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_size_tie.bin",
+          "ref_sha256": "b10845e2e1eaa231a6325efc716b5886d4aa37631bd5cbb82ed0b307dd5a9408",
           "ref_bytes": 36,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203104,8 +203160,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_opaque_rgba.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_opaque_rgba.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203159,8 +203215,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_odd_alpha.bin",
           "encoded_ref_bytes": 428,
           "encoded_ref_sha256": "23310a93b68b9e43b7b7ac0178f0622fb6b97bdbf3a47d5382058ae654df2054",
-          "ref_sha256": "3c0f47a0ff390267a671dc3c678561a4752de61159d22a8955b56f006dcee042",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_odd_alpha.bin",
+          "ref_sha256": "3c0f47a0ff390267a671dc3c678561a4752de61159d22a8955b56f006dcee042",
           "ref_bytes": 1292,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203214,8 +203270,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_bottom_edge_token.bin",
           "encoded_ref_bytes": 362,
           "encoded_ref_sha256": "ed33c333e64bf2562b2dbcbe9b6edd286eedc1fae1d8857fb2ba4b63155b351b",
-          "ref_sha256": "220ac25f9b9caa3a6eb0bc6fc7d192ec1d4c4802b32554d7bcee773635c3127d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_bottom_edge_token.bin",
+          "ref_sha256": "220ac25f9b9caa3a6eb0bc6fc7d192ec1d4c4802b32554d7bcee773635c3127d",
           "ref_bytes": 1088,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203267,8 +203323,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_horizontal.bin",
           "encoded_ref_bytes": 196,
           "encoded_ref_sha256": "22589a380432f68afacb96c9891784195be076da9c5989b53cda3a10428fc710",
-          "ref_sha256": "9e92ed63fca66a2987fd0ae95b63cc1524ab8e4dc4e5bf2c760148f25c644210",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_horizontal.bin",
+          "ref_sha256": "9e92ed63fca66a2987fd0ae95b63cc1524ab8e4dc4e5bf2c760148f25c644210",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203320,8 +203376,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_vertical.bin",
           "encoded_ref_bytes": 204,
           "encoded_ref_sha256": "99f3389119236de8f3f37c50d25031d44fbe1795a6967f792c139b22f92adb8a",
-          "ref_sha256": "0518961ef1c395a5714fe9a544517bd33d149c4e3d960d36f70019c341a342ec",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_vertical.bin",
+          "ref_sha256": "0518961ef1c395a5714fe9a544517bd33d149c4e3d960d36f70019c341a342ec",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203373,8 +203429,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_solid.bin",
           "encoded_ref_bytes": 92,
           "encoded_ref_sha256": "823a22996c7efd4c8535c9edb578ee446840243c0dc3eaf0a57de847c57d63ec",
-          "ref_sha256": "4ebd66edd871881dc04abf8f220b55849be7f648a29de33ad86cd084975af09c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_solid.bin",
+          "ref_sha256": "4ebd66edd871881dc04abf8f220b55849be7f648a29de33ad86cd084975af09c",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203427,8 +203483,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_noise.bin",
           "encoded_ref_bytes": 2888,
           "encoded_ref_sha256": "4989ffb95ab4b7bd4f1d5feb61d80d9fe256278a1e8d90070835db628dbb3912",
-          "ref_sha256": "f2eba090a1480782f40331ab6d8ddcfaea53e35fe5b5782126956a148c656cbd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_noise.bin",
+          "ref_sha256": "f2eba090a1480782f40331ab6d8ddcfaea53e35fe5b5782126956a148c656cbd",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203481,8 +203537,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_alpha.bin",
           "encoded_ref_bytes": 2774,
           "encoded_ref_sha256": "0e95f06269973433b60fbfed61e5fd209ad5c12fd148c1eea08c5d3a5e00a9db",
-          "ref_sha256": "86166c1b03aabb00578cf5518e4cc87f8d45a5651d745501e51ec8efc213fb7f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_alpha.bin",
+          "ref_sha256": "86166c1b03aabb00578cf5518e4cc87f8d45a5651d745501e51ec8efc213fb7f",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203537,8 +203593,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_exif.bin",
           "encoded_ref_bytes": 2878,
           "encoded_ref_sha256": "d4880a7f66991a57305c4a7416298d2360e95a3be9889e6ed2d1b548f2e5f269",
-          "ref_sha256": "9d70452dad4caaf9697916275827c1cb43bcdc0f2790647017a1624c43503d03",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_exif.bin",
+          "ref_sha256": "9d70452dad4caaf9697916275827c1cb43bcdc0f2790647017a1624c43503d03",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -203590,8 +203646,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_no_alpha.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_no_alpha.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203643,8 +203699,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_photo.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_photo.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203696,8 +203752,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_graph.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_graph.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203749,8 +203805,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_hint_picture.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_hint_picture.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203802,8 +203858,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_method_0.bin",
           "encoded_ref_bytes": 4112,
           "encoded_ref_sha256": "c0cde13eb4a8b52ff4c30b5154bcbef6faea44c46dbffcc6595fb9dbee9075c5",
-          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_method_0.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203855,8 +203911,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_method_6.bin",
           "encoded_ref_bytes": 3570,
           "encoded_ref_sha256": "ba524d40418e1bd254e437cb4cf51d98e10d31df9fb5a163938840b9e3fddf4f",
-          "ref_sha256": "2c759de6a1ae9096f129744a6c04d24f1a611bcd8841b26810cc1c583b6a1525",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_method_6.bin",
+          "ref_sha256": "2c759de6a1ae9096f129744a6c04d24f1a611bcd8841b26810cc1c583b6a1525",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -203910,8 +203966,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_6_token_checkpoint.bin",
           "encoded_ref_bytes": 3570,
           "encoded_ref_sha256": "ba524d40418e1bd254e437cb4cf51d98e10d31df9fb5a163938840b9e3fddf4f",
-          "ref_sha256": "2c759de6a1ae9096f129744a6c04d24f1a611bcd8841b26810cc1c583b6a1525",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_6_token_checkpoint.bin",
+          "ref_sha256": "2c759de6a1ae9096f129744a6c04d24f1a611bcd8841b26810cc1c583b6a1525",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204184,8 +204240,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_exif.bin",
           "encoded_ref_bytes": 3672,
           "encoded_ref_sha256": "7e7e5c9a4c114ed5bcfe64cd3182aa366e1fbf8b2ef4057b3337ac384ac7da59",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_exif.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204237,8 +204293,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_exif_mixed_hex_case.bin",
           "encoded_ref_bytes": 3674,
           "encoded_ref_sha256": "cfd0bb44ab858ed6e799b6187030760cbdf0db9d1d11938008b017386a6e5ff8",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_exif_mixed_hex_case.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204291,8 +204347,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_xmp.bin",
           "encoded_ref_bytes": 3672,
           "encoded_ref_sha256": "a290afc09f5167ca7e2785992d678ba32810510850416202af48224936f3c9b0",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_xmp.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204345,8 +204401,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_icc.bin",
           "encoded_ref_bytes": 3674,
           "encoded_ref_sha256": "e5c76730154444d293b3e36e9bd3c7be43e0271d2466cd536ce345df97c9484f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_icc.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204668,8 +204724,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_cmyk.bin",
           "encoded_ref_bytes": 3746,
           "encoded_ref_sha256": "f08e5c65268ef1a3f2339066ea35dac921d88999cb9cc60ca54b08d5898f4c67",
-          "ref_sha256": "819cc3cebbb33fc9280df97bdd15114061bd9107efec5234f9043a45c07d4478",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_cmyk.bin",
+          "ref_sha256": "819cc3cebbb33fc9280df97bdd15114061bd9107efec5234f9043a45c07d4478",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204721,8 +204777,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cmyk.bin",
           "encoded_ref_bytes": 16780,
           "encoded_ref_sha256": "6f7509153181e2346a376b97c4b15e00ed5fe1fd0b19f74d25dcf93c5fe3ead1",
-          "ref_sha256": "6f2096b7fbd9282af3df7e5b61dd69cdeffc55a7281378f3125002a8adfac6d3",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cmyk.bin",
+          "ref_sha256": "6f2096b7fbd9282af3df7e5b61dd69cdeffc55a7281378f3125002a8adfac6d3",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204774,8 +204830,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_noise.bin",
           "encoded_ref_bytes": 58,
           "encoded_ref_sha256": "43bfc3cd3a111d7985392817644a0a5e8d96f0416cee3b0d0ea9f97e49c8b0fb",
-          "ref_sha256": "481467504f1454343de16c379a0e986e104d65b76d7dd7eae6059d5991e4e763",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_noise.bin",
+          "ref_sha256": "481467504f1454343de16c379a0e986e104d65b76d7dd7eae6059d5991e4e763",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204827,8 +204883,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_checker.bin",
           "encoded_ref_bytes": 54,
           "encoded_ref_sha256": "72081b8fbf00fb6ccbb70d8ee27b36c0ae9f215c54a98df60e1f07ecdb53c4d5",
-          "ref_sha256": "067dbf6c8f7e85b3332570f5a3b71bb105b50d7e17d1a7461ee51bc0171791ff",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_checker.bin",
+          "ref_sha256": "067dbf6c8f7e85b3332570f5a3b71bb105b50d7e17d1a7461ee51bc0171791ff",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204880,8 +204936,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_solid.bin",
           "encoded_ref_bytes": 44,
           "encoded_ref_sha256": "980115bee705e7ff1276a5f97950c03769601c8409bd1cbb4a9dd8daa5158d7d",
-          "ref_sha256": "136990aaf3eb2bcbca7c554a187acb58d9b393cafa174c0078d394a990fe3710",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_solid.bin",
+          "ref_sha256": "136990aaf3eb2bcbca7c554a187acb58d9b393cafa174c0078d394a990fe3710",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204933,8 +204989,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette16.bin",
           "encoded_ref_bytes": 118,
           "encoded_ref_sha256": "b5f54a2e71428ab10f145e77ee142e6736a59e184cd728b5c3278a43b7a7d4e2",
-          "ref_sha256": "9775372327179b48ff6b3532111ea20ae45c453b0bc7c874ba00ac0711970dda",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette16.bin",
+          "ref_sha256": "9775372327179b48ff6b3532111ea20ae45c453b0bc7c874ba00ac0711970dda",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -204986,8 +205042,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette256.bin",
           "encoded_ref_bytes": 586,
           "encoded_ref_sha256": "42bc53bcb80cfb23db2e70db57f2811babc2a78d5660f6f05437724b4379a7c0",
-          "ref_sha256": "39f8c395f13cfe0e5b58ef6e32812a5e44dd4378163a73f11d3c8f5bf861f807",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette256.bin",
+          "ref_sha256": "39f8c395f13cfe0e5b58ef6e32812a5e44dd4378163a73f11d3c8f5bf861f807",
           "ref_bytes": 12288,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205039,8 +205095,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette4_box_chain.bin",
           "encoded_ref_bytes": 62,
           "encoded_ref_sha256": "4c7c883b704d56f182586b1e75979ebff920dd72505aa0d39160e46853b28e51",
-          "ref_sha256": "fa6ddad1fc1dcdce2239668796b0edb1a8cb89feeec1cec77783a4cf2266bf67",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette4_box_chain.bin",
+          "ref_sha256": "fa6ddad1fc1dcdce2239668796b0edb1a8cb89feeec1cec77783a4cf2266bf67",
           "ref_bytes": 49200,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205092,8 +205148,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_sparse.bin",
           "encoded_ref_bytes": 172,
           "encoded_ref_sha256": "da5586976b4c3b8289477b2cba1ccaecf9b6cd9aa088489369a149305473ae19",
-          "ref_sha256": "b5567cf4cbe1f501a47ae672e88dd740b92186c3010a231569f7ac1398a3a68e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_sparse.bin",
+          "ref_sha256": "b5567cf4cbe1f501a47ae672e88dd740b92186c3010a231569f7ac1398a3a68e",
           "ref_bytes": 27648,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205145,8 +205201,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_random_walk.bin",
           "encoded_ref_bytes": 10804,
           "encoded_ref_sha256": "849a556da4feef0f003e514e30fe52206612ce6f72c8a618944925b5c231956a",
-          "ref_sha256": "5a0394717945d61aaecb046964b3bd0124ebe3ba91f2afabbe515f9e068f298a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_random_walk.bin",
+          "ref_sha256": "5a0394717945d61aaecb046964b3bd0124ebe3ba91f2afabbe515f9e068f298a",
           "ref_bytes": 27648,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205198,8 +205254,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_radial.bin",
           "encoded_ref_bytes": 9734,
           "encoded_ref_sha256": "4cc2de0217d970de1ed42a18e65f19c99a642cacc9c288a513a1eab533c63531",
-          "ref_sha256": "fd6526ff2276a1ab11279c1bd7086b0aa58b32ad7186949e0a7a6b6c6916f601",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_radial.bin",
+          "ref_sha256": "fd6526ff2276a1ab11279c1bd7086b0aa58b32ad7186949e0a7a6b6c6916f601",
           "ref_bytes": 27648,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205251,8 +205307,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_quadrants.bin",
           "encoded_ref_bytes": 82,
           "encoded_ref_sha256": "b6e1f8eba126592031c036a91d43d2106a7a9823935a21697c056599fe037ace",
-          "ref_sha256": "58137e09a6161ac47a1a9463c61d5ea9a998276c828357ceb80ecb5147ed9a4c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_quadrants.bin",
+          "ref_sha256": "58137e09a6161ac47a1a9463c61d5ea9a998276c828357ceb80ecb5147ed9a4c",
           "ref_bytes": 27648,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205309,8 +205365,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_subtract_green.bin",
           "encoded_ref_bytes": 416,
           "encoded_ref_sha256": "a66abba0f11e57c05a5a50fbfa0c864757449aaee8725aca8ea6963ca586d5e1",
-          "ref_sha256": "5d031827c503da3b45412ee0e055e2a18d049297747a4a00144f27a211bc4a09",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_subtract_green.bin",
+          "ref_sha256": "5d031827c503da3b45412ee0e055e2a18d049297747a4a00144f27a211bc4a09",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205365,8 +205421,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_1x1.bin",
           "encoded_ref_bytes": 64,
           "encoded_ref_sha256": "2cc220bbd93e81289d8e500aed33b9014113588ba33b4cfb5e3d2214c26d49d1",
-          "ref_sha256": "c00048f3a43afba063c10e60de59d756b8266ad8300e6a88d5934f67a19f814c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_1x1.bin",
+          "ref_sha256": "c00048f3a43afba063c10e60de59d756b8266ad8300e6a88d5934f67a19f814c",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205418,8 +205474,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy.bin",
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
-          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205472,8 +205528,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_100.bin",
           "encoded_ref_bytes": 6892,
           "encoded_ref_sha256": "98660000a1cbc531ec182c051214918dcd0f868707ccc6e07cac8b5f7f45b91e",
-          "ref_sha256": "7b6edaefe59ef11b96849e1936f5c58939e3156a05397ba1ed4a7a5a6c3274c7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_100.bin",
+          "ref_sha256": "7b6edaefe59ef11b96849e1936f5c58939e3156a05397ba1ed4a7a5a6c3274c7",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205526,8 +205582,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_10.bin",
           "encoded_ref_bytes": 1408,
           "encoded_ref_sha256": "2b876df869b3f91b0245223224bdfa7dabafe0cc8c1bd61679bd6ac69bba00e9",
-          "ref_sha256": "cae03e2949688e8a921dfd0f78f1905bdf3a363bcf2b26d3e520024dde523b7f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_10.bin",
+          "ref_sha256": "cae03e2949688e8a921dfd0f78f1905bdf3a363bcf2b26d3e520024dde523b7f",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -205541,9 +205597,9 @@
     }
   },
   "summary": {
-    "total_rows": 2436,
+    "total_rows": 2437,
     "decode_rows": 1936,
-    "encode_rows": 500,
+    "encode_rows": 501,
     "formats": 8,
     "assets_available": 1933,
     "decode_active": 1936,

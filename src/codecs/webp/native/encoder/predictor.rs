@@ -34,8 +34,8 @@ const MODE_COUNT: usize = 14;
 const HISTOGRAM_SIZE: usize = 4 * 256;
 const TRANSFORM_CHECKPOINT_PIXELS: usize = 1_024;
 const MIN_TRANSFORM_BITS: u8 = 2;
-const MAX_TRANSFORM_BITS: u8 = 6;
-const MAX_LEGACY_SAMPLING_BITS: u8 = 9;
+const MAX_INITIAL_TRANSFORM_BITS: u8 = 6;
+const MAX_TRANSFORM_BITS: u8 = 9;
 const MAX_PREDICTOR_IMAGE_SIZE: usize = 1 << 14;
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
@@ -406,7 +406,7 @@ pub(crate) fn select_and_apply(
         width,
         height,
         bits,
-        MAX_LEGACY_SAMPLING_BITS,
+        MAX_TRANSFORM_BITS,
         scratch,
         token,
     )
@@ -488,9 +488,9 @@ fn subsample_size(size: usize, bits: u8) -> usize {
 }
 
 fn clamp_transform_bits(width: usize, height: usize, bits: u8) -> u8 {
-    let mut bits = bits.clamp(MIN_TRANSFORM_BITS, MAX_TRANSFORM_BITS);
+    let mut bits = bits.clamp(MIN_TRANSFORM_BITS, MAX_INITIAL_TRANSFORM_BITS);
     let mut image_size = subsample_size(width, bits).saturating_mul(subsample_size(height, bits));
-    while bits < MAX_TRANSFORM_BITS && image_size > MAX_PREDICTOR_IMAGE_SIZE {
+    while bits < MAX_INITIAL_TRANSFORM_BITS && image_size > MAX_PREDICTOR_IMAGE_SIZE {
         bits = bits.saturating_add(1);
         image_size = subsample_size(width, bits).saturating_mul(subsample_size(height, bits));
     }
@@ -675,7 +675,7 @@ pub(crate) fn apply_fixed<const LOW_EFFORT: bool, const RESAMPLE_MODES: bool>(
     apply_modes::<LOW_EFFORT>(source, width, height, bits, scratch, token)?;
     let modes = &mut scratch.modes;
     let best_bits = if RESAMPLE_MODES {
-        optimize_sampling(modes, width, height, bits, MAX_LEGACY_SAMPLING_BITS, token)?
+        optimize_sampling(modes, width, height, bits, MAX_TRANSFORM_BITS, token)?
     } else {
         bits
     };
