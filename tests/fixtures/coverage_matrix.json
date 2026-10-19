@@ -204383,6 +204383,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_display_plane_copy_sequence_allocation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:animated_motion_chroma_422"
+      },
+      "fault": {
+        "point": "av1.display_plane.reconstructed_copy_allocation",
+        "contract": "sequence_decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_film_grain_output_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

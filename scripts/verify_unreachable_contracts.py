@@ -137,6 +137,14 @@ FAULT_CONTRACTS = {
         "point": "av1.display_plane.reconstructed_copy_allocation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_display_plane_copy_sequence_allocation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure",
+        "source_case": "decode:avif:animated_motion_chroma_422",
+        "point": "av1.display_plane.reconstructed_copy_allocation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_film_grain_output_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

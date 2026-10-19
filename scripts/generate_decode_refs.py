@@ -3016,7 +3016,8 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "av1.display_plane.reconstructed_copy_allocation": {
-            "decode_error_then_retry_succeeds"
+            "decode_error_then_retry_succeeds",
+            "sequence_decode_error_then_retry_succeeds",
         },
         "av1.film_grain.output_reservation": {
             "decode_error_then_retry_succeeds"

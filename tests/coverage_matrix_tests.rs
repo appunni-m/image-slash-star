@@ -1072,6 +1072,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "av1.display_plane.reconstructed_copy_allocation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DisplayPlaneCopyAllocation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("av1.film_grain.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1FilmGrainOutputReservation,
                 false,
