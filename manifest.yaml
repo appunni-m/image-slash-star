@@ -1256,6 +1256,15 @@ formats:
         - PIL.Image.open
         - load
         - tobytes
+    - id: post_scan_conflicting_adobe_app14
+      description: YCCK keeps its header APP14 transform when a conflicting Adobe APP14 follows the entropy scan
+      test_assets:
+      - post_scan_conflicting_adobe_app14.jpg
+      rust_expected_metadata:
+      - kind_hex: ee
+        data_hex: 41646f626500640000000002
+      - kind_hex: ee
+        data_hex: 41646f626500640000000000
     - id: ycck_h2v1_subsampled_17x9
       description: Odd-sized YCCK with 4:2:2 chroma exercises row-wise h2v1 interpolation
       test_assets:

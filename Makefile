@@ -86,6 +86,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app0_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_post_scan_app14_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_trailing_dht_malformed_fixtures.py --check
 	$(PYTHON) scripts/generate_bmp_gif_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
