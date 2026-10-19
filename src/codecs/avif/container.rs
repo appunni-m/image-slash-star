@@ -684,7 +684,8 @@ fn parse_iloc(
             .push(AvifItemLocation::new(item_id, source, extents));
     }
     if !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignore bytes after the declared item-location records.
+        reader.skip(reader.remaining())?;
     }
     Ok(())
 }

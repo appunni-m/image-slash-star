@@ -1827,6 +1827,84 @@
           "error_contracts": {}
         },
         {
+          "id": "iloc_trailing_payload_ignored",
+          "type": "decode",
+          "format": "avif",
+          "category": "iloc",
+          "description": "Pillow ignores one trailing byte after the declared meta/iloc records and decodes unchanged pixels",
+          "asset": "iloc_trailing_payload_ignored.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_baseline_avif.bin",
+          "ref_bytes": 49152,
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "d62c4cf7da0e986cf90225f63160fb4ff8bd851cf0d2a0c2957bc48ef7ce4504",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "error_iloc_truncated_extent_index",
           "type": "decode",
           "format": "avif",
@@ -204883,12 +204961,12 @@
     }
   },
   "summary": {
-    "total_rows": 2428,
-    "decode_rows": 1928,
+    "total_rows": 2429,
+    "decode_rows": 1929,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1925,
-    "decode_active": 1928,
+    "assets_available": 1926,
+    "decode_active": 1929,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

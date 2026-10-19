@@ -901,12 +901,14 @@ jobs:
                 "      - x86-simd-lint\n"
                 "      - windows-msvc\n"
                 "      - supply-chain\n"
+                "      - documentation\n"
                 "      - coverage\n",
                 "    needs:\n"
                 "      - fixture-integrity\n"
                 "      - x86-simd-lint\n"
                 "      - windows-msvc\n"
                 "      - supply-chain\n"
+                "      - documentation\n"
                 "      - coverage\n",
                 "missing=['quality']",
             ),

@@ -138,6 +138,10 @@ impl<'input> Reader<'input> {
         self.offset == self.end
     }
 
+    fn remaining(&self) -> usize {
+        self.end.saturating_sub(self.offset)
+    }
+
     fn take_span(&mut self, length: usize) -> ParseResult<ByteSpan> {
         let end = self
             .offset
@@ -1194,7 +1198,8 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
         });
     }
     if !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignore bytes after the declared item-location records.
+        reader.skip(reader.remaining())?;
     }
     Ok(())
 }

@@ -11,6 +11,7 @@ generation provenance follow.
 | `animated_mixed_lossless_inter_b32_i420_64x64.avif` | Deterministic two-frame 64x64 full-range 8-bit I420 sequence whose second frame has a full-visible qindex-zero lossless B32x32 inter leaf at MI (8,8), alongside lossy segments | `scripts/generate_avif_mixed_lossless_inter_b32.py`; fixture-only libavif/libaom patches at `6543b22` / `ad44980`; Pillow 12.2.0 exact RGB frames; creation/modification timestamps normalized | `ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257` | MIT/Apache-2.0 (repository-generated) |
 | `ipma_version_1_wide_item_ids.avif` | Baseline still with a version-1 `ipma` FullBox and widened 32-bit item ID | `scripts/generate_test_assets.py`; Pillow 12.2.0; 2-byte box growth with relocated `iloc` extent | `90ac8f0230ddede24a72b73fb120bd46680962d4c0a7facab31e77b088cd82c5` | MIT/Apache-2.0 (repository-generated mutation) |
 | `iloc_version_2_wide_item_ids.avif` | Baseline still with version-2 item locations, 32-bit item count/ID, and file-backed construction method | `scripts/generate_test_assets.py`; Pillow 12.2.0; exact decoded pixels and image info match baseline; 6-byte box growth with relocated extent | `39a494da43edb3e25dcc60c1c51c987452c66a2590e5ac9563d416d922199d87` | MIT/Apache-2.0 (repository-generated mutation) |
+| `iloc_trailing_payload_ignored.avif` | Baseline still with one trailing byte after declared `meta/iloc` records | `scripts/generate_avif_iloc_trailing_payload_fixture.py`; Pillow 12.2.0 / libavif 1.4.1; exact image info and RGB pixels match baseline; `iloc` and `meta` grow by one byte with relocated extent | `d62c4cf7da0e986cf90225f63160fb4ff8bd851cf0d2a0c2957bc48ef7ce4504` | MIT/Apache-2.0 (repository-generated mutation) |
 | `ipma_wide_associations.avif` | Baseline still with 16-bit `ipma` property-association indices | `scripts/generate_test_assets.py`; Pillow 12.2.0; 4-byte box growth with relocated `iloc` extent | `7bef3a5c1db6196b199c03406719f5dcd4b0bb6a7320de44b39a7daa52e6116b` | MIT/Apache-2.0 (repository-generated mutation) |
 | `primary_item_irot_pasp_4x3.avif` | `primary_item_irot.avif` with an associated 4:3 pixel-aspect-ratio property | `scripts/generate_test_assets.py`; Pillow 12.2.0; 17-byte metadata growth with relocated `iloc` extent | `2acc2e59572718a5fd1247aef7d18ab7666943533f068c221117df05378c4564` | MIT/Apache-2.0 (repository-generated mutation) |
 | `primary_item_imir_top_bottom.avif` | `baseline.avif` with an essential primary-item `imir` axis 0 property; Pillow exposes EXIF orientation 4 and preserves decoded pixels | `scripts/generate_avif_imir_fixtures.py`; 10-byte metadata growth with relocated `iloc` extent; Pillow 12.2.0 exact reference | `b129f71ceda1490258d8fbdbec9885ab5ea29a82e9a453aa000290e366e8f3df` | MIT/Apache-2.0 (repository-generated mutation) |
@@ -1303,3 +1304,16 @@ checks that Pillow 12.2.0 with libavif 1.4.1 rejects the complete file during
 open with `cannot identify image file <bytes>`. Run the generator under the
 pinned oracle environment to reproduce and check that rejection. Its `--check`
 mode verifies the exact tracked mutation and hash without requiring Pillow.
+
+## AVIF item-location trailing payload
+
+`iloc_trailing_payload_ignored.avif` is generated from `baseline.avif`
+(`d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2`) by
+`scripts/generate_avif_iloc_trailing_payload_fixture.py`. The generator appends
+one `0xff` byte after the declared version-zero `iloc` record, increases the
+`iloc` and enclosing `meta` box sizes, and advances the file-backed extent by
+one byte because `mdat` moves. It pins the fixture SHA-256 to
+`d62c4cf7da0e986cf90225f63160fb4ff8bd851cf0d2a0c2957bc48ef7ce4504` and
+requires Pillow 12.2.0 with libavif 1.4.1 to verify and decode the same image
+information and exact RGB pixels as the baseline. The generator's `--check`
+mode validates the tracked bytes without requiring Pillow.
