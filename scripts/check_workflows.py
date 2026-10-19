@@ -188,6 +188,14 @@ CI_COVERAGE_CONDITION = (
     "github.event_name == 'schedule' || "
     "github.event_name == 'workflow_dispatch'"
 )
+CI_REQUIRED_CHECK_RESULTS = {
+    "fixture-integrity": "FIXTURE_RESULT",
+    "quality": "QUALITY_RESULT",
+    "x86-simd-lint": "X86_RESULT",
+    "windows-msvc": "WINDOWS_RESULT",
+    "supply-chain": "SUPPLY_CHAIN_RESULT",
+    "coverage": "COVERAGE_RESULT",
+}
 APPLE_ARM64_ORACLE_JOBS = {
     "ci.yml": ("quality", "coverage"),
     "benchmark.yml": ("benchmark",),
@@ -289,6 +297,133 @@ def ci_coverage_gate_violations(contents: str) -> list[str]:
             coverage_commands.extend(make_coverage_command_lines(script))
     if not coverage_commands:
         violations.append("CI aggregate coverage job must execute make coverage")
+    return violations
+
+
+def ci_required_checks_violations(contents: str) -> list[str]:
+    """Keep the stable required status tied to every mandatory CI result."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["CI workflow has no jobs section"]
+
+    job = jobs.get("required-checks")
+    if job is None:
+        return ["CI workflow has no required-checks job"]
+
+    violations = []
+    condition = workflow_job_condition(job)
+    if condition is None or normalized_expression(condition) != "always()":
+        violations.append("CI required-checks job must run with if: always()")
+
+    needs_match = re.search(
+        r"(?m)^    needs:\s*\n(?P<items>(?:^      - [A-Za-z0-9_-]+\s*\n)+)",
+        job,
+    )
+    expected_jobs = set(CI_REQUIRED_CHECK_RESULTS)
+    if needs_match is None:
+        violations.append("CI required-checks job must list all required jobs in needs")
+        actual_jobs = set()
+    else:
+        needed_job_names = [
+            match.group(1)
+            for match in re.finditer(
+                r"(?m)^      - ([A-Za-z0-9_-]+)\s*$", needs_match.group("items")
+            )
+        ]
+        actual_jobs = set(needed_job_names)
+        if len(needed_job_names) != len(actual_jobs):
+            violations.append("CI required-checks dependencies must not contain duplicates")
+        if actual_jobs != expected_jobs:
+            missing = sorted(expected_jobs - actual_jobs)
+            unexpected = sorted(actual_jobs - expected_jobs)
+            violations.append(
+                "CI required-checks dependencies differ: "
+                f"missing={missing}, unexpected={unexpected}"
+            )
+
+    steps = re.split(r"(?m)^      - ", job)
+    gate_steps = [
+        step
+        for step in steps
+        if re.search(
+            r"(?m)^name: Require every applicable CI job to pass$", step
+        )
+    ]
+    if len(gate_steps) != 1:
+        return [
+            *violations,
+            "CI required-checks job must have one result-gate step",
+        ]
+
+    gate_step = gate_steps[0]
+    if not re.search(r"(?m)^        shell: bash$", gate_step):
+        violations.append("CI required-checks result-gate step must use bash")
+
+    for job_name, variable in CI_REQUIRED_CHECK_RESULTS.items():
+        source = f"needs.{job_name}.result"
+        if not re.search(
+            rf"(?m)^          {variable}: \$\{{\{{ {re.escape(source)} \}}\}}$",
+            gate_step,
+        ):
+            violations.append(
+                f"CI required-checks must map {variable} from {source}"
+            )
+    if not re.search(
+        r"(?m)^          EVENT_NAME: \$\{\{ github\.event_name \}\}$",
+        gate_step,
+    ):
+        violations.append("CI required-checks must map EVENT_NAME from github.event_name")
+
+    script = run_script(gate_step)
+    if script is None:
+        return [*violations, "CI required-checks result-gate step must run a shell script"]
+    executable_script = "\n".join(
+        line for line in script.splitlines() if not line.lstrip().startswith("#")
+    )
+
+    helper = re.search(
+        r"(?ms)^require_success\(\) \{\n(?P<body>.*?)^\}", executable_script
+    )
+    helper_body = "" if helper is None else helper.group("body")
+    success_guard = re.search(
+        r'(?ms)^\s*if \[\[ "\$result" != success \]\]; then\n'
+        r"(?P<failure>.*?)^\s*fi\s*$",
+        helper_body,
+    )
+    if (
+        helper is None
+        or not re.search(r'(?m)^\s*local job_name="\$1"$', helper_body)
+        or not re.search(r'(?m)^\s*local result="\$2"$', helper_body)
+        or success_guard is None
+        or not re.search(r"(?m)^\s*exit 1$", success_guard.group("failure"))
+    ):
+        violations.append("CI required-checks must fail when a required result is not success")
+
+    for variable in CI_REQUIRED_CHECK_RESULTS.values():
+        if variable == "COVERAGE_RESULT":
+            continue
+        if not re.search(
+            rf'(?m)^require_success\s+"[^"]+"\s+"\${variable}"$',
+            executable_script,
+        ):
+            violations.append(
+                f"CI required-checks must require {variable} to succeed"
+            )
+
+    if not re.search(
+        r'(?m)^if \[\[ "\$EVENT_NAME" == schedule \|\| '
+        r'"\$EVENT_NAME" == workflow_dispatch \]\]; then$\n'
+        r'^  require_success\s+"[^"]+"\s+"\$COVERAGE_RESULT"$\n'
+        r'^elif \[\[ "\$COVERAGE_RESULT" != success && '
+        r'"\$COVERAGE_RESULT" != skipped \]\]; then$\n'
+        r'(?s:.*?)^  exit 1$\n^fi$',
+        executable_script,
+    ):
+        violations.append(
+            "CI required-checks must require scheduled/manual coverage and "
+            "allow skipped coverage otherwise"
+        )
     return violations
 
 
@@ -1613,6 +1748,12 @@ def main() -> int:
         ci_workflow,
         ci_x86_fault_coverage_violations,
         "CI x86 fault-contract coverage",
+    ):
+        return 1
+    if not verify_workflow_policy(
+        ci_workflow,
+        ci_required_checks_violations,
+        "CI required-check aggregation",
     ):
         return 1
     if not verify_apple_arm64_runner_policy():

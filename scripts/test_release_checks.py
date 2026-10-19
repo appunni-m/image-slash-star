@@ -802,6 +802,69 @@ jobs:
             group,
         )
 
+    def test_required_ci_status_covers_every_applicable_job(self) -> None:
+        workflow_path = (
+            Path(__file__).resolve().parent.parent
+            / ".github"
+            / "workflows"
+            / "ci.yml"
+        )
+        workflow = workflow_path.read_text(encoding="utf-8")
+        self.assertEqual(check_workflows.ci_required_checks_violations(workflow), [])
+
+        mutations = (
+            (
+                "    needs:\n"
+                "      - fixture-integrity\n"
+                "      - quality\n"
+                "      - x86-simd-lint\n"
+                "      - windows-msvc\n"
+                "      - supply-chain\n"
+                "      - coverage\n",
+                "    needs:\n"
+                "      - fixture-integrity\n"
+                "      - x86-simd-lint\n"
+                "      - windows-msvc\n"
+                "      - supply-chain\n"
+                "      - coverage\n",
+                "missing=['quality']",
+            ),
+            (
+                "          QUALITY_RESULT: ${{ needs.quality.result }}",
+                "          QUALITY_RESULT: ${{ needs.fixture-integrity.result }}",
+                "CI required-checks must map QUALITY_RESULT from needs.quality.result",
+            ),
+            (
+                '          require_success "Format, lint, and parity" "$QUALITY_RESULT"\n',
+                '          # require_success "Format, lint, and parity" "$QUALITY_RESULT"\n',
+                "CI required-checks must require QUALITY_RESULT to succeed",
+            ),
+            (
+                '          if [[ "$EVENT_NAME" == schedule || "$EVENT_NAME" == workflow_dispatch ]]; then',
+                '          if [[ "$EVENT_NAME" == schedule ]]; then',
+                "CI required-checks must require scheduled/manual coverage",
+            ),
+            (
+                '  elif [[ "$COVERAGE_RESULT" != success && "$COVERAGE_RESULT" != skipped ]]; then',
+                '  elif [[ "$COVERAGE_RESULT" != success && "$COVERAGE_RESULT" != cancelled ]]; then',
+                "CI required-checks must require scheduled/manual coverage",
+            ),
+            (
+                "  required-checks:\n    name: Required CI checks\n    if: always()",
+                "  required-checks:\n    name: Required CI checks\n    if: success()",
+                "CI required-checks job must run with if: always()",
+            ),
+        )
+        for old, new, expected in mutations:
+            with self.subTest(expected=expected):
+                self.assertIn(old, workflow)
+                mutated = workflow.replace(old, new, 1)
+                violations = check_workflows.ci_required_checks_violations(mutated)
+                self.assertTrue(
+                    any(expected in violation for violation in violations),
+                    violations,
+                )
+
     def test_pages_artifacts_are_unique_per_attempt_and_match_deployments(self) -> None:
         workflow_path = (
             Path(__file__).resolve().parent.parent
