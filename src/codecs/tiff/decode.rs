@@ -312,11 +312,9 @@ fn decode_ifd(
             "unsupported TIFF YCbCr subsampling".to_owned(),
         ));
     }
-    if matches!(
-        layout,
-        TiffLayout::YcbcrFull8 { .. } | TiffLayout::YcbcrSubsampled8 { .. }
-    ) && planar != 1
-    {
+    // Full-resolution YCbCr uses the shared separate-planar assembly path.
+    // Subsampled clumps cannot be assembled from independent component planes.
+    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) && planar != 1 {
         return Err(CodecError::Malformed(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
