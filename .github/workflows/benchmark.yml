@@ -89,10 +89,14 @@ jobs:
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
       - name: Refresh the pinned Ubuntu package snapshot
-        run: sudo apt-get update --snapshot "$UBUNTU_APT_SNAPSHOT"
+        run: |
+          sudo apt-get \
+            -o Acquire::Retries=3 \
+            -o APT::Update::Error-Mode=any \
+            update --snapshot "$UBUNTU_APT_SNAPSHOT"
       - name: Install pinned CMake and NASM
         run: |
-          sudo apt-get install --yes --snapshot "$UBUNTU_APT_SNAPSHOT" \
+          sudo apt-get -o Acquire::Retries=3 install --yes --snapshot "$UBUNTU_APT_SNAPSHOT" \
             cmake=3.28.3-1build7 nasm=2.16.01-1build1
       - name: Build the pinned SIMD benchmark oracle
         run: make bench-setup PYTHON=python3

@@ -965,11 +965,12 @@ jobs:
         self.assertIsNotNone(match, "benchmark must retain the x86 SIMD job")
         job = match.group("body")
         self.assertIn("UBUNTU_APT_SNAPSHOT: '20261017T000000Z'", job)
+        self.assertIn("-o Acquire::Retries=3", job)
+        self.assertIn("-o APT::Update::Error-Mode=any", job)
+        self.assertIn('update --snapshot "$UBUNTU_APT_SNAPSHOT"', job)
         self.assertIn(
-            'sudo apt-get update --snapshot "$UBUNTU_APT_SNAPSHOT"', job
-        )
-        self.assertIn(
-            'sudo apt-get install --yes --snapshot "$UBUNTU_APT_SNAPSHOT"',
+            'sudo apt-get -o Acquire::Retries=3 install --yes --snapshot '
+            '"$UBUNTU_APT_SNAPSHOT"',
             job,
         )
         self.assertIn(
