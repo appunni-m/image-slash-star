@@ -99,8 +99,8 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The current fixture matrix contains 2,414 total rows: 1,914 decode / inspect /
-verify rows and 500 encode rows. Of those, 1,914 decode rows and 468 encode
+The current fixture matrix contains 2,415 total rows: 1,915 decode / inspect /
+verify rows and 500 encode rows. Of those, 1,915 decode rows and 468 encode
 rows are active; the other 32 encode rows are planned.
 The separate fault-contract lane contains 65 rows. The coverage-origin
 inventory records 183 exact `cfg(coverage)` guards across 27 Rust files.
@@ -7068,7 +7068,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6302d0d1a4724fa1300449714ad7717bb7d405a91ff2d27847c0bc149b0b8079`; matrix `a0792ea2bc1ce14786975dc5da3cbf6fd676c4d30db4dd7dbcbe127109d1b2c1`.
+- Current fixture integrity only: manifest `8b2e3ae39f4d8d75e4ce240a353ee29e497243c5859601912bcd6239b17049f3`; matrix `02c8c6caf85867e163f5d7c69beba0cb13e95d66367eb8ae1d692ad71c99ba1b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

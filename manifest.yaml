@@ -5209,6 +5209,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - rgb16_be_uncompressed_strips.tiff
+    - id: rgb16_separate_planar_tiled_deflate_edges
+      description: Little-endian unsigned 16-bit RGB in separate Deflate-compressed 16x16 tiles with clipped right and bottom edges; Pillow exports each sample's high byte
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_separate_planar_tiled_deflate.tiff
     - id: registered_header_variants_over_classic_ifd
       description: Pillow accepts legacy swapped-magic and BigTIFF signatures over these classic IFD payloads
       test_assets:

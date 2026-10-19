@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Generate and verify little- and big-endian uncompressed RGB16 TIFF strips."""
+"""Generate and verify RGB16 strip and separate-planar tiled TIFF fixtures."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import struct
+import sys
+import zlib
 from io import BytesIO
 from pathlib import Path
 
@@ -37,6 +39,15 @@ WIDTH = 2
 HEIGHT = 2
 ROWS_PER_STRIP = 1
 SAMPLES_PER_STRIP = WIDTH * ROWS_PER_STRIP * 3
+PLANAR_TILED_OUTPUT = (
+    ROOT / "tests/fixtures/input/images/tiff/rgb16_separate_planar_tiled_deflate.tiff"
+)
+PLANAR_TILED_WIDTH = 17
+PLANAR_TILED_HEIGHT = 17
+PLANAR_TILED_TILE_SIZE = 16
+EXPECTED_PLANAR_TILED_SHA256 = (
+    "0cee08795dbfcb70e86040432e8ead2e371a8bfa40675fe4a35fc0231f7d7e86"
+)
 
 
 def build_fixture(byte_order: str) -> bytes:
@@ -105,15 +116,103 @@ def build_fixture(byte_order: str) -> bytes:
     return encoded
 
 
+def build_planar_tiled_fixture() -> bytes:
+    """Build an edge-clipped RGB16 TIFF with Deflate tiles in separate planes."""
+    width = PLANAR_TILED_WIDTH
+    height = PLANAR_TILED_HEIGHT
+    tile_size = PLANAR_TILED_TILE_SIZE
+    endian = "<"
+
+    def pack(code: str, *values: int) -> bytes:
+        return struct.pack(endian + code, *values)
+
+    def sample(x: int, y: int, channel: int) -> int:
+        high_bytes = (x + 1, y + 33, x + y + 65)
+        low_byte = (x * 13 + y * 17 + channel * 29 + 1) & 0xFF
+        return (high_bytes[channel] << 8) | low_byte
+
+    compressed_tiles = []
+    tiles_across = (width + tile_size - 1) // tile_size
+    tiles_down = (height + tile_size - 1) // tile_size
+    for channel in range(3):
+        for tile_y in range(tiles_down):
+            for tile_x in range(tiles_across):
+                tile_samples = []
+                for local_y in range(tile_size):
+                    y = tile_y * tile_size + local_y
+                    for local_x in range(tile_size):
+                        x = tile_x * tile_size + local_x
+                        tile_samples.append(
+                            sample(x, y, channel) if x < width and y < height else 0
+                        )
+                raw_tile = pack(f"{len(tile_samples)}H", *tile_samples)
+                compressed_tiles.append(zlib.compress(raw_tile, level=9))
+
+    entry_count = 13
+    ifd_offset = 8
+    ifd_end = ifd_offset + 2 + entry_count * 12 + 4
+    bits_offset = ifd_end
+    sample_format_offset = bits_offset + 3 * 2
+    tile_offsets_offset = (sample_format_offset + 3 * 2 + 3) & ~3
+    tile_byte_counts_offset = tile_offsets_offset + len(compressed_tiles) * 4
+    tile_data_offset = tile_byte_counts_offset + len(compressed_tiles) * 4
+
+    tile_offsets = []
+    cursor = tile_data_offset
+    for compressed_tile in compressed_tiles:
+        tile_offsets.append(cursor)
+        cursor += len(compressed_tile)
+
+    def entry(tag: int, field_type: int, count: int, value: bytes) -> bytes:
+        if len(value) > 4:
+            raise ValueError(f"tag {tag} does not fit its inline TIFF field")
+        return pack("HHI", tag, field_type, count) + value.ljust(4, b"\x00")
+
+    entries = [
+        entry(256, 4, 1, pack("I", width)),
+        entry(257, 4, 1, pack("I", height)),
+        entry(258, 3, 3, pack("I", bits_offset)),
+        entry(259, 3, 1, pack("H", 8)),
+        entry(262, 3, 1, pack("H", 2)),
+        entry(277, 3, 1, pack("H", 3)),
+        entry(284, 3, 1, pack("H", 2)),
+        entry(317, 3, 1, pack("H", 1)),
+        entry(322, 4, 1, pack("I", tile_size)),
+        entry(323, 4, 1, pack("I", tile_size)),
+        entry(324, 4, len(tile_offsets), pack("I", tile_offsets_offset)),
+        entry(325, 4, len(compressed_tiles), pack("I", tile_byte_counts_offset)),
+        entry(339, 3, 3, pack("I", sample_format_offset)),
+    ]
+    directory = pack("H", entry_count) + b"".join(entries) + pack("I", 0)
+    encoded = bytearray(b"II*\x00" + pack("I", ifd_offset) + directory)
+    encoded.extend(pack("HHH", 16, 16, 16))
+    encoded.extend(pack("HHH", 1, 1, 1))
+    encoded.extend(b"\x00" * (tile_offsets_offset - len(encoded)))
+    encoded.extend(pack(f"{len(tile_offsets)}I", *tile_offsets))
+    encoded.extend(pack(f"{len(compressed_tiles)}I", *(len(tile) for tile in compressed_tiles)))
+    for compressed_tile in compressed_tiles:
+        encoded.extend(compressed_tile)
+
+    expected_length = cursor
+    if len(encoded) != expected_length:
+        raise RuntimeError(
+            f"generated TIFF is {len(encoded)} bytes; expected {expected_length}"
+        )
+    digest = hashlib.sha256(encoded).hexdigest()
+    if digest != EXPECTED_PLANAR_TILED_SHA256:
+        raise RuntimeError(
+            "separate-planar tiled TIFF SHA-256 mismatch: "
+            f"expected {EXPECTED_PLANAR_TILED_SHA256}, found {digest}"
+        )
+    return bytes(encoded)
+
+
 def verify_pillow_reference(fixtures: dict[str, bytes]) -> None:
     """Check exact public pixels and storage tags against the pinned Pillow oracle."""
     import yaml
     from PIL import Image
 
-    sys_path = ROOT / "scripts"
-    import sys
-
-    sys.path.insert(0, str(sys_path))
+    sys.path.insert(0, str(ROOT / "scripts"))
     from generate_decode_refs import verify_primary_oracle
 
     verify_primary_oracle(yaml.safe_load((ROOT / "manifest.yaml").read_text()))
@@ -149,6 +248,48 @@ def verify_pillow_reference(fixtures: dict[str, bytes]) -> None:
             image.verify()
 
 
+def verify_planar_tiled_pillow_reference(encoded: bytes) -> None:
+    """Check the pinned Pillow pixels and TIFF layout for the tiled fixture."""
+    import yaml
+    from PIL import Image
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from generate_decode_refs import verify_primary_oracle
+
+    verify_primary_oracle(yaml.safe_load((ROOT / "manifest.yaml").read_text()))
+    expected_pixels = bytes(
+        value
+        for y in range(PLANAR_TILED_HEIGHT)
+        for x in range(PLANAR_TILED_WIDTH)
+        for value in (x + 1, y + 33, x + y + 65)
+    )
+    with Image.open(BytesIO(encoded)) as image:
+        if (
+            image.format,
+            image.mode,
+            image.size,
+        ) != ("TIFF", "RGB", (PLANAR_TILED_WIDTH, PLANAR_TILED_HEIGHT)):
+            raise RuntimeError("Pillow opened the separate-planar TIFF with unexpected metadata")
+        image.load()
+        if image.tobytes() != expected_pixels:
+            raise RuntimeError("Pillow separate-planar TIFF pixels differ from expected RGB bytes")
+        tags = image.tag_v2
+        if (
+            tuple(tags.get(258, ())) != (16, 16, 16)
+            or tags.get(259) != 8
+            or tags.get(284) != 2
+            or tags.get(317) != 1
+            or tags.get(322) != PLANAR_TILED_TILE_SIZE
+            or tags.get(323) != PLANAR_TILED_TILE_SIZE
+            or tuple(tags.get(339, ())) != (1, 1, 1)
+            or len(tuple(tags.get(324, ()))) != 12
+            or len(tuple(tags.get(325, ()))) != 12
+        ):
+            raise RuntimeError("Pillow TIFF tags differ from the separate-planar tile contract")
+    with Image.open(BytesIO(encoded)) as image:
+        image.verify()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -158,14 +299,24 @@ def main() -> int:
     )
     args = parser.parse_args()
     fixtures = {byte_order: build_fixture(byte_order) for byte_order in OUTPUTS}
+    planar_tiled = build_planar_tiled_fixture()
     if args.check:
         for byte_order, output in OUTPUTS.items():
             if not output.is_file() or output.read_bytes() != fixtures[byte_order]:
                 raise RuntimeError(f"{output.relative_to(ROOT)} differs from generated bytes")
             print(f"Fixture matches: {output.relative_to(ROOT)}")
+        if (
+            not PLANAR_TILED_OUTPUT.is_file()
+            or PLANAR_TILED_OUTPUT.read_bytes() != planar_tiled
+        ):
+            raise RuntimeError(
+                f"{PLANAR_TILED_OUTPUT.relative_to(ROOT)} differs from generated bytes"
+            )
+        print(f"Fixture matches: {PLANAR_TILED_OUTPUT.relative_to(ROOT)}")
         return 0
 
     verify_pillow_reference(fixtures)
+    verify_planar_tiled_pillow_reference(planar_tiled)
     for byte_order, output in OUTPUTS.items():
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_bytes(fixtures[byte_order])
@@ -173,6 +324,12 @@ def main() -> int:
             f"Wrote {output.relative_to(ROOT)} ({len(fixtures[byte_order])} bytes, "
             f"SHA-256 {hashlib.sha256(fixtures[byte_order]).hexdigest()})"
         )
+    PLANAR_TILED_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    PLANAR_TILED_OUTPUT.write_bytes(planar_tiled)
+    print(
+        f"Wrote {PLANAR_TILED_OUTPUT.relative_to(ROOT)} ({len(planar_tiled)} bytes, "
+        f"SHA-256 {hashlib.sha256(planar_tiled).hexdigest()})"
+    )
     return 0
 
 

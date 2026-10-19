@@ -388,14 +388,13 @@ pub(super) fn layout_and_palette(
         (2, 3, 8) => TiffLayout::Rgb8,
         (2, 3, 16)
             if sample_format == 1
-                && compression == 1
                 && fill_order == 1
                 && predictor == 1
-                && planar == 1
                 && !sample_formats.is_empty()
                 && sample_formats.iter().all(|&format| format == 1)
                 && extra_samples.is_empty()
-                && !tiled =>
+                && ((compression == 1 && planar == 1 && !tiled)
+                    || (compression == 8 && planar == 2 && tiled)) =>
         {
             TiffLayout::Rgb16
         }
