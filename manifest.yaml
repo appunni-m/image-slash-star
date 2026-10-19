@@ -5395,6 +5395,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - rgb16_le_uncompressed_strips.tiff
+    - id: rgb16_le_deflate_contiguous_strips
+      description: Little-endian 16-bit RGB samples in two Deflate-compressed contiguous strips; Pillow exports the high byte of each sample
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_le_deflate_contiguous_strips.tiff
     - id: rgb16_be_uncompressed_strips
       description: Big-endian 16-bit RGB samples with explicit unsigned SampleFormat tags in two uncompressed strips; Pillow exports the high byte of each sample
       rust_decode_with_token: true

@@ -393,7 +393,7 @@ pub(super) fn layout_and_palette(
                 && !sample_formats.is_empty()
                 && sample_formats.iter().all(|&format| format == 1)
                 && extra_samples.is_empty()
-                && ((compression == 1 && planar == 1 && !tiled)
+                && ((matches!(compression, 1 | 8) && planar == 1 && !tiled)
                     || (compression == 8 && planar == 2 && tiled)) =>
         {
             TiffLayout::Rgb16

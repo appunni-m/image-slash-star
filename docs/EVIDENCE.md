@@ -37,6 +37,39 @@ The focused report is
 `target/release-evidence/selected/20261019-jpeg-trailing-app0-as-chunks-f4e98437/coverage.json`
 (SHA-256 `eec4c738e6ef1eba9d853d47ce6e88682bba93a3413a534fd4f8b827329b3c75`).
 
+## TIFF RGB16 Deflate-compressed contiguous strips — 2026-10-19
+
+Added `decode:tiff:rgb16_le_deflate_contiguous_strips` for a little-endian
+16-bit RGB TIFF with two independently Deflate-compressed, one-row contiguous
+strips. It relies on the default unsigned sample format and omits the default
+contiguous planar configuration and predictor tags. Pinned Pillow 12.2.0
+opens it as 2×2 RGB and returns the exact pixel bytes
+`12569aab00ff0080ffff017f`. The fixture generator verifies the RGB
+photometric tag, compression, strip offsets and lengths, and the omitted
+default tags. Input SHA-256:
+`b3a35c9135e45daf9016229f803eaade5923b506830b491cd001c9db1899e369`; output
+SHA-256:
+`d7973d0ab7bfd18e2fe3666bcdb5367d84d3b854b58bab793799d0803fb63c1b`.
+
+The generic TIFF strip decoder already bounds each strip, decompresses to the
+expected row size, and converts RGB16 samples to RGB8. The inspection
+predicate now accepts this contiguous Deflate layout, with no pixel-loop or
+allocation change. The final selected coverage run passed 1/1. Coverage MCP's
+line query lists two missing observations at `inspect.rs:396`. The report's
+raw branch records show ten executions of the `planar == 1` and `!tiled`
+outcomes, but zero counts for a wider joined span on the same line. MCP marks
+the report's source unverified and test attribution unknown, so this mapping
+remains a coordinate lead and does not establish marginal coverage. Its
+incremental comparison with `coverage-main-20261019.json` was incomparable
+because baseline branch detail does not reconcile with its totals. The local
+receipt records the selected case, passing process, matching source-file
+hash, and fixture hashes; no aggregate coverage gain or full-suite claim is
+made. No full coverage campaign was run.
+
+The focused report is
+`target/release-evidence/selected/20261019-tiff-rgb16-deflate-strips-b3c311c69-clippy/coverage.json`
+(SHA-256 `ed984dbed71d978fab31b2f11b4d81055c7049ab36f371fdb4617e4bab258544`).
+
 ## TIFF unsigned RGB16 strip parity and allocation fault contract — 2026-10-19
 
 Added little- and big-endian, uncompressed 2×2 RGB16 TIFF fixtures with two
@@ -130,8 +163,8 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The current fixture matrix contains 2,427 total rows: 1,927 decode / inspect /
-verify rows and 500 encode rows. Of those, 1,927 decode rows and 468 encode
+The current fixture matrix contains 2,428 total rows: 1,928 decode / inspect /
+verify rows and 500 encode rows. Of those, 1,928 decode rows and 468 encode
 rows are active; the other 32 encode rows are planned.
 The separate fault-contract lane contains 71 rows. The coverage-origin
 inventory records 188 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7138,7 +7171,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `0acf88d27868e6cd5da349532a0c03ae014eaf98bd7b655fcf71f6a170f0709d`; matrix `2e03895f5851edc8337cb17814bb81a8c65d344dc5fc7f029b1428f758bea017`.
+- Current fixture integrity only: manifest `2e504c764638fa9ff3b2be78b25f8eb28c4684461f749b236669544d4abe009c`; matrix `31dbf35219fce5fb1683304df80947ee10eb0200a3465edce2384aa614af150a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
