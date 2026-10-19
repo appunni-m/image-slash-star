@@ -992,6 +992,8 @@ jobs:
             "benchmarks/jpeg-production/**",
             "src/codecs/jpeg/**",
             "src/codecs/mod.rs",
+            "src/decode_policy.rs",
+            "src/encode_policy.rs",
             "src/lib.rs",
             "src/types/**",
         ):
