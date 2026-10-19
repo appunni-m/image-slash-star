@@ -259,7 +259,7 @@
       "path": "src/codecs/avif/av1/motion.rs"
     },
     {
-      "guard_count": 2,
+      "guard_count": 7,
       "origin": "defensive_model",
       "path": "src/codecs/avif/av1/resize.rs"
     },

@@ -30,6 +30,15 @@ pub(super) struct ResizeGeometry {
     pub(super) superres_denominator: u32,
 }
 
+#[derive(Clone, Copy)]
+struct PlaneResizeGeometry {
+    input_width: u32,
+    source_width: u32,
+    source_height: u32,
+    output_width: u32,
+    output_height: u32,
+}
+
 // Conventional libaom sign convention: each phase sums to +128 and the
 // rounded result is (sum + 64) >> 7. The table is intentionally kept local so
 // the scalar path remains the parity authority for any future SIMD kernel.
@@ -166,12 +175,16 @@ pub(super) fn upscale_monochrome_plane(
     )?;
     resize_plane(
         plane,
-        coded_width,
-        coded_width,
-        frame_height,
-        upscaled_width,
-        frame_height,
+        PlaneResizeGeometry {
+            input_width: coded_width,
+            source_width: coded_width,
+            source_height: frame_height,
+            output_width: upscaled_width,
+            output_height: frame_height,
+        },
         depth,
+        #[cfg(coverage)]
+        crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
     )
 }
 
@@ -189,8 +202,18 @@ fn upscale_subsampled_leaf(
         output_height,
         superres_denominator,
     } = geometry;
+    #[cfg(coverage)]
+    let validation_leaf_width = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionHeaderGeometryMismatch,
+    ) {
+        !leaf.width
+    } else {
+        leaf.width
+    };
+    #[cfg(not(coverage))]
+    let validation_leaf_width = leaf.width;
     validate_header_geometry(
-        leaf.width,
+        validation_leaf_width,
         leaf.height,
         coded_width,
         output_width,
@@ -226,30 +249,42 @@ fn upscale_subsampled_leaf(
     let planes = [
         resize_plane(
             luma,
-            coded_width,
-            source_width,
-            source_height,
-            output_width,
-            output_height,
+            PlaneResizeGeometry {
+                input_width: coded_width,
+                source_width,
+                source_height,
+                output_width,
+                output_height,
+            },
             depth,
+            #[cfg(coverage)]
+            crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
         )?,
         resize_plane(
             chroma_u,
-            chroma_coded_width,
-            chroma_source_width,
-            chroma_source_height,
-            chroma_upscaled_width,
-            chroma_height,
+            PlaneResizeGeometry {
+                input_width: chroma_coded_width,
+                source_width: chroma_source_width,
+                source_height: chroma_source_height,
+                output_width: chroma_upscaled_width,
+                output_height: chroma_height,
+            },
             depth,
+            #[cfg(coverage)]
+            crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionChromaUPlaneReservation,
         )?,
         resize_plane(
             chroma_v,
-            chroma_coded_width,
-            chroma_source_width,
-            chroma_source_height,
-            chroma_upscaled_width,
-            chroma_height,
+            PlaneResizeGeometry {
+                input_width: chroma_coded_width,
+                source_width: chroma_source_width,
+                source_height: chroma_source_height,
+                output_width: chroma_upscaled_width,
+                output_height: chroma_height,
+            },
             depth,
+            #[cfg(coverage)]
+            crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionChromaVPlaneReservation,
         )?,
     ];
     leaf.width = output_width;
@@ -322,13 +357,17 @@ fn validate_plane(
 
 fn resize_plane(
     source: ReconstructedPlane,
-    input_width: u32,
-    source_width: u32,
-    source_height: u32,
-    output_width: u32,
-    output_height: u32,
+    geometry: PlaneResizeGeometry,
     depth: SampleDepth,
+    #[cfg(coverage)] reservation_fault: crate::coverage_support::CoverageFaultPoint,
 ) -> Av1Result<ReconstructedPlane> {
+    let PlaneResizeGeometry {
+        input_width,
+        source_width,
+        source_height,
+        output_width,
+        output_height,
+    } = geometry;
     validate_plane(&source, source_width, source_height, depth)?;
     if input_width == 0
         || source_width < input_width
@@ -416,9 +455,7 @@ fn resize_plane(
 
     let mut samples = Vec::new();
     #[cfg(coverage)]
-    let sample_reservation_count = if crate::coverage_support::take_fault_point(
-        crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
-    ) {
+    let sample_reservation_count = if crate::coverage_support::take_fault_point(reservation_fault) {
         usize::MAX
     } else {
         length

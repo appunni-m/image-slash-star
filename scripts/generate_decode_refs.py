@@ -3024,7 +3024,16 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.superres.position_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
+        "av1.superres.header_geometry_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "av1.superres.plane_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.superres.chroma_u_plane_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.superres.chroma_v_plane_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
         "av1.restoration.sgr_source_reservation": {

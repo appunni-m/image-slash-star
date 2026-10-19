@@ -642,6 +642,48 @@ fault_contracts:
       point: av1.superres.plane_reservation
       contract: sequence_decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_superresolution_header_geometry_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.superres.header_geometry_mismatch
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_superresolution_chroma_u_plane_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.superres.chroma_u_plane_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_superresolution_chroma_v_plane_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.superres.chroma_v_plane_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_sgr_source_reservation_failure
     type: fault-contract
     operation: decode

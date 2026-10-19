@@ -78,8 +78,14 @@ pub enum CoverageFaultPoint {
     AvifItemExtentSpanReservation,
     /// Force AV1 super-resolution position reservation to fail while resizing a frame.
     Av1SuperResolutionPositionReservation,
+    /// Corrupt the decoded leaf width before AV1 super-resolution geometry validation.
+    Av1SuperResolutionHeaderGeometryMismatch,
     /// Force AV1 super-resolution output-plane reservation to fail.
     Av1SuperResolutionPlaneReservation,
+    /// Force AV1 super-resolution chroma U output-plane reservation to fail.
+    Av1SuperResolutionChromaUPlaneReservation,
+    /// Force AV1 super-resolution chroma V output-plane reservation to fail.
+    Av1SuperResolutionChromaVPlaneReservation,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.

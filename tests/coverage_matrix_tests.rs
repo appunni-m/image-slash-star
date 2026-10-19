@@ -1192,8 +1192,35 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::SequenceDecode,
             ),
+            (
+                "av1.superres.header_geometry_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SuperResolutionHeaderGeometryMismatch,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("av1.superres.plane_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.superres.chroma_u_plane_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SuperResolutionChromaUPlaneReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.superres.chroma_v_plane_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SuperResolutionChromaVPlaneReservation,
                 true,
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::SequenceDecode,
@@ -1586,6 +1613,14 @@ fn execute_fault_contract(
         "av1.frame.assembled_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled AV1 CDEF active map",
         ),
+        "av1.superres.header_geometry_mismatch" => Some(
+            "decode sequence: AVIF sequence validation failed: invalid AV1 bitstream: super-resolution geometry is inconsistent",
+        ),
+        "av1.superres.plane_reservation"
+        | "av1.superres.chroma_u_plane_reservation"
+        | "av1.superres.chroma_v_plane_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 super-resolution plane",
+        ),
         "av1.restoration.sgr_source_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 SGR source",
         ),
@@ -1688,7 +1723,9 @@ fn execute_fault_contract(
             ..
         }) if matches!(
             row.fault.point.as_str(),
-            "png.apng.sequence_counter_exhaustion" | "av1.film_grain.points_reservation"
+            "png.apng.sequence_counter_exhaustion"
+                | "av1.film_grain.points_reservation"
+                | "av1.superres.header_geometry_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}

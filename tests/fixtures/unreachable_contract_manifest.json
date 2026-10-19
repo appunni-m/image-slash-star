@@ -206,6 +206,24 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "avif_superresolution_header_geometry_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_superresolution_header_geometry_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_superresolution_chroma_u_plane_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_superresolution_chroma_v_plane_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_sgr_source_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_sgr_source_reservation_failure",
