@@ -321,8 +321,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Require every applicable CI job to pass
-        shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           FIXTURE_RESULT: ${{ needs.fixture-integrity.result }}
@@ -331,27 +333,4 @@ jobs:
           WINDOWS_RESULT: ${{ needs.windows-msvc.result }}
           SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
           COVERAGE_RESULT: ${{ needs.coverage.result }}
-        run: |
-          set -euo pipefail
-
-          require_success() {
-            local job_name="$1"
-            local result="$2"
-            if [[ "$result" != success ]]; then
-              echo "Required CI job '$job_name' concluded '$result'." >&2
-              exit 1
-            fi
-          }
-
-          require_success "Fixture and release metadata" "$FIXTURE_RESULT"
-          require_success "Format, lint, and parity" "$QUALITY_RESULT"
-          require_success "x86 SSE2 and AVX2 checks" "$X86_RESULT"
-          require_success "Windows MSVC runtime and strict lint" "$WINDOWS_RESULT"
-          require_success "Dependencies and licenses" "$SUPPLY_CHAIN_RESULT"
-
-          if [[ "$EVENT_NAME" == schedule || "$EVENT_NAME" == workflow_dispatch ]]; then
-            require_success "Coverage report" "$COVERAGE_RESULT"
-          elif [[ "$COVERAGE_RESULT" != success && "$COVERAGE_RESULT" != skipped ]]; then
-            echo "Coverage report concluded unexpected state '$COVERAGE_RESULT'." >&2
-            exit 1
-          fi
+        run: python3 scripts/verify_ci_results.py

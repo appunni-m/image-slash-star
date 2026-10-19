@@ -27,6 +27,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_llvm_coverage as coverage
 import check_workflows
+import verify_ci_results
 import prepare_crates_io_publish
 import publish_release
 import setup_benchmark_oracle
@@ -34,6 +35,74 @@ import verify_claim_ledger as claim_ledger
 import verify_coverage_origins as coverage_origins
 import verify_release_tag
 import run_selected_coverage as selected_coverage
+
+
+class RequiredCiResultGateTests(unittest.TestCase):
+    def complete_results(self) -> dict[str, str]:
+        return {
+            job_id: "success"
+            for job_id in verify_ci_results.RESULT_ENV_BY_JOB
+        }
+
+    def test_mandatory_jobs_require_success(self) -> None:
+        results = self.complete_results()
+        results["coverage"] = "skipped"
+        self.assertEqual(verify_ci_results.check_ci_results("push", results), [])
+
+        for job_id in results:
+            if job_id == "coverage":
+                continue
+            for state in ("failure", "cancelled", "skipped", "missing"):
+                with self.subTest(job=job_id, result=state):
+                    changed = results.copy()
+                    changed[job_id] = state
+                    violations = verify_ci_results.check_ci_results("push", changed)
+                    self.assertTrue(
+                        any(f"concluded '{state}'" in item for item in violations),
+                        violations,
+                    )
+
+    def test_coverage_is_required_only_for_full_coverage_events(self) -> None:
+        results = self.complete_results()
+        for event in ("push", "pull_request"):
+            with self.subTest(event=event):
+                results["coverage"] = "skipped"
+                self.assertEqual(verify_ci_results.check_ci_results(event, results), [])
+
+        for event in ("schedule", "workflow_dispatch"):
+            with self.subTest(event=event):
+                results["coverage"] = "skipped"
+                violations = verify_ci_results.check_ci_results(event, results)
+                self.assertTrue(any("Coverage report" in item for item in violations))
+                results["coverage"] = "success"
+                self.assertEqual(verify_ci_results.check_ci_results(event, results), [])
+
+    def test_unknown_event_and_missing_job_results_fail_closed(self) -> None:
+        results = self.complete_results()
+        results.pop("quality")
+        violations = verify_ci_results.check_ci_results("merge_group", results)
+        self.assertTrue(any("unsupported GitHub event" in item for item in violations))
+        self.assertTrue(
+            any("Format, lint, and parity" in item and "missing" in item
+                for item in violations),
+            violations,
+        )
+
+    def test_workflow_environment_entrypoint_uses_the_result_mapping(self) -> None:
+        environment = {"EVENT_NAME": "push"}
+        environment.update(
+            {
+                variable: "success"
+                for variable in verify_ci_results.RESULT_ENV_BY_JOB.values()
+            }
+        )
+        environment["COVERAGE_RESULT"] = "skipped"
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(verify_ci_results.main(environment), 0)
+
+            environment["QUALITY_RESULT"] = "failure"
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(verify_ci_results.main(environment), 1)
 
 
 class CoverageTests(unittest.TestCase):
@@ -835,24 +904,39 @@ jobs:
                 "CI required-checks must map QUALITY_RESULT from needs.quality.result",
             ),
             (
-                '          require_success "Format, lint, and parity" "$QUALITY_RESULT"\n',
-                '          # require_success "Format, lint, and parity" "$QUALITY_RESULT"\n',
-                "CI required-checks must require QUALITY_RESULT to succeed",
+                "        run: python3 scripts/verify_ci_results.py",
+                "        run: python3 scripts/verify_ci_results.py && exit 0",
+                "CI required-checks must invoke the tested result gate directly",
             ),
             (
-                '          if [[ "$EVENT_NAME" == schedule || "$EVENT_NAME" == workflow_dispatch ]]; then',
-                '          if [[ "$EVENT_NAME" == schedule ]]; then',
-                "CI required-checks must require scheduled/manual coverage",
+                "  required-checks:\n    name: Required CI checks\n    if: always()",
+                "  unclassified-job:\n    runs-on: ubuntu-24.04\n\n"
+                "  required-checks:\n    name: Required CI checks\n    if: always()",
+                "CI workflow jobs are not classified by required-checks",
             ),
             (
-                '  elif [[ "$COVERAGE_RESULT" != success && "$COVERAGE_RESULT" != skipped ]]; then',
-                '  elif [[ "$COVERAGE_RESULT" != success && "$COVERAGE_RESULT" != cancelled ]]; then',
-                "CI required-checks must require scheduled/manual coverage",
+                "      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n"
+                "        with:\n          persist-credentials: false\n"
+                "      - name: Require every applicable CI job to pass\n",
+                "      - name: Require every applicable CI job to pass\n",
+                "CI required-checks must check out the script before running it",
             ),
             (
                 "  required-checks:\n    name: Required CI checks\n    if: always()",
                 "  required-checks:\n    name: Required CI checks\n    if: success()",
                 "CI required-checks job must run with if: always()",
+            ),
+            (
+                "      - name: Require every applicable CI job to pass\n",
+                "      - name: Require every applicable CI job to pass\n"
+                "        if: false\n",
+                "CI required-checks result-gate step must not be conditional",
+            ),
+            (
+                "      - name: Require every applicable CI job to pass\n",
+                "      - name: Require every applicable CI job to pass\n"
+                "        continue-on-error: true\n",
+                "CI required-checks result-gate step must not allow errors",
             ),
         )
         for old, new, expected in mutations:
