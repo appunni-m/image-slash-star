@@ -901,23 +901,24 @@ jobs:
         workflow = workflow_path.read_text(encoding="utf-8")
         self.assertEqual(check_workflows.ci_required_checks_violations(workflow), [])
 
+        jobs = check_workflows.workflow_jobs(workflow)
+        self.assertIsNotNone(jobs)
+        required_job = jobs["required-checks"]
+        needs_match = re.search(
+            r"(?m)^    needs:\s*\n(?:^      - [A-Za-z0-9_-]+\s*\n)+",
+            required_job,
+        )
+        self.assertIsNotNone(needs_match)
+        needs_block = needs_match.group(0)
+        needs_without_quality = re.sub(
+            r"(?m)^      - quality\s*\n", "", needs_block, count=1
+        )
+        self.assertNotEqual(needs_block, needs_without_quality)
+
         mutations = (
             (
-                "    needs:\n"
-                "      - fixture-integrity\n"
-                "      - quality\n"
-                "      - x86-simd-lint\n"
-                "      - windows-msvc\n"
-                "      - supply-chain\n"
-                "      - documentation\n"
-                "      - coverage\n",
-                "    needs:\n"
-                "      - fixture-integrity\n"
-                "      - x86-simd-lint\n"
-                "      - windows-msvc\n"
-                "      - supply-chain\n"
-                "      - documentation\n"
-                "      - coverage\n",
+                needs_block,
+                needs_without_quality,
                 "missing=['quality']",
             ),
             (
