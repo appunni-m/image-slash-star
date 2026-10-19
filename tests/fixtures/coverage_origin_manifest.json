@@ -340,7 +340,7 @@
       "path": "src/codecs/gif/encode.rs"
     },
     {
-      "guard_count": 1,
+      "guard_count": 2,
       "origin": "defensive_model",
       "path": "src/codecs/jpeg/decode/decode.rs"
     },

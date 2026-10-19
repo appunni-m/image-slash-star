@@ -1452,6 +1452,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.ycck.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegYcckPixelsReservation,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("bmp.palette.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::BmpPaletteReservation,
                 false,

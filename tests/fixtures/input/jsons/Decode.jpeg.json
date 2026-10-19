@@ -2196,6 +2196,166 @@
       ]
     },
     {
+      "id": "color_ycck_app14_transform_2",
+      "asset": "baseline_ycck_subsampled_17x9.jpg",
+      "asset_sha256": "39d712b61d2abe430c9767a1630a4f76dd8757d2b1357cec8524af4f414c23b7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_subsampled_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_h2v1_subsampled_17x9",
+      "asset": "baseline_ycck_h2v1_17x9.jpg",
+      "asset_sha256": "220828c276f262ee48c0bc8c1829e14bdad6eb11b36959b2cc1bfb2e8564aa88",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_h4v1_sampling_fallback_17x9",
+      "asset": "baseline_ycck_h4v1_17x9.jpg",
+      "asset_sha256": "a48aa5e81cbb354fb032be6f03f28195ae70f067d22503066cca5d5ac9894b52",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h4v1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "progressive_ycck_subsampled_17x9",
+      "asset": "progressive_ycck_subsampled_17x9.jpg",
+      "asset_sha256": "fdcb83551e242178ccef25f4e47943c555a362d37530a7118cb54f939830f014",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_ycck_subsampled_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_fractional_3x2_sampling",
+      "asset": "ycck_fractional_3x2_8x8.jpg",
+      "asset_sha256": "bc0b7c83c57fbe53482742cc9f5b7006c0923a09d370453571a23d33cad29e7b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/ycck_fractional_3x2_8x8.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "baseline_cmyk_partial_blocks",
       "asset": "baseline_cmyk_13x9.jpg",
       "asset_sha256": "c6860db09f1537886ae641d40e71b30793241ecb0d35f17f430e1c3cba277682",

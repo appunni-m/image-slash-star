@@ -3100,6 +3100,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.baseline.huffman_table_slot_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.ycck.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "bmp.palette.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

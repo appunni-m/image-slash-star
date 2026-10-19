@@ -89596,6 +89596,435 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "color_ycck_app14_transform_2",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "color",
+          "description": "Odd-sized, subsampled YCCK encoded by libjpeg-turbo exercises four-plane MCU edges",
+          "asset": "baseline_ycck_subsampled_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "39d712b61d2abe430c9767a1630a4f76dd8757d2b1357cec8524af4f414c23b7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_subsampled_17x9_jpg.bin",
+          "ref_sha256": "c3d39cb993e20e4062c928e8fdad94ada64377bd4095e7203194a2e5efc48f05",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_subsampled_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          }
+        },
+        {
+          "id": "ycck_h2v1_subsampled_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Odd-sized YCCK with 4:2:2 chroma exercises row-wise h2v1 interpolation",
+          "asset": "baseline_ycck_h2v1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "220828c276f262ee48c0bc8c1829e14bdad6eb11b36959b2cc1bfb2e8564aa88",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_h2v1_17x9_jpg.bin",
+          "ref_sha256": "13506514f4c09b1782a04a7b550456df333b6cc5aa5ea4014ac985d644827334",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_h4v1_sampling_fallback_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Odd-sized YCCK with 4:1:1 chroma exercises the generic nearest-neighbor row fallback",
+          "asset": "baseline_ycck_h4v1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h4v1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "a48aa5e81cbb354fb032be6f03f28195ae70f067d22503066cca5d5ac9894b52",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_h4v1_17x9_jpg.bin",
+          "ref_sha256": "79a870c031f08223141b5e346b8abe9c6f7332f670da37391063f741afdce250",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "progressive_ycck_subsampled_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive odd-sized YCCK exercises progressive reconstruction with subsampled planes",
+          "asset": "progressive_ycck_subsampled_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/progressive_ycck_subsampled_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "fdcb83551e242178ccef25f4e47943c555a362d37530a7118cb54f939830f014",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_progressive_ycck_subsampled_17x9_jpg.bin",
+          "ref_sha256": "c3d39cb993e20e4062c928e8fdad94ada64377bd4095e7203194a2e5efc48f05",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_fractional_3x2_sampling",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Pillow rejects fractional YCCK upsampling geometry during pixel decoding",
+          "asset": "ycck_fractional_3x2_8x8.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/ycck_fractional_3x2_8x8.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "bc0b7c83c57fbe53482742cc9f5b7006c0923a09d370453571a23d33cad29e7b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "baseline_cmyk_partial_blocks",
           "type": "decode",
           "format": "jpeg",
@@ -203767,12 +204196,12 @@
     }
   },
   "summary": {
-    "total_rows": 2415,
-    "decode_rows": 1915,
+    "total_rows": 2420,
+    "decode_rows": 1920,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1912,
-    "decode_active": 1915,
+    "assets_available": 1917,
+    "decode_active": 1920,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -205027,6 +205456,25 @@
       },
       "fault": {
         "point": "av1.partition_context.above_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_ycck_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
+      },
+      "fault": {
+        "point": "jpeg.ycck.output_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

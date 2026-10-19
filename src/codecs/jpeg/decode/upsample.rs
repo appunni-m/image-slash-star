@@ -1,6 +1,8 @@
 // Modified Rust port copyright (c) 2026 Appunni M.
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
+use crate::codecs::{CodecError, CodecResult};
+
 // ── Chroma Upsampling (libjpeg-exact triangle filter) ─────────────────────
 
 /// 2x1 fancy upsampling — exact match of IJG libjpeg h2v1_fancy_upsample.
@@ -178,6 +180,187 @@ pub(super) fn fancy_upsample(
             }
             out
         }
+    }
+}
+
+/// Upsample one destination row without materializing the full component plane.
+///
+/// The h2v1 and h2v2 branches preserve the same IJG triangle filter and edge
+/// rounding as [`fancy_upsample`]. Other integer ratios use the same nearest
+/// neighbor mapping as its fallback branch.
+pub(super) struct UpsampleComponent<'a> {
+    pub(super) samples: &'a [u8],
+    pub(super) stride: usize,
+    pub(super) width: usize,
+    pub(super) height: usize,
+    pub(super) horizontal_ratio: usize,
+    pub(super) vertical_ratio: usize,
+}
+
+pub(super) fn fancy_upsample_row(
+    component: &UpsampleComponent<'_>,
+    dst_y: usize,
+    output: &mut [u8],
+) -> CodecResult<()> {
+    let invalid_geometry =
+        || CodecError::Malformed("invalid JPEG component upsampling geometry".to_owned());
+    let src = component.samples;
+    let src_stride = component.stride;
+    let src_w = component.width;
+    let src_h = component.height;
+    let h_ratio = component.horizontal_ratio;
+    let v_ratio = component.vertical_ratio;
+    if src_w == 0 || src_h == 0 || src_stride < src_w || h_ratio == 0 || v_ratio == 0 {
+        return Err(invalid_geometry());
+    }
+    let Some(last_row_start) = src_stride.checked_mul(src_h.saturating_sub(1)) else {
+        return Err(invalid_geometry());
+    };
+    let Some(required_source_len) = last_row_start.checked_add(src_w) else {
+        return Err(invalid_geometry());
+    };
+    let Some(destination_height) = src_h.checked_mul(v_ratio) else {
+        return Err(invalid_geometry());
+    };
+    let Some(destination_width) = src_w.checked_mul(h_ratio) else {
+        return Err(invalid_geometry());
+    };
+    if src.len() < required_source_len
+        || dst_y >= destination_height
+        || output.len() > destination_width
+    {
+        return Err(invalid_geometry());
+    }
+
+    let source_y = dst_y.checked_div(v_ratio).ok_or_else(invalid_geometry)?;
+    let source_row_start = src_stride
+        .checked_mul(source_y)
+        .ok_or_else(invalid_geometry)?;
+    let source_row_end = source_row_start
+        .checked_add(src_w)
+        .ok_or_else(invalid_geometry)?;
+    let source_row = src
+        .get(source_row_start..source_row_end)
+        .ok_or_else(invalid_geometry)?;
+    match (h_ratio, v_ratio) {
+        (1, 1) => output.copy_from_slice(&source_row[..output.len()]),
+        (2, 1) => upsample_h2v1_row(source_row, output),
+        (2, 2) => {
+            let adjacent_y = if dst_y.is_multiple_of(2) {
+                source_y.saturating_sub(1)
+            } else {
+                source_y.saturating_add(1).min(src_h.saturating_sub(1))
+            };
+            let adjacent_start = src_stride
+                .checked_mul(adjacent_y)
+                .ok_or_else(invalid_geometry)?;
+            let adjacent_end = adjacent_start
+                .checked_add(src_w)
+                .ok_or_else(invalid_geometry)?;
+            let adjacent_row = src
+                .get(adjacent_start..adjacent_end)
+                .ok_or_else(invalid_geometry)?;
+            upsample_h2v2_row(source_row, adjacent_row, output);
+        }
+        _ => {
+            for (x, sample) in output.iter_mut().enumerate() {
+                let source_x = x.checked_div(h_ratio).ok_or_else(invalid_geometry)?;
+                *sample = source_row[source_x];
+            }
+        }
+    }
+    Ok(())
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Loop ranges and output bounds prove each h2v1 source and destination index is in range."
+)]
+fn upsample_h2v1_row(src: &[u8], output: &mut [u8]) {
+    if output.is_empty() {
+        return;
+    }
+    let mut invalue = i32::from(src[0]);
+    output[0] = low_u8(invalue);
+    if output.len() > 1 {
+        output[1] = if src.len() > 1 {
+            interpolate(invalue, i32::from(src[1]), 3, 2, 2)
+        } else {
+            low_u8(invalue)
+        };
+    }
+
+    for col in 1..src.len().saturating_sub(1) {
+        invalue = i32::from(src[col]).saturating_mul(3);
+        let destination = col.saturating_mul(2);
+        if destination < output.len() {
+            output[destination] = weighted_sum(invalue, i32::from(src[col - 1]), 1, 2);
+        }
+        if destination.saturating_add(1) < output.len() {
+            output[destination + 1] = weighted_sum(invalue, i32::from(src[col + 1]), 2, 2);
+        }
+    }
+
+    if src.len() > 1 {
+        let last = src.len() - 1;
+        let destination = last.saturating_mul(2);
+        invalue = i32::from(src[last]);
+        if destination < output.len() {
+            output[destination] = interpolate(invalue, i32::from(src[last - 1]), 3, 1, 2);
+        }
+        if destination.saturating_add(1) < output.len() {
+            output[destination + 1] = low_u8(invalue);
+        }
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Validated equal nonempty rows and bounded loop ranges prove each h2v2 index is in range."
+)]
+fn upsample_h2v2_row(top: &[u8], adjacent: &[u8], output: &mut [u8]) {
+    if output.is_empty() {
+        return;
+    }
+    let mut this_col_sum = vertical_sum(top[0], adjacent[0]);
+    let mut next_col_sum = if top.len() > 1 {
+        vertical_sum(top[1], adjacent[1])
+    } else {
+        this_col_sum
+    };
+    output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
+    if output.len() > 1 {
+        output[1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
+    }
+    let mut last_col_sum = this_col_sum;
+    this_col_sum = next_col_sum;
+
+    for col in 1..top.len().saturating_sub(1) {
+        let next = col + 1;
+        next_col_sum = vertical_sum(top[next], adjacent[next]);
+        let destination = col.saturating_mul(2);
+        if destination < output.len() {
+            output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
+        }
+        if destination.saturating_add(1) < output.len() {
+            output[destination + 1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
+        }
+        last_col_sum = this_col_sum;
+        this_col_sum = next_col_sum;
+    }
+
+    if top.len() > 1 {
+        let last = top.len() - 1;
+        let destination = last.saturating_mul(2);
+        if destination < output.len() {
+            output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
+        }
+        if destination.saturating_add(1) < output.len() {
+            output[destination + 1] = interpolate(this_col_sum, 0, 4, 7, 4);
+        }
+    } else if output.len() > 1 {
+        output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
+        output[1] = interpolate(this_col_sum, 0, 4, 7, 4);
     }
 }
 

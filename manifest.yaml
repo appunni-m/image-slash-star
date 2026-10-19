@@ -796,6 +796,20 @@ fault_contracts:
       point: jpeg.baseline.huffman_table_slot_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_ycck_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.ycck.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -1165,6 +1179,56 @@ formats:
       description: CMYK color space (Adobe)
       test_assets:
       - baseline_cmyk.jpg
+    - id: color_ycck_app14_transform_2
+      description: Odd-sized, subsampled YCCK encoded by libjpeg-turbo exercises four-plane MCU edges
+      test_assets:
+      - baseline_ycck_subsampled_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_subsampled_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v1_subsampled_17x9
+      description: Odd-sized YCCK with 4:2:2 chroma exercises row-wise h2v1 interpolation
+      test_assets:
+      - baseline_ycck_h2v1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h4v1_sampling_fallback_17x9
+      description: Odd-sized YCCK with 4:1:1 chroma exercises the generic nearest-neighbor row fallback
+      test_assets:
+      - baseline_ycck_h4v1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h4v1_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: progressive_ycck_subsampled_17x9
+      description: Progressive odd-sized YCCK exercises progressive reconstruction with subsampled planes
+      test_assets:
+      - progressive_ycck_subsampled_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/progressive_ycck_subsampled_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_fractional_3x2_sampling
+      description: Pillow rejects fractional YCCK upsampling geometry during pixel decoding
+      test_assets:
+      - ycck_fractional_3x2_8x8.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/ycck_fractional_3x2_8x8.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
     - id: baseline_cmyk_partial_blocks
       description: Odd-sized baseline CMYK image exercises partial MCU row interleave
       test_assets:

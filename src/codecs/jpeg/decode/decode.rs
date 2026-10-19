@@ -13,7 +13,7 @@ use super::huffman::HuffTableStorage;
 use super::idct::{self, YccColorConverter, extend, jpeg_idct_islow};
 use super::parser::{JpegInfo, M_APP1, M_COM, M_DHT, M_DQT, M_EOI, parse_jpeg};
 use super::progressive::progressive_reconstruct;
-use super::upsample::{crop_component, fancy_upsample};
+use super::upsample::{UpsampleComponent, crop_component, fancy_upsample, fancy_upsample_row};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use wide::bytemuck::{cast, pod_read_unaligned};
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -953,6 +953,7 @@ fn reconstruct_baseline_cmyk_direct_safe(
     quant_tables: &[[i32; 64]],
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 4
+        || info.adobe_color_transform == Some(2)
         || info.restart_interval != 0
         || info.scan_components.len() != 4
         || info
@@ -1108,6 +1109,196 @@ fn reconstruct_baseline_cmyk_direct_safe(
         pixels,
         ColorType::Cmyk8,
     )))
+}
+
+/// Convert Adobe YCCK sample planes into Pillow's CMYK byte convention.
+pub(super) fn ycck_to_cmyk_pixels(
+    info: &JpegInfo,
+    comp_buffers: &[Vec<u8>],
+    comp_buf_width: &[usize],
+    comp_buf_height: &[usize],
+    converter: &YccColorConverter,
+) -> CodecResult<Vec<u8>> {
+    let width = usize::from(info.width);
+    let height = usize::from(info.height);
+    if info.components.len() != 4 || comp_buffers.len() < 4 {
+        return Err(CodecError::Malformed(
+            "Adobe YCCK JPEG must have four component planes".to_owned(),
+        ));
+    }
+    let component_plane = |component_index: usize| -> CodecResult<UpsampleComponent<'_>> {
+        let component = info.components.get(component_index).ok_or_else(|| {
+            CodecError::Malformed("Adobe YCCK JPEG component is missing".to_owned())
+        })?;
+        if component.h_samp == 0
+            || component.v_samp == 0
+            || !info.max_h_samp.is_multiple_of(component.h_samp)
+            || !info.max_v_samp.is_multiple_of(component.v_samp)
+        {
+            return Err(CodecError::Malformed(
+                "fractional JPEG sampling ratios are not supported by the decoder".to_owned(),
+            ));
+        }
+        let horizontal_ratio = usize::from(
+            info.max_h_samp
+                .checked_div(component.h_samp)
+                .ok_or_else(|| {
+                    CodecError::Malformed("invalid JPEG horizontal sampling ratio".to_owned())
+                })?,
+        );
+        let vertical_ratio = usize::from(
+            info.max_v_samp
+                .checked_div(component.v_samp)
+                .ok_or_else(|| {
+                    CodecError::Malformed("invalid JPEG vertical sampling ratio".to_owned())
+                })?,
+        );
+        let source_width = width.div_ceil(horizontal_ratio);
+        let source_height = height.div_ceil(vertical_ratio);
+        let stride = *comp_buf_width.get(component_index).ok_or_else(|| {
+            CodecError::Malformed("Adobe YCCK JPEG component stride is missing".to_owned())
+        })?;
+        let plane_height = *comp_buf_height.get(component_index).ok_or_else(|| {
+            CodecError::Malformed("Adobe YCCK JPEG component height is missing".to_owned())
+        })?;
+        let source_length = stride
+            .checked_mul(plane_height.saturating_sub(1))
+            .and_then(|last_row| last_row.checked_add(source_width));
+        let samples = comp_buffers.get(component_index).ok_or_else(|| {
+            CodecError::Malformed("Adobe YCCK JPEG component plane is missing".to_owned())
+        })?;
+        if stride < source_width
+            || plane_height < source_height
+            || source_length.is_none_or(|required| samples.len() < required)
+        {
+            return Err(CodecError::Malformed(
+                "Adobe YCCK JPEG component plane is shorter than its image geometry".to_owned(),
+            ));
+        }
+        Ok(UpsampleComponent {
+            samples,
+            stride,
+            width: source_width,
+            height: source_height,
+            horizontal_ratio,
+            vertical_ratio,
+        })
+    };
+    let luma = component_plane(0)?;
+    let cb = component_plane(1)?;
+    let cr = component_plane(2)?;
+    let black = component_plane(3)?;
+    let Some(pixel_count) = width.checked_mul(height) else {
+        return Err(CodecError::Dimensions(
+            "Adobe YCCK JPEG output dimensions overflow".to_owned(),
+        ));
+    };
+    let Some(output_length) = pixel_count.checked_mul(4) else {
+        return Err(CodecError::Dimensions(
+            "Adobe YCCK JPEG output dimensions overflow".to_owned(),
+        ));
+    };
+    let Some(rgb_row_length) = width.checked_mul(3) else {
+        return Err(CodecError::Dimensions(
+            "Adobe YCCK JPEG row dimensions overflow".to_owned(),
+        ));
+    };
+    let mut pixels = Vec::new();
+    #[cfg(coverage)]
+    let output_reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckPixelsReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_length
+    };
+    #[cfg(not(coverage))]
+    let output_reservation = output_length;
+    pixels.try_reserve_exact(output_reservation).map_err(|_| {
+        CodecError::Dimensions("unable to allocate Adobe YCCK JPEG output".to_owned())
+    })?;
+
+    let mut rgb_row = reserve_ycck_row(rgb_row_length, "RGB")?;
+    let mut cb_row = reserve_ycck_row(width, "Cb")?;
+    let mut cr_row = reserve_ycck_row(width, "Cr")?;
+    let mut luma_scratch = if (luma.horizontal_ratio, luma.vertical_ratio) == (1, 1) {
+        Vec::new()
+    } else {
+        reserve_ycck_row(width, "luma")?
+    };
+
+    for row in 0..height {
+        let luma_row = if (luma.horizontal_ratio, luma.vertical_ratio) == (1, 1) {
+            let start = row.checked_mul(luma.stride).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG luma row overflows".to_owned())
+            })?;
+            let end = start.checked_add(luma.width).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG luma row overflows".to_owned())
+            })?;
+            luma.samples.get(start..end).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG luma row is truncated".to_owned())
+            })?
+        } else {
+            fancy_upsample_row(&luma, row, &mut luma_scratch)?;
+            &luma_scratch
+        };
+        fancy_upsample_row(&cb, row, &mut cb_row)?;
+        fancy_upsample_row(&cr, row, &mut cr_row)?;
+        converter.ycc_to_rgb_batch(luma_row, &cb_row, &cr_row, &mut rgb_row);
+
+        let black_row = row.checked_div(black.vertical_ratio).ok_or_else(|| {
+            CodecError::Malformed("Adobe YCCK JPEG black row ratio is invalid".to_owned())
+        })?;
+        if black_row >= black.height {
+            return Err(CodecError::Malformed(
+                "Adobe YCCK JPEG black plane is shorter than its image geometry".to_owned(),
+            ));
+        }
+        for column in 0..width {
+            let rgb_index = column.saturating_mul(3);
+            let black_column = column.checked_div(black.horizontal_ratio).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG black column ratio is invalid".to_owned())
+            })?;
+            if black_column >= black.width {
+                return Err(CodecError::Malformed(
+                    "Adobe YCCK JPEG black row is shorter than its image geometry".to_owned(),
+                ));
+            }
+            let black_index = black_row
+                .checked_mul(black.stride)
+                .and_then(|start| start.checked_add(black_column))
+                .ok_or_else(|| {
+                    CodecError::Malformed("Adobe YCCK JPEG black index overflows".to_owned())
+                })?;
+            let rgb_end = rgb_index.checked_add(3).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG RGB row index overflows".to_owned())
+            })?;
+            let rgb_pixel = rgb_row.get(rgb_index..rgb_end).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG RGB row is shorter than expected".to_owned())
+            })?;
+            let black_sample = black.samples.get(black_index).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG black plane is truncated".to_owned())
+            })?;
+            pixels.extend_from_slice(&[
+                rgb_pixel[0],
+                rgb_pixel[1],
+                rgb_pixel[2],
+                255u8.saturating_sub(*black_sample),
+            ]);
+        }
+    }
+
+    debug_assert_eq!(pixels.len(), output_length);
+    Ok(pixels)
+}
+
+fn reserve_ycck_row(length: usize, plane: &str) -> CodecResult<Vec<u8>> {
+    let mut row = Vec::new();
+    row.try_reserve_exact(length).map_err(|_| {
+        CodecError::Dimensions(format!("unable to allocate Adobe YCCK JPEG {plane} row"))
+    })?;
+    row.resize(length, 0);
+    Ok(row)
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -2092,6 +2283,20 @@ fn assemble_baseline_output(
         ))
     } else {
         debug_assert_eq!(info.num_components, 4);
+        if info.adobe_color_transform == Some(2) {
+            return Ok(DecodedImage::new(
+                u32::from(info.width),
+                u32::from(info.height),
+                ycck_to_cmyk_pixels(
+                    info,
+                    comp_buffers,
+                    comp_buf_width,
+                    comp_buf_height,
+                    converter,
+                )?,
+                ColorType::Cmyk8,
+            ));
+        }
         // Pillow exposes four-component JPEGs through its inverted CMYK byte
         // convention even when the Adobe APP14 marker is absent. The
         // no-APP14 CMYK fixture keeps this tied to the oracle instead of the

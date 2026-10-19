@@ -1107,6 +1107,20 @@ pub(super) fn progressive_reconstruct(
         ))
     } else {
         debug_assert_eq!(info.num_components, 4);
+        if info.adobe_color_transform == Some(2) {
+            return Ok(DecodedImage::new(
+                u32::from(info.width),
+                u32::from(info.height),
+                super::implementation::ycck_to_cmyk_pixels(
+                    info,
+                    &comp_buffers,
+                    &comp_buf_width,
+                    &comp_buf_height,
+                    converter,
+                )?,
+                ColorType::Cmyk8,
+            ));
+        }
         let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
         for y in 0..h {
             for x in 0..w {

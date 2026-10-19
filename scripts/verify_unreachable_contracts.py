@@ -313,6 +313,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.baseline.huffman_table_slot_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_ycck_output_reservation_failure": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_ycck_output_reservation_failure",
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2",
+        "point": "jpeg.ycck.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "bmp_palette_reservation_failure": {
         "format": "bmp",
         "category": "structured-diagnostics",

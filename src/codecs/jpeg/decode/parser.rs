@@ -70,6 +70,7 @@ pub(super) struct JpegInfo {
     pub(super) max_h_samp: u8,
     pub(super) max_v_samp: u8,
     pub(super) progressive: bool,
+    pub(super) adobe_color_transform: Option<u8>,
     pub(super) scans: Vec<ScanInfo>,
     pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
 }
@@ -466,6 +467,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut saw_sof = false;
     let mut saw_sos = false;
     let mut progressive = false;
+    let mut adobe_color_transform = None;
     let mut scans: Vec<ScanInfo> = Vec::new();
     let mut metadata = Vec::new();
 
@@ -635,9 +637,13 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     });
                 }
                 let payload_end = pos.saturating_add(payload_len);
+                let payload = &data[pos..payload_end];
+                if payload.starts_with(b"Adobe") && payload.len() >= 12 {
+                    adobe_color_transform = payload.get(11).copied();
+                }
                 metadata.push(crate::types::OpaqueMetadata {
                     kind: vec![0xee],
-                    data: data[pos..payload_end].to_vec(),
+                    data: payload.to_vec(),
                 });
                 pos = payload_end;
             }
@@ -706,6 +712,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         max_h_samp,
         max_v_samp,
         progressive,
+        adobe_color_transform,
         scans,
         metadata,
     })
