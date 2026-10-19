@@ -148,7 +148,9 @@ fn require_ok<T, E: std::fmt::Debug>(value: Result<T, E>, context: &str) -> T {
 fn decode_hex_bytes(hex: &str, context: &str) -> Vec<u8> {
     assert_eq!(hex.len() % 2, 0, "{context} must contain complete bytes");
     hex.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let pair = require_ok(std::str::from_utf8(pair), context);
             require_ok(u8::from_str_radix(pair, 16), context)

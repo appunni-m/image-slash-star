@@ -34,8 +34,8 @@ No aggregate coverage gain or full-suite claim is made; no full coverage
 campaign was run.
 
 The focused report is
-`target/release-evidence/selected/20261019-jpeg-trailing-app0-metadata-retry-f4e98437/coverage.json`
-(SHA-256 `794d1a26db18695b00d61fa6caff90e178c12540a3b9d66811806abb968bfcbb`).
+`target/release-evidence/selected/20261019-jpeg-trailing-app0-as-chunks-f4e98437/coverage.json`
+(SHA-256 `eec4c738e6ef1eba9d853d47ce6e88682bba93a3413a534fd4f8b827329b3c75`).
 
 ## TIFF unsigned RGB16 strip parity and allocation fault contract — 2026-10-19
 
