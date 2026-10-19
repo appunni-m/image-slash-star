@@ -117,7 +117,10 @@ def deterministic_factor_clumps(
                 (17 + row * 31 + column * 19 + sample * 13) % 256
                 for sample in range(horizontal * vertical)
             ]
-            + [73 + row * 17 + column * 9, 181 - row * 11 - column * 7]
+            + [
+                (73 + row * 17 + column * 9) % 256,
+                (181 - row * 11 - column * 7) % 256,
+            ]
         )
         for row in range(clump_rows)
         for column in range(clump_columns)
@@ -911,6 +914,85 @@ def fixtures() -> dict[
         ),
     )
 
+    checkpoint_factor_fixtures = {}
+    for horizontal, vertical in ((1, 2), (4, 2)):
+        subsampling = (horizontal, vertical)
+        checkpoint_factor_fixtures[
+            f"ycbcr_subsampled_lzw_{horizontal}x{vertical}_checkpoint_32x32.tiff"
+        ] = (
+            build_tiff(
+                32,
+                32,
+                32,
+                deterministic_factor_clumps(32, 32, subsampling),
+                subsampling=subsampling,
+                positioning=1,
+            ),
+            (32, 32),
+            {
+                (1, 2): "aab3615119f418bd01f1834e4fc69ebb2d7160e6127a1d87cae3ba1b1c62c71d",
+                (4, 2): "b41938a49cec59bfd6b9fc28cffa67e3afb56652e185106f79ddea31500adbf0",
+            }[subsampling],
+            {530: subsampling, 531: 1},
+            None,
+        )
+
+    custom_4x2_checkpoint = build_tiff(
+        32,
+        32,
+        32,
+        deterministic_factor_clumps(32, 32, (4, 2)),
+        subsampling=(4, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    checkpoint_factor_fixtures[
+        "ycbcr_custom_coefficients_lzw_4x2_checkpoint_32x32.tiff"
+    ] = (
+        custom_4x2_checkpoint,
+        (32, 32),
+        "90e2efdfc1f608dea30ba7af6c3926038c7be47be545c306c3c483410cb96ec8",
+        {529: (0.2126, 0.7152, 0.0722), 530: (4, 2), 531: 1},
+        None,
+    )
+
+    edge_checkpoint_4x2 = build_tiff(
+        33,
+        33,
+        32,
+        deterministic_factor_clumps(33, 33, (4, 2)),
+        subsampling=(4, 2),
+        positioning=1,
+    )
+    checkpoint_factor_fixtures[
+        "ycbcr_subsampled_lzw_4x2_checkpoint_33x33_odd_edges.tiff"
+    ] = (
+        edge_checkpoint_4x2,
+        (33, 33),
+        "9c0120652489755de04c1772ebc85b290009f87ba31c7f1900528ca07826e1ce",
+        {530: (4, 2), 531: 1},
+        None,
+    )
+
+    custom_edge_checkpoint_4x2 = build_tiff(
+        33,
+        33,
+        32,
+        deterministic_factor_clumps(33, 33, (4, 2)),
+        subsampling=(4, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    checkpoint_factor_fixtures[
+        "ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges.tiff"
+    ] = (
+        custom_edge_checkpoint_4x2,
+        (33, 33),
+        "c7df3d80e3f1bdbb722264aa45357619e926d4d50bcc99d12ba2d07676278dbc",
+        {529: (0.2126, 0.7152, 0.0722), 530: (4, 2), 531: 1},
+        None,
+    )
+
     odd_edge_width = 5
     odd_edge_height = 5
     odd_edge_subsampling = (4, 4)
@@ -1699,6 +1781,7 @@ def fixtures() -> dict[
             ),
         ),
         **factor_fixtures,
+        **checkpoint_factor_fixtures,
     }
 
 
@@ -1853,6 +1936,11 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_separate_full_resolution_lzw_1x1.tiff": "49a0f6c148ab883d78a99fef5493eae9116a9e052113bf7b45409daa1d46c57c",
             "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": "ec170a210ddaf4c27f3cc69810a68ee666f57eb77001c860b8558583011e8248",
             "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
+            "ycbcr_subsampled_lzw_1x2_checkpoint_32x32.tiff": "5d939e561c664e1e067df3c30ed737d6fdc565c671903c283d49d2ba9a58c622",
+            "ycbcr_subsampled_lzw_4x2_checkpoint_32x32.tiff": "9972da18cd6251572ee0ff97381e31ce1c8fa5894759d448e354373619558c7f",
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_32x32.tiff": "67848935b58248ac7a90cdea456de78662ef65d68424d792ceab5d026011d744",
+            "ycbcr_subsampled_lzw_4x2_checkpoint_33x33_odd_edges.tiff": "7386abb5268ad529c1ef12dec0840e5dae327eeb567c97cee5d0cd3fde38e6bc",
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges.tiff": "795a203175c9809e8f5a97b9409dba292aa34a36b99dbb135dfe1c0b88a95bc5",
             "ycbcr_subsampled_lzw_2x1.tiff": "abc595f9245db5d77d61f3ca19894bcba716db5e9841a258f08afcebec29fc35",
             "ycbcr_subsampled_lzw_4x1.tiff": "dda6b978a0f36882c6f380bb505f89d4801cacea4f298f23a3b27f570d06f657",
             "ycbcr_subsampled_lzw_4x2.tiff": "61de5caf036d78fdc559e1607b60590f1b2be45e7d887794768b1d45b6c8977f",

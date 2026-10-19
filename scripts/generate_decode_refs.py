@@ -1417,6 +1417,41 @@ def validate_tiff_claim(case_id, asset_name, data):
                 1,
                 1,
             ),
+            "ycbcr_subsampled_lzw_1x2_checkpoint_32x32": (
+                (32, 32),
+                32,
+                (1, 2),
+                1,
+                1,
+            ),
+            "ycbcr_subsampled_lzw_4x2_checkpoint_32x32": (
+                (32, 32),
+                32,
+                (4, 2),
+                1,
+                1,
+            ),
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_32x32": (
+                (32, 32),
+                32,
+                (4, 2),
+                1,
+                1,
+            ),
+            "ycbcr_subsampled_lzw_4x2_checkpoint_33x33_odd_edges": (
+                (33, 33),
+                32,
+                (4, 2),
+                1,
+                2,
+            ),
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges": (
+                (33, 33),
+                32,
+                (4, 2),
+                1,
+                2,
+            ),
         }
         ycbcr_lzw_claim = ycbcr_lzw_claims.get(case_id)
         if ycbcr_lzw_claim is not None:
@@ -1435,6 +1470,13 @@ def validate_tiff_claim(case_id, asset_name, data):
                 or len(actual_strips) != strip_count
             ):
                 raise RuntimeError("TIFF YCbCr LZW fixture tags differ from its claim")
+        if case_id in {
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_32x32",
+            "ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges",
+        } and (
+            image.tag_v2.get(529) != (0.2126, 0.7152, 0.0722)
+        ):
+            raise RuntimeError("TIFF YCbCr coefficient tags differ from its claim")
         if case_id in ("tiled", "tiled_predictor") and not all(
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):

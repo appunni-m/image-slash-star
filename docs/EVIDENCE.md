@@ -37,6 +37,34 @@ observations and do not establish an aggregate coverage gain. The focused
 runner log records 2/2 Pillow decode rows and 1/1 fault contracts passing. No
 full coverage campaign was run.
 
+## TIFF subsampled YCbCr checkpoints and odd clump edges — 2026-10-19
+
+Added five Pillow-backed decode rows for 1×2 and 4×2 subsampling. The three
+32×32 inputs exercise the 1,024-pixel conversion checkpoint through the
+specialized 1×2 path, the general 4×2 path, and custom-coefficient tables. Two
+33×33 4×2 inputs add odd final clumps; both clip the final row and column while
+still reaching the checkpoint. Pinned Pillow 12.2.0 generated the exact RGB
+references for all five cases.
+
+Selected branch runs passed all five rows: the individual 1×2, default 4×2,
+and custom 4×2 reports are under
+`target/release-evidence/selected/tiff-ycbcr-checkpoint-1x2.json`,
+`target/release-evidence/selected/tiff-ycbcr-checkpoint-4x2-retry1.json`, and
+`target/release-evidence/selected/tiff-ycbcr-checkpoint-custom-4x2-retry1.json`;
+the two odd-edge rows passed in
+`target/release-evidence/selected/tiff-ycbcr-checkpoint-4x2-odd-edges.json`.
+Coverage MCP finds no missing branch groups at the general converter's current
+checkpoint and clipping conditions (`decode.rs:2124`, `2131`, `2155`) in the
+combined odd-edge report. Its selected-tests comparison with the even 4×2
+report observes 13 new branch coordinates, including both true clipping arms.
+The MCP marks the comparison limited because source/build identity is
+unverified and test attribution is unknown. Its incremental comparison cannot
+combine the selected reports because exact detail does not reconcile with the
+reported totals. The 1×2 report's raw LLVM record shows both checkpoint
+outcomes (5 and 5,115), while MCP still lists that specialized line as missing;
+therefore no aggregate gain or regression is claimed. No full coverage
+campaign was run.
+
 ## AVIF mixed-segment inter parity and TIFF YCbCr fault contract — 2026-10-18
 
 Added the active public parity case
@@ -71,8 +99,8 @@ hook. These measurements have unverified source/build identity and unknown
 test attribution, so they are coordinate-only evidence; no aggregate coverage
 gain or regression is claimed. No full coverage campaign was run.
 
-The current fixture matrix contains 2,408 total rows: 1,908 decode / inspect /
-verify rows and 500 encode rows. Of those, 1,908 decode rows and 468 encode
+The current fixture matrix contains 2,413 total rows: 1,913 decode / inspect /
+verify rows and 500 encode rows. Of those, 1,913 decode rows and 468 encode
 rows are active; the other 32 encode rows are planned.
 The separate fault-contract lane contains 65 rows. The coverage-origin
 inventory records 183 exact `cfg(coverage)` guards across 27 Rust files.
@@ -7040,7 +7068,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b469a286c20837b072908d9d06e10dc6a420aed32ef0d5a3b8796841f41c88e5`; matrix `66618d6c8911ea6a91349642707d4928e2a8b4e3db0ddbe50f48e0c1e0e7d305`.
+- Current fixture integrity only: manifest `dd5e804484066bdf5419c76151677f1a4f53608b8a84bb3e5ccca7b5b60e14b7`; matrix `a0e1faa177236984d28d418121ac971d23a1172a7378c3fbe2d76f38eeced3ff`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
