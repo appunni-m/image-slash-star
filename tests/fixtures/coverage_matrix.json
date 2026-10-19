@@ -60453,6 +60453,240 @@
           "error_contracts": {}
         },
         {
+          "id": "os2_dib64_bitfields16",
+          "type": "decode",
+          "format": "bmp",
+          "category": "os2",
+          "description": "Pillow-compatible RGB555 BI_BITFIELDS masks in an OS/2 64-byte DIB",
+          "asset": "control_os2_compatible_bitfields16.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_16bit_bmp.bin",
+          "ref_bytes": 49152,
+          "ref_sha256": "498a44c0948d5cdcdd8f9d49ce99a31307726fc69425aaaca88d436a370ff787",
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "102400bfb66e32d1ba854fbd611847833e95759ad11ab0280937e2f96d76be2c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 16,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "os2_dib64_bitfields24",
+          "type": "decode",
+          "format": "bmp",
+          "category": "os2",
+          "description": "Pillow-compatible RGB888 BI_BITFIELDS masks in an OS/2 64-byte DIB",
+          "asset": "control_os2_compatible_bitfields24.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_info_header_56_bmp.bin",
+          "ref_bytes": 3,
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "dbf34ab9a704b123c2e4af0fd0eba1ddffd539a4fe15dee244abd350588056cc",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "os2_dib64_bitfields32",
+          "type": "decode",
+          "format": "bmp",
+          "category": "os2",
+          "description": "Pillow-compatible RGBA BI_BITFIELDS masks in an OS/2 64-byte DIB",
+          "asset": "control_os2_compatible_bitfields32.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_v5header_bmp.bin",
+          "ref_bytes": 65536,
+          "ref_sha256": "82c3f1726e7047196775714260d17a069bba10f752a98620ca963c7296368427",
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "1d67f29880da9ab09084b2bd6c8bf10c58b1b9ba620345ecc77e0b69d708a9d0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 32,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "error_malformed",
           "type": "decode",
           "format": "bmp",
@@ -65647,8 +65881,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_error_retained_sequence_geometry.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_error_retained_sequence_geometry.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -65726,8 +65960,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_error_public_mode_contract.bin",
           "encoded_ref_bytes": 58,
           "encoded_ref_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
-          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_error_public_mode_contract.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -65780,8 +66014,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_indexed_missing_palette.bin",
           "encoded_ref_bytes": 58,
           "encoded_ref_sha256": "64850622123ceb124c80eca8ee8c8f4a3ec3026580501d9ba44a7c256e5ba747",
-          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_indexed_missing_palette.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -65833,8 +66067,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_1bit.bin",
           "encoded_ref_bytes": 2110,
           "encoded_ref_sha256": "8e5f50d39982f7cd0af624e98f7642948704ed850a4f5df95914088fdc609a84",
-          "ref_sha256": "3ce53162e902b8ae7f46faf1a1cd98321628df7529e208d5872775d058c2d5ea",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1bit.bin",
+          "ref_sha256": "3ce53162e902b8ae7f46faf1a1cd98321628df7529e208d5872775d058c2d5ea",
           "ref_bytes": 2048,
           "ref_mode": "1",
           "ref_size": [
@@ -65886,8 +66120,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_4bit.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_4bit.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -65939,8 +66173,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_8bit.bin",
           "encoded_ref_bytes": 17342,
           "encoded_ref_sha256": "961659cc5f3275f6845ef6406a3af1731e209d12df3de33f10128c88c9250bf9",
-          "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_8bit.bin",
+          "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -65992,8 +66226,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_grayscale.bin",
           "encoded_ref_bytes": 17462,
           "encoded_ref_sha256": "713ff4f5e520e4694901037176c50c9602c263fff3980831dd9431d7eac3932d",
-          "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_grayscale.bin",
+          "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -66323,8 +66557,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_16bit.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_16bit.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66376,8 +66610,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_24bit.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_24bit.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66429,8 +66663,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_32bit.bin",
           "encoded_ref_bytes": 65590,
           "encoded_ref_sha256": "f45762f98518a88086a84a6f61b57dba6baa8c400046bc4c6ede9e76845c6705",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_32bit.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66482,8 +66716,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rgb.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rgb.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66535,8 +66769,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rle8.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rle8.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66588,8 +66822,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_rle4.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_rle4.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66641,8 +66875,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bi_bitfields.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bi_bitfields.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66694,8 +66928,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_top_down.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_top_down.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66747,8 +66981,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_bottom_up.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_bottom_up.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66800,8 +67034,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v3_header.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v3_header.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66853,8 +67087,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v4_header.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v4_header.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66906,8 +67140,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_v5_header.bin",
           "encoded_ref_bytes": 49206,
           "encoded_ref_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_v5_header.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -66962,8 +67196,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_1x1.bin",
           "encoded_ref_bytes": 58,
           "encoded_ref_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
-          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_1x1.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -67018,8 +67252,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_odd_width.bin",
           "encoded_ref_bytes": 938,
           "encoded_ref_sha256": "80bd2b95d335772654a2d86ece2bc96a32a85ea4d0dfde161e783b765d327084",
-          "ref_sha256": "4c2763e32c50aa37de740d1b1db96ab82b296c676d8ee6a4e4e90966d859e1de",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_odd_width.bin",
+          "ref_sha256": "4c2763e32c50aa37de740d1b1db96ab82b296c676d8ee6a4e4e90966d859e1de",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -67069,8 +67303,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_wide_scanline_checkpoint.bin",
           "encoded_ref_bytes": 3130,
           "encoded_ref_sha256": "2f88896959682f64f68fdc25d35ffd4b087e584f510a4b996e9ded657185d2fb",
-          "ref_sha256": "9d84ef421e8ac0a48c88ae2afbca0fdf913306bb86f5d5549a45b0dced74df93",
           "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_wide_scanline_checkpoint.bin",
+          "ref_sha256": "9d84ef421e8ac0a48c88ae2afbca0fdf913306bb86f5d5549a45b0dced74df93",
           "ref_bytes": 3075,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -202908,12 +203142,12 @@
     }
   },
   "summary": {
-    "total_rows": 2404,
-    "decode_rows": 1904,
+    "total_rows": 2407,
+    "decode_rows": 1907,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1901,
-    "decode_active": 1904,
+    "assets_available": 1904,
+    "decode_active": 1907,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

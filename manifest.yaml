@@ -3838,6 +3838,21 @@ formats:
       description: Windows BITMAPV3INFOHEADER DIB size 56
       test_assets:
       - info_header_56.bmp
+    - id: os2_dib64_bitfields16
+      description: Pillow-compatible RGB555 BI_BITFIELDS masks in an OS/2 64-byte DIB
+      test_assets:
+      - control_os2_compatible_bitfields16.bmp
+      pixel_reference_case: depth_16
+    - id: os2_dib64_bitfields24
+      description: Pillow-compatible RGB888 BI_BITFIELDS masks in an OS/2 64-byte DIB
+      test_assets:
+      - control_os2_compatible_bitfields24.bmp
+      pixel_reference_case: info_header_56
+    - id: os2_dib64_bitfields32
+      description: Pillow-compatible RGBA BI_BITFIELDS masks in an OS/2 64-byte DIB
+      test_assets:
+      - control_os2_compatible_bitfields32.bmp
+      pixel_reference_case: v5_header
     - id: error_malformed
       description: Malformed BMP headers, palettes, and pixel payloads
       test_assets:

@@ -50,6 +50,15 @@ PNG_SOURCE_COLOR_PARITY_EXCLUSIONS = {
     "pillow_tolerated_malformed_iccp_empty_keyword",
 }
 ALL_CODEC_FEATURES = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
+PIXEL_REFERENCE_FIELDS = (
+    "ref_path",
+    "ref_bytes",
+    "ref_sha256",
+    "ref_mode",
+    "ref_size",
+    "ref_frame_count",
+    "ref_is_animated",
+)
 MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH = 65_534
 
 
@@ -345,6 +354,7 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                     raise RuntimeError(f"duplicate decode case id: {fmt_name}/{row_id}")
                 seen.add(row_id)
                 row = dict(existing.get(row_id, {}))
+                row.pop("_pixel_reference_case", None)
                 case_status = case.get("status")
                 if case_status is None:
                     case_status = (
@@ -382,6 +392,27 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                         "status": case_status,
                     }
                 )
+                pixel_reference_case = case.get("pixel_reference_case")
+                if pixel_reference_case is not None:
+                    if (
+                        pixel_reference_case == row_id
+                        or pixel_reference_case not in seen - {row_id}
+                    ):
+                        raise RuntimeError(
+                            f"{fmt_name}/{row_id}: pixel_reference_case must name an earlier decode case"
+                        )
+                    reference = existing.get(pixel_reference_case)
+                    if (
+                        reference is None
+                        or reference.get("status") != "active"
+                        or any(field not in reference for field in PIXEL_REFERENCE_FIELDS)
+                    ):
+                        raise RuntimeError(
+                            f"{fmt_name}/{row_id}: pixel_reference_case lacks an active exact reference"
+                        )
+                    for field in PIXEL_REFERENCE_FIELDS:
+                        row[field] = reference[field]
+                    row["_pixel_reference_case"] = pixel_reference_case
                 if case.get("frame_request") is None:
                     row.pop("frame_request", None)
                     row.pop("frame_request_result", None)
@@ -1110,6 +1141,33 @@ def validate_bmp_claim(case_id, asset_name, data):
         raise RuntimeError(
             f"BMP compression is {compression}, expected {compression_claims[case_id]}"
         )
+    os2_bitfield_claims = {
+        "os2_dib64_bitfields16": (
+            16,
+            (0x00007C00, 0x000003E0, 0x0000001F, 0),
+        ),
+        "os2_dib64_bitfields24": (
+            24,
+            (0x00FF0000, 0x0000FF00, 0x000000FF, 0),
+        ),
+        "os2_dib64_bitfields32": (
+            32,
+            (0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000),
+        ),
+    }
+    os2_bitfield_claim = os2_bitfield_claims.get(case_id)
+    if os2_bitfield_claim is not None:
+        expected_depth, expected_masks = os2_bitfield_claim
+        actual_masks = (
+            *struct.unpack_from("<III", data, 54),
+            struct.unpack_from("<I", data, 66)[0],
+        )
+        if dib_size != 64 or (depth, compression, actual_masks) != (
+            expected_depth,
+            3,
+            expected_masks,
+        ):
+            raise RuntimeError("BMP is not the declared OS/2 DIB64 BI_BITFIELDS control")
     if asset_name == "bitfields_32_zero_masks.bmp":
         masks = struct.unpack_from("<III", data, 54)
         if (depth, compression, masks) != (32, 3, (0, 0, 0)):
@@ -1735,10 +1793,29 @@ def write_pixel_ref(row, image, ref_name):
     """Write raw PIL pixels and update one matrix/output row."""
     image.load()
     raw = image.tobytes()
-    OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
-    (OUTPUT_RAWS / ref_name).write_bytes(raw)
+    reference_case = row.get("_pixel_reference_case")
+    if reference_case is None:
+        OUTPUT_RAWS.mkdir(parents=True, exist_ok=True)
+        (OUTPUT_RAWS / ref_name).write_bytes(raw)
+        row["ref_path"] = raw_ref_path(ref_name).as_posix()
+    else:
+        observed = (len(raw), sha256(raw), mode_name(image), list(image.size))
+        expected = (
+            row.get("ref_bytes"),
+            row.get("ref_sha256"),
+            row.get("ref_mode"),
+            row.get("ref_size"),
+        )
+        reference_path = ROOT / str(row.get("ref_path", ""))
+        if (
+            expected != observed
+            or not reference_path.is_file()
+            or reference_path.read_bytes() != raw
+        ):
+            raise RuntimeError(
+                f"{row['id']}: Pillow pixels do not match shared reference case {reference_case}"
+            )
     row["ref_sha256"] = sha256(raw)
-    row["ref_path"] = raw_ref_path(ref_name).as_posix()
     row["ref_bytes"] = len(raw)
     row["ref_mode"] = mode_name(image)
     row["ref_size"] = list(image.size)
@@ -5473,6 +5550,9 @@ def generate(target_format=None):
     # Encode
     n_enc = generate_encode(manifest, matrix, target_format)
     print(f"Encode: {n_enc} refs")
+    for format_data in matrix.get("formats", {}).values():
+        for row in format_data.get("decode", []):
+            row.pop("_pixel_reference_case", None)
     matrix.pop("operations", None)
     update_summary(matrix)
     validate_generated_outputs(matrix, target_format)
