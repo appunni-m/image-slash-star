@@ -968,6 +968,17 @@ jobs:
         self.assertIn("-o Acquire::Retries=3", job)
         self.assertIn("-o APT::Update::Error-Mode=any", job)
         self.assertIn('update --snapshot "$UBUNTU_APT_SNAPSHOT"', job)
+        self.assertIn("for attempt in 1 2 3; do", job)
+        self.assertIn(
+            "sudo find /var/lib/apt/lists -mindepth 1 -maxdepth 1", job
+        )
+        self.assertIn("! -name lock -exec rm -rf -- {} +", job)
+        self.assertIn(
+            "sudo apt-get --simulate --yes --snapshot \"$UBUNTU_APT_SNAPSHOT\" install",
+            job,
+        )
+        self.assertIn("cmake=3.28.3-1build7 nasm=2.16.01-1build1", job)
+        self.assertIn('sleep "$((attempt * 10))"', job)
         self.assertIn(
             'sudo apt-get -o Acquire::Retries=3 install --yes --snapshot '
             '"$UBUNTU_APT_SNAPSHOT"',

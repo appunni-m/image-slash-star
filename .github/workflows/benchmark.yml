@@ -90,12 +90,32 @@ jobs:
           python-version: '3.12.10'
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
-      - name: Refresh the pinned Ubuntu package snapshot
+      - name: Refresh and verify the pinned Ubuntu package snapshot
         run: |
-          sudo apt-get \
-            -o Acquire::Retries=3 \
-            -o APT::Update::Error-Mode=any \
-            update --snapshot "$UBUNTU_APT_SNAPSHOT"
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            echo "Refreshing Ubuntu package snapshot (attempt ${attempt}/3)"
+            sudo find /var/lib/apt/lists -mindepth 1 -maxdepth 1 \
+              ! -name lock -exec rm -rf -- {} +
+            sudo mkdir -p /var/lib/apt/lists/partial
+
+            if sudo apt-get \
+              -o Acquire::Retries=3 \
+              -o APT::Update::Error-Mode=any \
+              update --snapshot "$UBUNTU_APT_SNAPSHOT" && \
+              sudo apt-get --simulate --yes --snapshot "$UBUNTU_APT_SNAPSHOT" install \
+                cmake=3.28.3-1build7 nasm=2.16.01-1build1; then
+              exit 0
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Pinned CMake and NASM are unavailable from Ubuntu snapshot $UBUNTU_APT_SNAPSHOT" >&2
+              sudo apt-cache policy cmake nasm || true
+              exit 1
+            fi
+
+            sleep "$((attempt * 10))"
+          done
       - name: Install pinned CMake and NASM
         run: |
           sudo apt-get -o Acquire::Retries=3 install --yes --snapshot "$UBUNTU_APT_SNAPSHOT" \
