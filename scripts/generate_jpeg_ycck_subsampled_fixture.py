@@ -31,6 +31,30 @@ FIXTURES = {
         ("h4v1",),
         "a48aa5e81cbb354fb032be6f03f28195ae70f067d22503066cca5d5ac9894b52",
     ),
+    "baseline_ycck_vertical_only_17x9.jpg": (
+        ("v2",),
+        "cf5996c469605f93b1d0fa2fcd13c614cc45ad6ddad83d63749dd6837dd04307",
+    ),
+    "baseline_ycck_vertical_only_even_height_17x10.jpg": (
+        ("v2_even_height",),
+        "eb81f72b3e99aaa819d0b22b696628a2771c22ad44fc588322799c4616423307",
+    ),
+    "baseline_ycck_luma_upsampled_17x9.jpg": (
+        ("luma_upsample",),
+        "e870d1a9a8eac573e742681e85a7660fc38de3f7ab786511892020ef0ae279cd",
+    ),
+    "baseline_ycck_black_upsampled_17x9.jpg": (
+        ("black_upsample",),
+        "58ded3a110ea6b9a583021f5bf577f12238c6ea2d44b6a9debc1ee91d0f6c155",
+    ),
+    "baseline_ycck_h2v2_single_sample_2x2.jpg": (
+        ("tiny_2x2",),
+        "0c2f73a0727f6457b636a2409ad01143aafd52c30f3c1edfbd5714828d3edf5b",
+    ),
+    "baseline_ycck_h2v1_single_sample_2x2.jpg": (
+        ("tiny_2x2", "h2v1"),
+        "b7be4ab92b1acae8ad419abbbb3b9270f123af93a08fd325e176862ae0c05d74",
+    ),
 }
 FRACTIONAL_FIXTURE = (
     "ycck_fractional_3x2_8x8.jpg",

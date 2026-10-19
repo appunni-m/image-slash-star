@@ -3100,6 +3100,18 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.baseline.huffman_table_slot_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.upsample.h1v2_plane_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.h1v2_empty_geometry": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.h1v2_zero_width": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.h1v2_source_length_mismatch": {
+            "decode_error_then_retry_succeeds"
+        },
         "jpeg.ycck.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

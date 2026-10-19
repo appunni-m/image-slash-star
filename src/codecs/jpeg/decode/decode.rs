@@ -1226,6 +1226,11 @@ pub(super) fn ycck_to_cmyk_pixels(
     } else {
         reserve_ycck_row(width, "luma")?
     };
+    let mut black_scratch = if (black.horizontal_ratio, black.vertical_ratio) == (1, 1) {
+        Vec::new()
+    } else {
+        reserve_ycck_row(width, "black")?
+    };
 
     for row in 0..height {
         let luma_row = if (luma.horizontal_ratio, luma.vertical_ratio) == (1, 1) {
@@ -1246,38 +1251,32 @@ pub(super) fn ycck_to_cmyk_pixels(
         fancy_upsample_row(&cr, row, &mut cr_row)?;
         converter.ycc_to_rgb_batch(luma_row, &cb_row, &cr_row, &mut rgb_row);
 
-        let black_row = row.checked_div(black.vertical_ratio).ok_or_else(|| {
-            CodecError::Malformed("Adobe YCCK JPEG black row ratio is invalid".to_owned())
-        })?;
-        if black_row >= black.height {
-            return Err(CodecError::Malformed(
-                "Adobe YCCK JPEG black plane is shorter than its image geometry".to_owned(),
-            ));
-        }
+        let black_row_samples = if (black.horizontal_ratio, black.vertical_ratio) == (1, 1) {
+            let start = row.checked_mul(black.stride).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG black row overflows".to_owned())
+            })?;
+            let end = start.checked_add(black.width).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG black row overflows".to_owned())
+            })?;
+            black.samples.get(start..end).ok_or_else(|| {
+                CodecError::Malformed("Adobe YCCK JPEG black row is truncated".to_owned())
+            })?
+        } else {
+            fancy_upsample_row(&black, row, &mut black_scratch)?;
+            &black_scratch
+        };
         for column in 0..width {
             let rgb_index = column.saturating_mul(3);
-            let black_column = column.checked_div(black.horizontal_ratio).ok_or_else(|| {
-                CodecError::Malformed("Adobe YCCK JPEG black column ratio is invalid".to_owned())
-            })?;
-            if black_column >= black.width {
-                return Err(CodecError::Malformed(
-                    "Adobe YCCK JPEG black row is shorter than its image geometry".to_owned(),
-                ));
-            }
-            let black_index = black_row
-                .checked_mul(black.stride)
-                .and_then(|start| start.checked_add(black_column))
-                .ok_or_else(|| {
-                    CodecError::Malformed("Adobe YCCK JPEG black index overflows".to_owned())
-                })?;
             let rgb_end = rgb_index.checked_add(3).ok_or_else(|| {
                 CodecError::Malformed("Adobe YCCK JPEG RGB row index overflows".to_owned())
             })?;
             let rgb_pixel = rgb_row.get(rgb_index..rgb_end).ok_or_else(|| {
                 CodecError::Malformed("Adobe YCCK JPEG RGB row is shorter than expected".to_owned())
             })?;
-            let black_sample = black.samples.get(black_index).ok_or_else(|| {
-                CodecError::Malformed("Adobe YCCK JPEG black plane is truncated".to_owned())
+            let black_sample = black_row_samples.get(column).ok_or_else(|| {
+                CodecError::Malformed(
+                    "Adobe YCCK JPEG black row is shorter than expected".to_owned(),
+                )
             })?;
             pixels.extend_from_slice(&[
                 rgb_pixel[0],
@@ -2249,7 +2248,7 @@ fn assemble_baseline_output(
             cb_v_ratio,
             w,
             h,
-        );
+        )?;
         let cr_upsampled = fancy_upsample(
             &cr_cropped,
             cr_src_w,
@@ -2258,7 +2257,7 @@ fn assemble_baseline_output(
             cr_v_ratio,
             w,
             h,
-        );
+        )?;
 
         let cb_stride = cb_src_w.saturating_mul(cb_h_ratio);
         let cr_stride = cr_src_w.saturating_mul(cr_h_ratio);

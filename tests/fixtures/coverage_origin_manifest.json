@@ -355,6 +355,11 @@
       "path": "src/codecs/jpeg/decode/parser.rs"
     },
     {
+      "guard_count": 4,
+      "origin": "defensive_model",
+      "path": "src/codecs/jpeg/decode/upsample.rs"
+    },
+    {
       "guard_count": 2,
       "origin": "defensive_model",
       "path": "src/codecs/png/decode.rs"

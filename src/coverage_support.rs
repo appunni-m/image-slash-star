@@ -90,6 +90,14 @@ pub enum CoverageFaultPoint {
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.
     JpegHuffmanTableSlotReservation,
+    /// Force the JPEG 1x2 upsampler to reject empty component geometry.
+    JpegH1v2UpsampleEmptyGeometry,
+    /// Force the JPEG 1x2 upsampler to reject a zero component width.
+    JpegH1v2UpsampleZeroWidth,
+    /// Force the JPEG 1x2 upsampler to reject a short source plane.
+    JpegH1v2UpsampleSourceLengthMismatch,
+    /// Force reservation of the JPEG 1x2 upsampled component plane to fail.
+    JpegH1v2UpsamplePlaneReservation,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
     /// Force reservation of a BMP palette to fail before reading its entries.

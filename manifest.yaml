@@ -810,6 +810,62 @@ fault_contracts:
       point: jpeg.ycck.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_h1v2_upsample_plane_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:baseline_420_chroma_component_sampling_fallback
+    fault:
+      point: jpeg.upsample.h1v2_plane_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_h1v2_upsample_empty_geometry_rejection
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:baseline_420_chroma_component_sampling_fallback
+    fault:
+      point: jpeg.upsample.h1v2_empty_geometry
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_h1v2_upsample_zero_width_rejection
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:baseline_420_chroma_component_sampling_fallback
+    fault:
+      point: jpeg.upsample.h1v2_zero_width
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_h1v2_upsample_source_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:baseline_420_chroma_component_sampling_fallback
+    fault:
+      point: jpeg.upsample.h1v2_source_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -1205,6 +1261,66 @@ formats:
       - baseline_ycck_h4v1_17x9.jpg
       pillow_call:
         open: tests/fixtures/input/images/jpeg/baseline_ycck_h4v1_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_vertical_only_fallback_17x9
+      description: Odd-sized YCCK with 4:4:0 chroma exercises vertical fancy upsampling
+      test_assets:
+      - baseline_ycck_vertical_only_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_vertical_only_even_height_17x10
+      description: Even-height YCCK with 4:4:0 chroma exercises the vertical fancy upsampler's clamped bottom row
+      test_assets:
+      - baseline_ycck_vertical_only_even_height_17x10.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_even_height_17x10.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_luma_upsample_17x9
+      description: YCCK with 1x1 luma and 2x2 black sampling exercises luma-plane reconstruction
+      test_assets:
+      - baseline_ycck_luma_upsampled_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_luma_upsampled_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_black_upsample_17x9
+      description: YCCK with 2x2 luma and 1x1 black sampling exercises K-plane replication
+      test_assets:
+      - baseline_ycck_black_upsampled_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_black_upsampled_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v2_single_sample_2x2
+      description: Tiny YCCK image with one chroma sample exercises the h2v2 singleton edge
+      test_assets:
+      - baseline_ycck_h2v2_single_sample_2x2.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v2_single_sample_2x2.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v1_single_sample_2x2
+      description: Tiny 4:2:2 YCCK image exercises the h2v1 singleton edge
+      test_assets:
+      - baseline_ycck_h2v1_single_sample_2x2.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_2x2.jpg
         operations:
         - PIL.Image.open
         - load

@@ -1452,6 +1452,30 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.upsample.h1v2_empty_geometry", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegH1v2UpsampleEmptyGeometry,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.h1v2_zero_width", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegH1v2UpsampleZeroWidth,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.h1v2_source_length_mismatch", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegH1v2UpsampleSourceLengthMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.h1v2_plane_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegH1v2UpsamplePlaneReservation,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.ycck.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegYcckPixelsReservation,
                 false,
@@ -1654,6 +1678,14 @@ fn execute_fault_contract(
         "jpeg.baseline.huffman_table_slot_reservation" => {
             Some("decode: unable to allocate JPEG Huffman table slots")
         }
+        "jpeg.upsample.h1v2_plane_reservation" => {
+            Some("decode: unable to allocate JPEG upsampled component")
+        }
+        "jpeg.upsample.h1v2_empty_geometry"
+        | "jpeg.upsample.h1v2_zero_width"
+        | "jpeg.upsample.h1v2_source_length_mismatch" => {
+            Some("decode: invalid JPEG component upsampling geometry")
+        }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
         "bmp.decoded_pixels.output_reservation" => {
             Some("decode: unable to allocate BMP decoded pixels")
@@ -1741,6 +1773,9 @@ fn execute_fault_contract(
             "png.apng.sequence_counter_exhaustion"
                 | "av1.film_grain.points_reservation"
                 | "av1.superres.header_geometry_mismatch"
+                | "jpeg.upsample.h1v2_empty_geometry"
+                | "jpeg.upsample.h1v2_zero_width"
+                | "jpeg.upsample.h1v2_source_length_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}

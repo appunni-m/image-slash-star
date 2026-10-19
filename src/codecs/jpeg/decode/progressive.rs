@@ -1076,7 +1076,7 @@ pub(super) fn progressive_reconstruct(
             v_ratio,
             w,
             h,
-        );
+        )?;
         let cr_up = fancy_upsample(
             &cr_cropped,
             chroma_src_w,
@@ -1085,7 +1085,7 @@ pub(super) fn progressive_reconstruct(
             v_ratio,
             w,
             h,
-        );
+        )?;
         let chroma_stride = chroma_src_w.saturating_mul(h_ratio);
         let mut pixels = vec![0u8; w.saturating_mul(h).saturating_mul(3)];
         for y in 0..h {

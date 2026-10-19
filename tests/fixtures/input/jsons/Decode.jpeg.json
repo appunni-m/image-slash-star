@@ -2292,6 +2292,198 @@
       ]
     },
     {
+      "id": "ycck_vertical_only_fallback_17x9",
+      "asset": "baseline_ycck_vertical_only_17x9.jpg",
+      "asset_sha256": "cf5996c469605f93b1d0fa2fcd13c614cc45ad6ddad83d63749dd6837dd04307",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_vertical_only_even_height_17x10",
+      "asset": "baseline_ycck_vertical_only_even_height_17x10.jpg",
+      "asset_sha256": "eb81f72b3e99aaa819d0b22b696628a2771c22ad44fc588322799c4616423307",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_even_height_17x10.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_luma_upsample_17x9",
+      "asset": "baseline_ycck_luma_upsampled_17x9.jpg",
+      "asset_sha256": "e870d1a9a8eac573e742681e85a7660fc38de3f7ab786511892020ef0ae279cd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_luma_upsampled_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_black_upsample_17x9",
+      "asset": "baseline_ycck_black_upsampled_17x9.jpg",
+      "asset_sha256": "58ded3a110ea6b9a583021f5bf577f12238c6ea2d44b6a9debc1ee91d0f6c155",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_black_upsampled_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_h2v2_single_sample_2x2",
+      "asset": "baseline_ycck_h2v2_single_sample_2x2.jpg",
+      "asset_sha256": "0c2f73a0727f6457b636a2409ad01143aafd52c30f3c1edfbd5714828d3edf5b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v2_single_sample_2x2.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_h2v1_single_sample_2x2",
+      "asset": "baseline_ycck_h2v1_single_sample_2x2.jpg",
+      "asset_sha256": "b7be4ab92b1acae8ad419abbbb3b9270f123af93a08fd325e176862ae0c05d74",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_2x2.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "progressive_ycck_subsampled_17x9",
       "asset": "progressive_ycck_subsampled_17x9.jpg",
       "asset_sha256": "fdcb83551e242178ccef25f4e47943c555a362d37530a7118cb54f939830f014",

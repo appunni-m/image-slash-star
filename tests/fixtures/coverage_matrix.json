@@ -89854,6 +89854,522 @@
           "error_contracts": {}
         },
         {
+          "id": "ycck_vertical_only_fallback_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Odd-sized YCCK with 4:4:0 chroma exercises vertical fancy upsampling",
+          "asset": "baseline_ycck_vertical_only_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "cf5996c469605f93b1d0fa2fcd13c614cc45ad6ddad83d63749dd6837dd04307",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_vertical_only_17x9_jpg.bin",
+          "ref_sha256": "9d88f79c7c2611d7a405dcd4369d733ef2a8351fd370835f13b22cf3c1100060",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_vertical_only_even_height_17x10",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Even-height YCCK with 4:4:0 chroma exercises the vertical fancy upsampler's clamped bottom row",
+          "asset": "baseline_ycck_vertical_only_even_height_17x10.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_vertical_only_even_height_17x10.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "eb81f72b3e99aaa819d0b22b696628a2771c22ad44fc588322799c4616423307",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_vertical_only_even_height_17x10_jpg.bin",
+          "ref_sha256": "68b7c9d64bcc8c96d8494296034ff7e8b2153af99a61c3380e2b5e14ee8e3d6c",
+          "ref_bytes": 680,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            10
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_luma_upsample_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "YCCK with 1x1 luma and 2x2 black sampling exercises luma-plane reconstruction",
+          "asset": "baseline_ycck_luma_upsampled_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_luma_upsampled_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "e870d1a9a8eac573e742681e85a7660fc38de3f7ab786511892020ef0ae279cd",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_luma_upsampled_17x9_jpg.bin",
+          "ref_sha256": "494f56626839c270ee9e4ce9672f8c598c0aaf963129e2b58bdd1eea0ad44746",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_black_upsample_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "YCCK with 2x2 luma and 1x1 black sampling exercises K-plane replication",
+          "asset": "baseline_ycck_black_upsampled_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_black_upsampled_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "58ded3a110ea6b9a583021f5bf577f12238c6ea2d44b6a9debc1ee91d0f6c155",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_black_upsampled_17x9_jpg.bin",
+          "ref_sha256": "893f340d3296b30185409233d04eb5d3de638c87041e9204c07a9ba1d3988b6a",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_h2v2_single_sample_2x2",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Tiny YCCK image with one chroma sample exercises the h2v2 singleton edge",
+          "asset": "baseline_ycck_h2v2_single_sample_2x2.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v2_single_sample_2x2.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "0c2f73a0727f6457b636a2409ad01143aafd52c30f3c1edfbd5714828d3edf5b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_h2v2_single_sample_2x2_jpg.bin",
+          "ref_sha256": "a08c7b7c7bbbe791ba89cba1084a8ce07320d2b699c9d65563914d8f12422b86",
+          "ref_bytes": 16,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            2,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_h2v1_single_sample_2x2",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "Tiny 4:2:2 YCCK image exercises the h2v1 singleton edge",
+          "asset": "baseline_ycck_h2v1_single_sample_2x2.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_2x2.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "b7be4ab92b1acae8ad419abbbb3b9270f123af93a08fd325e176862ae0c05d74",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_h2v1_single_sample_2x2_jpg.bin",
+          "ref_sha256": "74d26f6a2a659585e47603ae07075434ae8dbcbf96686af00f062367cfdafacf",
+          "ref_bytes": 16,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            2,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "progressive_ycck_subsampled_17x9",
           "type": "decode",
           "format": "jpeg",
@@ -108215,8 +108731,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_error_retained_sequence_geometry.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_error_retained_sequence_geometry.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108295,8 +108811,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_error_public_mode_contract.bin",
           "encoded_ref_bytes": 633,
           "encoded_ref_sha256": "ebe312ff045b1f86a890e0af53966ee228cbca760d7af8fc01fed1508a25c9f2",
-          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_error_public_mode_contract.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108348,8 +108864,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q100.bin",
           "encoded_ref_bytes": 16404,
           "encoded_ref_sha256": "a4953e227a83e534d563605c94853d2dc1aa57852c2305a30438d5948a65a4d3",
-          "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q100.bin",
+          "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108401,8 +108917,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q85.bin",
           "encoded_ref_bytes": 5911,
           "encoded_ref_sha256": "7a2d8c55e4e10d7d5576619735b393e6127cca2b7b73b9f0db2bcffd42c41505",
-          "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q85.bin",
+          "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108454,8 +108970,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q75.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q75.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108507,8 +109023,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q50.bin",
           "encoded_ref_bytes": 3327,
           "encoded_ref_sha256": "78a1749701c6221c5c060500bda14cc82b856999e42cb18ad97d60784ee0d369",
-          "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q50.bin",
+          "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108560,8 +109076,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q25.bin",
           "encoded_ref_bytes": 2398,
           "encoded_ref_sha256": "be38564754c43d519856f17f9fa28a908fbdc3d017896c77db99eddf92eccff9",
-          "ref_sha256": "fd776d72fabbed8926aefc876aa48bc6693adcff23123f5b3d28f3ec3897a2a0",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q25.bin",
+          "ref_sha256": "fd776d72fabbed8926aefc876aa48bc6693adcff23123f5b3d28f3ec3897a2a0",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108613,8 +109129,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q10.bin",
           "encoded_ref_bytes": 1677,
           "encoded_ref_sha256": "df1f1f85fe478d958158915455b21948e7cba57adb173852efd6cd5304525b33",
-          "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q10.bin",
+          "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108666,8 +109182,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_q1.bin",
           "encoded_ref_bytes": 1106,
           "encoded_ref_sha256": "325704c6f1d7f53386cb4968920caf13d097010b2894099870c4b5ce00225254",
-          "ref_sha256": "ae6c026b5971f550d41f9ca5e1b9909d297382125e5b33164d98e47a9d74e44d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_q1.bin",
+          "ref_sha256": "ae6c026b5971f550d41f9ca5e1b9909d297382125e5b33164d98e47a9d74e44d",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108719,8 +109235,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444.bin",
           "encoded_ref_bytes": 7927,
           "encoded_ref_sha256": "5200c257618606a17eb5c449b3166c83ae81948cbfa417b4cd3f7c4256c1514e",
-          "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444.bin",
+          "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108775,8 +109291,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_unaligned_subthreshold.bin",
           "encoded_ref_bytes": 935,
           "encoded_ref_sha256": "2b0bf9e3ec80ea03c64ba29ada83936174dd228174beda295c0821505eec1b54",
-          "ref_sha256": "be7e872ae2e82b1afef5033827954e68e777dcfcbd4494b5df22fb24fd2fdfcd",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444_unaligned_subthreshold.bin",
+          "ref_sha256": "be7e872ae2e82b1afef5033827954e68e777dcfcbd4494b5df22fb24fd2fdfcd",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108831,8 +109347,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_aligned_subthreshold.bin",
           "encoded_ref_bytes": 1105,
           "encoded_ref_sha256": "226b6c79ece9703e51fb15972aa10274a22aad2de16397b5d57edace58652db6",
-          "ref_sha256": "2c64f43b404804f982e81b70146de9a8b1849b4afdf60e8a4d27558fd23edf3d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444_aligned_subthreshold.bin",
+          "ref_sha256": "2c64f43b404804f982e81b70146de9a8b1849b4afdf60e8a4d27558fd23edf3d",
           "ref_bytes": 1536,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108889,8 +109405,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_streaming_exif_restart_rows.bin",
           "encoded_ref_bytes": 9183,
           "encoded_ref_sha256": "bd91ee14c1b9edce5f120571ff52783bf9cb1f83c13439f1486b018b3b7c95ea",
-          "ref_sha256": "292041a9b78a0ae5e7a7570c12f7afa1790ede5c2fb1a08283a534f25e00f70f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444_streaming_exif_restart_rows.bin",
+          "ref_sha256": "292041a9b78a0ae5e7a7570c12f7afa1790ede5c2fb1a08283a534f25e00f70f",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108942,8 +109458,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422.bin",
           "encoded_ref_bytes": 5853,
           "encoded_ref_sha256": "80f8322364f37d991de2424230367107c14ebe1f56edc8cce9c9d811884bc3c2",
-          "ref_sha256": "711562a389bd36d8ea7dee5723cef99df885ead26c9bbe5cf624f4a9f927a126",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422.bin",
+          "ref_sha256": "711562a389bd36d8ea7dee5723cef99df885ead26c9bbe5cf624f4a9f927a126",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -108995,8 +109511,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109049,8 +109565,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_odd_streaming_edge.bin",
           "encoded_ref_bytes": 1310,
           "encoded_ref_sha256": "4085353d9062438f4901fc2afb87feb1b60c744320d0979cbdffa3cc9016f402",
-          "ref_sha256": "588146c5f05caa407d1533fe1eab975f42c5f4507f072dc4264df0c063c1d670",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_odd_streaming_edge.bin",
+          "ref_sha256": "588146c5f05caa407d1533fe1eab975f42c5f4507f072dc4264df0c063c1d670",
           "ref_bytes": 3267,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109105,8 +109621,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_horizontal_tail_streaming.bin",
           "encoded_ref_bytes": 1545,
           "encoded_ref_sha256": "9b40ea47143f38e97daabaa4bcbb67038898b4ea530d9ff2d40c6a00c560c861",
-          "ref_sha256": "0841911c6421556e369427bfc46221dbbf8726a6a167513bdada889c07a73480",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_horizontal_tail_streaming.bin",
+          "ref_sha256": "0841911c6421556e369427bfc46221dbbf8726a6a167513bdada889c07a73480",
           "ref_bytes": 4704,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109159,8 +109675,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_aligned_batch_fast_path.bin",
           "encoded_ref_bytes": 677,
           "encoded_ref_sha256": "c16b91e8bac179502509e587b2cf2a76542ee78c73e03bc3ecc7324e1e1932c2",
-          "ref_sha256": "e3ee83f227d12efe9447a48b8b42b9744f5074f50e3ea99323d5c4ad39210839",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_aligned_batch_fast_path.bin",
+          "ref_sha256": "e3ee83f227d12efe9447a48b8b42b9744f5074f50e3ea99323d5c4ad39210839",
           "ref_bytes": 96,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109215,8 +109731,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_generic_mcu_aligned_16x16.bin",
           "encoded_ref_bytes": 818,
           "encoded_ref_sha256": "f8f11806f51915cf5673c8f5732280b24fe53ee7b3c5ef6669ac17ace9e97031",
-          "ref_sha256": "6fb0c4384dd488fb72663f0799d7591a1fe701165b1ac614a289974139f9696a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_generic_mcu_aligned_16x16.bin",
+          "ref_sha256": "6fb0c4384dd488fb72663f0799d7591a1fe701165b1ac614a289974139f9696a",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109269,8 +109785,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_aligned_odd_height.bin",
           "encoded_ref_bytes": 677,
           "encoded_ref_sha256": "291ef89946b5443a8b08aa3a6ede961399e43ea2c3b74f422a75fb2d31fee62c",
-          "ref_sha256": "ea50b16a0d0e02ddc5b6765ecaf8c87345c0dc0aaf9fc2962debfcaa005e9de2",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_aligned_odd_height.bin",
+          "ref_sha256": "ea50b16a0d0e02ddc5b6765ecaf8c87345c0dc0aaf9fc2962debfcaa005e9de2",
           "ref_bytes": 48,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109323,8 +109839,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_aligned_odd_height_streaming.bin",
           "encoded_ref_bytes": 1291,
           "encoded_ref_sha256": "12ada953c31a4077fc06a414e6b7a548627457050708f3ad542a75162a8ae110",
-          "ref_sha256": "f376cf415a1ccf4a372288851bf6e39489ff2de16f6b24cabdf9f41701ae427f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_aligned_odd_height_streaming.bin",
+          "ref_sha256": "f376cf415a1ccf4a372288851bf6e39489ff2de16f6b24cabdf9f41701ae427f",
           "ref_bytes": 3168,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109377,8 +109893,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_aligned_full_mcu_rows.bin",
           "encoded_ref_bytes": 1264,
           "encoded_ref_sha256": "644ec00d071d47f21042a0548a7c2d89387c43039be6af375f7b087ef7c0f3a0",
-          "ref_sha256": "4feb8e402e18b6a86ccb3891d641275e480a99b939c41b403a5ce626e1a807e9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_aligned_full_mcu_rows.bin",
+          "ref_sha256": "4feb8e402e18b6a86ccb3891d641275e480a99b939c41b403a5ce626e1a807e9",
           "ref_bytes": 3072,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109431,8 +109947,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_unaligned_row_tail.bin",
           "encoded_ref_bytes": 878,
           "encoded_ref_sha256": "4f67ea31339ab7df90792096333e6888962466edf817e5e444f084e19c1492fb",
-          "ref_sha256": "b55f536967998a4efbc0942f40c1a6cb01f8a4bb0a8a81c14c11f08f03a8e158",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_unaligned_row_tail.bin",
+          "ref_sha256": "b55f536967998a4efbc0942f40c1a6cb01f8a4bb0a8a81c14c11f08f03a8e158",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109487,8 +110003,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_small_image_threshold.bin",
           "encoded_ref_bytes": 690,
           "encoded_ref_sha256": "ff93ff388fa786b630cff562f4052d31de74e9f4d2cdd076b1377f4cf83a8cba",
-          "ref_sha256": "1d6104f4bb83745472ec880ef54879465b70f11c245773f375e4f8e06b0df69a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_q10_small_image_threshold.bin",
+          "ref_sha256": "1d6104f4bb83745472ec880ef54879465b70f11c245773f375e4f8e06b0df69a",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109543,8 +110059,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_odd_streaming_edge.bin",
           "encoded_ref_bytes": 777,
           "encoded_ref_sha256": "db364d028ea02c8c5e3548e22df6c1d4a74466e9afb06cf952bfe0e47e71419e",
-          "ref_sha256": "9ee98db427d2e8ac625f6eb0e09e79f96ae13ff7c975297d537fe0e1725c27e4",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_q10_odd_streaming_edge.bin",
+          "ref_sha256": "9ee98db427d2e8ac625f6eb0e09e79f96ae13ff7c975297d537fe0e1725c27e4",
           "ref_bytes": 3267,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109597,8 +110113,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_unaligned_even_height.bin",
           "encoded_ref_bytes": 685,
           "encoded_ref_sha256": "6fa85ef3633d38769c8a51d073e0443c7ca48de6bc05ba1f0a943b96a6e80d28",
-          "ref_sha256": "5fe68a4ba3deffe77db3cf10a31dcf92d89c24adc987bc57b22d86dce342fd7a",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_unaligned_even_height.bin",
+          "ref_sha256": "5fe68a4ba3deffe77db3cf10a31dcf92d89c24adc987bc57b22d86dce342fd7a",
           "ref_bytes": 102,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109651,8 +110167,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_unaligned_batch_tail.bin",
           "encoded_ref_bytes": 905,
           "encoded_ref_sha256": "e93a0acea6924e8fe3340879babca370653e0a396908b1f9cb8172d17c989364",
-          "ref_sha256": "b03f331ea10b4ac04ecf7bf06dc0ec9ee8f0429f950700900b15b29aa1e43b7b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_unaligned_batch_tail.bin",
+          "ref_sha256": "b03f331ea10b4ac04ecf7bf06dc0ec9ee8f0429f950700900b15b29aa1e43b7b",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109705,8 +110221,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_aligned_width_partial_height.bin",
           "encoded_ref_bytes": 691,
           "encoded_ref_sha256": "4afe5fc617557765f13a6806683d757d6bdab6815240556c4192f4f357dc7ea5",
-          "ref_sha256": "d4c725df1b6264caa93fcae0f76836868464cd8b7ab85089ad1a62e5074acc55",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_aligned_width_partial_height.bin",
+          "ref_sha256": "d4c725df1b6264caa93fcae0f76836868464cd8b7ab85089ad1a62e5074acc55",
           "ref_bytes": 192,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109759,8 +110275,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_aligned_subthreshold.bin",
           "encoded_ref_bytes": 1026,
           "encoded_ref_sha256": "3c6dcb8056b151eb832db29ec8a337e4edaf76a423ba0aefdf4573466d557a01",
-          "ref_sha256": "332a8232e4dc7a6b45c500f5c51196dafeea6b98b7efeacc1ee756bcf60f74b8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_aligned_subthreshold.bin",
+          "ref_sha256": "332a8232e4dc7a6b45c500f5c51196dafeea6b98b7efeacc1ee756bcf60f74b8",
           "ref_bytes": 1536,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109817,8 +110333,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_streaming_exif_restart_rows.bin",
           "encoded_ref_bytes": 1056,
           "encoded_ref_sha256": "8d905cce6489e60bc342177c28b4cb5badd78751cc86501c8a9f2b617e94009a",
-          "ref_sha256": "332a8232e4dc7a6b45c500f5c51196dafeea6b98b7efeacc1ee756bcf60f74b8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_streaming_exif_restart_rows.bin",
+          "ref_sha256": "332a8232e4dc7a6b45c500f5c51196dafeea6b98b7efeacc1ee756bcf60f74b8",
           "ref_bytes": 1536,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109924,8 +110440,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive.bin",
           "encoded_ref_bytes": 4562,
           "encoded_ref_sha256": "246443c304f31e1b6f99e70c54b2b1b1e7278a30ec23d634d663379d49f1d42e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -109978,8 +110494,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_restart_rows.bin",
           "encoded_ref_bytes": 4839,
           "encoded_ref_sha256": "8b9bea2c97d710bb775d6a66022faac26496e2caf0c340d2930406b8f6913291",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_restart_rows.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -110034,8 +110550,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_restart_rows_partial_mcu_420.bin",
           "encoded_ref_bytes": 1331,
           "encoded_ref_sha256": "0185f9326f806ea684d69619abaa48e1abebf62d1d511ba0ca349017a8566f29",
-          "ref_sha256": "588146c5f05caa407d1533fe1eab975f42c5f4507f072dc4264df0c063c1d670",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_restart_rows_partial_mcu_420.bin",
+          "ref_sha256": "588146c5f05caa407d1533fe1eab975f42c5f4507f072dc4264df0c063c1d670",
           "ref_bytes": 3267,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -110087,8 +110603,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_baseline.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_baseline.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -110140,8 +110656,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale.bin",
           "encoded_ref_bytes": 3441,
           "encoded_ref_sha256": "bd0b5bfd8830961bbb643e560ea97db8c63c2a988e6ec7fea5baac1c703559fa",
-          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale.bin",
+          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -110195,8 +110711,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_small_fallback.bin",
           "encoded_ref_bytes": 422,
           "encoded_ref_sha256": "05fae511efea0f239c6d7c59ee24d0e52f993f6d6581ee842b2397ec06cb3442",
-          "ref_sha256": "6a70a8d4004ee0bfa08cc8e627e52a907526f0450b5efa524ca01b0b5fe21d5b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_small_fallback.bin",
+          "ref_sha256": "6a70a8d4004ee0bfa08cc8e627e52a907526f0450b5efa524ca01b0b5fe21d5b",
           "ref_bytes": 117,
           "ref_mode": "L8",
           "ref_size": [
@@ -110250,8 +110766,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_aligned_width_partial_height.bin",
           "encoded_ref_bytes": 349,
           "encoded_ref_sha256": "1467cdfb18e2f59ce73814ebfeb2882f6bef77c97990b4b16c3f4182e217b241",
-          "ref_sha256": "773544332b80da6ea317ab04c932bf03245e8b18ee70b2d8a558a2dadee7bf4e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_aligned_width_partial_height.bin",
+          "ref_sha256": "773544332b80da6ea317ab04c932bf03245e8b18ee70b2d8a558a2dadee7bf4e",
           "ref_bytes": 32,
           "ref_mode": "L8",
           "ref_size": [
@@ -110305,8 +110821,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_aligned_subthreshold.bin",
           "encoded_ref_bytes": 465,
           "encoded_ref_sha256": "29c71e3206d0eeebe5428504e2432d5810631508a82d761f7fd3db9fbab3ffec",
-          "ref_sha256": "a37ef2228141dbb92402ba2cb0b91ffc05458cc4b2f5364830268ff7f5151964",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_aligned_subthreshold.bin",
+          "ref_sha256": "a37ef2228141dbb92402ba2cb0b91ffc05458cc4b2f5364830268ff7f5151964",
           "ref_bytes": 256,
           "ref_mode": "L8",
           "ref_size": [
@@ -110361,8 +110877,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_streaming_exif.bin",
           "encoded_ref_bytes": 487,
           "encoded_ref_sha256": "2f5654c7a02d1f35f1c8fdf3ec0fd629a7cf75dab825f6afb5567fb67b31a595",
-          "ref_sha256": "a37ef2228141dbb92402ba2cb0b91ffc05458cc4b2f5364830268ff7f5151964",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_streaming_exif.bin",
+          "ref_sha256": "a37ef2228141dbb92402ba2cb0b91ffc05458cc4b2f5364830268ff7f5151964",
           "ref_bytes": 256,
           "ref_mode": "L8",
           "ref_size": [
@@ -110416,8 +110932,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_optimized.bin",
           "encoded_ref_bytes": 3185,
           "encoded_ref_sha256": "5612f6c2f016150cde09d9d35f336c8cf9115178772bff3d143a64804908b9ff",
-          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_optimized.bin",
+          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -110472,8 +110988,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_huffman_length_limit.bin",
           "encoded_ref_bytes": 8167,
           "encoded_ref_sha256": "4f8d2339e8eb0053fc2190cbbdd7e10a99f74e4139edd7be16805a669db7d668",
-          "ref_sha256": "d32f510d01f106a1a99de5d8d42df56389333f10d602ac4b6cc9030b36003cb4",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_huffman_length_limit.bin",
+          "ref_sha256": "d32f510d01f106a1a99de5d8d42df56389333f10d602ac4b6cc9030b36003cb4",
           "ref_bytes": 721152,
           "ref_mode": "L8",
           "ref_size": [
@@ -110525,8 +111041,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_rgb.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_rgb.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -110578,8 +111094,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk.bin",
           "encoded_ref_bytes": 10886,
           "encoded_ref_sha256": "1b809ff637f6f78f5a25a56df827c1783b4843df82fa656fb370c2c27e216bad",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110633,8 +111149,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_optimized.bin",
           "encoded_ref_bytes": 10325,
           "encoded_ref_sha256": "7bb93dc5c122a85aa555e03c9912da5f22d8f5377226d7cb16ceb9af84070d4e",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_optimized.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110686,8 +111202,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_small_unaligned_fallback.bin",
           "encoded_ref_bytes": 634,
           "encoded_ref_sha256": "0d8885a6009b46e1f8f066fe90abadf5dac3153dcd11c5c63a8f62c15bf9b03a",
-          "ref_sha256": "afdcb99a4ae9b2dae26bc834b3f284afee95239289c0f19b25c34127dc7e8723",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_small_unaligned_fallback.bin",
+          "ref_sha256": "afdcb99a4ae9b2dae26bc834b3f284afee95239289c0f19b25c34127dc7e8723",
           "ref_bytes": 468,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110739,8 +111255,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_aligned_subthreshold.bin",
           "encoded_ref_bytes": 759,
           "encoded_ref_sha256": "226d495545b556a72558ba6f9b768ef382372b2729eaa6481410313426c18fba",
-          "ref_sha256": "12f4ec08a7a0c6d463341e86ae44eb79f0de44dbbed2ffeeb284b8b63743be09",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_aligned_subthreshold.bin",
+          "ref_sha256": "12f4ec08a7a0c6d463341e86ae44eb79f0de44dbbed2ffeeb284b8b63743be09",
           "ref_bytes": 1024,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110792,8 +111308,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_aligned_width_partial_height.bin",
           "encoded_ref_bytes": 809,
           "encoded_ref_sha256": "aa5e354fe0ae1c8d072642ea27501f72252648fc1bb52a03bf3ff61d1730709c",
-          "ref_sha256": "065d4319ce432ba73146ace9b5184b9c8ce14b8148a3595e6e48aca5a0149a1d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_aligned_width_partial_height.bin",
+          "ref_sha256": "065d4319ce432ba73146ace9b5184b9c8ce14b8148a3595e6e48aca5a0149a1d",
           "ref_bytes": 1152,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110847,8 +111363,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_progressive.bin",
           "encoded_ref_bytes": 10364,
           "encoded_ref_sha256": "53d7b0a56e5156b5b9a7ea14ef13fe5fc0fe88274b1d86efa5e6668fa1592814",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_progressive.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110903,8 +111419,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_progressive_restart_rows.bin",
           "encoded_ref_bytes": 11082,
           "encoded_ref_sha256": "d85f4da0d0ec9513ae3baef40e55737836db116085a6b9d084dadd2325b6332a",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_progressive_restart_rows.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -110959,8 +111475,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_restart_rows.bin",
           "encoded_ref_bytes": 10947,
           "encoded_ref_sha256": "6a98ceee8c48f08f911636ac8d2c173a97e4ee4ae9f2ae32f8b435c3362a59ca",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_restart_rows.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -111015,8 +111531,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_restart_interval_clamped.bin",
           "encoded_ref_bytes": 10892,
           "encoded_ref_sha256": "31b02427723ea814ca2abd46a542acf0700ccf2e5ed15d4f14e2ef199b89d67e",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_restart_interval_clamped.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -111071,8 +111587,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_restart_rows_above_signed_limit.bin",
           "encoded_ref_bytes": 10886,
           "encoded_ref_sha256": "1b809ff637f6f78f5a25a56df827c1783b4843df82fa656fb370c2c27e216bad",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_restart_rows_above_signed_limit.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -111127,8 +111643,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_cmyk_exif_streaming.bin",
           "encoded_ref_bytes": 10908,
           "encoded_ref_sha256": "97627c9e7a004a998a2a13f61ed200d14b4a989dbf1e76e55246a2eb2aafa59a",
-          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_cmyk_exif_streaming.bin",
+          "ref_sha256": "9abfefe72d1d894ec70deadb1511434b1d10bfd73d37063b4dbd28370aa28b73",
           "ref_bytes": 65536,
           "ref_mode": "CMYK",
           "ref_size": [
@@ -111391,8 +111907,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
           "encoded_ref_bytes": 10238,
           "encoded_ref_sha256": "68f15e5e6fa58222070babcba88088a4a9960e427796b96a08f9b7a8aa5905f7",
-          "ref_sha256": "45658ed5e25bb8269cdaa023112598ee39d80fad5cdb273787c308f66725043d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_bilevel_png_rust_unsupported.bin",
+          "ref_sha256": "45658ed5e25bb8269cdaa023112598ee39d80fad5cdb273787c308f66725043d",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -111447,8 +111963,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_1x1.bin",
           "encoded_ref_bytes": 633,
           "encoded_ref_sha256": "9b616590a4eb0c185c040e13289ebfbb006ed4721453dbc3f030f965d53c366e",
-          "ref_sha256": "05d6cb0338b455d0265d55e4ed3bb7931a406e57aab1e3080da6a808ca2fd899",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_1x1.bin",
+          "ref_sha256": "05d6cb0338b455d0265d55e4ed3bb7931a406e57aab1e3080da6a808ca2fd899",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111560,8 +112076,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_8x8.bin",
           "encoded_ref_bytes": 675,
           "encoded_ref_sha256": "a72e9a374af0c1fbd9aa1e52ed545604ea6cc88586eca416dfbcef6ec34ef802",
-          "ref_sha256": "3e0b16811ce3532ec643e445c8b9c15c252952abce2def80589e02039f61c9f8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_8x8.bin",
+          "ref_sha256": "3e0b16811ce3532ec643e445c8b9c15c252952abce2def80589e02039f61c9f8",
           "ref_bytes": 192,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111616,8 +112132,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_odd_size.bin",
           "encoded_ref_bytes": 829,
           "encoded_ref_sha256": "bb82aecccc1d04b6d74ca5b4d297839d4cd4641a7ab16040ca75c643ed8293ff",
-          "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_odd_size.bin",
+          "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111669,8 +112185,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif.bin",
           "encoded_ref_bytes": 4921,
           "encoded_ref_sha256": "2825c0f6c394f1866ed71661a54880f227d44221239bd7d35f84a9368dba2c1c",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_exif.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111722,8 +112238,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_exif_mixed_hex_case.bin",
           "encoded_ref_bytes": 4923,
           "encoded_ref_sha256": "9db46253ab06235b82b050c692f3c95ed43db0d7b6be2177b534a7185d612852",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_exif_mixed_hex_case.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111937,8 +112453,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_exif.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_no_exif.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -111990,8 +112506,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_restart.bin",
           "encoded_ref_bytes": 4906,
           "encoded_ref_sha256": "a3bc1228a37d4865d038f2514352b0c0c561b36d41d2089bcabcbc38570a729c",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_restart.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112043,8 +112559,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_restart.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_no_restart.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112096,8 +112612,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_fast.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_dct_fast.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112149,8 +112665,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_dct_slow.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_dct_slow.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112202,8 +112718,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize.bin",
           "encoded_ref_bytes": 4437,
           "encoded_ref_sha256": "49b67893efa9f017b4c10225d7200e73bf0a901aef44386e1c3263785938afd1",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112259,8 +112775,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_odd.bin",
           "encoded_ref_bytes": 511,
           "encoded_ref_sha256": "91e4e96cf2b16dc7be52944f481b5c81125ebdea9ca72cfa031ee6003d92c0e0",
-          "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_odd.bin",
+          "ref_sha256": "ff17ba9736ca6cdffcfe639824ae3271a4c921e4fcbbf3f06d50002852986d3d",
           "ref_bytes": 867,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112313,8 +112829,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_optimize_restart.bin",
           "encoded_ref_bytes": 4441,
           "encoded_ref_sha256": "a466d162ad38a6c34381b54b22ed55507cd18ab9e1d80a16557afb7451777a30",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_optimize_restart.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112367,8 +112883,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_grayscale.bin",
           "encoded_ref_bytes": 3227,
           "encoded_ref_sha256": "19b5a9d7e5f1b5fc1a829561ba1f1fdec43cc19c5a0fde457a622cdd10d11cc9",
-          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_grayscale.bin",
+          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -112422,8 +112938,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_grayscale_restart_rows.bin",
           "encoded_ref_bytes": 3443,
           "encoded_ref_sha256": "2fc2daccac18b1f812e41f70ca06c85b7ef4e5a9170271a51471f334ad8b47fc",
-          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_grayscale_restart_rows.bin",
+          "ref_sha256": "a1af24d5646aabd900c97f1f5faeb9d019093eba131c33fec15d929252d8208e",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -112476,8 +112992,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_eob_limit.bin",
           "encoded_ref_bytes": 8486,
           "encoded_ref_sha256": "566ffe377253e2d4a279e4a776d00509c10ef8ae174ae993a615376c6c49f5cb",
-          "ref_sha256": "e303b22f75fb4f8b39e5ea623f1f24d455263303088135176e9d9dd4d6a6a556",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_eob_limit.bin",
+          "ref_sha256": "e303b22f75fb4f8b39e5ea623f1f24d455263303088135176e9d9dd4d6a6a556",
           "ref_bytes": 2097152,
           "ref_mode": "L8",
           "ref_size": [
@@ -112529,8 +113045,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_no_optimize.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_no_optimize.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112582,8 +113098,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_100.bin",
           "encoded_ref_bytes": 16404,
           "encoded_ref_sha256": "a4953e227a83e534d563605c94853d2dc1aa57852c2305a30438d5948a65a4d3",
-          "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_quality_100.bin",
+          "ref_sha256": "629400b55c60835f6cc3c56b693e61f1912034e96b236808dd39dfff20d870d8",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112635,8 +113151,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_85.bin",
           "encoded_ref_bytes": 5911,
           "encoded_ref_sha256": "7a2d8c55e4e10d7d5576619735b393e6127cca2b7b73b9f0db2bcffd42c41505",
-          "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_quality_85.bin",
+          "ref_sha256": "4c277ca87f0f45721f840aae6b0860da002eb4bd48e459a904ecbfd0eb23fbde",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112688,8 +113204,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_50.bin",
           "encoded_ref_bytes": 3327,
           "encoded_ref_sha256": "78a1749701c6221c5c060500bda14cc82b856999e42cb18ad97d60784ee0d369",
-          "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_quality_50.bin",
+          "ref_sha256": "e469e34f8f6b333aef776b469e5576ff9934a39ebd2911fee2714e7481ce8bd1",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112741,8 +113257,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_quality_10.bin",
           "encoded_ref_bytes": 1677,
           "encoded_ref_sha256": "df1f1f85fe478d958158915455b21948e7cba57adb173852efd6cd5304525b33",
-          "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_quality_10.bin",
+          "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112794,8 +113310,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_subsample_444.bin",
           "encoded_ref_bytes": 7927,
           "encoded_ref_sha256": "5200c257618606a17eb5c449b3166c83ae81948cbfa417b4cd3f7c4256c1514e",
-          "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_subsample_444.bin",
+          "ref_sha256": "fdf89263700cd98caf9f5504df2cbde71a8c93914d2a1a8078111110468d3b43",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112847,8 +113363,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_subsample_420.bin",
           "encoded_ref_bytes": 4899,
           "encoded_ref_sha256": "edc299cdeaa5f271d6c8935241ef76308e125ac058a5329ca741e7957fa58c8e",
-          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_subsample_420.bin",
+          "ref_sha256": "56dce0e0740240edf39f0a021ec3d2f8f82594c8e4367ec3a0a871b1adae081e",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112903,8 +113419,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_subsample_422_tiny_edge.bin",
           "encoded_ref_bytes": 670,
           "encoded_ref_sha256": "def25d95dd817dbd19c97e02b1daa5f416cbd3abe79d5aca928c5e2c2d413190",
-          "ref_sha256": "6b6084151e6361e6d4810faa4e3d82a4ca9c82d7cbabe32a7a82e7d45e2383b7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_subsample_422_tiny_edge.bin",
+          "ref_sha256": "6b6084151e6361e6d4810faa4e3d82a4ca9c82d7cbabe32a7a82e7d45e2383b7",
           "ref_bytes": 24,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -112958,8 +113474,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
-          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_17x9.bin",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_bytes": 153,
           "ref_mode": "L8",
           "ref_size": [
@@ -113014,8 +113530,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
-          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_17x9.bin",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_bytes": 153,
           "ref_mode": "L8",
           "ref_size": [
@@ -113070,8 +113586,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "073f466605758f65c1f6a0af7fbcaf072af42c61b2d43ef768f57ad19c41b8c4",
-          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_17x9.bin",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_bytes": 153,
           "ref_mode": "L8",
           "ref_size": [
@@ -113126,8 +113642,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "5ce93b78d7497ab9b6f651bd97b43ec594ebe28ec59ecdaffd8c9f06b59b5583",
-          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_17x9.bin",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
           "ref_bytes": 153,
           "ref_mode": "L8",
           "ref_size": [
@@ -113181,8 +113697,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_128x128.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113237,8 +113753,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_128x128.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113293,8 +113809,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "26ad036e67a855f4495851c59686c212b1d316c6a9c6699b16d0517b6f6c4f44",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_128x128.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113349,8 +113865,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "ec3d968f651020392282ddf1ff6734ae45d95ccd4f4f7e69658f8a25be435cce",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113404,8 +113920,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
-          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_512x512.bin",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_bytes": 262144,
           "ref_mode": "L8",
           "ref_size": [
@@ -113460,8 +113976,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
-          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_512x512.bin",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_bytes": 262144,
           "ref_mode": "L8",
           "ref_size": [
@@ -113516,8 +114032,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "f9f40477a1701ba7f721e4688db484daef27a30c4d7afab0c78462c7481445fe",
-          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_512x512.bin",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_bytes": 262144,
           "ref_mode": "L8",
           "ref_size": [
@@ -113572,8 +114088,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "23603612ec346f2eac5f3b880d53fd433deec85c3156c44c8e110be12c025ef5",
-          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_512x512.bin",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
           "ref_bytes": 262144,
           "ref_mode": "L8",
           "ref_size": [
@@ -113628,8 +114144,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_optimized.bin",
           "encoded_ref_bytes": 10514,
           "encoded_ref_sha256": "e0dd7cb15399cb4588202b7cef0c068f7e5fa94db6be0d1179c27b7cff8cb9ad",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_optimized.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113684,8 +114200,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_progressive.bin",
           "encoded_ref_bytes": 10616,
           "encoded_ref_sha256": "9c91aace0599cb36f7f9fb970523f6951f971d7a4397666d265d9ad709d3bb9b",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_progressive.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -113741,8 +114257,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_restart_rows_4.bin",
           "encoded_ref_bytes": 11401,
           "encoded_ref_sha256": "8c780ae5bb7f8cd3a7dfcc30e7504332b0da70b57ed3ee410eb489dcd301987c",
-          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_restart_rows_4.bin",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -204196,12 +204712,12 @@
     }
   },
   "summary": {
-    "total_rows": 2420,
-    "decode_rows": 1920,
+    "total_rows": 2426,
+    "decode_rows": 1926,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1917,
-    "decode_active": 1920,
+    "assets_available": 1923,
+    "decode_active": 1926,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -205214,6 +205730,101 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "jpeg_ycck_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
+      },
+      "fault": {
+        "point": "jpeg.ycck.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_h1v2_upsample_plane_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_420_chroma_component_sampling_fallback"
+      },
+      "fault": {
+        "point": "jpeg.upsample.h1v2_plane_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_h1v2_upsample_empty_geometry_rejection",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_420_chroma_component_sampling_fallback"
+      },
+      "fault": {
+        "point": "jpeg.upsample.h1v2_empty_geometry",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_h1v2_upsample_zero_width_rejection",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_420_chroma_component_sampling_fallback"
+      },
+      "fault": {
+        "point": "jpeg.upsample.h1v2_zero_width",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_h1v2_upsample_source_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_420_chroma_component_sampling_fallback"
+      },
+      "fault": {
+        "point": "jpeg.upsample.h1v2_source_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",
@@ -205456,25 +206067,6 @@
       },
       "fault": {
         "point": "av1.partition_context.above_reservation",
-        "contract": "decode_error_then_retry_succeeds"
-      },
-      "oracle_status": "not_applicable"
-    },
-    {
-      "id": "jpeg_ycck_output_reservation_failure",
-      "type": "fault-contract",
-      "operation": "decode",
-      "format": "jpeg",
-      "status": "active",
-      "requirements": [
-        "structured-diagnostics"
-      ],
-      "verification": "fault-contract",
-      "input": {
-        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
-      },
-      "fault": {
-        "point": "jpeg.ycck.output_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

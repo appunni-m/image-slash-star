@@ -56,6 +56,107 @@ pub(super) fn h2v1_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
     out
 }
 
+/// 1x2 fancy upsampling — exact match of IJG libjpeg h1v2_fancy_upsample.
+pub(super) fn h1v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> CodecResult<Vec<u8>> {
+    let invalid_geometry =
+        || CodecError::Malformed("invalid JPEG component upsampling geometry".to_owned());
+    #[cfg(coverage)]
+    let src_w = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegH1v2UpsampleZeroWidth,
+    ) {
+        0
+    } else {
+        src_w
+    };
+    #[cfg(coverage)]
+    let src_h = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegH1v2UpsampleEmptyGeometry,
+    ) {
+        0
+    } else {
+        src_h
+    };
+    if src_w == 0 || src_h == 0 {
+        return Err(invalid_geometry());
+    }
+    let source_length = src_w.checked_mul(src_h).ok_or_else(invalid_geometry)?;
+    #[cfg(coverage)]
+    let available_source_length = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegH1v2UpsampleSourceLengthMismatch,
+    ) {
+        src.len().saturating_sub(1)
+    } else {
+        src.len()
+    };
+    #[cfg(not(coverage))]
+    let available_source_length = src.len();
+    if available_source_length < source_length {
+        return Err(invalid_geometry());
+    }
+    let dst_h = src_h.checked_mul(2).ok_or_else(invalid_geometry)?;
+    let output_length = src_w.checked_mul(dst_h).ok_or_else(invalid_geometry)?;
+    let mut out = Vec::new();
+    #[cfg(coverage)]
+    let output_reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegH1v2UpsamplePlaneReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_length
+    };
+    #[cfg(not(coverage))]
+    let output_reservation = output_length;
+    out.try_reserve_exact(output_reservation).map_err(|_| {
+        CodecError::Dimensions("unable to allocate JPEG upsampled component".to_owned())
+    })?;
+    out.resize(output_length, 0);
+
+    for source_y in 0..src_h {
+        let source_start = source_y.checked_mul(src_w).ok_or_else(invalid_geometry)?;
+        let source_end = source_start
+            .checked_add(src_w)
+            .ok_or_else(invalid_geometry)?;
+        let current = src
+            .get(source_start..source_end)
+            .ok_or_else(invalid_geometry)?;
+        let previous_y = source_y.saturating_sub(1);
+        let previous_start = previous_y.checked_mul(src_w).ok_or_else(invalid_geometry)?;
+        let previous_end = previous_start
+            .checked_add(src_w)
+            .ok_or_else(invalid_geometry)?;
+        let previous = src
+            .get(previous_start..previous_end)
+            .ok_or_else(invalid_geometry)?;
+        let next_y = source_y
+            .checked_add(1)
+            .ok_or_else(invalid_geometry)?
+            .min(src_h.saturating_sub(1));
+        let next_start = next_y.checked_mul(src_w).ok_or_else(invalid_geometry)?;
+        let next_end = next_start.checked_add(src_w).ok_or_else(invalid_geometry)?;
+        let next = src.get(next_start..next_end).ok_or_else(invalid_geometry)?;
+
+        let top_start = source_y
+            .checked_mul(2)
+            .and_then(|row| row.checked_mul(src_w))
+            .ok_or_else(invalid_geometry)?;
+        let top_end = top_start.checked_add(src_w).ok_or_else(invalid_geometry)?;
+        let top = out
+            .get_mut(top_start..top_end)
+            .ok_or_else(invalid_geometry)?;
+        upsample_h1v2_row(current, previous, top, 1);
+        let bottom_start = top_end;
+        let bottom_end = bottom_start
+            .checked_add(src_w)
+            .ok_or_else(invalid_geometry)?;
+        let bottom = out
+            .get_mut(bottom_start..bottom_end)
+            .ok_or_else(invalid_geometry)?;
+        upsample_h1v2_row(current, next, bottom, 2);
+    }
+
+    Ok(out)
+}
+
 /// 2x2 fancy upsampling — exact match of IJG libjpeg h2v2_fancy_upsample.
 pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec<u8> {
     let dst_w = src_w.saturating_mul(2);
@@ -151,7 +252,7 @@ pub(super) fn fancy_upsample(
     v_ratio: usize,
     _dst_w: usize,
     _dst_h: usize,
-) -> Vec<u8> {
+) -> CodecResult<Vec<u8>> {
     match (h_ratio, v_ratio) {
         (1, 1) => {
             let mut out = Vec::with_capacity(src_w.saturating_mul(src_h));
@@ -161,10 +262,11 @@ pub(super) fn fancy_upsample(
                     out.push(src[row.saturating_add(x)]);
                 }
             }
-            out
+            Ok(out)
         }
-        (2, 1) => h2v1_fancy_upsample(src, src_w, src_h),
-        (2, 2) => h2v2_fancy_upsample(src, src_w, src_h),
+        (1, 2) => h1v2_fancy_upsample(src, src_w, src_h),
+        (2, 1) => Ok(h2v1_fancy_upsample(src, src_w, src_h)),
+        (2, 2) => Ok(h2v2_fancy_upsample(src, src_w, src_h)),
         _ => {
             // Integer-only nearest-neighbor fallback for other ratios
             let out_w = src_w.saturating_mul(h_ratio);
@@ -178,16 +280,16 @@ pub(super) fn fancy_upsample(
                         src[sy.saturating_mul(src_w).saturating_add(sx)];
                 }
             }
-            out
+            Ok(out)
         }
     }
 }
 
 /// Upsample one destination row without materializing the full component plane.
 ///
-/// The h2v1 and h2v2 branches preserve the same IJG triangle filter and edge
-/// rounding as [`fancy_upsample`]. Other integer ratios use the same nearest
-/// neighbor mapping as its fallback branch.
+/// The h1v2, h2v1, and h2v2 branches preserve the same IJG triangle filter and
+/// edge rounding as [`fancy_upsample`]. Other integer ratios use the same
+/// nearest neighbor mapping as its fallback branch.
 pub(super) struct UpsampleComponent<'a> {
     pub(super) samples: &'a [u8],
     pub(super) stride: usize,
@@ -244,6 +346,24 @@ pub(super) fn fancy_upsample_row(
         .ok_or_else(invalid_geometry)?;
     match (h_ratio, v_ratio) {
         (1, 1) => output.copy_from_slice(&source_row[..output.len()]),
+        (1, 2) => {
+            let adjacent_y = if dst_y.is_multiple_of(2) {
+                source_y.saturating_sub(1)
+            } else {
+                source_y.saturating_add(1).min(src_h.saturating_sub(1))
+            };
+            let adjacent_start = src_stride
+                .checked_mul(adjacent_y)
+                .ok_or_else(invalid_geometry)?;
+            let adjacent_end = adjacent_start
+                .checked_add(src_w)
+                .ok_or_else(invalid_geometry)?;
+            let adjacent_row = src
+                .get(adjacent_start..adjacent_end)
+                .ok_or_else(invalid_geometry)?;
+            let bias = if dst_y.is_multiple_of(2) { 1 } else { 2 };
+            upsample_h1v2_row(source_row, adjacent_row, output, bias);
+        }
         (2, 1) => upsample_h2v1_row(source_row, output),
         (2, 2) => {
             let adjacent_y = if dst_y.is_multiple_of(2) {
@@ -270,6 +390,21 @@ pub(super) fn fancy_upsample_row(
         }
     }
     Ok(())
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Validated equal nonempty rows and bounded output length prove each h1v2 sample index is in range."
+)]
+fn upsample_h1v2_row(current: &[u8], adjacent: &[u8], output: &mut [u8], bias: i32) {
+    for (column, sample) in output.iter_mut().enumerate() {
+        *sample = weighted_sum(
+            i32::from(current[column]).saturating_mul(3),
+            i32::from(adjacent[column]),
+            bias,
+            2,
+        );
+    }
 }
 
 #[allow(
