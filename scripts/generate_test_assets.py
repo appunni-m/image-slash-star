@@ -5230,6 +5230,39 @@ def write_bmp_bitfields(path, image, header_size=40):
     write_bmp(path, dib, bytes(rows), masks=masks)
 
 
+def write_bmp_v4_bitfields_without_alpha(path):
+    """Write V4 RGB bitfields with a nonzero unused fourth pixel byte."""
+    pixels = bytes((0x33, 0x22, 0x11, 0xA5))
+    dib = bytearray(108)
+    struct.pack_into(
+        "<IiiHHIIiiII",
+        dib,
+        0,
+        108,
+        1,
+        1,
+        1,
+        32,
+        3,
+        len(pixels),
+        3_780,
+        3_780,
+        0,
+        0,
+    )
+    struct.pack_into(
+        "<IIII",
+        dib,
+        40,
+        0x00FF0000,
+        0x0000FF00,
+        0x000000FF,
+        0,
+    )
+    struct.pack_into("<I", dib, 56, 0x73524742)
+    write_bmp(path, bytes(dib), pixels)
+
+
 def write_bmp_bitfields_v2_32(path):
     dib = bytearray(52)
     pixels = bytes((0x30, 0x20, 0x10, 0xff))
@@ -5367,6 +5400,7 @@ def gen_bmp():
     write_bmp_bitfields_v2_32(d / "bitfields_v2_32_no_alpha.bmp")
     write_bmp_bitfields_16_unsupported_masks(d / "bitfields_16_unsupported_masks.bmp")
     write_bmp_bitfields(d / "v4header.bmp", pattern_img("RGBA"), header_size=108)
+    write_bmp_v4_bitfields_without_alpha(d / "v4_bitfields_alpha_mask_0.bmp")
     write_bmp_bitfields(d / "v5header.bmp", pattern_img("RGBA"), header_size=124)
     write_bmp_v4_16(d / "v4header16.bmp")
     write_bmp_24(d / "os2v1.bmp", img, core_header=True)

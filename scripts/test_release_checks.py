@@ -66,13 +66,21 @@ class RequiredCiResultGateTests(unittest.TestCase):
                     )
 
     def test_documentation_is_required_for_pull_requests(self) -> None:
-        results = self.complete_results()
-        results["documentation"] = "skipped"
-        violations = verify_ci_results.check_ci_results("pull_request", results)
-        self.assertTrue(
-            any("Documentation build and examples" in item for item in violations),
-            violations,
-        )
+        for result in ("failure", "cancelled", "skipped", "missing"):
+            with self.subTest(result=result):
+                results = self.complete_results()
+                results["documentation"] = result
+                violations = verify_ci_results.check_ci_results(
+                    "pull_request", results
+                )
+                self.assertTrue(
+                    any(
+                        "Documentation build and examples" in item
+                        and f"concluded '{result}'" in item
+                        for item in violations
+                    ),
+                    violations,
+                )
 
     def test_coverage_is_required_only_for_full_coverage_events(self) -> None:
         results = self.complete_results()
@@ -893,21 +901,24 @@ jobs:
         workflow = workflow_path.read_text(encoding="utf-8")
         self.assertEqual(check_workflows.ci_required_checks_violations(workflow), [])
 
+        jobs = check_workflows.workflow_jobs(workflow)
+        self.assertIsNotNone(jobs)
+        required_job = jobs["required-checks"]
+        needs_match = re.search(
+            r"(?m)^    needs:\s*\n(?:^      - [A-Za-z0-9_-]+\s*\n)+",
+            required_job,
+        )
+        self.assertIsNotNone(needs_match)
+        needs_block = needs_match.group(0)
+        needs_without_quality = re.sub(
+            r"(?m)^      - quality\s*\n", "", needs_block, count=1
+        )
+        self.assertNotEqual(needs_block, needs_without_quality)
+
         mutations = (
             (
-                "    needs:\n"
-                "      - fixture-integrity\n"
-                "      - quality\n"
-                "      - x86-simd-lint\n"
-                "      - windows-msvc\n"
-                "      - supply-chain\n"
-                "      - coverage\n",
-                "    needs:\n"
-                "      - fixture-integrity\n"
-                "      - x86-simd-lint\n"
-                "      - windows-msvc\n"
-                "      - supply-chain\n"
-                "      - coverage\n",
+                needs_block,
+                needs_without_quality,
                 "missing=['quality']",
             ),
             (
@@ -949,6 +960,36 @@ jobs:
                 "      - name: Require every applicable CI job to pass\n"
                 "        continue-on-error: true\n",
                 "CI required-checks result-gate step must not allow errors",
+            ),
+            (
+                "    if: github.event_name == 'pull_request'\n",
+                "    if: github.event_name == 'push'\n",
+                "CI documentation job must run only for pull_request events",
+            ),
+            (
+                "      - name: Execute examples using published packages\n"
+                "        run: make docs-registry-examples PYTHON=python\n",
+                "      - name: Execute examples using published packages\n"
+                "        run: echo documentation examples skipped\n",
+                "CI documentation job must execute exactly once: "
+                "make docs-registry-examples PYTHON=python",
+            ),
+            (
+                "      - name: Execute the documented Rust quickstart\n"
+                "        run: make docs-examples\n",
+                "      - name: Execute the documented Rust quickstart\n"
+                "        if: false\n"
+                "        run: make docs-examples\n",
+                "CI documentation job must not conditionally skip: "
+                "make docs-examples",
+            ),
+            (
+                "      - name: Execute the documented Rust quickstart\n"
+                "        run: make docs-examples\n",
+                "      - name: Execute the documented Rust quickstart\n"
+                "        continue-on-error: true\n"
+                "        run: make docs-examples\n",
+                "CI documentation job and steps must not allow errors",
             ),
         )
         for old, new, expected in mutations:

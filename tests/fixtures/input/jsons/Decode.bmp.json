@@ -1851,6 +1851,58 @@
       ]
     },
     {
+      "id": "compression_bitfields_v4_bitfields_alpha_mask_0",
+      "asset": "v4_bitfields_alpha_mask_0.bmp",
+      "asset_sha256": "f12a2109de317b7283294cfff0720079711ccd8321b42b15bea961ad1d8ae596",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/v4_bitfields_alpha_mask_0.bmp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "error_unsupported_bitfields_layout",
       "asset": "bitfields_16_unsupported_masks.bmp",
       "asset_sha256": "429460fd3f6d8db93503f07febb90d36047a9bbdeea3ae1a919d3459224ad2ca",

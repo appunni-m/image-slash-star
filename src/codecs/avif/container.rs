@@ -343,7 +343,7 @@ fn inspect_inner_with_grid(
                         return Err(parse_failure!());
                     }
                     meta = Some(
-                        parse_meta_with_input(data, child.payload, &mut budget)
+                        parse_meta(child.payload, &mut budget)
                             .map_err(|error| error.at(box_offset, "avif_box"))?,
                     );
                 }
@@ -508,7 +508,7 @@ fn parse_full_box_version_zero(reader: &mut Reader<'_>) -> ParseResult<u32> {
 }
 
 // libavif 1.4.1 src/read.c:3428-3511.
-fn parse_meta_with_input(input: &[u8], payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
+fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
     let first = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
@@ -572,13 +572,12 @@ fn parse_meta_with_input(input: &[u8], payload: &[u8], budget: &mut Budget) -> P
         return Err(parse_failure!());
     }
     if let Some(iloc) = iloc {
-        parse_iloc(input, iloc, idat, &mut meta, budget)?;
+        parse_iloc(iloc, idat, &mut meta, budget)?;
     }
     Ok(meta)
 }
 
 fn parse_iloc(
-    input: &[u8],
     payload: &[u8],
     idat: Option<&[u8]>,
     meta: &mut Meta,
@@ -663,15 +662,14 @@ fn parse_iloc(
             let relative = base_offset
                 .checked_add(extent_offset)
                 .ok_or_else(|| parse_failure!())?;
-            let end = relative
+            let _end = relative
                 .checked_add(extent_length)
                 .ok_or_else(|| parse_failure!())?;
             match source {
-                AvifItemLocationSource::File => {
-                    if end > u64::try_from(input.len()).unwrap_or(u64::MAX) {
-                        return Err(parse_failure!());
-                    }
-                }
+                // File extents are declarations during inspection. The sample
+                // reader checks their input bound immediately before reading
+                // item bytes, matching Pillow/libavif's lazy decode behavior.
+                AvifItemLocationSource::File => {}
                 AvifItemLocationSource::Idat => {
                     // Inspection retains declared extents. The sample reader
                     // checks their idat source bound before decoding payloads.
@@ -684,7 +682,8 @@ fn parse_iloc(
             .push(AvifItemLocation::new(item_id, source, extents));
     }
     if !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignore bytes after the declared item-location records.
+        reader.skip(reader.remaining())?;
     }
     Ok(())
 }

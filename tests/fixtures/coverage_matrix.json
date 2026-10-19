@@ -1827,6 +1827,84 @@
           "error_contracts": {}
         },
         {
+          "id": "iloc_trailing_payload_ignored",
+          "type": "decode",
+          "format": "avif",
+          "category": "iloc",
+          "description": "Pillow ignores one trailing byte after the declared meta/iloc records and decodes unchanged pixels",
+          "asset": "iloc_trailing_payload_ignored.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_baseline_avif.bin",
+          "ref_bytes": 49152,
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "d62c4cf7da0e986cf90225f63160fb4ff8bd851cf0d2a0c2957bc48ef7ce4504",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "error_iloc_truncated_extent_index",
           "type": "decode",
           "format": "avif",
@@ -2088,6 +2166,83 @@
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
           "inspect_cursor_hotspot": null
+        },
+        {
+          "id": "error_iloc_file_extent_out_of_bounds",
+          "type": "decode",
+          "format": "avif",
+          "category": "error",
+          "description": "A complete AVIF declares a file-backed primary-item extent one byte past EOF; Pillow inspection and verification succeed before frame decoding reports truncated data",
+          "asset": "error_iloc_file_extent_out_of_bounds.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "764f4205c7b60acd296e37e9d2e45968c66aafd4fc84102366d67e9903d237ad",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.SyntaxError",
+          "oracle_error_message": "Failed to decode frame 0: Truncated data",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.SyntaxError",
+              "pillow_message": "Failed to decode frame 0: Truncated data",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.SyntaxError",
+              "pillow_message": "Failed to decode frame 0: Truncated data",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "id": "ipma_wide_property_associations",
@@ -57040,7 +57195,7 @@
         {
           "asset": "bitfields.bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "expect_error": false,
           "format": "bmp",
           "id": "compression_bitfields",
@@ -57120,7 +57275,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_v2_32_no_alpha.bmp",
           "expect_error": false,
           "status": "active",
@@ -57198,7 +57353,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_16_rgb565.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57276,7 +57431,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_24.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57354,7 +57509,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_layout_2.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57432,7 +57587,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_layout_3.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57510,7 +57665,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_layout_4.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57588,7 +57743,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_layout_5.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57666,7 +57821,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_layout_7.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57744,7 +57899,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "bitfields_32_zero_masks.bmp",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -57822,7 +57977,7 @@
           "type": "decode",
           "format": "bmp",
           "category": "compression",
-          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
           "asset": "v4header16.bmp",
           "expect_error": false,
           "status": "active",
@@ -57894,6 +58049,84 @@
           "decoded_source_color": null,
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "compression_bitfields_v4_bitfields_alpha_mask_0",
+          "type": "decode",
+          "format": "bmp",
+          "category": "compression",
+          "description": "Pillow-supported 16/24/32-bit BI_BITFIELDS masks and channel layouts, including V4 RGB without alpha",
+          "asset": "v4_bitfields_alpha_mask_0.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f12a2109de317b7283294cfff0720079711ccd8321b42b15bea961ad1d8ae596",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 32,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_v4_bitfields_alpha_mask_0_bmp.bin",
+          "ref_sha256": "49ee2bf93aac3b1fb4117e59095e07abe555c3383b38d608da37680a406096e8",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "error_unsupported_bitfields_layout",
@@ -89772,6 +90005,94 @@
               "tobytes"
             ]
           }
+        },
+        {
+          "id": "post_scan_conflicting_adobe_app14",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "post",
+          "description": "YCCK keeps its header APP14 transform when a conflicting Adobe APP14 follows the entropy scan",
+          "asset": "post_scan_conflicting_adobe_app14.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "rust_expected_metadata": [
+            {
+              "kind_hex": "ee",
+              "data_hex": "41646f626500640000000002"
+            },
+            {
+              "kind_hex": "ee",
+              "data_hex": "41646f626500640000000000"
+            }
+          ],
+          "asset_sha256": "8e64e01abd202d4a5196ab021f44f0f7b45d22f650a2ed871a698b5a4a2e0520",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_post_scan_conflicting_adobe_app14_jpg.bin",
+          "ref_sha256": "c3d39cb993e20e4062c928e8fdad94ada64377bd4095e7203194a2e5efc48f05",
+          "ref_bytes": 612,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "ycck_h2v1_subsampled_17x9",
@@ -204883,12 +205204,12 @@
     }
   },
   "summary": {
-    "total_rows": 2428,
-    "decode_rows": 1928,
+    "total_rows": 2432,
+    "decode_rows": 1932,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1925,
-    "decode_active": 1928,
+    "assets_available": 1929,
+    "decode_active": 1932,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

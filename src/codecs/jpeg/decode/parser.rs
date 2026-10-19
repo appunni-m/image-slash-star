@@ -639,7 +639,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let payload_end = pos.saturating_add(payload_len);
                 let payload = &data[pos..payload_end];
-                if payload.starts_with(b"Adobe") && payload.len() >= 12 {
+                if adobe_color_transform.is_none()
+                    && payload.starts_with(b"Adobe")
+                    && payload.len() >= 12
+                {
                     adobe_color_transform = payload.get(11).copied();
                 }
                 metadata.push(crate::types::OpaqueMetadata {

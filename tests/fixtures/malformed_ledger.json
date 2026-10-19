@@ -828,6 +828,39 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_iloc_file_extent_out_of_bounds.avif",
+        "class": "error_iloc_file_extent_out_of_bounds",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Truncated data",
+            "pillow_type": "builtins.SyntaxError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Truncated data",
+            "pillow_type": "builtins.SyntaxError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete AVIF declares a file-backed primary-item extent one byte past EOF; Pillow inspection and verification succeed before frame decoding reports truncated data",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Truncated data",
+        "pillow_status": "error",
+        "pillow_type": "builtins.SyntaxError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "error_iloc_idat_extent_out_of_bounds.avif",
         "class": "error_iloc_idat_extent_out_of_bounds",
         "contracts": {
@@ -27058,7 +27091,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 60,
+      "avif": 61,
       "bmp": 68,
       "gif": 48,
       "ico": 30,
@@ -27068,17 +27101,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 643,
-      "specification_reference": 60
+      "pillow_fixture": 644,
+      "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
       "spec_violation": 374,
       "tolerated": 0,
-      "truncated": 195
+      "truncated": 196
     },
-    "classes": 643,
+    "classes": 644,
     "formats": 8
   }
 }

@@ -138,6 +138,10 @@ impl<'input> Reader<'input> {
         self.offset == self.end
     }
 
+    fn remaining(&self) -> usize {
+        self.end.saturating_sub(self.offset)
+    }
+
     fn take_span(&mut self, length: usize) -> ParseResult<ByteSpan> {
         let end = self
             .offset
@@ -1165,7 +1169,18 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
             declared_extents.push(AvifItemExtent::new(relative, extent_length));
             let span = match source {
                 ExtentSource::File => {
-                    ByteSpan::from_bounded_offset_size(relative, extent_length, input.len(), true)?
+                    if CHECK_ITEM_BOUNDS {
+                        ByteSpan::from_bounded_offset_size(
+                            relative,
+                            extent_length,
+                            input.len(),
+                            true,
+                        )?
+                    } else {
+                        // Inspection keeps file-backed declarations lazy; the
+                        // validated decoder path checks bounds before reading.
+                        ByteSpan::from_offset_size(relative, extent_length)?
+                    }
                 }
                 ExtentSource::Idat => {
                     let idat = idat.ok_or_else(|| parse_failure!())?;
@@ -1194,7 +1209,8 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
         });
     }
     if !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignore bytes after the declared item-location records.
+        reader.skip(reader.remaining())?;
     }
     Ok(())
 }
