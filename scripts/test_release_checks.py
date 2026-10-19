@@ -956,7 +956,7 @@ jobs:
 
     def test_x86_simd_benchmark_pins_and_records_ubuntu_apt_snapshot(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
-                    / ".github" / "workflows" / "benchmark.yml")
+                    / ".github" / "workflows" / "benchmark-x86.yml")
         contents = workflow.read_text(encoding="utf-8")
         match = re.search(
             r"(?ms)^  x86-simd:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)",
@@ -989,7 +989,7 @@ jobs:
 
     def test_x86_simd_benchmark_runs_on_relevant_pull_requests_only(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
-                    / ".github" / "workflows" / "benchmark.yml")
+                    / ".github" / "workflows" / "benchmark-x86.yml")
         contents = workflow.read_text(encoding="utf-8")
         pull_request = re.search(
             r"(?ms)^  pull_request:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|^jobs:)",
@@ -1018,14 +1018,31 @@ jobs:
 
         jobs = check_workflows.workflow_jobs(contents)
         self.assertIsNotNone(jobs)
-        self.assertEqual(
-            check_workflows.workflow_job_condition(jobs["benchmark"]),
-            "github.event_name != 'pull_request'",
-            "the full Apple matrix must stay off pull requests",
-        )
+        self.assertEqual(set(jobs), {"x86-simd"})
         self.assertIsNone(
             check_workflows.workflow_job_condition(jobs["x86-simd"]),
             "the paired x86 benchmark must run for matching pull requests",
+        )
+
+        publisher = (Path(__file__).resolve().parent.parent
+                     / ".github" / "workflows" / "benchmark.yml").read_text(
+                         encoding="utf-8"
+                     )
+        publisher_jobs = check_workflows.workflow_jobs(publisher)
+        self.assertEqual(
+            set(publisher_jobs),
+            {"benchmark"},
+            "the docs snapshot publisher must not depend on the x86 lane",
+        )
+        documentation = (Path(__file__).resolve().parent.parent
+                         / ".github" / "workflows" / "docs.yml").read_text(
+                             encoding="utf-8"
+                         )
+        x86_workflow_name = re.search(r"(?m)^name: (.+)$", contents).group(1)
+        self.assertNotIn(
+            x86_workflow_name,
+            re.search(r"(?m)^    workflows: \[(.+)\]$", documentation).group(1),
+            "an x86-only failure must not suppress the published ARM benchmark snapshot",
         )
 
     def test_main_benchmark_refreshes_after_docs_exporter_changes(self) -> None:
@@ -1044,7 +1061,7 @@ jobs:
 
     def test_benchmark_cancels_only_superseded_pull_request_runs(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
-                    / ".github" / "workflows" / "benchmark.yml")
+                    / ".github" / "workflows" / "benchmark-x86.yml")
         contents = workflow.read_text(encoding="utf-8")
         self.assertRegex(
             contents,
