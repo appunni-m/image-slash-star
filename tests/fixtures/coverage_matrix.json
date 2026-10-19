@@ -46829,6 +46829,84 @@
           "error_contracts": {}
         },
         {
+          "id": "superres_actual_upscaled_i420_17x17",
+          "type": "decode",
+          "format": "avif",
+          "category": "superres",
+          "description": "17x17 lossy 4:2:0 AVIF still uses denominator 9 to resize coded luma width 16 to 17 and ceil-rounded chroma width 8 to 9",
+          "asset": "superres_actual_upscaled_i420_17x17.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_superres_actual_upscaled_i420_17x17_avif.bin",
+          "ref_sha256": "0140c8dab75efad711db2af0b7f1f837e76e2a8d578ac43052fea15b7693d926",
+          "ref_bytes": 867,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "superres_actual_upscaled_i422_33x17",
           "type": "decode",
           "format": "avif",
@@ -205597,12 +205675,12 @@
     }
   },
   "summary": {
-    "total_rows": 2437,
-    "decode_rows": 1936,
+    "total_rows": 2438,
+    "decode_rows": 1937,
     "encode_rows": 501,
     "formats": 8,
-    "assets_available": 1933,
-    "decode_active": 1936,
+    "assets_available": 1934,
+    "decode_active": 1937,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

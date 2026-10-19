@@ -9578,6 +9578,11 @@ formats:
       test_assets:
       - superres_actual_upscaled_i444_32x16.avif
       status: active
+    - id: superres_actual_upscaled_i420_17x17
+      description: 17x17 lossy 4:2:0 AVIF still uses denominator 9 to resize coded luma width 16 to 17 and ceil-rounded chroma width 8 to 9
+      test_assets:
+      - superres_actual_upscaled_i420_17x17.avif
+      status: active
     - id: superres_actual_upscaled_i422_33x17
       description: 33x17 lossy 4:2:2 AVIF still uses denominator 9 with coded width 29 and restoration disabled, exercising generic super-resolution across odd luma and chroma edges
       test_assets:

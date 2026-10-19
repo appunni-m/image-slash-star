@@ -34,11 +34,45 @@ so this is coordinate evidence only. No full coverage campaign was run.
 `make workflows-check`, the focused workflow-policy regression test, fixture
 integrity, and the typed fault-contract validator passed.
 
-The current fixture matrix contains 2,437 total rows: 1,936 decode / inspect /
-verify rows and 501 encode rows. Of those, 1,936 decode rows and 469 encode
+The current fixture matrix contains 2,438 total rows: 1,937 decode / inspect /
+verify rows and 501 encode rows. Of those, 1,937 decode rows and 469 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
+
+## AV1 odd-width I420 super-resolution parity — 2026-10-20
+
+Added `decode:avif:superres_actual_upscaled_i420_17x17`, a lossy 17x17 AVIF
+still that signals super-resolution denominator 9. Its coded luma width is 16
+and upscales to 17; ceil-rounded I420 chroma width grows from 8 to 9. The
+fixture generator validates the AV1 geometry, repeat-encodes byte-identically,
+and checks the exact pinned Pillow 12.2.0 RGB output. Input SHA-256:
+`5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f`; the
+867-byte decoded pixel SHA-256 is
+`0140c8dab75efad711db2af0b7f1f837e76e2a8d578ac43052fea15b7693d926`.
+
+The selected public parity row passed 1/1. Coverage MCP lists branch
+coordinates in `upscale_subsampled_leaf` and `resize_plane`, including the
+unobserved injected header-mismatch arm and invalid-plane-geometry arms. It
+also lists the unsampled non-subsampled width arms at `resize.rs:223` and
+`resize.rs:228`; this fixture follows the 4:2:0 subsampled arms. The report is
+local-only with unverified source/build identity and unknown test attribution,
+so these are coordinate observations rather than a marginal coverage claim.
+Separately, the existing target-only
+`fault-contract:avif:avif_superresolution_header_geometry_mismatch` row passed
+1/1 with oracle status `not_applicable`; it remains outside Pillow parity
+counts. The gap query for that selected report omits the injected mismatch arm
+at `resize.rs:206`, while still listing non-subsampled width and invalid-plane
+geometry arms. Its report is also local-only with unverified source/build
+identity and unknown named-test attribution, so this does not establish an
+aggregate or marginal coverage gain. No full coverage campaign was run.
+
+The selected report is
+`target/release-evidence/selected/20261019T234416Z/coverage.json` (SHA-256
+`b8fd5e36e6ff450011a4c6c1b397210ddbb9b1ff200edd51c1a1a9995f457c1a`).
+The selected fault-contract report is
+`target/release-evidence/selected/20261019T234822Z/coverage.json` (SHA-256
+`f102498b91b8b11e8034b16ec7315cc4edf802e9998d0608dd02f2639676feba`).
 
 ## JPEG trailing JFIF APP0 parity — 2026-10-19
 
@@ -7206,7 +7240,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `388f033e26081f27ebc589cec068856e89dd035e8426823d8f39ebb7b6582a86`; matrix `c3115350a3f2e9971cb744520eda86e68d2746af06fdd949c3b55c093c8dcb47`.
+- Current fixture integrity only: manifest `36a664301b26d9f0619604e8c1321a3ad7768c72d94e97142f3765f5bfceb4e4`; matrix `8242365ed939241aeda99bee15e3ee573763a12b886898183a2759622b94f6e1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
