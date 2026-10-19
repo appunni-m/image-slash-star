@@ -3110,6 +3110,16 @@ The report has no source/build receipt and MCP test attribution is unknown, so
 it is selected-coordinate evidence only. No aggregate coverage gain or
 full-suite coverage claim is made, and no full coverage campaign was run.
 
+Six YCCK parity rows also pass in the selected report
+`target/release-evidence/selected/20261019-ycck-selected-final/coverage.json`.
+They cover odd- and even-height 4:4:0 vertical row upsampling, luma and K-plane
+sampling differences, and single-sample h2v1/h2v2 edges. The 17×10 parity case
+checks the clamped final source row. Coverage MCP reports 3,975/223,112 regions
+observed overall and 186 unobserved regions in the separate full-plane
+`h1v2_fancy_upsample` helper for this YCCK-only selection. This report also
+lacks source/build identity and test attribution, so it does not establish an
+aggregate coverage gain. No full coverage campaign was run.
+
 ### AV1 super-resolution output-plane reservation fault contract — 2026-10-04
 
 `fault-contract:avif:avif_superresolution_plane_reservation_failure` reuses
