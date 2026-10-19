@@ -16,8 +16,8 @@ pub(crate) const M_DQT: u16 = 0xFFDB;
 pub(crate) const M_DRI: u16 = 0xFFDD;
 pub(crate) const M_COM: u16 = 0xFFFE;
 pub(crate) const M_APP0: u16 = 0xFFE0;
-pub(crate) const M_APP1: u16 = 0xFFE1;
 pub(crate) const M_APP14: u16 = 0xFFEE;
+pub(crate) const M_APP15: u16 = 0xFFEF;
 
 // ── JPEG Structures ───────────────────────────────────────────────────────
 
@@ -651,7 +651,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 });
                 pos = payload_end;
             }
-            0xFFE0..=0xFFEF | M_COM => {
+            M_APP0..=M_APP15 | M_COM => {
                 let length = usize::from(
                     read_u16(data, &mut pos)
                         .map_err(|error| error.at(marker_offset, "jpeg_metadata"))?,

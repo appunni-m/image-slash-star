@@ -87254,6 +87254,186 @@
           "error_contracts": {}
         },
         {
+          "id": "baseline_444_single_scan_trailing_app2",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:4:4 JPEG has a valid APP2 segment after its only entropy scan",
+          "asset": "baseline_444_single_scan_trailing_app2.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "rust_expected_metadata": [
+            {
+              "kind_hex": "e0",
+              "data_hex": "4a46494600010100000100010000"
+            },
+            {
+              "kind_hex": "fe",
+              "data_hex": "6f6b"
+            },
+            {
+              "kind_hex": "e2",
+              "data_hex": "706f73742d7363616e2d61707032"
+            }
+          ],
+          "asset_sha256": "58247b069ba0954a1ddffaa04ad62f4747d37b86b4921cfd62b36c0eac195331",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_single_scan_trailing_app2_jpg.bin",
+          "ref_sha256": "7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "baseline_444_single_scan_trailing_dri",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:4:4 JPEG has a valid DRI segment after its only entropy scan",
+          "asset": "baseline_444_single_scan_trailing_dri.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "rust_expected_metadata": [
+            {
+              "kind_hex": "e0",
+              "data_hex": "4a46494600010100000100010000"
+            },
+            {
+              "kind_hex": "fe",
+              "data_hex": "6f6b"
+            }
+          ],
+          "asset_sha256": "ac4b22a21920a9485648431c72f028e3fbae408e6a713770405b3af2019e96d7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_single_scan_trailing_dri_jpg.bin",
+          "ref_sha256": "7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "baseline_444_single_scan_trailing_app0",
           "type": "decode",
           "format": "jpeg",
@@ -205204,12 +205384,12 @@
     }
   },
   "summary": {
-    "total_rows": 2432,
-    "decode_rows": 1932,
+    "total_rows": 2434,
+    "decode_rows": 1934,
     "encode_rows": 500,
     "formats": 8,
-    "assets_available": 1929,
-    "decode_active": 1932,
+    "assets_available": 1931,
+    "decode_active": 1934,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

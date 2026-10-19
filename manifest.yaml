@@ -1100,6 +1100,26 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid APP1 segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_app1.jpg
+    - id: baseline_444_single_scan_trailing_app2
+      description: Baseline 4:4:4 JPEG has a valid APP2 segment after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_app2.jpg
+      rust_expected_metadata:
+      - kind_hex: e0
+        data_hex: 4a46494600010100000100010000
+      - kind_hex: fe
+        data_hex: 6f6b
+      - kind_hex: e2
+        data_hex: 706f73742d7363616e2d61707032
+    - id: baseline_444_single_scan_trailing_dri
+      description: Baseline 4:4:4 JPEG has a valid DRI segment after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_dri.jpg
+      rust_expected_metadata:
+      - kind_hex: e0
+        data_hex: 4a46494600010100000100010000
+      - kind_hex: fe
+        data_hex: 6f6b
     - id: baseline_444_single_scan_trailing_app0
       description: Baseline 4:4:4 JPEG has a valid JFIF APP0 segment after its only entropy scan
       test_assets:
