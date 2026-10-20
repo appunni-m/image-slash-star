@@ -196,7 +196,7 @@ Run the pinned generator and Pillow reference check:
 The patches are fixture-generation controls only. They do not modify the
 runtime codec or the clean pinned source checkouts.
 
-## Full-visible mixed-lossless inter B32 sequence
+## Mixed-lossless inter B32 sequences
 
 `animated_mixed_lossless_inter_b32_i420_64x64.avif` keeps a 64x64 full-range
 I420 canvas and places a qindex-zero ROI segment over the bottom-right B32
@@ -206,6 +206,14 @@ an unsplit B32x32 at MI `(8,8)`, segment 1, qindex 0. Segment 0 and 2 retain
 nonzero qindices, and neither frame is all-lossless. The generator validates
 the serialized key/inter headers, normalized repeat-encode output, trace, and
 both exact Pillow RGB frames.
+
+The generator also accepts `--canvas-size 60` to create
+`animated_mixed_lossless_inter_b32_i420_60x60.avif`. Its bottom-right
+inter-coded B32x32 remains at MI `(8,8)` and pixel origin `(32,32)`, with a
+28x28 visible extent. Segment 1 remains qindex zero while surrounding
+segments stay lossy; both frames remain non-all-lossless. The bitstream check
+validates the clipped dimensions and mixed segment map before exact Pillow
+frames are written.
 
 Use isolated copies of the pinned sources, applying the existing clipped-B32
 fixture patch before the sequence-specific patches:
@@ -247,6 +255,10 @@ cc -std=c99 -O2 -Wall -Wextra -Werror \
   -lz -lm -lpthread -o target/oracle-staging/encode-avif-mixed-lossless-inter-b32
 .oracle-venv/bin/python scripts/generate_avif_mixed_lossless_inter_b32.py \
   --encoder target/oracle-staging/encode-avif-mixed-lossless-inter-b32
+
+.oracle-venv/bin/python scripts/generate_avif_mixed_lossless_inter_b32.py \
+  --encoder target/oracle-staging/encode-avif-mixed-lossless-inter-b32 \
+  --canvas-size 60
 ```
 
 The generator writes a receipt under ignored `target/oracle-staging/` with

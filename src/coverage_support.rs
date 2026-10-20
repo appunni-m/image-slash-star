@@ -148,6 +148,8 @@ pub enum CoverageFaultPoint {
     Av1AssembledCdefRegionMapReservation,
     /// Force per-tile AV1 CDEF region-map reservation to fail.
     Av1TileCdefRegionMapReservation,
+    /// Force per-tile AV1 CDEF active-map reservation to fail.
+    Av1TileCdefActiveMapReservation,
     /// Force assembled AV1 color CDEF active-map reservation to fail.
     Av1AssembledCdefActiveMapReservation,
     /// Force AV1 partition-tree node reservation to fail.

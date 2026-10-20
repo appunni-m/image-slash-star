@@ -11338,7 +11338,17 @@ pub(super) fn validate_complete_lossy_420_partition(
             .checked_mul(cdef_active_height)
             .ok_or_else(|| malformed("CDEF active map allocation overflows"))?;
         let mut values = Vec::new();
-        values.try_reserve_exact(count).map_err(|_| {
+        #[cfg(coverage)]
+        let reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1TileCdefActiveMapReservation,
+        ) {
+            usize::MAX
+        } else {
+            count
+        };
+        #[cfg(not(coverage))]
+        let reservation_count = count;
+        values.try_reserve_exact(reservation_count).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 CDEF active map".to_owned())
         })?;
         values.resize(count, false);

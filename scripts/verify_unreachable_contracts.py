@@ -594,6 +594,14 @@ FAULT_CONTRACTS = {
         "point": "av1.tile.cdef_region_map_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_tile_cdef_active_map_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_tile_cdef_active_map_reservation_failure",
+        "source_case": "decode:avif:multitile_color_split_groups",
+        "point": "av1.tile.cdef_active_map_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_assembled_cdef_active_map_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

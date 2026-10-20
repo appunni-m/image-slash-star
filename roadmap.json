@@ -5695,9 +5695,9 @@
       "transport_prefix": "__image_slash_star_av1_fixture_selector__="
     },
     "avif": {
-      "decode_active": 560,
+      "decode_active": 561,
       "decode_planned": 0,
-      "decode_rows": 560,
+      "decode_rows": 561,
       "encode_active": 0,
       "encode_planned": 32,
       "encode_rows": 32,
@@ -5712,7 +5712,7 @@
       },
       "coverage_origin_inventory": {
         "files": 28,
-        "guards": 189
+        "guards": 190
       },
       "function": {
         "covered": 5125,
@@ -6744,13 +6744,13 @@
       "status": "open_until_all_four_metrics_are_100_percent"
     },
     "matrix": {
-      "decode_active": 1957,
+      "decode_active": 1959,
       "decode_planned": 0,
-      "decode_rows": 1957,
-      "encode_active": 482,
+      "decode_rows": 1959,
+      "encode_active": 483,
       "encode_planned": 32,
-      "encode_rows": 514,
-      "total_rows": 2471
+      "encode_rows": 515,
+      "total_rows": 2474
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

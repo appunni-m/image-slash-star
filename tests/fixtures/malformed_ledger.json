@@ -21492,6 +21492,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff",
+        "class": "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Separate-planar full-resolution YCbCr with (2,2) subsampling opens and verifies but fails during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff",
         "class": "ycbcr_subsampling_unsupported_pair_lzw_2x2",
         "contracts": {
@@ -27209,21 +27241,21 @@
       "ico": 30,
       "jpeg": 103,
       "png": 63,
-      "tiff": 132,
+      "tiff": 133,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 647,
+      "pillow_fixture": 648,
       "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 376,
+      "spec_violation": 377,
       "tolerated": 0,
       "truncated": 197
     },
-    "classes": 647,
+    "classes": 648,
     "formats": 8
   }
 }

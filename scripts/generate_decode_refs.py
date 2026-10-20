@@ -3335,6 +3335,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.tile.cdef_region_map_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "av1.tile.cdef_active_map_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.frame.assembled_cdef_active_map_reservation": {
             "decode_error_then_retry_succeeds"
         },

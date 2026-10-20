@@ -846,6 +846,9 @@ def fixtures() -> dict[
     full_resolution_separate = build_separate_full_resolution_lzw_tiff(
         4, 4, full_resolution_pixels
     )
+    separate_subsampling_unsupported = set_ifd_subsampling_values(
+        full_resolution_separate, 3, (2, 2)
+    )
     full_resolution_custom = build_full_resolution_lzw_tiff(
         4,
         4,
@@ -1762,6 +1765,13 @@ def fixtures() -> dict[
             {284: 2, 530: (1, 1), 531: 1},
             None,
         ),
+        "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff": (
+            separate_subsampling_unsupported,
+            (4, 4),
+            None,
+            {284: 2, 530: (2, 2), 531: 1},
+            None,
+        ),
         "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": (
             full_resolution_custom,
             (4, 4),
@@ -1964,6 +1974,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_and_reference_black_white_lzw_2x2.tiff": "c72ecf1c02ee1a18c9a7f41ae8917ce0668508de2555aee6172e486eb6103bb2",
             "ycbcr_full_resolution_lzw_1x1.tiff": "7a90e875697e13f98b23500bf9b4c9d5b83064b572daa102784bb84503cc167a",
             "ycbcr_separate_full_resolution_lzw_1x1.tiff": "49a0f6c148ab883d78a99fef5493eae9116a9e052113bf7b45409daa1d46c57c",
+            "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff": "7c8a656e6d7a72c19a284b19260f5bf021f406526a17606f4f36bfaa96426905",
             "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": "ec170a210ddaf4c27f3cc69810a68ee666f57eb77001c860b8558583011e8248",
             "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
             "ycbcr_subsampled_lzw_1x2_checkpoint_32x32.tiff": "5d939e561c664e1e067df3c30ed737d6fdc565c671903c283d49d2ba9a58c622",

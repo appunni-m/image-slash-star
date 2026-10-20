@@ -1449,6 +1449,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("av1.tile.cdef_active_map_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1TileCdefActiveMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "av1.frame.assembled_cdef_active_map_reservation",
                 "decode_error_then_retry_succeeds",
@@ -1669,6 +1675,9 @@ fn execute_fault_contract(
         ),
         "av1.tile.cdef_region_map_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 CDEF region map")
+        }
+        "av1.tile.cdef_active_map_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 CDEF active map")
         }
         "av1.frame.assembled_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled AV1 CDEF active map",
