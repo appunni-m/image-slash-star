@@ -917,8 +917,9 @@ jobs:
         required_job_start = (
             "  required-checks:\n"
             "    name: Required CI checks\n"
-            "    # Preserve failure aggregation, but let superseded runs release concurrency.\n"
-            "    if: always() && !cancelled()"
+            "    # Run the result gate after cancellation so canceled required lanes fail\n"
+            "    # this stable check instead of leaving a skipped, green required context.\n"
+            "    if: always()"
         )
 
         mutations = (
@@ -953,18 +954,16 @@ jobs:
             (
                 required_job_start,
                 required_job_start.replace(
-                    "always() && !cancelled()", "always()", 1
+                    "if: always()", "if: always() && !cancelled()", 1
                 ),
-                "CI required-checks job must run with if: "
-                "always() && !cancelled()",
+                "CI required-checks job must run with if: always()",
             ),
             (
                 required_job_start,
                 required_job_start.replace(
-                    "always() && !cancelled()", "success()", 1
+                    "if: always()", "if: success()", 1
                 ),
-                "CI required-checks job must run with if: "
-                "always() && !cancelled()",
+                "CI required-checks job must run with if: always()",
             ),
             (
                 "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n",

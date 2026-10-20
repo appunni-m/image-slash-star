@@ -362,8 +362,9 @@ jobs:
 
   required-checks:
     name: Required CI checks
-    # Preserve failure aggregation, but let superseded runs release concurrency.
-    if: always() && !cancelled()
+    # Run the result gate after cancellation so canceled required lanes fail
+    # this stable check instead of leaving a skipped, green required context.
+    if: always()
     needs:
       - fixture-integrity
       - quality
