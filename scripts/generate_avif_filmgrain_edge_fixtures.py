@@ -47,8 +47,10 @@ I444_SOURCE_SHA256 = "5e40ca71068fdd232d11f356103f53c1fdd7b94356fa91b0004d7307de
 I422_NAME = "portable_lossless_filmgrain_i422_64x64.avif"
 INACTIVE_REUSE_NAME = "animated_filmgrain_inactive_reference_reuse_i444_64x64.avif"
 NON_INCREASING_Y_POINTS_NAME = "malformed_filmgrain_y_point_non_increasing.avif"
+OVERLAP_NAME = "portable_lossless_filmgrain_i444_overlap_64x64.avif"
 FIXTURE_SHA256 = {
     I422_NAME: "7c0241226c98d663df8b704b60fabb22e625bf7b010ad194f41db4b80afa0344",
+    OVERLAP_NAME: "345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a",
     "malformed_filmgrain_y_point_count_15.avif": (
         "81be05bdc9f5004a0c8afbbad23cf94bed8b888affbb45a728d05600940fd444"
     ),
@@ -71,6 +73,9 @@ FIXTURE_SHA256 = {
 PILLOW_RGB_SHA256 = {
     I422_NAME: (
         "0683e77f414bf0c550f763d136cbedd24ce9e6fb521777243e702a2f05af2016",
+    ),
+    OVERLAP_NAME: (
+        "46bfc877578f36fc8d3b376c3ac41e6be9ff98bb14fda447a0b0baeeba0b97d7",
     ),
     INACTIVE_REUSE_NAME: (
         "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84",
@@ -295,6 +300,42 @@ def unequal_uv_presence(source: bytes) -> bytes:
     return replace_grain_sentence(source, sample, obu, encode_update_grain(grain))
 
 
+def enable_grain_overlap(source: bytes) -> bytes:
+    """Enable only the checked key-frame grain overlap flag in a full AVIF."""
+
+    sample, obu = frame_location(source)
+    frame = obu["frame_header"]
+    grain = frame["film_grain"]
+    if frame["frame_type"] != "key" or not grain["update"] or grain["overlap"]:
+        raise ValueError("source is not a key frame with overlap disabled on updated grain")
+
+    # The inspector's final two frame-header bits are overlap and clip_to_restricted_range.
+    overlap_bit = frame["header_bits"] - 2
+    if overlap_bit < frame["film_grain_start_bit"]:
+        raise ValueError("film-grain overlap flag is outside the parsed frame header")
+    changed = replace_field(source, obu, overlap_bit, 1, 0, 1)
+    changed_sample, changed_obu = frame_location(changed)
+    changed_frame = changed_obu["frame_header"]
+    expected_frame = deepcopy(frame)
+    expected_frame["film_grain"]["overlap"] = True
+    if changed_frame != expected_frame:
+        raise ValueError("overlap mutation changed fields beyond the overlap flag")
+    if len(changed) != len(source) or changed_sample["spans"] != sample["spans"]:
+        raise ValueError("overlap mutation changed AVIF sample geometry")
+
+    source_span = obu["payload_spans"][0]
+    changed_span = changed_obu["payload_spans"][0]
+    source_tile_offset = source_span["offset"] + obu["tile_group"]["data_bit"] // 8
+    changed_tile_offset = changed_span["offset"] + changed_obu["tile_group"]["data_bit"] // 8
+    source_tile = source[source_tile_offset:source_span["offset"] + source_span["length"]]
+    changed_tile = changed[
+        changed_tile_offset:changed_span["offset"] + changed_span["length"]
+    ]
+    if source_tile != changed_tile:
+        raise ValueError("overlap mutation changed the AV1 tile payload")
+    return changed
+
+
 def inactive_reference_reuse(source: bytes) -> bytes:
     """Disable key-frame grain while the inter frame reuses its listed reference.
 
@@ -350,7 +391,7 @@ def validate_malformed(name: str, data: bytes) -> None:
 
 
 def fixture_bytes() -> dict[str, bytes]:
-    """Regenerate all source encodes and construct the seven input-only cases."""
+    """Regenerate source encodes and construct the pinned film-grain cases."""
 
     i444 = encode_still(0x21108, "4:4:4")
     if i444 != encode_still(0x21108, "4:4:4") or sha256(i444) != I444_SOURCE_SHA256:
@@ -374,6 +415,7 @@ def fixture_bytes() -> dict[str, bytes]:
 
     _, obu = frame_location(i444)
     grain = obu["frame_header"]["film_grain"]
+    overlap = enable_grain_overlap(i444)
     # Key frames have apply_grain, a 16-bit seed, and then num_y_points.
     y_count_bit = obu["frame_header"]["film_grain_start_bit"] + 1 + 16
     # The U count follows Y points and chroma_scaling_from_luma, which is clear.
@@ -382,6 +424,7 @@ def fixture_bytes() -> dict[str, bytes]:
     u_count_bit = y_count_bit + 4 + 16 * len(grain["y_points"]) + 1
     fixtures = {
         I422_NAME: i422,
+        OVERLAP_NAME: overlap,
         "malformed_filmgrain_y_point_count_15.avif": replace_field(
             i444, obu, y_count_bit, 4, len(grain["y_points"]), 15
         ),
@@ -422,8 +465,10 @@ def fixture_bytes() -> dict[str, bytes]:
     return fixtures
 
 
-def write_avif_filmgrain_edge_fixtures(output_dir: Path) -> tuple[Path, ...]:
-    """Validate frozen inputs and live outcomes, then write all seven AVIF files."""
+def write_avif_filmgrain_edge_fixtures(
+    output_dir: Path, *, check: bool = False
+) -> tuple[Path, ...]:
+    """Validate frozen inputs and live outcomes, then write or check the AVIF files."""
 
     require_pinned_oracle()
     fixtures = fixture_bytes()
@@ -462,7 +507,11 @@ def write_avif_filmgrain_edge_fixtures(output_dir: Path) -> tuple[Path, ...]:
     paths = []
     for name, data in fixtures.items():
         path = output_dir / name
-        path.write_bytes(data)
+        if check:
+            if not path.exists() or path.read_bytes() != data:
+                raise RuntimeError(f"{path}: checked AVIF fixture differs or is missing")
+        else:
+            path.write_bytes(data)
         paths.append(path)
     return tuple(paths)
 
@@ -472,8 +521,13 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify the pinned fixture files without rewriting them",
+    )
     args = parser.parse_args()
-    for path in write_avif_filmgrain_edge_fixtures(args.output_dir):
+    for path in write_avif_filmgrain_edge_fixtures(args.output_dir, check=args.check):
         print(f"Wrote {path} ({path.stat().st_size} bytes, SHA-256 {FIXTURE_SHA256[path.name]})")
 
 

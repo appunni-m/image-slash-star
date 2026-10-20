@@ -6,6 +6,55 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## Full coverage baseline and AV1 film-grain overlap parity — 2026-10-20
+
+Refreshed the local all-feature coverage baseline on source revision
+`34c3930f2e7f6fdad102a421e15170fc2e202688`. The report is retained at
+`.coverage-mcp/local-evidence/20261020/main-full-34c3930f/coverage.json`
+(SHA-256
+`0b28133d95eb8c736f83dccc87cfbcf7eaea57a89c9031dade323c2e8716383b`). The
+run used:
+
+```text
+CARGO_INCREMENTAL=0 RUSTC_WRAPPER= PYTHON=.oracle-venv/bin/python CARGO_BUILD_JOBS=2 make coverage COVERAGE_REPORT=target/release-evidence/coverage-main-full-20261020.json
+```
+
+The all-feature coverage gate passed. The run passed 57/57 coverage-matrix
+tests, 7/7 decode-policy tests, 1/1 determinism test, 68/68 feature-gate tests,
+4/4 animation-loop tests, and the capability-table test. The full report
+measures 91,909/138,417 lines (66.4001%), 18,108/31,800 branches (56.9434%),
+5,079/8,855 functions (57.3574%), and 140,584/214,895 regions (65.4199%).
+Coverage MCP labels its source identity unverified and test attribution
+unknown; this is a fixed local exploration baseline, not a registered
+source/build receipt.
+
+Coverage MCP located uncovered outcomes in
+`src/codecs/avif/av1/film_grain.rs::overlapped_grain`. Added the public parity
+row `decode:avif:portable_lossless_filmgrain_i444_overlap_64x64` by enabling
+only the inspected AV1 overlap flag in the existing 64x64 all-lossless I444
+source. The generator confirms unchanged BMFF sample extents and all 15,555
+tile-payload bytes. The input is 15,960 bytes with SHA-256
+`345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a`; its
+12,288-byte Pillow RGB reference has SHA-256
+`46bfc877578f36fc8d3b376c3ac41e6be9ff98bb14fda447a0b0baeeba0b97d7`.
+
+The selected coverage-matrix run passed 1/1. Its LLVM report is retained at
+`.coverage-mcp/local-evidence/20261020/avif-filmgrain-overlap-34c3930f/coverage.json`
+(SHA-256
+`418c268e65838ac45a232cc52b119b894843c94b84f321721b5eb1fbafbe72b8`). The
+hit-bearing `overlapped_grain` specialization recorded 36,864 calls and both
+outcomes at its branch conditions. Coverage MCP still reports missing branch
+coordinates for another linked specialization. The incremental comparison
+with the full baseline is incomparable because the baseline's detailed branch
+data does not reconcile with its aggregate totals. No aggregate coverage gain
+or complete branch-closure claim is made.
+
+The parity matrix now contains 2,439 total rows: 1,938 decode / inspect /
+verify rows and 501 encode rows. Of those, 1,938 decode rows and 469 encode
+rows are active; the other 32 encode rows are planned. The separate
+fault-contract lane contains 72 rows. The coverage-origin inventory records
+189 exact `cfg(coverage)` guards across 28 Rust files.
+
 ## Unaligned TIFF YCbCr strips and CI gate hardening — 2026-10-20
 
 Added a Pillow-parity fixture for subsampled YCbCr TIFF strips whose
@@ -34,8 +83,8 @@ so this is coordinate evidence only. No full coverage campaign was run.
 `make workflows-check`, the focused workflow-policy regression test, fixture
 integrity, and the typed fault-contract validator passed.
 
-The current fixture matrix contains 2,438 total rows: 1,937 decode / inspect /
-verify rows and 501 encode rows. Of those, 1,937 decode rows and 469 encode
+The current fixture matrix contains 2,439 total rows: 1,938 decode / inspect /
+verify rows and 501 encode rows. Of those, 1,938 decode rows and 469 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7241,7 +7290,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `36a664301b26d9f0619604e8c1321a3ad7768c72d94e97142f3765f5bfceb4e4`; matrix `8242365ed939241aeda99bee15e3ee573763a12b886898183a2759622b94f6e1`.
+- Current fixture integrity only: manifest `8a714a88e98c13d07f3d491a54c63369f9ba58718c5422a09ba9d13d64cb11d0`; matrix `b545067d4e4838786bb70528de4e6e6a7d6d1da216bbb2a816ae9eaaa3fd16ad`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

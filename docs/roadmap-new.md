@@ -10,8 +10,8 @@ is not evidence that a later fix failed. No entry is silently removed here.
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 The latest complete local all-feature run passed 57/57 matrix tests and 68/68
-feature-gate tests, as part of 136 executed tests, on source commit
-`7fe6010a91b4b1732bf3f1f6fac99cdc418b4340`. Its report, exact totals, test
+feature-gate tests on source commit
+`34c3930f2e7f6fdad102a421e15170fc2e202688`. Its report, exact totals, test
 counts, and Coverage MCP attribution limits are recorded in
 [Evidence](EVIDENCE.md). The LLVM percentages below remain the historical
 managed baseline; they use a separate report and denominator.
@@ -32,9 +32,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 555 rows total, 555 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 556 rows total, 556 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,438 rows total, 1,937 active decode rows, 469 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 380 decode rows. Typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,439 rows total, 1,938 active decode rows, 469 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 380 decode rows. Typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

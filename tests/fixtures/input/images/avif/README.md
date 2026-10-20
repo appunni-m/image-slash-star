@@ -53,6 +53,7 @@ generation provenance follow.
 | `portable_lossless_monochrome_limited_alpha_12bit_16x16.avif` | Deterministic 16x16 12-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `27aed8594e5d60179e6596dd950800fdf43f6809038ed30c0b86aaf4c20ac3c7` | MIT/Apache-2.0 (repository-generated) |
 | `portable_i444_quality100_64x64.avif` | Deterministic 64x64 8-bit quality-100 RGB 4:4:4 key frame with fixed 64-pixel partitions | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, CICP 1/13/6 | `5ceb66b47bda43bec5c421222eeb3ef858c62702bc41833986fdf678f6867737` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_i444_64x64.avif` | Seeded 64x64 8-bit all-lossless RGB 4:4:4 key frame with film grain | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, DCT only, CICP 1/13/6, film-grain test enabled | `5e40ca71068fdd232d11f356103f53c1fdd7b94356fa91b0004d7307de4cbd25` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_filmgrain_i444_overlap_64x64.avif` | The pinned I444 film-grain source with only the AV1 overlap flag enabled, covering all 32x32 block-edge blends | `scripts/generate_avif_filmgrain_edge_fixtures.py`; source `portable_lossless_filmgrain_i444_64x64.avif`; set the inspected frame-header overlap bit; preserve sample extents and tile payload; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2 | `345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a` | MIT/Apache-2.0 (repository-generated) |
 | `malformed_filmgrain_y_point_non_increasing.avif` | Full-file I444 AVIF whose second film-grain Y point repeats the first point's x value | `scripts/generate_avif_filmgrain_edge_fixtures.py`; source `portable_lossless_filmgrain_i444_64x64.avif`; replace the checked second Y-point x field; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2 | `1a7811072b8e1e3b9ea0694aaf5415d61d00f19a4dcdbbcb0048f7fddd94fe71` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame using chroma scaling from luma for film grain | `scripts/generate_avif_filmgrain_chroma_from_luma_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, CICP 1/13/6, film-grain test enabled | `80c3a157f32f190a787588c48232113c4bbe915abd80812c5e0d1d62fd51c893` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_420_zero_y_points_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame whose update-grain syntax has zero Y points and omits conditional U/V points and coefficients | `scripts/generate_avif_filmgrain_zero_y_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; deterministic film-grain header rewrite | `c76ede4ac45599b182d023f8425744f09dc27e4011742d6295d3ec50e172ed9f` | MIT/Apache-2.0 (repository-generated) |
@@ -654,6 +655,17 @@ uses quality 100, speed 0, one thread, fixed 64×64 partitions, DCT-only
 transforms, CICP 1/13/6, and its film-grain test mode. The AV1 item is 8-bit
 full-resolution 4:4:4 and all-lossless. Its 12,288 Pillow RGB bytes have
 SHA-256 `44f85ee642e036ae8646b40b2a71643f1e74a27d2a5a6af719c938d8aba2dceb`.
+
+`portable_lossless_filmgrain_i444_overlap_64x64.avif` changes only the
+inspected frame-header overlap bit in that pinned source. The independent AV1
+OBU inspector confirms the updated grain syntax and unchanged sample geometry;
+the generator also checks that all 15,555 tile-payload bytes are identical.
+The fixture remains 15,960 bytes (SHA-256
+`345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a`). Its
+12,288 Pillow RGB bytes have SHA-256
+`46bfc877578f36fc8d3b376c3ac41e6be9ff98bb14fda447a0b0baeeba0b97d7`.
+Because the image spans four 32×32 grain blocks, decoding covers top-only,
+left-only, and top-left overlap blending.
 
 `portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif` starts from
 deterministic random RGB pixels (seed `0x4672`) encoded losslessly as I420 by
