@@ -115426,6 +115426,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_correction_buffer_flush_256x256.bin",
           "encoded_ref_bytes": 3228,
           "encoded_ref_sha256": "7bf0311dd950a11befc00859db41ae78298875a015be7958dcdafaf71c091b18",
@@ -115438,17 +115448,7 @@
             256
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -210183,6 +210183,25 @@
       },
       "fault": {
         "point": "jpeg.upsample.row_invalid_geometry",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fancy_upsample_row_short_stride",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
+      },
+      "fault": {
+        "point": "jpeg.upsample.row_short_stride",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

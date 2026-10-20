@@ -922,6 +922,20 @@ fault_contracts:
       point: jpeg.upsample.row_invalid_geometry
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_short_stride
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_short_stride
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
