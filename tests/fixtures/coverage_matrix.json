@@ -208102,6 +208102,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_0_method_0_capped_statistics.bin",
           "encoded_ref_bytes": 698,
           "encoded_ref_sha256": "66771f67573da043e1b72af996adf0d8b694ae86e03332369361be65ff305860",
@@ -208114,17 +208124,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_quality_0_method_0_large_frame_skip_sample",
@@ -208180,14 +208180,69 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy quality-zero method-zero encoding at the first quarter-sample size above 50 macroblocks",
+          "params": {
+            "lossless": false,
+            "quality": 0,
+            "method": 0
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_method0_sampling_boundary_204_macroblocks.png",
+          "source_sha256": "ed366fb0782fb533d08eb853fca3409488179a0d855ff6036b99cda0724b556f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks.bin",
+          "encoded_ref_bytes": 2218,
+          "encoded_ref_sha256": "02b3bde54171c43bee921746dd3398a6f0a35649f0735f2a376b31a9640749b3",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks.bin",
+          "ref_sha256": "9d57084ef1d52684be996976c25884afe3225d29948570e940116b293d0b7f3b",
+          "ref_bytes": 156672,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            192,
+            272
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ]
     }
   },
   "summary": {
-    "total_rows": 2470,
+    "total_rows": 2471,
     "decode_rows": 1957,
-    "encode_rows": 513,
+    "encode_rows": 514,
     "formats": 8,
     "assets_available": 1953,
     "decode_active": 1957,

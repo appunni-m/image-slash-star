@@ -41,8 +41,29 @@ its totals. No aggregate coverage gain or full-suite claim is made, and no
 full coverage campaign was run. These are ordinary input parity cases, not
 target-only fault contracts.
 
-The current public fixture matrix contains 2,470 total rows: 1,957 decode /
-inspect / verify rows and 513 encode rows. Of those, 1,957 decode rows and 481
+The follow-up row `enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks`
+uses a 192x272 RGB source (204 macroblocks). Method 0 samples 51 decisions at
+this size, the first sample count above the 50-macroblock cap; the 51st sampled
+macroblock has a deterministic high-frequency pattern. The source is generated
+by `scripts/generate_webp_method0_sampling_boundary_fixture.py` from the pinned
+`rgb.png` input. Pillow 12.2.0 emits 2,218 bytes (SHA-256
+`02b3bde54171c43bee921746dd3398a6f0a35649f0735f2a376b31a9640749b3`), and the
+selected all-feature run passed this row alone (1/1, four public encode calls,
+zero panics). Its one-row LLVM report observed 7,099/140,521 lines,
+609/32,044 branches, 481/8,971 functions, and 11,236/218,427 regions. Coverage
+MCP identified the `total > 200` false arm as unobserved in this one-row
+selection, while the prior 10-row selected report observed both arms. The
+selected-tests comparison found no newly observed branch locations; the
+incremental comparison is incomparable because the earlier report's branch
+detail does not reconcile with its totals. Both reports have unverified source
+identity and unknown test attribution. Keep this row for the exact public
+sampling-boundary regression contract; it does not establish marginal or
+aggregate coverage gain. The report is
+`target/release-evidence/selected/webp-method0-sampling-boundary-204-20261020.json`
+(SHA-256 `048ed9d35829a3ed4da16db92e2610bdf5c7b172934727a9d28246d082996548`).
+
+The current public fixture matrix contains 2,471 total rows: 1,957 decode /
+inspect / verify rows and 514 encode rows. Of those, 1,957 decode rows and 482
 encode rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows.
 
@@ -7745,7 +7766,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b0c2e8a11b661a62f3531e88d91fef711708cb1aca53c436818bfcba0c74c200`; matrix `092f60559f4a909589e281da382d8e6011ec106d651250dd147898019397439c`.
+- Current fixture integrity only: manifest `a71fd9f1988ca97bb3a600410d9b188d70b071ba12821b793c1aab15dcf367a8`; matrix `e27c22f6655fd66ed2bc14795bd792fe360e34b901e7785883f2994c8289f752`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

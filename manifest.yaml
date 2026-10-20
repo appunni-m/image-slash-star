@@ -5502,6 +5502,14 @@ formats:
         lossless: false
         quality: 0
         method: 0
+    - id: enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks
+      description: Lossy quality-zero method-zero encoding at the first quarter-sample size above 50 macroblocks
+      source_format: png
+      source_asset: webp_method0_sampling_boundary_204_macroblocks.png
+      params:
+        lossless: false
+        quality: 0
+        method: 0
   tiff:
     name: TIFF
     extensions:

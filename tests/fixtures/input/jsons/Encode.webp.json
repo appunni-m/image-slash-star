@@ -9510,6 +9510,57 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks",
+      "source_asset": "webp_method0_sampling_boundary_204_macroblocks.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "ed366fb0782fb533d08eb853fca3409488179a0d855ff6036b99cda0724b556f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_method0_sampling_boundary_204_macroblocks.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }
