@@ -1617,6 +1617,92 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "depth_1_1bit_odd_width",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 1,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_1bit_odd_width_png.bin",
+      "ref_bytes": 6,
+      "ref_sha256": "36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203",
+      "ref_mode": "1",
+      "ref_size": [
+        9,
+        3
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "depth_2",
       "status": "ok",
       "error_type": null,

@@ -4009,6 +4009,126 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossless_method_0_quality_25",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_quality_25.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_quality_25.bin",
+      "encoded_ref_bytes": 3638,
+      "encoded_ref_sha256": "90f3b669c6d09675a56cadb39a9bb794baa9899595fb09f6e4d8b787e485f588",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_method_0_quality_40",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_quality_40.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_quality_40.bin",
+      "encoded_ref_bytes": 3358,
+      "encoded_ref_sha256": "21af1c4ce50d605d46ea838a65660bb4219b9bee2d47fb21deb1718ea69d13d5",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_method_0_quality_60",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_quality_60.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_quality_60.bin",
+      "encoded_ref_bytes": 3276,
+      "encoded_ref_sha256": "d9d39a23393d2418af4eea5bf80cac9fbcfff5a5ede79a126ec600c5bc3a18c9",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossless_method_0_run_cap",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_run_cap.bin",
       "ref_bytes": 13068,

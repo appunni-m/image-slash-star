@@ -2698,6 +2698,7 @@ formats:
       description: 1-bit grayscale
       test_assets:
       - 1bit.png
+      - 1bit_odd_width.png
     - id: depth_2
       description: 2-bit grayscale
       test_assets:
@@ -5092,6 +5093,15 @@ formats:
     - id: enc_lossless_method_0
       description: VP8L method zero selects its low-effort lossless transform path
       params: {'lossless': True, 'quality': 80, 'method': 0}
+    - id: enc_lossless_method_0_quality_25
+      description: VP8L method zero at quality twenty-five selects the width-scaled 16-pixel search window
+      params: {'lossless': True, 'quality': 25, 'method': 0}
+    - id: enc_lossless_method_0_quality_40
+      description: VP8L method zero at quality forty selects the width-scaled 64-pixel search window
+      params: {'lossless': True, 'quality': 40, 'method': 0}
+    - id: enc_lossless_method_0_quality_60
+      description: VP8L method zero at quality sixty selects the width-scaled 256-pixel search window
+      params: {'lossless': True, 'quality': 60, 'method': 0}
     - id: enc_lossless_method_0_run_cap
       description: VP8L method zero checkpoints a 4,096-pixel run from 4,099 equal source pixels and clamps it at the 4,095-pixel maximum
       source_format: png

@@ -37,10 +37,84 @@ localized branch evidence, not an aggregate coverage-gain claim. These cases
 are reachable through normal image inputs and remain Pillow parity rows; no
 fault-contract row is appropriate.
 
-The fixture matrix contains 2,462 rows: 1,956 decode / inspect / verify rows
-and 506 encode rows. Of those, 1,956 decode rows and 474 encode rows are active;
+The fixture matrix contains 2,466 rows: 1,957 decode / inspect / verify rows
+and 509 encode rows. Of those, 1,957 decode rows and 477 encode rows are active;
 the other 32 encode rows are planned. The separate fault-contract lane contains
 72 rows.
+
+## WebP method-zero quality-window parity — 2026-10-20
+
+Added active Pillow encode rows `enc_lossless_method_0_quality_40` and
+`enc_lossless_method_0_quality_60` using the existing 128x128 `lossless.webp`
+source (SHA-256
+`20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2`). Both
+select `lossless: true` and `method: 0`, at qualities 40 and 60. With Pillow
+12.2.0, Rust encoding matched the exact reference streams: 3,358 bytes at
+quality 40 (SHA-256
+`21af1c4ce50d605d46ea838a65660bb4219b9bee2d47fb21deb1718ea69d13d5`) and
+3,276 bytes at quality 60 (SHA-256
+`d9d39a23393d2418af4eea5bf80cac9fbcfff5a5ede79a126ec600c5bc3a18c9`). Both
+re-decoded to the exact 128x128 RGB pixel reference.
+
+The focused two-row selection passed both new cases and made eight public
+encode calls. A follow-up selection including the existing quality-80 control
+passed 3/3 rows and made 12 public encode calls; its report is
+`target/release-evidence/selected/webp-method0-quality-windows-control.json`
+(SHA-256
+`362613df5133960f80abccdeb71bdc91e3449dc917c0a3c503a4a43992a45e98`). The
+active LLVM function record counted both outcomes at `backward_refs.rs:307`
+(6 true, 12 false) and `:309` (6 true, 6 false), plus six true outcomes at
+`:311`. Coverage MCP also returned missing groups for duplicate zero-hit
+function records at these coordinates. Its comparison with
+`target/release-evidence/coverage-main-full-20261020.json` was incomparable
+because the baseline branch detail does not match its reported totals; its
+source/build identity is unverified and test attribution unknown. These remain
+selected parity and branch-location evidence, not an aggregate coverage-gain
+claim.
+
+## WebP method-zero quality-25 window parity — 2026-10-20
+
+Added active Pillow encode row `enc_lossless_method_0_quality_25` on the same
+128x128 RGB `lossless.webp` source. At `lossless: true`, `method: 0`, and
+`quality: 25`, Pillow 12.2.0 produces a 3,638-byte WebP with SHA-256
+`90f3b669c6d09675a56cadb39a9bb794baa9899595fb09f6e4d8b787e485f588`; the
+re-decoded RGB reference is 49,152 bytes with SHA-256
+`8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131`.
+
+The focused selected case passed 1/1 with exact encoded-byte and pixel parity.
+Its report is `target/release-evidence/selected/webp-method0-quality-25.json`
+(SHA-256
+`466d08a74507cb1010c8474a1bb2f07470337c6884bec70009ae91840975e351`). The
+active `fill_hash_chain_impl::<true>` record counted six false outcomes at the
+`quality > 25` predicate on `backward_refs.rs:311`, selecting the `width << 4`
+search window. Coverage MCP returned that false outcome as observed in one
+function record while retaining duplicate zero-hit groups; its incremental
+comparison with the saved full report was incomparable. This is local selected
+evidence only.
+
+## Direct odd-width 1-bit PNG decode parity — 2026-10-20
+
+Added Decode row `decode:png:depth_1_1bit_odd_width` for the existing complete
+9x3 mode `1` `1bit_odd_width.png` fixture, previously used only for encoding.
+The source SHA-256 is
+`ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675`; its six
+Pillow pixel bytes have SHA-256
+`36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203`. The
+odd row width exercises public unpacking of the ninth 1-bit pixel before the
+seven unused tail bits in each row.
+
+The selected Decode row and the existing `encode:png:enc_1bit_odd_width` row
+both passed exact pixel parity. The command and report are
+`PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:png:depth_1_1bit_odd_width encode:png:enc_1bit_odd_width' SELECTED_COVERAGE_REPORT=target/release-evidence/selected/png-one-bit-odd-width-roundtrip.json`
+and `target/release-evidence/selected/png-one-bit-odd-width-roundtrip.json`
+(SHA-256
+`7aac9adf9c0bc71f044c3cc5b8d98400914c95485aed2788aa9cba63d181022f`). Coverage
+MCP returned no missing branch groups for `unpack_into` at line 1774. Its query
+for `pack_one_bit` at line 1900 reported a duplicate zero-hit function record,
+while the selected LLVM export contains nonzero branch counters for an active
+function record there. The selected report and saved full baseline have no
+source/build receipts, and their incremental comparison is incomparable; this
+is localized evidence, not an aggregate coverage-gain claim.
 
 ## JPEG progressive correction-buffer parity — 2026-10-20
 
@@ -69,8 +143,8 @@ claim.
 
 The branch is reached through ordinary public encoding, so this case remains
 in Pillow parity and does not need a target-only fault-contract row. The
-fixture matrix now contains 2,462 total rows: 1,956 decode / inspect / verify rows and 506 encode rows.
-Of those, 1,956 decode rows and 474 encode rows are active; the other 32 encode
+fixture matrix now contains 2,466 total rows: 1,957 decode / inspect / verify rows and 509 encode rows.
+Of those, 1,957 decode rows and 477 encode rows are active; the other 32 encode
 rows are planned. The separate fault-contract lane contains 72 rows.
 
 ## AVIF odd-size I420 film-grain chroma parity — 2026-10-20
@@ -7600,7 +7674,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `91522e23d1ba4649c1994d8e6c18fccbd75d3a710353834dfb2d141ebf31aa96`; matrix `ddbb1357638808de12e60c062555037e90eb5f9c4fae6139b933084e95b14cb6`.
+- Current fixture integrity only: manifest `b412d1c8f24ee03b0223f1164e1694d4574302fc634251e249f04f8bdab546d7`; matrix `20f4ac77486578565bbcdcd09061276c84415fbae8871c1e09f9b88872ecfcaa`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
