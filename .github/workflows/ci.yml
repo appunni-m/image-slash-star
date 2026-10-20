@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "codex/**"]
+    branches: [main]
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 # Keep main pushes and manual full-coverage dispatches in unique groups so
-# newer runs cannot replace pending release evidence. Superseded working-branch
-# and pull-request runs can be canceled safely.
+# newer runs cannot replace pending release evidence. Superseded pull-request
+# runs can be canceled safely.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.ref == 'refs/heads/main' && github.event_name == 'push' && github.sha || 'shared') }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
