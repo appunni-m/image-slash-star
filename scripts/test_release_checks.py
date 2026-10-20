@@ -1016,7 +1016,7 @@ jobs:
                     violations,
                 )
 
-    def test_pages_artifacts_are_unique_per_attempt_and_match_deployments(self) -> None:
+    def test_pages_artifact_handoff_survives_failed_job_retries(self) -> None:
         workflow_path = (
             Path(__file__).resolve().parent.parent
             / ".github"
@@ -1027,28 +1027,47 @@ jobs:
         self.assertEqual(check_workflows.artifact_upload_rerun_violations(workflow), [])
 
         static_upload_name = workflow.replace(
-            "name: github-pages-${{ github.run_attempt }}",
+            "name: ${{ steps.pages-artifact.outputs.name }}",
             "name: github-pages",
             1,
         )
         self.assertTrue(
             any(
-                violation.startswith(
-                    "GitHub Pages artifact name must include github.run_attempt"
-                )
+                "GitHub Pages upload must use the attempt-specific build output"
+                in violation
                 for violation in check_workflows.artifact_upload_rerun_violations(
                     static_upload_name
                 )
             )
         )
 
+        fixed_attempt_name = workflow.replace(
+            'name=github-pages-${GITHUB_RUN_ATTEMPT}',
+            'name=github-pages',
+            1,
+        )
+        self.assertIn(
+            "GitHub Pages artifact name must include GITHUB_RUN_ATTEMPT",
+            check_workflows.artifact_upload_rerun_violations(fixed_attempt_name),
+        )
+
+        hidden_job_output = workflow.replace(
+            "pages_artifact: ${{ steps.pages-artifact.outputs.name }}",
+            "pages_artifact: github-pages",
+            1,
+        )
+        self.assertIn(
+            "GitHub Pages attempt-specific name must be exposed as a build output",
+            check_workflows.artifact_upload_rerun_violations(hidden_job_output),
+        )
+
         mismatched_deployment = workflow.replace(
-            "artifact_name: github-pages-${{ github.run_attempt }}",
+            "artifact_name: ${{ needs.build.outputs.pages_artifact }}",
             "artifact_name: github-pages",
             1,
         )
         self.assertIn(
-            "GitHub Pages deployment artifact_name must match the uploaded artifact",
+            "GitHub Pages deployment must use the successful build's artifact output",
             check_workflows.artifact_upload_rerun_violations(mismatched_deployment),
         )
 

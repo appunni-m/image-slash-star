@@ -1612,6 +1612,8 @@ def artifact_upload_rerun_violations(contents: str) -> list[str]:
     violations = []
     pages_artifact_names = []
     pages_deployment_names = []
+    pages_step_output = "${{ steps.pages-artifact.outputs.name }}"
+    pages_job_output = "${{ needs.build.outputs.pages_artifact }}"
     steps = re.finditer(
         r"(?ms)^      - (?P<header>[^\n]*)\n"
         r"(?P<body>.*?)(?=^      - |\Z)",
@@ -1631,10 +1633,9 @@ def artifact_upload_rerun_violations(contents: str) -> list[str]:
         artifact_name = artifact_match.group(1) if artifact_match is not None else "<unnamed>"
         if uses.startswith("actions/upload-pages-artifact@"):
             pages_artifact_names.append(artifact_name)
-            if "${{ github.run_attempt }}" not in artifact_name:
+            if artifact_name.strip() != pages_step_output:
                 violations.append(
-                    "GitHub Pages artifact name must include github.run_attempt "
-                    "for same-run retries"
+                    "GitHub Pages upload must use the attempt-specific build output"
                 )
         elif uses.startswith("actions/deploy-pages@"):
             deployment_match = re.search(
@@ -1657,11 +1658,24 @@ def artifact_upload_rerun_violations(contents: str) -> list[str]:
     if len(pages_artifact_names) > 1:
         violations.append("workflow must upload exactly one GitHub Pages artifact")
     if pages_artifact_names:
-        artifact_name = pages_artifact_names[0].strip()
+        if f"pages_artifact: {pages_step_output}" not in contents:
+            violations.append(
+                "GitHub Pages attempt-specific name must be exposed as a build output"
+            )
+        if not re.search(
+            r'(?m)^      - name: Name the Pages artifact for this run attempt\n'
+            r'        id: pages-artifact\n'
+            r'        run: echo "name=github-pages-\$\{GITHUB_RUN_ATTEMPT\}" '
+            r'>> "\$GITHUB_OUTPUT"$',
+            contents,
+        ):
+            violations.append(
+                "GitHub Pages artifact name must include GITHUB_RUN_ATTEMPT"
+            )
         for deployment_name in pages_deployment_names:
-            if deployment_name != artifact_name:
+            if deployment_name != pages_job_output:
                 violations.append(
-                    "GitHub Pages deployment artifact_name must match the uploaded artifact"
+                    "GitHub Pages deployment must use the successful build's artifact output"
                 )
     return violations
 
