@@ -22,7 +22,11 @@ from generate_av1_sequence_refs import (
     LIBAVIF_COMMIT, artifact_records, digest_file, git_tree_digest,
     resolve_tool, run, sha256, text_output, write_json,
 )
-from avif_sample_table_fixtures import stts_timing_variants, zero_stts_sample_delta
+from avif_sample_table_fixtures import (
+    alpha_track_duration_mismatch,
+    stts_timing_variants,
+    zero_stts_sample_delta,
+)
 from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -312,6 +316,7 @@ STTS_CASES = {
         "stts_sample_deltas": [1, 2],
     },
 }
+ALPHA_TIMING_CASES = {"sequence_alpha_duration_mismatch"}
 OBSERVER = r'''
 #include <avif/avif.h>
 #include <dlfcn.h>
@@ -411,6 +416,8 @@ def collect(bundle, observe, only=None):
     originals, records = {}, []
     if only in STTS_CASES:
         fixtures = [("animated", FIXTURES["animated"])]
+    elif only in ALPHA_TIMING_CASES:
+        fixtures = [("highdepth", FIXTURES["highdepth"])]
     else:
         fixtures = FIXTURES.items() if only is None else [(only, FIXTURES[only])]
     for name, (filename, expected_hash) in fixtures:
@@ -419,7 +426,7 @@ def collect(bundle, observe, only=None):
         if sha256(data) != expected_hash:
             raise RuntimeError(f"pinned {name} source changed")
         originals[name] = data
-        if only in STTS_CASES:
+        if only in STTS_CASES or only in ALPHA_TIMING_CASES:
             continue
         record = pillow_observation(data, bundle / "pixels" / name)
         if record["status"] != "ok" or record != pillow_observation(data):
@@ -468,6 +475,21 @@ def collect(bundle, observe, only=None):
             data = mutate(originals["animated"], **parameters)
         mutation = STTS_CASES[name] if name in STTS_CASES else parameters
         records.append((name, "animated", data, mutation))
+    if only in ALPHA_TIMING_CASES or only is None:
+        source = originals["highdepth"]
+        derived = alpha_track_duration_mismatch(source)
+        fixture_path = ROOT / "tests/fixtures/input/images/avif/sequence_alpha_duration_mismatch.avif"
+        data = fixture_path.read_bytes()
+        if data != derived:
+            raise RuntimeError("AVIF alpha timing fixture differs from its pinned mutation")
+        records.append(
+            (
+                "sequence_alpha_duration_mismatch",
+                "highdepth",
+                data,
+                {"track": "auxiliary alpha", "stts_sample_delta": 2},
+            )
+        )
     if only is None:
         records.append(("alpha_loop_disagreement", "highdepth",
                         mutate(originals["highdepth"], track=1, flags=0), {"track": 1, "flags": 0}))
@@ -563,8 +585,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--only",
-        choices=sorted((*FIXTURES, *STTS_CASES)),
-        help="collect one unchanged fixture or one stts timing-table mutation",
+        choices=sorted((*FIXTURES, *STTS_CASES, *ALPHA_TIMING_CASES)),
+        help="collect one unchanged fixture or one timing-table mutation",
     )
     args = parser.parse_args()
     output, source = args.output.resolve(), args.libavif_source.resolve()

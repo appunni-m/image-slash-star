@@ -9071,6 +9071,12 @@ formats:
       - 10bit.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: sequence_alpha_duration_mismatch
+      description: Animated AVIF whose auxiliary alpha timing differs while Pillow uses color-track frame durations and pixels
+      test_assets:
+      - sequence_alpha_duration_mismatch.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: high_bitdepth_still_10bit_444_lossless
       description: Single-frame 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
       test_assets:

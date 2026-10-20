@@ -309,19 +309,12 @@ fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> Codec
             "AVIF sequence timescale is zero".to_owned(),
         ));
     }
-    if let Some(alpha) = &sequence.alpha {
-        if alpha.samples.len() != sequence.color.samples.len() {
-            return Err(CodecError::Malformed(
-                "AVIF sequence color and alpha sample counts differ".to_owned(),
-            ));
-        }
-        for (color, alpha) in sequence.color.samples.iter().zip(&alpha.samples) {
-            if color.duration != alpha.duration {
-                return Err(CodecError::Malformed(
-                    "AVIF sequence color and alpha durations differ".to_owned(),
-                ));
-            }
-        }
+    if let Some(alpha) = &sequence.alpha
+        && alpha.samples.len() != sequence.color.samples.len()
+    {
+        return Err(CodecError::Malformed(
+            "AVIF sequence color and alpha sample counts differ".to_owned(),
+        ));
     }
     Ok(())
 }

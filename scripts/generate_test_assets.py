@@ -12244,9 +12244,23 @@ def write_avif_identity_color_matrix_error_fixture(directory):
     )
 
 
+def generate_avif_sequence_alpha_duration_mismatch_fixture():
+    """Change only the auxiliary alpha track's duration in the pinned sequence."""
+    source_path = OUT / "avif" / "10bit.avif"
+    source = source_path.read_bytes()
+    from avif_sample_table_fixtures import alpha_track_duration_mismatch
+
+    candidate = alpha_track_duration_mismatch(source)
+
+    fixture = OUT / "avif" / "sequence_alpha_duration_mismatch.avif"
+    fixture.write_bytes(candidate)
+    return fixture
+
+
 def gen_avif():
     d = OUT / "avif"
     d.mkdir(parents=True, exist_ok=True)
+    generate_avif_sequence_alpha_duration_mismatch_fixture()
     write_avif_frame_id_width_error_fixture(d)
     write_avif_identity_color_matrix_error_fixture(d)
     from PIL import _avif, features
@@ -12415,12 +12429,14 @@ def gen_avif():
         ):
             raise RuntimeError("Pillow rICC fixture differs from the prof control")
 
-    forbidden_422_source = d / "10bit.avif"
-    forbidden_422_partition = bytearray(forbidden_422_source.read_bytes())
-    if hashlib.sha256(forbidden_422_partition).hexdigest() != (
+    high_bitdepth_source = d / "10bit.avif"
+    high_bitdepth_source_bytes = high_bitdepth_source.read_bytes()
+    if hashlib.sha256(high_bitdepth_source_bytes).hexdigest() != (
         "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
     ):
         raise RuntimeError("forbidden 4:2:2 partition source differs")
+
+    forbidden_422_partition = bytearray(high_bitdepth_source_bytes)
     original_422_tile = bytes.fromhex("00e234fe35f6ba4026a9e0b77e80")
     if forbidden_422_partition[2047:2061] != original_422_tile:
         raise RuntimeError("forbidden 4:2:2 partition tile moved")
@@ -19540,6 +19556,11 @@ def main():
         help="generate only the qindex-4 following Horizontal16x8 chroma fixture",
     )
     parser.add_argument(
+        "--avif-sequence-alpha-duration-mismatch",
+        action="store_true",
+        help="generate only the AVIF alpha-track duration parity fixture",
+    )
+    parser.add_argument(
         "--tiff-lzw-midstream-clear-width-reset",
         action="store_true",
         help="generate only the TIFF LZW mid-stream CLEAR parity fixture",
@@ -19555,9 +19576,12 @@ def main():
         help="generate only the separate-planar RGB invalid Deflate tile fixture",
     )
     args = parser.parse_args()
-    selected_avif_fixture = (
-        args.avif_iinf_entry_count_zero or args.avif_h16x8_following_chroma
+    selected_avif_fixtures = (
+        args.avif_iinf_entry_count_zero,
+        args.avif_h16x8_following_chroma,
+        args.avif_sequence_alpha_duration_mismatch,
     )
+    selected_avif_fixture = any(selected_avif_fixtures)
     selected_tiff_fixture = (
         args.tiff_lzw_midstream_clear_width_reset
         or args.tiff_planar_short_deflate_tile
@@ -19575,7 +19599,7 @@ def main():
         )
         if sum(selected_tiff_options) > 1:
             parser.error("focused TIFF fixture options cannot be combined")
-        if args.avif_iinf_entry_count_zero and args.avif_h16x8_following_chroma:
+        if sum(selected_avif_fixtures) > 1:
             parser.error("focused AVIF fixture options cannot be combined")
         if args.tiff_lzw_midstream_clear_width_reset:
             fixture = OUT / "tiff" / "lzw_midstream_clear_width_reset.tiff"
@@ -19607,9 +19631,12 @@ def main():
         elif args.avif_iinf_entry_count_zero:
             gen_avif_iinf_entry_count_zero()
             print("Generated AVIF iinf zero-count parity input")
-        else:
+        elif args.avif_h16x8_following_chroma:
             fixture = generate_avif_h16x8_following_chroma_fixture()
             print(f"Generated AVIF H16x8 following-chroma fixture: {fixture}")
+        else:
+            fixture = generate_avif_sequence_alpha_duration_mismatch_fixture()
+            print(f"Generated AVIF alpha timing fixture: {fixture}")
         return
     selected = [args.format] if args.format else generators
     for format_name in selected:

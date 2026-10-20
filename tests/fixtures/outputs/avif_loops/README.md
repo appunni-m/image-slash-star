@@ -1,9 +1,9 @@
 # Native AVIF repetition evidence
 
-This bundle records 106 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. Ninety-eight accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 334 hashed artifacts total
-12,154,708 bytes, including 106 inputs, the compiled observer source, and
+This bundle records 107 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. Ninety-nine accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 335 hashed artifacts total
+12,157,252 bytes, including 107 inputs, the compiled observer source, and
 11,574,428 bytes of Pillow-decoded frame outputs. Mutation cases share the
 original frame artifacts; each observation records complete per-frame pixel
 hashes and durations.
@@ -157,6 +157,10 @@ u32::MAX]` and deltas `[1, 2]` wraps its cumulative `u32` count; it reports
 durations 33 ms then four at 67 ms while preserving all five pixels. That
 1,243-byte input adjusts enclosing box sizes and the `stco`/`iloc` offsets but
 keeps the original media payload bytes.
+The `sequence_alpha_duration_mismatch` input changes only the auxiliary alpha
+track's five-sample delta from one to two. Pinned libavif and Pillow still decode
+all five RGBA frames; Pillow reports the color track's 1,000 ms duration and
+the exact frame pixels remain unchanged.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is

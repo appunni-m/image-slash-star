@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import struct
 from pathlib import Path
 
-from inspect_avif_bitstreams import children, parse_boxes, unique_box
+from inspect_avif_bitstreams import children, parse_boxes, parse_track, unique_box
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -13,6 +14,8 @@ SOURCE_PATH = ROOT / "tests/fixtures/input/images/avif/animated.avif"
 OUTPUT_PATH = ROOT / "tests/fixtures/input/images/avif/animated_stts_zero_delta.avif"
 SOURCE_SHA256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
 OUTPUT_SHA256 = "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105"
+ALPHA_TIMING_SOURCE_SHA256 = "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
+ALPHA_TIMING_VARIANT_SHA256 = "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d"
 STTS_BOX_OFFSET = 883
 STTS_ENTRY_COUNT_OFFSET = 895
 STTS_SAMPLE_COUNT_OFFSET = 899
@@ -94,6 +97,59 @@ def zero_stts_sample_delta(source: bytes) -> bytes:
     ]
     if changed != [SAMPLE_DELTA_OFFSET + 3]:
         raise ValueError("zero-delta mutation changed bytes outside the sample_delta field")
+    return result
+
+
+def alpha_track_duration_mismatch(source: bytes) -> bytes:
+    """Change the pinned sequence's auxiliary alpha sample delta from 1 to 2."""
+    if hashlib.sha256(source).hexdigest() != ALPHA_TIMING_SOURCE_SHA256:
+        raise ValueError("AVIF high-bit-depth sequence source differs from its pin")
+
+    movie = unique_box(parse_boxes(source, 0, len(source)), b"moov")
+    tracks = [
+        (track, parse_track(source, track))
+        for track in children(source, movie)
+        if track.kind == b"trak"
+    ]
+    color_track_ids = {
+        track_info["track_id"]
+        for _, track_info in tracks
+        if track_info["handler"] in ("pict", "vide")
+    }
+    alpha_tracks = [
+        track
+        for track, track_info in tracks
+        if track_info["handler"] == "auxv"
+        and track_info["aux_for_track_id"] in color_track_ids
+    ]
+    if len(alpha_tracks) != 1:
+        raise ValueError(
+            f"expected one auxiliary alpha track, found {len(alpha_tracks)}"
+        )
+
+    alpha_track_boxes = children(source, alpha_tracks[0])
+    alpha_mdia = unique_box(alpha_track_boxes, b"mdia")
+    alpha_minf = unique_box(children(source, alpha_mdia), b"minf")
+    alpha_stbl = unique_box(children(source, alpha_minf), b"stbl")
+    alpha_stts = unique_box(children(source, alpha_stbl), b"stts")
+    expected_timing = bytes.fromhex("00000000000000010000000500000001")
+    if source[alpha_stts.payload_start : alpha_stts.end] != expected_timing:
+        raise ValueError("AVIF alpha timing source differs from its pinned table")
+
+    output = bytearray(source)
+    struct.pack_into(">I", output, alpha_stts.payload_start + 12, 2)
+    result = bytes(output)
+    if len(result) != len(source) or hashlib.sha256(result).hexdigest() != (
+        ALPHA_TIMING_VARIANT_SHA256
+    ):
+        raise ValueError("AVIF alpha timing variant differs from its pinned output")
+    changed = [
+        index
+        for index, (before, after) in enumerate(zip(source, result))
+        if before != after
+    ]
+    if changed != [alpha_stts.payload_start + 15]:
+        raise ValueError("AVIF alpha timing mutation changed unexpected bytes")
     return result
 
 

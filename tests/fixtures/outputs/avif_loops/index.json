@@ -467,13 +467,39 @@
       "collection_index_sha256": "ef1b0e3655606513b0d18d977cfe3b153ea9dad8c6c81e2cd4d3d76e4298112a",
       "generator_sha256": "c06f3a827c27e5b18b0d28af57e87fa57bd628d46ff36fab4d6f583009a51f9a",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "1a9727327666319521a54229bd42469043296419c7b62fc3fb3b89ead629c633",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "sequence_alpha_duration_mismatch"
+      ],
+      "collection_index_sha256": "73f2f3f7daa4fa9126cf1f0849d8c5a0965df4ed473d71e4c955e99c52ae22bb",
+      "generator_sha256": "b1886ebfa78ab3353c7f85e143189f3a32d27200c7ba7be4ee3ba32da0bfebf0",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 13787,
+      "bytes": 14064,
       "path": "README.md",
-      "sha256": "e10604d685baac156e2e68c8d97c4b1d00ceb5d5a2936af181cb73ca48b0de4d"
+      "sha256": "9eacc965b249e1b2450cb7de3a54555901f0e50f52e2ad9e8ba59f16967d6c25"
     },
     {
       "bytes": 2267,
@@ -959,6 +985,11 @@
       "bytes": 1235,
       "path": "inputs/repeating_v0.avif",
       "sha256": "28771d1433f3a750109704ed0b7e098be36b1fabd88deb191a3546ebc717d413"
+    },
+    {
+      "bytes": 2267,
+      "path": "inputs/sequence_alpha_duration_mismatch.avif",
+      "sha256": "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d"
     },
     {
       "bytes": 1235,
@@ -8752,6 +8783,90 @@
       "repeat_equal": true,
       "source": "animated",
       "source_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+    },
+    {
+      "input_bytes": 2267,
+      "input_path": "inputs/sequence_alpha_duration_mismatch.avif",
+      "input_sha256": "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d",
+      "media_payloads_equal": true,
+      "mutation": {
+        "stts_sample_delta": 2,
+        "track": "auxiliary alpha"
+      },
+      "name": "sequence_alpha_duration_mismatch",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 16384,
+            "duration_ms": 1000,
+            "index": 0,
+            "mode": "RGBA",
+            "sha256": "cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 16384,
+            "duration_ms": 1000,
+            "index": 1,
+            "mode": "RGBA",
+            "sha256": "a526b8f55554f37e72a092738c1ea964ea3b6d529a0fc24f036fabed3c8cb51f",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 16384,
+            "duration_ms": 1000,
+            "index": 2,
+            "mode": "RGBA",
+            "sha256": "e5adf69a2e6c5e5912b0083b87dc2b12b9113c36653483da3461bfb64db51061",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 16384,
+            "duration_ms": 1000,
+            "index": 3,
+            "mode": "RGBA",
+            "sha256": "2de187c245387de0486104c8e51653d6277268dacf32ee0e3f7f888d521b2e55",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 16384,
+            "duration_ms": 1000,
+            "index": 4,
+            "mode": "RGBA",
+            "sha256": "97baa972654b05a76b3e53bf221106a6cd7f85394b8e4f918066466b08b4b89f",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "highdepth",
+      "source_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
     }
   ],
   "incremental_collections": [

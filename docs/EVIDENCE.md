@@ -6,6 +6,44 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## AVIF auxiliary-alpha duration parity — 2026-10-20
+
+Added active Pillow parity row
+`decode:avif:sequence_alpha_duration_mismatch`. The input is derived from the
+existing 10-bit AVIF sequence by changing only the auxiliary alpha track's
+sample duration from 1 to 2; its sample payloads and color track are unchanged.
+The generated input is 2,267 bytes with SHA-256
+`b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d`.
+Pillow 12.2.0 accepts the 64×64 RGBA sequence and yields five 16,384-byte
+frames, each with a 1,000 ms duration. The public decoder previously rejected
+this input solely because corresponding color and auxiliary-alpha sample
+durations differ; the decoder now keeps the sample-count and track-timescale
+checks while allowing Pillow-compatible duration differences.
+
+The exact selected parity case passed 1/1 after the fix using:
+
+```text
+PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:avif:sequence_alpha_duration_mismatch' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/20261020/sequence-alpha-timing-final.json
+```
+
+The selected LLVM report is retained at
+`.coverage-mcp/local-evidence/20261020/sequence-alpha-timing-final.json` (SHA-256
+`ed93cf3ead23150f44100c598cbb2a7227d7425eec6b2d16cb6681b519efabcd`).
+The local receipt records the selected case passing; Coverage MCP labels source
+identity unverified and test attribution unknown, so this report is not used to
+claim aggregate coverage gain. Incremental comparison with the retained full
+baseline is incomparable because baseline branch detail does not match its
+reported totals. Pillow supplies exact frame pixels and the independent
+libavif observation supplies loop semantics. This parity case tests accepted
+public input behavior; it does not claim support for every AVIF track
+arrangement.
+
+The current fixture matrix contains 2,445 total rows: 1,942 decode / inspect /
+verify rows and 503 encode rows. Of those, 1,942 decode rows and 471 encode
+rows are active; the other 32 encode rows are planned. The separate
+fault-contract lane contains 72 rows. The coverage-origin inventory records
+189 exact `cfg(coverage)` guards across 28 Rust files.
+
 ## AVIF version-1 item-reference alpha parity — 2026-10-20
 
 Added active public parity row
@@ -7406,7 +7444,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b41c08c0a746d9a4ef8aaebd635b6805cb3d12c48e7c23d4deae59577dcc9e6f`; matrix `4bba518af49b575d3a9b7433696a068eb4dd4567a16c500f1e4ab346664d656f`.
+- Current fixture integrity only: manifest `4bdc0da0a93a650f34c2d6144009a03b6913fcc98553326efdfde452172ea3ab`; matrix `f38d91675ff79c057db3603114f1cf427601185095c8e31a89665f39afa9dce1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
