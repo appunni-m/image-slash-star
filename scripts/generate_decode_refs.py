@@ -1321,6 +1321,14 @@ def validate_tiff_claim(case_id, asset_name, data):
             raise RuntimeError("TIFF is not un-sub-sampled baseline YCbCr")
         ycbcr_lzw_claims = {
             "ycbcr_subsampled_lzw_2x2": ((4, 4), 4, (2, 2), 1, 1),
+            "ycbcr_subsampled_lzw_1x2_predictor_2": ((4, 4), 2, (1, 2), 1, 2),
+            "ycbcr_subsampled_lzw_1x2_predictor_2_aligned": (
+                (3, 4),
+                2,
+                (1, 2),
+                1,
+                2,
+            ),
             "ycbcr_subsampling_byte_type_lzw_2x2": (
                 (4, 4),
                 4,

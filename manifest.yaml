@@ -5929,6 +5929,14 @@ formats:
       description: Horizontally full-resolution YCbCr samples in vertically subsampled LZW clumps
       test_assets:
       - ycbcr_subsampled_lzw_1x2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_predictor_2
+      description: Horizontal Predictor=2 on vertically subsampled 1-by-2 YCbCr LZW strips
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_predictor_2_aligned
+      description: 1-by-2 YCbCr LZW Predictor=2 scanlines aligned to the RGB sample stride
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff
     - id: ycbcr_subsampled_lzw_2x1
       description: Two-by-one YCbCr LZW clumps with horizontal subsampling
       test_assets:

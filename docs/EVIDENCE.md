@@ -6,7 +6,7 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
-## JPEG row-upsample fault contracts and TIFF multi-strip Predictor=2 parity — 2026-10-21
+## JPEG row-upsample fault contracts and TIFF Predictor=2 parity — 2026-10-21
 
 Added target-only fault contract
 `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry` using the
@@ -48,8 +48,27 @@ unknown, so no coverage gain is claimed. The reports are
 `target/release-evidence/selected/20261020T194437Z/coverage.json`. No full
 coverage campaign was run.
 
-The fixture matrix now contains 2,480 total rows: 1,965 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,965 decode rows and 483 encode
+Added Pillow-backed 1-by-2 YCbCr LZW Predictor=2 parity cases. The 4-by-4
+fixture has 8-byte predictor scanlines, so libtiff reports
+`horAcc8: (cc%stride)!=0.` and leaves the residual bytes untouched; the 3-by-4
+fixture has 6-byte scanlines, which libtiff reverses normally. With pinned
+Pillow 12.2.0 / libtiff 4.7.1, the 235-byte input and 48-byte RGB output hashes
+are `e5dd405646c7e6f44ea0c82e5f01cd770cd395ad38b93bb1011ccc176c17a095` and
+`b394ef5f5e2680867b09884393d2ee73a2ce9491a21c905c9b40d99074d9671a`; the
+224-byte input and 36-byte RGB output hashes are
+`b1ebb064f9f7f330ce1a1e0b7e8abdab9919791f6c364067542dc656e09e6681` and
+`384d5eeb323cb3f719d2203a0602ba2fcd42f95cd981568a4e9c4c2b084de219`. One
+selected run passed both new rows and the neighboring 1-by-2 Predictor=1 and
+2-by-2 Predictor=2 rows (4/4). Coverage MCP still lists
+branch arms at `decode_ifd:323`, but the selected report records source identity
+as unverified and test attribution as unknown. Comparing it with the saved full
+report was incomparable because baseline branch detail does not match its
+reported totals; no coverage gain is claimed. The selected report is
+`target/release-evidence/selected/20261020T213209Z/coverage.json`. No full
+coverage campaign was run.
+
+The fixture matrix now contains 2,482 total rows: 1,967 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,967 decode rows and 483 encode
 rows are active; 32 encode rows remain planned. The separate target-only fault
 lane contains 77 rows. The coverage-origin inventory records 194 exact
 `cfg(coverage)` guards across 28 Rust files.
@@ -7838,7 +7857,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `823593c3282c19b6d596a4cb3c1965f9eb28c187357de1e97c44ebc05006b048`; matrix `9c213166cba6dbdc16861ec2d493a40c12fd5a9226b21b30dfc819fc0eb8597e`.
+- Current fixture integrity only: manifest `a44e5e58d45d4db0bc1cb0533f7b62cbb7922f9047db9d9f67968eb9027ebc38`; matrix `7fea8193482c8bcbad573a3ed3ae7829897dbe6488a58dec87cb1832e593fdca`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

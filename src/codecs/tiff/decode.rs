@@ -322,11 +322,13 @@ fn decode_ifd(
     }
     let aligned_subsampled_ycbcr_predictor = predictor == 2
         && compression == COMPRESSION_LZW
-        && ycbcr_subsampling == Some((2, 2))
         && !tiled
-        && width.is_multiple_of(2)
-        && height.is_multiple_of(2)
-        && rows_per_strip.is_multiple_of(2);
+        && ycbcr_subsampling.is_some_and(|(horizontal, vertical)| {
+            matches!((horizontal, vertical), (1, 2) | (2, 2))
+                && width_usize.is_multiple_of(horizontal)
+                && height_usize.is_multiple_of(vertical)
+                && rows_per_strip.is_multiple_of(vertical)
+        });
     if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
         && predictor != 1
         && !aligned_subsampled_ycbcr_predictor
@@ -916,24 +918,32 @@ fn decode_ifd(
             } else {
                 row_bytes
             };
-            if let Some(token) = token {
-                reverse_horizontal_predictor_with_token(
-                    &mut decoded,
-                    predictor_row_bytes,
-                    samples_per_pixel,
-                    bits_per_sample,
-                    endian,
-                    token,
-                )
-                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
-            } else {
-                reverse_horizontal_predictor(
-                    &mut decoded,
-                    predictor_row_bytes,
-                    samples_per_pixel,
-                    bits_per_sample,
-                    endian,
-                );
+            // libtiff's 8-bit horizontal accumulator returns without
+            // reversing a 1-by-2 YCbCr clump row when its scanline byte count
+            // is not divisible by the three samples per pixel. Preserve those
+            // predictor residuals for Pillow parity.
+            let libtiff_reverses_subsampled_predictor = ycbcr_subsampling != Some((1, 2))
+                || predictor_row_bytes.is_multiple_of(samples_per_pixel);
+            if libtiff_reverses_subsampled_predictor {
+                if let Some(token) = token {
+                    reverse_horizontal_predictor_with_token(
+                        &mut decoded,
+                        predictor_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                        token,
+                    )
+                    .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+                } else {
+                    reverse_horizontal_predictor(
+                        &mut decoded,
+                        predictor_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                    );
+                }
             }
         }
         pixels.extend_from_slice(&decoded);

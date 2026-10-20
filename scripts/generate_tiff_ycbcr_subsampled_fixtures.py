@@ -748,6 +748,24 @@ def fixtures() -> dict[
         subsampling=(1, 2),
         positioning=1,
     )
+    one_by_two_predictor_2 = build_tiff(
+        4,
+        4,
+        2,
+        deterministic_factor_clumps(4, 4, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        predictor=2,
+    )
+    one_by_two_predictor_2_aligned = build_tiff(
+        3,
+        4,
+        2,
+        deterministic_factor_clumps(3, 4, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        predictor=2,
+    )
     one_by_two_odd_height = build_tiff(
         4,
         3,
@@ -1452,6 +1470,20 @@ def fixtures() -> dict[
                 "6807006d2306714031765c5b8d2c0192482b9665569b8180"
                 "a55244aa6e6eaf8b99b4a7c3ca7769cf9393d4b0bed9cce8"
             ),
+        ),
+        "ycbcr_subsampled_lzw_1x2_predictor_2.tiff": (
+            one_by_two_predictor_2,
+            (4, 4),
+            "b394ef5f5e2680867b09884393d2ee73a2ce9491a21c905c9b40d99074d9671a",
+            {317: 2, 530: (1, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff": (
+            one_by_two_predictor_2_aligned,
+            (3, 4),
+            "384d5eeb323cb3f719d2203a0602ba2fcd42f95cd981568a4e9c4c2b084de219",
+            {317: 2, 530: (1, 2), 531: 1},
+            None,
         ),
         "ycbcr_subsampled_lzw_1x2_odd_height.tiff": (
             one_by_two_odd_height,
@@ -2225,6 +2257,8 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampling_ascii_type_lzw_2x2.tiff": "dedbfec3b02eacedb00f936c11a2f00af510cd875b23b2b2b546db5225f8a808",
             "ycbcr_subsampling_short_count_three_lzw_2x2.tiff": "701521f18c666bc757bd68835e0bd6f90316ceb1e1b549a90ec63545fe3bfd26",
             "ycbcr_subsampled_lzw_1x2.tiff": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
+            "ycbcr_subsampled_lzw_1x2_predictor_2.tiff": "e5dd405646c7e6f44ea0c82e5f01cd770cd395ad38b93bb1011ccc176c17a095",
+            "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff": "b1ebb064f9f7f330ce1a1e0b7e8abdab9919791f6c364067542dc656e09e6681",
             "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
