@@ -933,6 +933,7 @@ jobs:
         jobs = check_workflows.workflow_jobs(workflow)
         self.assertIsNotNone(jobs)
         required_job = jobs["required-checks"]
+
         needs_match = re.search(
             r"(?m)^    needs:\s*\n(?:^      - [A-Za-z0-9_-]+\s*\n)+",
             required_job,
@@ -943,14 +944,6 @@ jobs:
             r"(?m)^      - quality\s*\n", "", needs_block, count=1
         )
         self.assertNotEqual(needs_block, needs_without_quality)
-        required_job_start = (
-            "  required-checks:\n"
-            "    name: Required CI checks\n"
-            "    # Run the result gate after cancellation so canceled required lanes fail\n"
-            "    # this stable check instead of leaving a skipped, green required context.\n"
-            "    if: always()"
-        )
-
         mutations = (
             (
                 needs_block,
@@ -968,9 +961,9 @@ jobs:
                 "CI required-checks must invoke the tested result gate directly",
             ),
             (
-                required_job_start,
+                "  required-checks:\n",
                 "  unclassified-job:\n    runs-on: ubuntu-24.04\n\n"
-                f"{required_job_start}",
+                "  required-checks:\n",
                 "CI workflow jobs are not classified by required-checks",
             ),
             (
@@ -981,23 +974,26 @@ jobs:
                 "CI required-checks must check out the script before running it",
             ),
             (
-                required_job_start,
-                required_job_start.replace(
+                required_job,
+                required_job.replace(
                     "if: always()", "if: always() && !cancelled()", 1
                 ),
                 "CI required-checks job must run with if: always()",
             ),
             (
-                required_job_start,
-                required_job_start.replace(
+                required_job,
+                required_job.replace(
                     "if: always()", "if: success()", 1
                 ),
                 "CI required-checks job must run with if: always()",
             ),
             (
-                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n",
-                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n"
-                "    continue-on-error: true\n",
+                jobs["quality"],
+                jobs["quality"].replace(
+                    "needs: fixture-integrity\n",
+                    "needs: fixture-integrity\n    continue-on-error: true\n",
+                    1,
+                ),
                 "CI required job quality and steps must not allow errors",
             ),
             (

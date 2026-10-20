@@ -9,6 +9,7 @@ from io import BytesIO
 from math import isnan
 from pathlib import Path
 import struct
+import zlib
 
 import yaml
 
@@ -258,6 +259,166 @@ def build_tiff(
             output.append(0)
         output.extend(block)
     return bytes(output)
+
+
+def build_tiled_deflate_tiff(
+    width: int,
+    height: int,
+    tile_width: int,
+    tile_height: int,
+    subsampling: tuple[int, int],
+    tile_samples: tuple[bytes, ...],
+    *,
+    tile_sample_lengths: tuple[int, ...] | None = None,
+) -> bytes:
+    """Write contiguous YCbCr Deflate tiles with subsampled clumps."""
+    horizontal, vertical = subsampling
+    clump_bytes = horizontal * vertical + 2
+    expected_size = (
+        (tile_width + horizontal - 1) // horizontal
+        * ((tile_height + vertical - 1) // vertical)
+        * clump_bytes
+    )
+    tiles_across = (width + tile_width - 1) // tile_width
+    tiles_down = (height + tile_height - 1) // tile_height
+    expected_tiles = tiles_across * tiles_down
+    if len(tile_samples) != expected_tiles or any(
+        len(samples) != expected_size for samples in tile_samples
+    ):
+        raise ValueError("YCbCr tile samples do not match image and tile geometry")
+    if tile_sample_lengths is not None and (
+        len(tile_sample_lengths) != expected_tiles
+        or any(length < 0 or length > expected_size for length in tile_sample_lengths)
+    ):
+        raise ValueError("YCbCr tile sample lengths do not match tile geometry")
+    tile_blocks = tuple(
+        zlib.compress(samples if tile_sample_lengths is None else samples[:length])
+        for samples, length in zip(
+            tile_samples,
+            tile_sample_lengths or (expected_size,) * expected_tiles,
+        )
+    )
+    entries = [
+        (256, 4, [width]),
+        (257, 4, [height]),
+        (258, 3, [8, 8, 8]),
+        (259, 3, [8]),
+        (262, 3, [6]),
+        (277, 3, [3]),
+        (284, 3, [1]),
+        (322, 4, [tile_width]),
+        (323, 4, [tile_height]),
+        (324, 4, [0] * expected_tiles),
+        (325, 4, [len(block) for block in tile_blocks]),
+        (530, 3, list(subsampling)),
+        (531, 3, [1]),
+    ]
+    entries.sort()
+
+    def pack_values(field_type: int, values: list[int]) -> bytes:
+        scalar_type = "H" if field_type == 3 else "I"
+        return struct.pack("<" + scalar_type * len(values), *values)
+
+    def value_count(field_type: int, values: list[int]) -> int:
+        return len(values)
+
+    cursor = 8 + 2 + 12 * len(entries) + 4
+    buffers: dict[int, tuple[int, bytes]] = {}
+    for tag, field_type, values in entries:
+        packed = pack_values(field_type, values)
+        if len(packed) > 4:
+            cursor += cursor % 2
+            buffers[tag] = (cursor, packed)
+            cursor += len(packed)
+
+    cursor += cursor % 2
+    tile_offsets = []
+    for block in tile_blocks:
+        tile_offsets.append(cursor)
+        cursor += len(block)
+    entries = [
+        (tag, field_type, tile_offsets if tag == 324 else values)
+        for tag, field_type, values in entries
+    ]
+    for tag, field_type, values in entries:
+        if tag in {324, 325} and tag in buffers:
+            offset = buffers[tag][0]
+            buffers[tag] = (offset, pack_values(field_type, values))
+
+    output = bytearray(b"II*\0" + struct.pack("<I", 8) + struct.pack("<H", len(entries)))
+    for tag, field_type, values in entries:
+        packed = pack_values(field_type, values)
+        value = (
+            struct.pack("<I", buffers[tag][0])
+            if len(packed) > 4
+            else packed.ljust(4, b"\0")
+        )
+        output.extend(
+            struct.pack("<HHI", tag, field_type, value_count(field_type, values))
+            + value
+        )
+    output.extend(bytes(4))
+    for offset, buffer in sorted(buffers.values()):
+        output.extend(bytes(offset - len(output)))
+        output.extend(buffer)
+    output.extend(bytes(tile_offsets[0] - len(output)))
+    for block in tile_blocks:
+        output.extend(block)
+    return bytes(output)
+
+
+def patterned_ycbcr_tile(
+    tile_width: int,
+    tile_height: int,
+    subsampling: tuple[int, int],
+    tile_index: int,
+) -> bytes:
+    """Create distinct luma and chroma samples across each tile and clump."""
+    horizontal, vertical = subsampling
+    clump_columns = (tile_width + horizontal - 1) // horizontal
+    clump_rows = (tile_height + vertical - 1) // vertical
+    output = bytearray()
+    for row in range(clump_rows):
+        for column in range(clump_columns):
+            luma_base = 32 + tile_index * 52 + row * 4 + column * 2
+            for local_y in range(vertical):
+                for local_x in range(horizontal):
+                    output.append(luma_base + local_y + local_x)
+            output.append(92 + tile_index * 17 + row * 3 + column * 2)
+            output.append(164 - tile_index * 15 - row * 2 - column * 2)
+    return bytes(output)
+
+
+def set_ifd_value_count(data: bytes, tag: int, count: int) -> bytes:
+    """Rewrite one full-file IFD entry's value count for malformed fixtures."""
+    output = bytearray(data)
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        if struct.unpack_from("<H", output, entry_offset)[0] == tag:
+            struct.pack_into("<I", output, entry_offset + 4, count)
+            return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
+
+
+def set_ifd_long_value(data: bytes, tag: int, index: int, value: int) -> bytes:
+    """Replace one LONG entry in an external TIFF tag array."""
+    output = bytearray(data)
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for entry_index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * entry_index
+        if struct.unpack_from("<H", output, entry_offset)[0] != tag:
+            continue
+        field_type = struct.unpack_from("<H", output, entry_offset + 2)[0]
+        value_count = struct.unpack_from("<I", output, entry_offset + 4)[0]
+        if field_type != 4 or index < 0 or index >= value_count:
+            raise ValueError(f"tag {tag} does not contain the requested LONG value")
+        value_offset = struct.unpack_from("<I", output, entry_offset + 8)[0]
+        struct.pack_into("<I", output, value_offset + 4 * index, value)
+        return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
 
 
 def build_full_resolution_lzw_tiff(
@@ -532,6 +693,25 @@ def fixtures() -> dict[
     str, tuple[bytes, tuple[int, int], str | None, dict[int, object], bytes | None]
 ]:
     """Return deterministic inputs and the pinned Pillow result metadata."""
+    tiled_deflate = build_tiled_deflate_tiff(
+        19,
+        19,
+        16,
+        16,
+        (2, 2),
+        tuple(patterned_ycbcr_tile(16, 16, (2, 2), index) for index in range(4)),
+    )
+    tiled_deflate_unaligned = build_tiled_deflate_tiff(
+        13,
+        11,
+        15,
+        16,
+        (2, 2),
+        (patterned_ycbcr_tile(15, 16, (2, 2), 0),),
+        tile_sample_lengths=(282,),
+    )
+    tiled_deflate_mismatched_byte_counts = set_ifd_value_count(tiled_deflate, 325, 2)
+    tiled_deflate_oob_offset = set_ifd_long_value(tiled_deflate, 324, 0, 0x7FFFFFFF)
     one_by_two_clumps = tuple(
         (
             (31 + 37 * (2 * clump_row) + 23 * x) % 256,
@@ -1068,6 +1248,62 @@ def fixtures() -> dict[
             REFERENCE_PIXEL_SHA256,
             {530: (2, 2), 531: 1},
             REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampled_deflate_tiled_2x2.tiff": (
+            tiled_deflate,
+            (19, 19),
+            "0962b74e00c7d65acf645da6f54c59ae920741ac59d5b62ed0f8c38122afd53d",
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff": (
+            tiled_deflate_unaligned,
+            (13, 11),
+            "71bc1731c0c1c4d51a9a8de47978453519da43c9bfa7fafc7a9e1eb9312389bf",
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 15,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff": (
+            tiled_deflate_mismatched_byte_counts,
+            (19, 19),
+            None,
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_oob_offset.tiff": (
+            tiled_deflate_oob_offset,
+            (19, 19),
+            None,
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
         ),
         "ycbcr_equivalent_default_rational_lzw_2x2.tiff": (
             equivalent_default_rational,
@@ -1850,16 +2086,20 @@ def verify_pillow_reference(
             284: tags.get(284, 1),
             530: tags.get(530),
             531: tags.get(531),
+            322: tags.get(322),
+            323: tags.get(323),
             529: tags.get(529),
             532: tags.get(532),
         }
         expected = {
-            259: 5,
+            259: expected_tags.get(259, 5),
             262: 6,
             277: 3,
             284: expected_tags.get(284, 1),
             530: expected_tags.get(530),
             531: expected_tags.get(531),
+            322: expected_tags.get(322),
+            323: expected_tags.get(323),
             529: expected_tags.get(529),
             532: expected_tags.get(532),
         }
@@ -1890,7 +2130,7 @@ def verify_pillow_reference(
                         f"({type(error).__name__}: {error})"
                     ) from error
             else:
-                raise RuntimeError(f"{name}: Pillow unexpectedly decoded invalid coefficients")
+                raise RuntimeError(f"{name}: Pillow unexpectedly decoded an invalid TIFF")
             return
 
         image.load()
@@ -1915,6 +2155,10 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_subsampled_deflate_tiled_2x2.tiff": "0177d3f7f9e9ef9a6aacef38269246f36dea324f9a956473e9b9207b2121ae3f",
+            "ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff": "28e953f4ee67fa91f4de1bfdfbc1e6f481e0093b593166d647f7c949498935c0",
+            "ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff": "184dc855038e16deb3745fba2dd484bcd20fad4e02b499826784bf91dd1e2006",
+            "ycbcr_subsampled_deflate_tiled_oob_offset.tiff": "6803f9acc84e29e7b96fe7b935c542ec5be03312789223ba808b5e0675d44bfb",
             "ycbcr_equivalent_default_rational_lzw_2x2.tiff": "06a8a28ba0ebe1359d107ca2d7c442eb02dcc27cba8b85b06c16eaa610e7fa65",
             "ycbcr_subsampling_byte_type_lzw_2x2.tiff": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",
             "ycbcr_subsampling_long_type_lzw_2x2.tiff": "a3bc8d6110c272f34180e6e6231f88aa229ce5c87ee026464e6996a4523631cd",

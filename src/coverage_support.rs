@@ -116,6 +116,10 @@ pub enum CoverageFaultPoint {
     TiffYcbcrClumpLengthMismatch,
     /// Force specialized TIFF YCbCr RGB output reservation to fail.
     TiffYcbcrRgbOutputReservation,
+    /// Force contiguous TIFF YCbCr tile assembly reservation to fail.
+    TiffYcbcrTileAssemblyReservation,
+    /// Force a contiguous TIFF YCbCr tile prefix to exceed its output budget.
+    TiffYcbcrTilePrefixLimit,
     /// Report a TIFF full-resolution YCbCr sample-buffer length mismatch.
     TiffYcbcrFullResolutionLengthMismatch,
     /// Force AV1 partial monochrome tile-state retention to fail.

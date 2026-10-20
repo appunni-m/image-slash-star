@@ -104,6 +104,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "tiff_ycbcr_tile_assembly_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_tile_prefix_limit_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_ycbcr_general_rgb_output_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure",

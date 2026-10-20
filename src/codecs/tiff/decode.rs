@@ -319,13 +319,10 @@ fn decode_ifd(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
     }
-    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) {
-        let tiled = directory.field_type(324).is_some() || directory.field_type(325).is_some();
-        if predictor != 1 || tiled {
-            return Err(CodecError::Malformed(
-                "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
-            ));
-        }
+    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) && predictor != 1 {
+        return Err(CodecError::Malformed(
+            "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
+        ));
     }
     // Pillow's baseline YCbCr TIFF raw mode is RGBX: the IFD declares three
     // samples, but each stored pixel occupies four bytes.
@@ -415,6 +412,45 @@ fn decode_ifd(
         if !separate_planar && offsets.len() != expected_tiles {
             return Err(CodecError::Malformed(
                 "TIFF tile offset count does not match its geometry".to_owned(),
+            ));
+        }
+        if let TiffLayout::YcbcrSubsampled8 { subsampling, .. } = layout {
+            if offsets.len() != byte_counts.len() {
+                return Err(CodecError::Malformed(
+                    "TIFF tile offset and byte-count lengths differ".to_owned(),
+                ));
+            }
+            let pixels = decode_subsampled_ycbcr_tiles(
+                data,
+                compression,
+                &offsets,
+                &byte_counts,
+                SubsampledYcbcrTileGeometry {
+                    width: width_usize,
+                    height: height_usize,
+                    tiles_across,
+                    tile_width,
+                    tile_height,
+                    clump_row_bytes: row_bytes,
+                    clump_buffer_len: expected_total,
+                    subsampling,
+                },
+                token,
+            )?;
+            return Ok((
+                convert_pixels_for_token(
+                    (width, height),
+                    pixels,
+                    layout,
+                    endian,
+                    palette,
+                    alpha,
+                    token,
+                )?
+                .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+                .with_metadata(std::mem::take(&mut directory.metadata)),
+                next_offset,
+                directory_end,
             ));
         }
         if separate_planar {
@@ -1288,6 +1324,170 @@ pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
     let ifd_offset =
         endian.u32_exact([ifd_offset[0], ifd_offset[1], ifd_offset[2], ifd_offset[3]]) as usize;
     Ok((endian, ifd_offset))
+}
+
+/// Geometry and storage settings for contiguous subsampled YCbCr tiles.
+struct SubsampledYcbcrTileGeometry {
+    width: usize,
+    height: usize,
+    tiles_across: usize,
+    tile_width: usize,
+    tile_height: usize,
+    clump_row_bytes: usize,
+    clump_buffer_len: usize,
+    subsampling: (usize, usize),
+}
+
+/// Decode and assemble contiguous subsampled YCbCr tiles into clump rows.
+fn decode_subsampled_ycbcr_tiles(
+    data: &[u8],
+    compression: usize,
+    offsets: &[usize],
+    declared_byte_counts: &[usize],
+    geometry: SubsampledYcbcrTileGeometry,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    let SubsampledYcbcrTileGeometry {
+        width,
+        height,
+        tiles_across,
+        tile_width,
+        tile_height,
+        clump_row_bytes,
+        clump_buffer_len,
+        subsampling,
+    } = geometry;
+    let (horizontal, vertical) = subsampling;
+    let clump_bytes = horizontal
+        .checked_mul(vertical)
+        .and_then(|luma_samples| luma_samples.checked_add(2))
+        .dimensions("TIFF YCbCr tile clump byte size overflows")?;
+    let tile_row_bytes = tile_width
+        .div_ceil(horizontal)
+        .checked_mul(clump_bytes)
+        .dimensions("TIFF YCbCr tile row byte size overflows")?;
+    let maximum_tile_prefix = usize::try_from(super::PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS)
+        .ok()
+        .and_then(|pixels| pixels.checked_mul(3))
+        .dimensions("TIFF maximum tile output size overflows")?;
+    #[cfg(coverage)]
+    let maximum_tile_prefix = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrTilePrefixLimit,
+    ) {
+        0
+    } else {
+        maximum_tile_prefix
+    };
+    let mut pixels = Vec::new();
+    #[cfg(coverage)]
+    let reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrTileAssemblyReservation,
+    ) {
+        usize::MAX
+    } else {
+        clump_buffer_len
+    };
+    #[cfg(not(coverage))]
+    let reservation = clump_buffer_len;
+    pixels
+        .try_reserve_exact(reservation)
+        .map_err(|_| CodecError::Dimensions("unable to allocate TIFF tile buffer".to_owned()))?;
+    pixels.resize(clump_buffer_len, 0);
+
+    for (tile_index, &offset) in offsets.iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        let byte_count = declared_byte_counts
+            .get(tile_index)
+            .copied()
+            .malformed("TIFF tile byte count is missing")?;
+        #[cfg(target_pointer_width = "32")]
+        let encoded_end = offset
+            .checked_add(byte_count)
+            .malformed("TIFF tile payload is out of bounds")?;
+        #[cfg(not(target_pointer_width = "32"))]
+        let encoded_end = offset.saturating_add(byte_count);
+        let encoded = if encoded_end <= data.len() {
+            &data[offset..encoded_end]
+        } else {
+            return Err(CodecError::NeedMore {
+                minimum: encoded_end,
+                message: "TIFF tile payload is out of bounds".to_owned(),
+            });
+        };
+        let tile_column = tile_index
+            .checked_rem(tiles_across)
+            .dimensions("TIFF tile column overflows")?;
+        let tile_row = tile_index
+            .checked_div(tiles_across)
+            .dimensions("TIFF tile row overflows")?;
+        let tile_x = tile_column
+            .checked_mul(tile_width)
+            .dimensions("TIFF tile x coordinate overflows")?;
+        let tile_y = tile_row
+            .checked_mul(tile_height)
+            .dimensions("TIFF tile y coordinate overflows")?;
+        let copied_width = tile_width.min(width.saturating_sub(tile_x));
+        let copied_height = tile_height.min(height.saturating_sub(tile_y));
+        let copied_clump_columns = tile_width
+            .div_ceil(horizontal)
+            .min(copied_width.div_ceil(horizontal));
+        let copied_clump_rows = tile_height
+            .div_ceil(vertical)
+            .min(copied_height.div_ceil(vertical));
+
+        let copied_bytes = copied_clump_columns
+            .checked_mul(clump_bytes)
+            .dimensions("TIFF copied tile clump row size overflows")?;
+        let copied_tile_prefix = copied_clump_rows
+            .checked_sub(1)
+            .and_then(|last_row| last_row.checked_mul(tile_row_bytes))
+            .and_then(|last_row_start| last_row_start.checked_add(copied_bytes))
+            .dimensions("TIFF copied tile prefix size overflows")?;
+        // Bound padded tile inflation by TIFF's existing RGB output limit.
+        if copied_tile_prefix > maximum_tile_prefix {
+            return Err(CodecError::Dimensions(
+                "TIFF tile decoded prefix exceeds the output limit".to_owned(),
+            ));
+        }
+        let tile_samples = decode_block(compression, encoded, copied_tile_prefix, token)
+            .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+        let tile_x_clumps = tile_x
+            .checked_div(horizontal)
+            .dimensions("TIFF tile x clump offset overflows")?;
+        let tile_y_clumps = tile_y
+            .checked_div(vertical)
+            .dimensions("TIFF tile y clump offset overflows")?;
+        let tile_x_bytes = tile_x_clumps
+            .checked_mul(clump_bytes)
+            .dimensions("TIFF tile x byte offset overflows")?;
+        for row in 0..copied_clump_rows {
+            crate::codecs::error::check_cancelled(token)?;
+            let source_start = row
+                .checked_mul(tile_row_bytes)
+                .dimensions("TIFF tile source row offset overflows")?;
+            let source_end = source_start
+                .checked_add(copied_bytes)
+                .dimensions("TIFF tile source row range overflows")?;
+            let source = tile_samples
+                .get(source_start..source_end)
+                .malformed("TIFF tile clump source row is truncated")?;
+            let destination_row = tile_y_clumps
+                .checked_add(row)
+                .dimensions("TIFF tile clump destination row overflows")?;
+            let destination_start = destination_row
+                .checked_mul(clump_row_bytes)
+                .and_then(|row_offset| row_offset.checked_add(tile_x_bytes))
+                .dimensions("TIFF tile destination offset overflows")?;
+            let destination_end = destination_start
+                .checked_add(copied_bytes)
+                .dimensions("TIFF tile destination range overflows")?;
+            let destination = pixels
+                .get_mut(destination_start..destination_end)
+                .malformed("TIFF tile clump destination row is out of bounds")?;
+            destination.copy_from_slice(source);
+        }
+    }
+    Ok(pixels)
 }
 
 fn decode_block(

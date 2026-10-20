@@ -1566,6 +1566,20 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.ycbcr.tile_assembly.output_reservation", "decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::TiffYcbcrTileAssemblyReservation,
+                    false,
+                    img::ImageFormat::Tiff,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("tiff.ycbcr.tile_prefix.output_limit", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrTilePrefixLimit,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.ycbcr.full_resolution_length_mismatch", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffYcbcrFullResolutionLengthMismatch,
                 false,
@@ -1734,6 +1748,12 @@ fn execute_fault_contract(
         }
         "tiff.ycbcr.rgb_output_reservation" => {
             Some("decode: unable to allocate TIFF YCbCr RGB buffer")
+        }
+        "tiff.ycbcr.tile_assembly.output_reservation" => {
+            Some("decode: unable to allocate TIFF tile buffer")
+        }
+        "tiff.ycbcr.tile_prefix.output_limit" => {
+            Some("decode: TIFF tile decoded prefix exceeds the output limit")
         }
         "tiff.rgb16.output_reservation" => {
             Some("decode: unable to allocate TIFF RGB16 output buffer")

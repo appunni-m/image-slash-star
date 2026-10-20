@@ -4,8 +4,6 @@ use super::decode::{Directory, Endian};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescriptor};
 
-const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
-
 /// Inspect the first TIFF page and count the complete IFD chain.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     inspect_inner(data, false)
@@ -232,7 +230,9 @@ pub(super) fn validate_primary_dimensions(directory: &Directory<'_>) -> CodecRes
             "TIFF dimensions must be nonzero".to_owned(),
         ));
     }
-    if u64::from(width).saturating_mul(u64::from(height)) > PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS {
+    if u64::from(width).saturating_mul(u64::from(height))
+        > super::PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS
+    {
         return Err(CodecError::Dimensions(
             "TIFF dimensions exceed Pillow's decompression-bomb limit".to_owned(),
         ));

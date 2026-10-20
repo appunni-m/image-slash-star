@@ -348,6 +348,34 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_tile_assembly_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_deflate_tiled_2x2
+    fault:
+      point: tiff.ycbcr.tile_assembly.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_tile_prefix_limit_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_deflate_tiled_2x2
+    fault:
+      point: tiff.ycbcr.tile_prefix.output_limit
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_general_rgb_output_reservation_failure
     type: fault-contract
     operation: decode
@@ -5788,6 +5816,24 @@ formats:
       description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_2x2
+      description: Patterned contiguous 2-by-2 YCbCr clumps assemble four 16-by-16 Deflate tiles across both axes and clipped edges
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_2x2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_unaligned_2x2
+      description: Pillow accepts a 15-by-16 nonstandard Deflate tile and clipped-prefix output for 2-by-2 YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_mismatched_byte_counts
+      description: Pillow rejects a Deflate YCbCr tile byte-count array with only two counts for four tile offsets
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff
+      expect_error: true
+    - id: ycbcr_subsampled_deflate_tiled_oob_offset
+      description: Pillow rejects a Deflate YCbCr tile offset that points outside the TIFF payload
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_oob_offset.tiff
+      expect_error: true
     - id: ycbcr_equivalent_default_rational_lzw_2x2
       description: Explicit noncanonical rational tags exactly equal to YCbCr defaults
       test_assets:
