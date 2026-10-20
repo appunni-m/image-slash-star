@@ -21,6 +21,7 @@ on:
       - 'Makefile'
       - 'rust-toolchain.toml'
       - 'src/decode_policy.rs'
+      - 'src/cancel.rs'
       - 'src/encode_options.rs'
       - 'src/encode_policy.rs'
       - 'src/lib.rs'
