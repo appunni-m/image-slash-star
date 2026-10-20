@@ -908,6 +908,20 @@ fault_contracts:
       point: jpeg.upsample.h1v2_source_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_invalid_geometry
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_invalid_geometry
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -5945,6 +5959,10 @@ formats:
       description: Default 2-by-2 YCbCr clumps split across aligned LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_2x2_two_strips.tiff
+    - id: ycbcr_subsampled_lzw_2x2_two_strips_predictor_2
+      description: Horizontal Predictor=2 on 2-by-2 YCbCr clumps split across aligned LZW strips
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3
       description: Default 2-by-2 YCbCr clumps split across LZW strips at an unaligned row boundary
       test_assets:

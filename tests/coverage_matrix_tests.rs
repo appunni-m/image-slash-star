@@ -1497,6 +1497,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.upsample.row_invalid_geometry", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowInvalidGeometry,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.upsample.h1v2_plane_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegH1v2UpsamplePlaneReservation,
                 false,
@@ -1727,7 +1733,8 @@ fn execute_fault_contract(
         }
         "jpeg.upsample.h1v2_empty_geometry"
         | "jpeg.upsample.h1v2_zero_width"
-        | "jpeg.upsample.h1v2_source_length_mismatch" => {
+        | "jpeg.upsample.h1v2_source_length_mismatch"
+        | "jpeg.upsample.row_invalid_geometry" => {
             Some("decode: invalid JPEG component upsampling geometry")
         }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
@@ -1826,6 +1833,7 @@ fn execute_fault_contract(
                 | "jpeg.upsample.h1v2_empty_geometry"
                 | "jpeg.upsample.h1v2_zero_width"
                 | "jpeg.upsample.h1v2_source_length_mismatch"
+                | "jpeg.upsample.row_invalid_geometry"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}

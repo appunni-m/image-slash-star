@@ -148726,6 +148726,84 @@
           "error_contracts": {}
         },
         {
+          "id": "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 on 2-by-2 YCbCr clumps split across aligned LZW strips",
+          "asset": "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "bf76628b4a022f6c6891f65fc572d3af75760777dab85e70ef1e0e933072c6c1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_two_strips_predictor_2_tiff.bin",
+          "ref_sha256": "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
+          "ref_bytes": 48,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3",
           "type": "decode",
           "format": "tiff",
@@ -208921,12 +208999,12 @@
     }
   },
   "summary": {
-    "total_rows": 2479,
-    "decode_rows": 1964,
+    "total_rows": 2480,
+    "decode_rows": 1965,
     "encode_rows": 515,
     "formats": 8,
-    "assets_available": 1960,
-    "decode_active": 1964,
+    "assets_available": 1961,
+    "decode_active": 1965,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -210086,6 +210164,25 @@
       },
       "fault": {
         "point": "jpeg.upsample.h1v2_source_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fancy_upsample_row_invalid_geometry",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
+      },
+      "fault": {
+        "point": "jpeg.upsample.row_invalid_geometry",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

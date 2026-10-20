@@ -781,6 +781,15 @@ def fixtures() -> dict[
         subsampling=(2, 2),
         positioning=2,
     )
+    two_strips_predictor_2 = build_tiff(
+        4,
+        4,
+        2,
+        TWO_STRIP_CLUMPS,
+        subsampling=(2, 2),
+        positioning=2,
+        predictor=2,
+    )
     unaligned_rows_per_strip = build_tiff(
         4,
         4,
@@ -1480,6 +1489,13 @@ def fixtures() -> dict[
             (4, 4),
             "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
             {530: (2, 2), 531: 2},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": (
+            two_strips_predictor_2,
+            (4, 4),
+            "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
+            {317: 2, 530: (2, 2), 531: 2},
             None,
         ),
         "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": (
@@ -2213,6 +2229,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
+            "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": "bf76628b4a022f6c6891f65fc572d3af75760777dab85e70ef1e0e933072c6c1",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
             "ycbcr_zero_green_coefficient_lzw_2x2.tiff": "ff382d3f6afa3fb5f14fba10bb2df80d1aaa820e68f75883de097387bfa047d4",
