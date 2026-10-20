@@ -211,6 +211,7 @@ fn decode_ifd(
     let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
     let planar = directory.one_or(284, 1);
+    let tiled = directory.field_type(324).is_some() || directory.field_type(325).is_some();
     let sample_formats = directory.values_or(339, &[1]);
     let sample_format = sample_formats.first().copied().unwrap_or(1);
     let ycbcr_parameters = if photometric == 6 && compression != COMPRESSION_NONE {
@@ -243,7 +244,7 @@ fn decode_ifd(
         color_map: color_map.as_deref(),
         extra_samples: extra_samples.as_deref().unwrap_or_default(),
         planar,
-        tiled: directory.field_type(324).is_some() || directory.field_type(325).is_some(),
+        tiled,
         ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
         ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
@@ -319,7 +320,17 @@ fn decode_ifd(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
     }
-    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. }) && predictor != 1 {
+    let aligned_subsampled_ycbcr_predictor = predictor == 2
+        && compression == COMPRESSION_LZW
+        && ycbcr_subsampling == Some((2, 2))
+        && !tiled
+        && width.is_multiple_of(2)
+        && height.is_multiple_of(2)
+        && rows_per_strip.is_multiple_of(2);
+    if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
+        && predictor != 1
+        && !aligned_subsampled_ycbcr_predictor
+    {
         return Err(CodecError::Malformed(
             "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
         ));
@@ -896,10 +907,19 @@ fn decode_ifd(
         let mut decoded = decode_block(compression, encoded, expected, token)
             .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
+            // Subsampled YCbCr's compressed scanline covers one vertical
+            // subsample row, so divide the clump-row byte count by V.
+            let predictor_row_bytes = if let Some((_, vertical)) = ycbcr_subsampling {
+                row_bytes
+                    .checked_div(vertical)
+                    .dimensions("TIFF YCbCr predictor row stride is invalid")?
+            } else {
+                row_bytes
+            };
             if let Some(token) = token {
                 reverse_horizontal_predictor_with_token(
                     &mut decoded,
-                    row_bytes,
+                    predictor_row_bytes,
                     samples_per_pixel,
                     bits_per_sample,
                     endian,
@@ -909,7 +929,7 @@ fn decode_ifd(
             } else {
                 reverse_horizontal_predictor(
                     &mut decoded,
-                    row_bytes,
+                    predictor_row_bytes,
                     samples_per_pixel,
                     bits_per_sample,
                     endian,

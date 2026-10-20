@@ -77,6 +77,7 @@ def lzw_blocks(
     clumps: tuple[tuple[int, ...], ...],
     *,
     subsampling: tuple[int, int] = (2, 2),
+    predictor: int = 1,
 ) -> list[bytes]:
     """Encode TIFF LZW strips with each strip rounded to complete clump rows."""
     if width <= 0 or height <= 0:
@@ -86,6 +87,8 @@ def lzw_blocks(
         raise ValueError("YCbCr subsampling factors must be positive")
     if rows_per_strip <= 0:
         raise ValueError("YCbCr RowsPerStrip must be positive")
+    if predictor not in (1, 2):
+        raise ValueError("YCbCr Predictor must be 1 or 2")
     clump_columns = (width + horizontal - 1) // horizontal
     strip_starts = range(0, height, rows_per_strip)
     clump_rows_per_strip = tuple(
@@ -110,7 +113,18 @@ def lzw_blocks(
     for clump_rows in clump_rows_per_strip:
         start = first_clump_row * clump_columns
         end = (first_clump_row + clump_rows) * clump_columns
-        samples = bytes(value for clump in clumps[start:end] for value in clump)
+        samples = bytearray(value for clump in clumps[start:end] for value in clump)
+        if predictor == 2:
+            predictor_row_numerator = clump_columns * samples_per_clump
+            if predictor_row_numerator % vertical:
+                raise ValueError("YCbCr predictor scanline size is not integral")
+            predictor_row_bytes = predictor_row_numerator // vertical
+            if predictor_row_bytes == 0 or len(samples) % predictor_row_bytes:
+                raise ValueError("YCbCr predictor rows do not match strip geometry")
+            for row_start in range(0, len(samples), predictor_row_bytes):
+                row_end = row_start + predictor_row_bytes
+                for index in range(row_end - 1, row_start + 2, -1):
+                    samples[index] = (samples[index] - samples[index - 3]) & 0xFF
         blocks.append(pack_lzw_codes_with_growth([256, *samples, 257]))
         first_clump_row += clump_rows
     return blocks
@@ -173,6 +187,7 @@ def build_tiff(
     *,
     subsampling: tuple[int, int] | None,
     positioning: int | None,
+    predictor: int = 1,
     coefficients: tuple[tuple[int, int], ...] | None = None,
     reference_black_white: tuple[tuple[int, int], ...] | None = None,
 ) -> bytes:
@@ -184,6 +199,7 @@ def build_tiff(
         rows_per_strip,
         clumps,
         subsampling=storage_subsampling,
+        predictor=predictor,
     )
     entries = [
         (256, 4, [width]),
@@ -201,6 +217,8 @@ def build_tiff(
         entries.append((530, 3, list(subsampling)))
     if positioning is not None:
         entries.append((531, 3, [positioning]))
+    if predictor != 1:
+        entries.append((317, 3, [predictor]))
     if coefficients is not None:
         if len(coefficients) != 3:
             raise ValueError("YCbCr coefficients must contain three rationals")
@@ -1249,6 +1267,21 @@ def fixtures() -> dict[
             {530: (2, 2), 531: 1},
             REFERENCE_PIXELS,
         ),
+        "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": (
+            build_tiff(
+                4,
+                4,
+                4,
+                BASE_CLUMPS,
+                subsampling=(2, 2),
+                positioning=1,
+                predictor=2,
+            ),
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {317: 2, 530: (2, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
         "ycbcr_subsampled_deflate_tiled_2x2.tiff": (
             tiled_deflate,
             (19, 19),
@@ -2084,6 +2117,7 @@ def verify_pillow_reference(
             262: tags.get(262, 1),
             277: tags.get(277, 1),
             284: tags.get(284, 1),
+            317: tags.get(317),
             530: tags.get(530),
             531: tags.get(531),
             322: tags.get(322),
@@ -2096,6 +2130,7 @@ def verify_pillow_reference(
             262: 6,
             277: 3,
             284: expected_tags.get(284, 1),
+            317: expected_tags.get(317),
             530: expected_tags.get(530),
             531: expected_tags.get(531),
             322: expected_tags.get(322),
@@ -2155,6 +2190,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": "14358eaf415ce0d216c3fa3a416a87888c66f694c35ee59e67ca23fb475b1087",
             "ycbcr_subsampled_deflate_tiled_2x2.tiff": "0177d3f7f9e9ef9a6aacef38269246f36dea324f9a956473e9b9207b2121ae3f",
             "ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff": "28e953f4ee67fa91f4de1bfdfbc1e6f481e0093b593166d647f7c949498935c0",
             "ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff": "184dc855038e16deb3745fba2dd484bcd20fad4e02b499826784bf91dd1e2006",
