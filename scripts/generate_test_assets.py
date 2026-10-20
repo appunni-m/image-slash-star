@@ -9645,9 +9645,8 @@ def mutate_tiff_tag_to_external_longs(source, destination, tag, values):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
-def write_short_deflate_tile_tiff(source, destination, output_prefix_bytes):
-    """Make one valid Deflate tile decode to fewer bytes than a packed row."""
-    data = bytearray(source.read_bytes())
+def first_deflate_tile_info(data):
+    """Return byte order and first Deflate tile offsets from a classic TIFF."""
     if data[:2] not in (b"II", b"MM"):
         raise ValueError("TIFF byte-order marker is invalid")
     byte_order = "<" if data[:2] == b"II" else ">"
@@ -9677,26 +9676,45 @@ def write_short_deflate_tile_tiff(source, destination, output_prefix_bytes):
         return values, value_position
 
     compression, _ = integer_values(259)
-    if compression[0] not in (8, 32946):
+    if not compression or compression[0] not in (8, 32946):
         raise ValueError("TIFF source does not use Deflate compression")
+    byte_counts_entry = entries.get(325)
+    if byte_counts_entry is None or byte_counts_entry[1] != 4:
+        raise ValueError("TIFF TileByteCounts must be stored as LONG values")
     offsets, _ = integer_values(324)
     byte_counts, byte_counts_position = integer_values(325)
-    if len(offsets) != len(byte_counts) or not offsets:
+    if len(offsets) != len(byte_counts) or not offsets or byte_counts[0] < 1:
         raise ValueError("TIFF tile offsets and byte counts do not match")
-
     tile_offset = offsets[0]
     tile_end = tile_offset + byte_counts[0]
     if tile_end > len(data):
         raise ValueError("TIFF first tile payload is truncated")
+    return byte_order, tile_offset, byte_counts[0], byte_counts_position
+
+
+def write_short_deflate_tile_tiff(source, destination, output_prefix_bytes):
+    """Make one valid Deflate tile decode to fewer bytes than a packed row."""
+    data = bytearray(source.read_bytes())
+    byte_order, tile_offset, byte_count, byte_counts_position = first_deflate_tile_info(data)
+    tile_end = tile_offset + byte_count
     decoded_tile = zlib.decompress(data[tile_offset:tile_end])
     if not 0 < output_prefix_bytes < len(decoded_tile):
         raise ValueError("short Deflate output length is outside the tile")
     compressed_prefix = zlib.compress(decoded_tile[:output_prefix_bytes])
-    if len(compressed_prefix) > byte_counts[0]:
+    if len(compressed_prefix) > byte_count:
         raise ValueError("short Deflate stream exceeds the original tile payload")
 
     data[tile_offset : tile_offset + len(compressed_prefix)] = compressed_prefix
     struct.pack_into(byte_order + "I", data, byte_counts_position, len(compressed_prefix))
+    destination.write_bytes(data)
+
+
+def write_invalid_deflate_tile_tiff(source, destination):
+    """Replace one separate-planar Deflate tile stream with an invalid zlib header."""
+    data = bytearray(source.read_bytes())
+    byte_order, tile_offset, _, byte_counts_position = first_deflate_tile_info(data)
+    data[tile_offset] = 0xFF
+    struct.pack_into(byte_order + "I", data, byte_counts_position, 1)
     destination.write_bytes(data)
 
 
@@ -10453,6 +10471,31 @@ def gen_tiff():
         tile_size=32,
         compression=8,
     )
+    planar_short_deflate_tile = d / "planar_separate_rgb_tiled_deflate_short_tile.tiff"
+    write_short_deflate_tile_tiff(
+        d / "planar_separate_rgb_tiled_deflate.tiff",
+        planar_short_deflate_tile,
+        3,
+    )
+    if hashlib.sha256(planar_short_deflate_tile.read_bytes()).hexdigest() != (
+        "2756d3f21cda37ea4aa2b5f02b6f40511e3ce0654bdf1a922a928e64c5ab4454"
+    ):
+        raise RuntimeError(
+            "separate RGB short Deflate tile fixture differs from its pinned hash"
+        )
+    planar_invalid_deflate_tile = (
+        d / "planar_separate_rgb_tiled_deflate_invalid_stream.tiff"
+    )
+    write_invalid_deflate_tile_tiff(
+        d / "planar_separate_rgb_tiled_deflate.tiff",
+        planar_invalid_deflate_tile,
+    )
+    if hashlib.sha256(planar_invalid_deflate_tile.read_bytes()).hexdigest() != (
+        "fb0a43f73dc8a957f59f56cbe6d924c449ad4d0d8306649b1ab2f97c33b79ba5"
+    ):
+        raise RuntimeError(
+            "separate RGB invalid Deflate tile fixture differs from its pinned hash"
+        )
     write_rgb_planar_tiled_tiff(
         d / "planar_separate_ycbcr_tiled.tiff",
         planar_image.resize((17, 13)),
@@ -19501,15 +19544,37 @@ def main():
         action="store_true",
         help="generate only the TIFF LZW mid-stream CLEAR parity fixture",
     )
+    parser.add_argument(
+        "--tiff-planar-short-deflate-tile",
+        action="store_true",
+        help="generate only the separate-planar RGB short Deflate tile fixture",
+    )
+    parser.add_argument(
+        "--tiff-planar-invalid-deflate-tile",
+        action="store_true",
+        help="generate only the separate-planar RGB invalid Deflate tile fixture",
+    )
     args = parser.parse_args()
     selected_avif_fixture = (
         args.avif_iinf_entry_count_zero or args.avif_h16x8_following_chroma
     )
-    if selected_avif_fixture or args.tiff_lzw_midstream_clear_width_reset:
+    selected_tiff_fixture = (
+        args.tiff_lzw_midstream_clear_width_reset
+        or args.tiff_planar_short_deflate_tile
+        or args.tiff_planar_invalid_deflate_tile
+    )
+    if selected_avif_fixture or selected_tiff_fixture:
         if args.format is not None:
             parser.error("focused fixture generation cannot be combined with --format")
-        if selected_avif_fixture and args.tiff_lzw_midstream_clear_width_reset:
+        if selected_avif_fixture and selected_tiff_fixture:
             parser.error("focused AVIF and TIFF fixture options cannot be combined")
+        selected_tiff_options = (
+            args.tiff_lzw_midstream_clear_width_reset,
+            args.tiff_planar_short_deflate_tile,
+            args.tiff_planar_invalid_deflate_tile,
+        )
+        if sum(selected_tiff_options) > 1:
+            parser.error("focused TIFF fixture options cannot be combined")
         if args.avif_iinf_entry_count_zero and args.avif_h16x8_following_chroma:
             parser.error("focused AVIF fixture options cannot be combined")
         if args.tiff_lzw_midstream_clear_width_reset:
@@ -19517,6 +19582,28 @@ def main():
             fixture.parent.mkdir(parents=True, exist_ok=True)
             write_lzw_midstream_clear_width_reset_tiff(fixture)
             print(f"Generated TIFF LZW mid-stream CLEAR fixture: {fixture}")
+        elif args.tiff_planar_short_deflate_tile:
+            fixture = OUT / "tiff" / "planar_separate_rgb_tiled_deflate_short_tile.tiff"
+            source = OUT / "tiff" / "planar_separate_rgb_tiled_deflate.tiff"
+            write_short_deflate_tile_tiff(source, fixture, 3)
+            if hashlib.sha256(fixture.read_bytes()).hexdigest() != (
+                "2756d3f21cda37ea4aa2b5f02b6f40511e3ce0654bdf1a922a928e64c5ab4454"
+            ):
+                raise RuntimeError(
+                    "separate RGB short Deflate tile fixture differs from its pinned hash"
+                )
+            print(f"Generated TIFF separate-planar short Deflate tile: {fixture}")
+        elif args.tiff_planar_invalid_deflate_tile:
+            fixture = OUT / "tiff" / "planar_separate_rgb_tiled_deflate_invalid_stream.tiff"
+            source = OUT / "tiff" / "planar_separate_rgb_tiled_deflate.tiff"
+            write_invalid_deflate_tile_tiff(source, fixture)
+            if hashlib.sha256(fixture.read_bytes()).hexdigest() != (
+                "fb0a43f73dc8a957f59f56cbe6d924c449ad4d0d8306649b1ab2f97c33b79ba5"
+            ):
+                raise RuntimeError(
+                    "separate RGB invalid Deflate tile fixture differs from its pinned hash"
+                )
+            print(f"Generated TIFF separate-planar invalid Deflate tile: {fixture}")
         elif args.avif_iinf_entry_count_zero:
             gen_avif_iinf_entry_count_zero()
             print("Generated AVIF iinf zero-count parity input")

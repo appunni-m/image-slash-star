@@ -1233,7 +1233,20 @@ fn decode_separate_planar_tiles(
                 let destination_end = destination
                     .checked_add(sample_bytes)
                     .dimensions("TIFF separate-planar tile destination range overflows")?;
-                pixels[destination..destination_end].copy_from_slice(&decoded[source..source_end]);
+                let source_sample = decoded.get(source..source_end).ok_or_else(|| {
+                    CodecError::Malformed(
+                        "TIFF separate-planar tile output is truncated".to_owned(),
+                    )
+                })?;
+                let destination_sample =
+                    pixels
+                        .get_mut(destination..destination_end)
+                        .ok_or_else(|| {
+                            CodecError::Malformed(
+                                "TIFF separate-planar output range is invalid".to_owned(),
+                            )
+                        })?;
+                destination_sample.copy_from_slice(source_sample);
             }
         }
     }

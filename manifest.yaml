@@ -5036,6 +5036,9 @@ formats:
     - id: enc_lossless_quality_0
       description: Lossless quality zero uses Pillow's fastest compression setting while preserving decoded pixels
       params: {'lossless': True, 'quality': 0, 'method': 4}
+    - id: enc_lossless_quality_50
+      description: Lossless quality fifty selects the middle cross-color predictor search schedule
+      params: {'lossless': True, 'quality': 50, 'method': 4}
     - id: enc_lossless_quality_100
       description: Lossless quality one hundred maximizes compression effort while preserving decoded pixels
       params: {'lossless': True, 'quality': 100, 'method': 4}
@@ -6436,6 +6439,16 @@ formats:
       description: Separate RGB Deflate tiles decode without horizontal prediction
       test_assets:
       - planar_separate_rgb_tiled_deflate.tiff
+    - id: planar_separate_rgb_tiled_deflate_short_tile
+      description: Deflate output in a separate RGB tile is shorter than a full tile raster requires
+      test_assets:
+      - planar_separate_rgb_tiled_deflate_short_tile.tiff
+      expect_error: true
+    - id: planar_separate_rgb_tiled_deflate_invalid_stream
+      description: A separate RGB Deflate tile contains an invalid zlib stream header
+      test_assets:
+      - planar_separate_rgb_tiled_deflate_invalid_stream.tiff
+      expect_error: true
     - id: planar_separate_rgb_tiled_missing_tail_tile
       description: Pillow zero-fills an omitted tile at the end of a separate RGB sample plane
       test_assets:

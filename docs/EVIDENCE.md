@@ -6,6 +6,42 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## Separate-planar TIFF Deflate faults and WebP quality-50 parity — 2026-10-20
+
+Added two public TIFF parity inputs derived from the active separate-planar
+RGB tiled Deflate fixture. The invalid-zlib-header input
+`planar_separate_rgb_tiled_deflate_invalid_stream.tiff` has SHA-256
+`fb0a43f73dc8a957f59f56cbe6d924c449ad4d0d8306649b1ab2f97c33b79ba5`; Pillow
+12.2.0 verifies the TIFF header and raises `OSError: decoder error -2` while
+loading pixels. The short-output input
+`planar_separate_rgb_tiled_deflate_short_tile.tiff` has SHA-256
+`2756d3f21cda37ea4aa2b5f02b6f40511e3ce0654bdf1a922a928e64c5ab4454` and has
+the same Pillow decode error. It exposed a decoder panic when a valid Deflate
+stream produced only three bytes; the decoder now returns a structured
+malformed-input error after checking the requested sample range.
+
+Added `encode:webp:enc_lossless_quality_50` on the existing lossless WebP
+source. The exact Pillow encoded reference is 3,584 bytes with SHA-256
+`46dc365fb19ed82270953c05d810df4c43e0aea7d5bff836f60e271de9e861a5`; its
+re-decoded 128×128 RGB reference SHA-256 is
+`8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131`.
+
+The three selected parity cases passed. The report is retained at
+`.coverage-mcp/local-evidence/20261020/tiff-webp-deflate-outcomes/tiff-webp-deflate-outcomes-final.json`
+(SHA-256
+`a47a5359edcaaa554578fa4613302c918dacdd19a879afad9aaf7cd2f505230f`). Its
+local receipt confirms source and fixture hashes stayed fixed during the run.
+Coverage MCP marks source/build identity unverified and test status unknown.
+The LLVM report records the separate-planar `decode_block` error-mapping
+closure and truncated-output guard. It also records the quality-50 path through
+the `quality > 50` false edge. The full-baseline comparison remains
+incomparable because baseline branch detail does not reconcile with aggregate
+totals; no aggregate coverage gain is claimed.
+
+These inputs reach behavior through public Pillow-compatible calls, so they
+remain parity cases. The 72 typed target-only fault-contract rows remain in
+their separate `not_applicable` oracle lane.
+
 ## WebP VP8L run-cap parity and benchmark path filter — 2026-10-20
 
 Added active Pillow parity row `encode:webp:enc_lossless_method_0_run_cap`.
@@ -43,8 +79,8 @@ CI filter fix is committed on `main` as `62daa2436d7802294ed253f2e54953862a6509a
 the GitHub CI, documentation, and paired SSE2/AVX2 benchmark runs were triggered
 on that commit.
 
-The current fixture matrix contains 2,440 total rows: 1,938 decode / inspect /
-verify rows and 502 encode rows. Of those, 1,938 decode rows and 470 encode
+The current fixture matrix contains 2,443 total rows: 1,940 decode / inspect /
+verify rows and 503 encode rows. Of those, 1,940 decode rows and 471 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7333,7 +7369,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `51dfff48fbddfb5a53ff316dc5e2ae2895bd87b62685a21cd225a728152f6b1e`; matrix `8052c8b30cedc56a2cb11f2dd68c95b7e15d6f5e92224f84dbc526e2e6377b38`.
+- Current fixture integrity only: manifest `94a281a34dec44393c80edf4b576b29c4b9d0ab7babd375601cb227771c565a1`; matrix `9fd427dbcd98842fa914646f06c1685648ebc1795ddf5a45f061bda34de8bce9`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
