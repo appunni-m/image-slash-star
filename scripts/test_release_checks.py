@@ -1215,6 +1215,7 @@ jobs:
             "benchmarks/jpeg-production/**",
             "src/codecs/jpeg/**",
             "src/codecs/mod.rs",
+            "src/capabilities.rs",
             "src/cancel.rs",
             "src/decode_policy.rs",
             "src/diagnostic.rs",
