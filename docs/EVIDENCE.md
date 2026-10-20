@@ -6,6 +6,49 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## WebP VP8L run-cap parity and benchmark path filter — 2026-10-20
+
+Added active Pillow parity row `encode:webp:enc_lossless_method_0_run_cap`.
+Its 4,356×1 RGB source contains 4,099 repeated white pixels followed by 257
+distinct colors, keeping the input off the small-palette path. With lossless
+method 0, the public encoder reaches the VP8L hash-chain checkpoint at an
+internal run of 4,096 and clamps the run to 4,095. The PNG source SHA-256 is
+`038d4a47bb2b7f22b62eaac823a897c74607b20ee0ab6999e30b5dc84f6a1a93`; the
+13,068-byte Pillow-decoded RGB reference SHA-256 is
+`3206f3f36cf23cf01f6a3f2b696cb407eee7c80c81c05a0373154b4a165a6016`; the
+186-byte encoded WebP SHA-256 is
+`d99c88b7b040f8f34dd8048f54ef0fcb4db4f43a7ffa1a048ddd9008dc863f7c`.
+
+The selected parity run passed 1/1 and re-decoded to 4,356×1 with exact pixel
+parity. Its report is retained at
+`.coverage-mcp/local-evidence/20261020/webp-run-cap-62daa243/coverage.json`
+(SHA-256
+`c86f0bc2a039065003df89e788f7def9b9f26812d0939d963bbeb03e8342c16f`). In the
+active `fill_hash_chain_impl::<true>` specialization, the report records both
+outcomes at the periodic-run check (48 / 13,206) and maximum-run check (3 / 9).
+The local receipt marks source/build identity unverified and named test
+attribution unknown. Coverage MCP groups untouched sibling monomorphizations
+separately, and its comparison with the full baseline is incomparable because
+the baseline branch detail does not reconcile with its aggregate totals. These
+are local path observations, not an aggregate coverage gain claim.
+
+This input reaches the behavior through normal public encoding, so it remains
+Pillow parity. The 72 typed target-only fault-contract rows remain in their
+separate lane with oracle status `not_applicable`.
+
+The x86 benchmark workflow's pull-request path filter now includes
+`src/cancel.rs`, which the benchmark uses for cancellation-aware encodes. Its
+release-policy regression test and the local selected parity test passed. The
+CI filter fix is committed on `main` as `62daa2436d7802294ed253f2e54953862a6509aa`;
+the GitHub CI, documentation, and paired SSE2/AVX2 benchmark runs were triggered
+on that commit.
+
+The current fixture matrix contains 2,440 total rows: 1,938 decode / inspect /
+verify rows and 502 encode rows. Of those, 1,938 decode rows and 470 encode
+rows are active; the other 32 encode rows are planned. The separate
+fault-contract lane contains 72 rows. The coverage-origin inventory records
+189 exact `cfg(coverage)` guards across 28 Rust files.
+
 ## Full coverage baseline and AV1 film-grain overlap parity — 2026-10-20
 
 Refreshed the local all-feature coverage baseline on source revision
@@ -7290,7 +7333,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8a714a88e98c13d07f3d491a54c63369f9ba58718c5422a09ba9d13d64cb11d0`; matrix `b545067d4e4838786bb70528de4e6e6a7d6d1da216bbb2a816ae9eaaa3fd16ad`.
+- Current fixture integrity only: manifest `51dfff48fbddfb5a53ff316dc5e2ae2895bd87b62685a21cd225a728152f6b1e`; matrix `8052c8b30cedc56a2cb11f2dd68c95b7e15d6f5e92224f84dbc526e2e6377b38`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

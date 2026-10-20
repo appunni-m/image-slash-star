@@ -5042,6 +5042,11 @@ formats:
     - id: enc_lossless_method_0
       description: VP8L method zero selects its low-effort lossless transform path
       params: {'lossless': True, 'quality': 80, 'method': 0}
+    - id: enc_lossless_method_0_run_cap
+      description: VP8L method zero checkpoints a 4,096-pixel run from 4,099 equal source pixels and clamps it at the 4,095-pixel maximum
+      source_format: png
+      source_asset: webp_lossless_run_cap_4356x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 0}
     - id: enc_lossless_method_0_palette
       description: VP8L method zero retains the sorted palette path for a 16-color input
       source_format: webp

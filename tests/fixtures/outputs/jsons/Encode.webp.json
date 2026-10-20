@@ -3969,6 +3969,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossless_method_0_run_cap",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_run_cap.bin",
+      "ref_bytes": 13068,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4356,
+        1
+      ],
+      "ref_sha256": "3206f3f36cf23cf01f6a3f2b696cb407eee7c80c81c05a0373154b4a165a6016",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_run_cap.bin",
+      "encoded_ref_bytes": 186,
+      "encoded_ref_sha256": "d99c88b7b040f8f34dd8048f54ef0fcb4db4f43a7ffa1a048ddd9008dc863f7c",
+      "source_mode": "Rgb8",
+      "source_sha256": "038d4a47bb2b7f22b62eaac823a897c74607b20ee0ab6999e30b5dc84f6a1a93",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossless_method_0_palette",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_palette.bin",
       "ref_bytes": 12288,
