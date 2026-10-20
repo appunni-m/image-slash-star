@@ -83,6 +83,11 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_apng_duplicate_actl.py --check
 	$(PYTHON) scripts/generate_png_apng_fdat_sequence_mismatch_before_idat.py --check
 	$(PYTHON) scripts/generate_png_apng_gray16_partial_fixture.py --check
+	$(PYTHON) scripts/generate_ico_equal_area_tiebreak_fixture.py --check
+	$(PYTHON) scripts/generate_ico_equal_area_same_depth_fixture.py --check
+	$(PYTHON) scripts/generate_cur_equal_size_y_hotspots_fixture.py --check
+	$(PYTHON) scripts/generate_cur_larger_dimensions_fixture.py --check
+	$(PYTHON) scripts/generate_ico_zero_bpp_depth_fallbacks_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check

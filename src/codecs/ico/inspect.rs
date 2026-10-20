@@ -35,7 +35,16 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut best = &directory[..ENTRY_SIZE];
     let mut best_offset = HEADER_SIZE;
     let mut best_score = 0;
+    let mut best_color_depth = u32::MAX;
     for (index, entry) in directory.as_chunks::<ENTRY_SIZE>().0.iter().enumerate() {
+        if kind == 2 {
+            if super::prefers_cursor_entry(entry[0], entry[1], best[0], best[1]) {
+                best = entry;
+                best_offset = HEADER_SIZE.saturating_add(index.saturating_mul(ENTRY_SIZE));
+            }
+            continue;
+        }
+
         let width = if entry[0] == 0 {
             256
         } else {
@@ -47,10 +56,13 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
             u32::from(entry[1])
         };
         let score = width.saturating_mul(height);
-        if score > best_score {
+        let bit_count = u16::from_le_bytes([entry[6], entry[7]]);
+        let color_depth = super::entry_color_depth(entry[2], bit_count);
+        if super::prefers_entry(score, color_depth, best_score, best_color_depth) {
             best = entry;
             best_offset = HEADER_SIZE.saturating_add(index.saturating_mul(ENTRY_SIZE));
             best_score = score;
+            best_color_depth = color_depth;
         }
     }
 

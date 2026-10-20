@@ -6,6 +6,42 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## ICO/CUR entry-selection parity — 2026-10-20
+
+Added five active Pillow parity rows covering ICO directory selection and CUR
+hotspot handling: equal-area lower-depth preference, stable equal-depth ties,
+both zero-bit-count depth fallbacks, equal-size CUR entries with different
+y-hotspots, and a CUR entry whose width and height both increase. The CUR
+equal-size witness uses a 1x11 canvas, keeping y-hotspots 10 and 2 in bounds.
+The larger-dimensions CUR witness orders a 1x1 green entry before a 2x2 red
+entry and confirms Pillow selects the later entry.
+
+The ICO decoder and inspector now share area-then-depth selection for ICOs,
+including Pillow's palette-derived `ceil(log2(color_count))` fallback and the
+maximum-depth fallback when the palette count is absent. CUR selection follows
+Pillow's raw directory rule: a later entry replaces the current one only when
+both raw dimensions are strictly larger. ICO bit-depth bytes are not treated
+as CUR hotspot coordinates.
+
+The focused all-feature branch-coverage run passed all seven selected rows:
+
+```text
+RUSTC_WRAPPER= PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:ico:cursor_equal_size_different_y_hotspots decode:ico:cursor_larger_dimensions decode:ico:multi_res_multi_descending decode:ico:multi_res_equal_area_bit_depth_tiebreak decode:ico:multi_res_equal_area_same_depth_stable decode:ico:multi_res_zero_bpp_depth_fallbacks decode:ico:cursor_cursor_24bit' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/20261020/ico-selection-branches-final/coverage.json
+```
+
+Coverage MCP reports no missing branches in `entry_color_depth`,
+`prefers_entry`, or `prefers_cursor_entry` for this measurement. The selected
+report is `.coverage-mcp/local-evidence/20261020/ico-selection-branches-final/coverage.json`;
+its source identity is unverified and test attribution is unknown, so this is
+localized branch evidence, not an aggregate coverage-gain claim. These cases
+are reachable through normal image inputs and remain Pillow parity rows; no
+fault-contract row is appropriate.
+
+The fixture matrix contains 2,462 rows: 1,956 decode / inspect / verify rows
+and 506 encode rows. Of those, 1,956 decode rows and 474 encode rows are active;
+the other 32 encode rows are planned. The separate fault-contract lane contains
+72 rows.
+
 ## JPEG progressive correction-buffer parity — 2026-10-20
 
 Added the public encode row
@@ -33,8 +69,8 @@ claim.
 
 The branch is reached through ordinary public encoding, so this case remains
 in Pillow parity and does not need a target-only fault-contract row. The
-fixture matrix now contains 2,457 total rows: 1,951 decode / inspect / verify rows and 506 encode rows.
-Of those, 1,951 decode rows and 474 encode rows are active; the other 32 encode
+fixture matrix now contains 2,462 total rows: 1,956 decode / inspect / verify rows and 506 encode rows.
+Of those, 1,956 decode rows and 474 encode rows are active; the other 32 encode
 rows are planned. The separate fault-contract lane contains 72 rows.
 
 ## AVIF odd-size I420 film-grain chroma parity — 2026-10-20
@@ -7564,7 +7600,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2445e8df9b7570c342f18f29f119378940a4526bd6d657d14344a4c82ef49c77`; matrix `bd32c33c6dfa3942b8b086dda7decf5f11a9916fa38dbd3f137a4e2fbe5f7b82`.
+- Current fixture integrity only: manifest `91522e23d1ba4649c1994d8e6c18fccbd75d3a710353834dfb2d141ebf31aa96`; matrix `ddbb1357638808de12e60c062555037e90eb5f9c4fae6139b933084e95b14cb6`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -1564,6 +1564,104 @@ def validate_ico_claim(case_id, asset_name, data):
         raise RuntimeError(f"ICO has {count} entries, expected one")
     if case_id == "multi_res" and count < 2:
         raise RuntimeError("ICO does not contain multiple resolutions")
+    if case_id == "multi_res_equal_area_bit_depth_tiebreak":
+        if icon_type != 1 or count != 2:
+            raise RuntimeError("equal-area bit-depth fixture must contain two ICO entries")
+        first, second = (entry for entry, _ in entries)
+        first_size = (first[0] or 256) * (first[1] or 256)
+        second_size = (second[0] or 256) * (second[1] or 256)
+        first_depth = int.from_bytes(first[6:8], "little")
+        second_depth = int.from_bytes(second[6:8], "little")
+        if first_size != second_size or (first[0], first[1]) != (second[0], second[1]):
+            raise RuntimeError("equal-area bit-depth entries must have equal dimensions")
+        if (first_depth, second_depth) != (32, 24):
+            raise RuntimeError("equal-area bit-depth fixture must order 32-bit before 24-bit")
+        if not all(payload and not payload.startswith(b"\x89PNG") for _, payload in entries):
+            raise RuntimeError("equal-area bit-depth fixture must use complete DIB entries")
+    if case_id == "multi_res_equal_area_same_depth_stable":
+        if icon_type != 1 or count != 2:
+            raise RuntimeError("equal-area same-depth fixture must contain two ICO entries")
+        first, second = (entry for entry, _ in entries)
+        first_size = (first[0] or 256) * (first[1] or 256)
+        second_size = (second[0] or 256) * (second[1] or 256)
+        if first_size != second_size or (first[0], first[1]) != (second[0], second[1]):
+            raise RuntimeError("equal-area same-depth entries must have identical dimensions")
+        depths = tuple(int.from_bytes(entry[6:8], "little") for entry in (first, second))
+        if depths != (24, 24):
+            raise RuntimeError("equal-area same-depth fixture must order two 24-bit entries")
+        if not all(
+            len(payload) >= 40
+            and int.from_bytes(payload[:4], "little") == 40
+            and int.from_bytes(payload[14:16], "little") == 24
+            for _, payload in entries
+        ):
+            raise RuntimeError("equal-area same-depth fixture must use complete 24-bit DIBs")
+    if case_id == "multi_res_zero_bpp_depth_fallbacks":
+        if icon_type != 1 or count != 3:
+            raise RuntimeError("zero-bit-count fixture must contain three ICO entries")
+        expected_directory = ((0, 24), (2, 0), (0, 0))
+        expected_dib_depths = (24, 1, 32)
+        for index, ((entry, payload), (colors, bit_count), dib_depth) in enumerate(
+            zip(entries, expected_directory, expected_dib_depths, strict=True)
+        ):
+            width, height = entry[0] or 256, entry[1] or 256
+            if (width, height) != (1, 1):
+                raise RuntimeError("zero-bit-count entries must have equal 1x1 dimensions")
+            if (entry[2], int.from_bytes(entry[6:8], "little")) != (colors, bit_count):
+                raise RuntimeError(
+                    f"zero-bit-count entry {index} has unexpected palette/depth metadata"
+                )
+            if (
+                len(payload) < 40
+                or int.from_bytes(payload[:4], "little") != 40
+                or int.from_bytes(payload[14:16], "little") != dib_depth
+            ):
+                raise RuntimeError(
+                    f"zero-bit-count entry {index} is not a complete {dib_depth}-bit DIB"
+                )
+    if case_id == "cursor_equal_size_different_y_hotspots":
+        if icon_type != 2 or count != 2:
+            raise RuntimeError("equal-size hotspot fixture must contain two CUR entries")
+        first, second = (entry for entry, _ in entries)
+        if (first[0], first[1]) != (second[0], second[1]) or (first[0], first[1]) != (1, 11):
+            raise RuntimeError("equal-size hotspot entries must have identical 1x11 dimensions")
+        first_hotspot_x = int.from_bytes(first[4:6], "little")
+        second_hotspot_x = int.from_bytes(second[4:6], "little")
+        first_hotspot_y = int.from_bytes(first[6:8], "little")
+        second_hotspot_y = int.from_bytes(second[6:8], "little")
+        if (first_hotspot_x, second_hotspot_x, first_hotspot_y, second_hotspot_y) != (0, 0, 10, 2):
+            raise RuntimeError("equal-size hotspot fixture must order y-hotspots 10 then 2")
+        if not all(
+            len(payload) >= 40
+            and int.from_bytes(payload[:4], "little") == 40
+            and int.from_bytes(payload[14:16], "little") == 24
+            and int.from_bytes(payload[4:8], "little", signed=True) == 1
+            and int.from_bytes(payload[8:12], "little", signed=True) == 22
+            for _, payload in entries
+        ):
+            raise RuntimeError("equal-size hotspot fixture must use complete 24-bit DIBs")
+    if case_id == "cursor_larger_dimensions":
+        if icon_type != 2 or count != 2:
+            raise RuntimeError("larger-dimensions fixture must contain two CUR entries")
+        expected_entries = ((1, 1, 0, 0), (2, 2, 1, 1))
+        for index, ((entry, payload), (width, height, x_hotspot, y_hotspot)) in enumerate(
+            zip(entries, expected_entries, strict=True)
+        ):
+            directory_values = (
+                entry[0],
+                entry[1],
+                int.from_bytes(entry[4:6], "little"),
+                int.from_bytes(entry[6:8], "little"),
+            )
+            dib_values = (
+                int.from_bytes(payload[4:8], "little", signed=True),
+                int.from_bytes(payload[8:12], "little", signed=True),
+                int.from_bytes(payload[14:16], "little"),
+            ) if len(payload) >= 40 else ()
+            if directory_values != (width, height, x_hotspot, y_hotspot):
+                raise RuntimeError(f"larger-dimensions CUR entry {index} is malformed")
+            if dib_values != (width, height * 2, 24):
+                raise RuntimeError(f"larger-dimensions CUR entry {index} is not a complete 24-bit DIB")
     if case_id == "cursor" and icon_type != 2:
         raise RuntimeError("fixture is not a CUR container")
     if case_id == "png_entry" and not entries[0][1].startswith(b"\x89PNG"):
@@ -2498,17 +2596,7 @@ def clear_pixel_ref(row):
 
 def ico_bit_depth(data):
     """Read storage depth from the best-resolution ICO or CUR payload."""
-    if len(data) < 6:
-        raise ValueError("truncated ICO header")
-    count = int.from_bytes(data[4:6], "little")
-    directory_end = 6 + count * 16
-    if count == 0 or directory_end > len(data):
-        raise ValueError("truncated ICO directory")
-    entries = [data[6 + index * 16 : 22 + index * 16] for index in range(count)]
-    best = max(
-        entries,
-        key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
-    )
+    best = ico_best_entry(data)
     length = int.from_bytes(best[8:12], "little")
     offset = int.from_bytes(best[12:16], "little")
     payload = data[offset : offset + length]
@@ -2521,6 +2609,40 @@ def ico_bit_depth(data):
     if len(payload) < 16:
         raise ValueError("truncated ICO DIB header")
     return int.from_bytes(payload[14:16], "little")
+
+
+def ico_best_entry(data):
+    """Select the entry Pillow loads, respecting the ICO/CUR field layouts."""
+    if len(data) < 6:
+        raise ValueError("truncated ICO header")
+    count = int.from_bytes(data[4:6], "little")
+    directory_end = 6 + count * 16
+    if count == 0 or directory_end > len(data):
+        raise ValueError("truncated ICO directory")
+    entries = [data[6 + index * 16 : 22 + index * 16] for index in range(count)]
+    icon_type = int.from_bytes(data[2:4], "little")
+    if icon_type == 2:
+        best = entries[0]
+        for entry in entries[1:]:
+            if entry[0] > best[0] and entry[1] > best[1]:
+                best = entry
+        return best
+
+    def color_depth(entry):
+        bit_count = int.from_bytes(entry[6:8], "little")
+        if bit_count:
+            return bit_count
+        palette_colors = entry[2]
+        palette_depth = (palette_colors - 1).bit_length() if palette_colors > 1 else 0
+        return palette_depth or 256
+
+    return max(
+        entries,
+        key=lambda entry: (
+            (entry[0] or 256) * (entry[1] or 256),
+            -color_depth(entry),
+        ),
+    )
 
 
 def avif_bit_depth(image_path):
@@ -2706,15 +2828,7 @@ def write_inspect_ref(row, image_path, fmt_name):
                 row["avif_mirror_axis"] = mirror_axis
         if image.format == "CUR":
             data = image_path.read_bytes()
-            count = int.from_bytes(data[4:6], "little")
-            entries = [
-                data[6 + index * 16 : 22 + index * 16]
-                for index in range(count)
-            ]
-            best = max(
-                entries,
-                key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
-            )
+            best = ico_best_entry(data)
             row["inspect_cursor_hotspot"] = [
                 int.from_bytes(best[4:6], "little"),
                 int.from_bytes(best[6:8], "little"),

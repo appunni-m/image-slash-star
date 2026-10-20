@@ -7102,6 +7102,18 @@ formats:
       test_assets:
       - multi.ico
       - multi_descending.ico
+    - id: multi_res_equal_area_bit_depth_tiebreak
+      description: Equal-area entries select the lower bit depth even when it appears later
+      test_assets:
+      - equal_area_bit_depth_tiebreak.ico
+    - id: multi_res_equal_area_same_depth_stable
+      description: Equal-area and equal-depth entries retain the first directory entry
+      test_assets:
+      - equal_area_same_depth.ico
+    - id: multi_res_zero_bpp_depth_fallbacks
+      description: Zero directory bit counts derive depth from palette size or use the maximum fallback
+      test_assets:
+      - zero_bpp_depth_fallbacks.ico
     - id: png_entry
       description: ICO with embedded PNG data
       test_assets:
@@ -7175,6 +7187,14 @@ formats:
       - cursor.cur
       - cursor_default_palette.cur
       - cursor_24bit.cur
+    - id: cursor_equal_size_different_y_hotspots
+      description: Equal-size CUR entries retain the first entry despite its larger y-hotspot
+      test_assets:
+      - equal_size_y_hotspots.cur
+    - id: cursor_larger_dimensions
+      description: CUR selection replaces an entry only when both raw dimensions grow
+      test_assets:
+      - larger_dimensions.cur
     - id: size_16x16
       description: 16x16 icon (most common)
       test_assets:

@@ -81482,6 +81482,240 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "multi_res_equal_area_bit_depth_tiebreak",
+          "type": "decode",
+          "format": "ico",
+          "category": "multi",
+          "description": "Equal-area entries select the lower bit depth even when it appears later",
+          "asset": "equal_area_bit_depth_tiebreak.ico",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "99f2da93f172c14fb4dd2fe78b6c25e2f5194fd57cb9fc7f798f485241443a82",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "ICO",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_equal_area_bit_depth_tiebreak_ico.bin",
+          "ref_sha256": "34aaa746c25a0f105c4316bbb1f009aa359f49582656ee97d73c58132d563423",
+          "ref_bytes": 4,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "multi_res_equal_area_same_depth_stable",
+          "type": "decode",
+          "format": "ico",
+          "category": "multi",
+          "description": "Equal-area and equal-depth entries retain the first directory entry",
+          "asset": "equal_area_same_depth.ico",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "971907370044e3d15908854cba640abe0566ef55e15ac39beb4a7c835203cb36",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "ICO",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_equal_area_same_depth_ico.bin",
+          "ref_sha256": "7a7bf454c5f3cb1b9d9a20f81417f98d976fe3b3dd52c1b9968f02e89e7e8a2f",
+          "ref_bytes": 4,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "multi_res_zero_bpp_depth_fallbacks",
+          "type": "decode",
+          "format": "ico",
+          "category": "multi",
+          "description": "Zero directory bit counts derive depth from palette size or use the maximum fallback",
+          "asset": "zero_bpp_depth_fallbacks.ico",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "6d7fa6c19913b0f124338fc4afb0c5e841730cf05e20e3b6dd88ccb6943b4651",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "ICO",
+          "ref_bit_depth": 1,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_zero_bpp_depth_fallbacks_ico.bin",
+          "ref_sha256": "7a7bf454c5f3cb1b9d9a20f81417f98d976fe3b3dd52c1b9968f02e89e7e8a2f",
+          "ref_bytes": 4,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "png_entry.ico",
           "asset_path": "tests/fixtures/input/images/ico/png_entry.ico",
           "category": "png",
@@ -83218,6 +83452,168 @@
           "decoded_source_color": null,
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "cursor_equal_size_different_y_hotspots",
+          "type": "decode",
+          "format": "ico",
+          "category": "cursor",
+          "description": "Equal-size CUR entries retain the first entry despite its larger y-hotspot",
+          "asset": "equal_size_y_hotspots.cur",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "49e7629bdf85ec5c1e27af798e430fd08650fdee5693ffdd3704ebe256b9a0e2",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "CUR",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": [
+            0,
+            10
+          ],
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_equal_size_y_hotspots_cur.bin",
+          "ref_sha256": "13282cb75283192bda25b1e0f8688337bd77de15e28fbb9dd3c509b8775d0b80",
+          "ref_bytes": 33,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            11
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "cursor_larger_dimensions",
+          "type": "decode",
+          "format": "ico",
+          "category": "cursor",
+          "description": "CUR selection replaces an entry only when both raw dimensions grow",
+          "asset": "larger_dimensions.cur",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "9119f0d91fa3a5a5da28904cbbfb10a6ae4eb4eb43ea446881308749a564ff40",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "CUR",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": [
+            1,
+            1
+          ],
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.ico_larger_dimensions_cur.bin",
+          "ref_sha256": "fcf067f6323bb42b8292a565a8f826ec5fdb1b142b7a69bf7f7721f0d5d46ef8",
+          "ref_bytes": 12,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "asset": "16x16.ico",
@@ -86255,8 +86651,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_retained_sequence_geometry.bin",
           "encoded_ref_bytes": 839,
           "encoded_ref_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
-          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_retained_sequence_geometry.bin",
+          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -86338,8 +86734,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_public_mode_contract.bin",
           "encoded_ref_bytes": 91,
           "encoded_ref_sha256": "585a86d4f96fa97e776b107aec4bcc9bf6f565e6352ea594c593810e4c87f044",
-          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_public_mode_contract.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
           "ref_bytes": 3,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -86396,8 +86792,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_16x16.bin",
           "encoded_ref_bytes": 839,
           "encoded_ref_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
-          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_16x16.bin",
+          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -86454,8 +86850,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_256x256.bin",
           "encoded_ref_bytes": 59255,
           "encoded_ref_sha256": "17a3b9f4654b1537c03a13cafe5b8717da6f776508d998779339ea420550cadc",
-          "ref_sha256": "baf7d531467e8450f2bcd80ab59d6eda5ee3d7c634ead35c7c69c8fcb9a84936",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_256x256.bin",
+          "ref_sha256": "baf7d531467e8450f2bcd80ab59d6eda5ee3d7c634ead35c7c69c8fcb9a84936",
           "ref_bytes": 196608,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -86572,8 +86968,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_entry.bin",
           "encoded_ref_bytes": 862,
           "encoded_ref_sha256": "f6f230629b249863a171d4c505ca9ed37ae18b75b48896adc0cc7191f55af68a",
-          "ref_sha256": "c6b73419bafc8ebc82a2f14df4b3644b48a52b5d948a781312b82ac6a8001c3b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_entry.bin",
+          "ref_sha256": "c6b73419bafc8ebc82a2f14df4b3644b48a52b5d948a781312b82ac6a8001c3b",
           "ref_bytes": 1024,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -86631,8 +87027,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_entry.bin",
           "encoded_ref_bytes": 839,
           "encoded_ref_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
-          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_entry.bin",
+          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -86690,8 +87086,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_bilevel.bin",
           "encoded_ref_bytes": 2154,
           "encoded_ref_sha256": "9c4ca879789fc202ea7d23f4ec021982c21241940fe9d30c731766bc6ecd8d98",
-          "ref_sha256": "3ce53162e902b8ae7f46faf1a1cd98321628df7529e208d5872775d058c2d5ea",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_bilevel.bin",
+          "ref_sha256": "3ce53162e902b8ae7f46faf1a1cd98321628df7529e208d5872775d058c2d5ea",
           "ref_bytes": 2048,
           "ref_mode": "1",
           "ref_size": [
@@ -86749,8 +87145,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_indexed.bin",
           "encoded_ref_bytes": 12265,
           "encoded_ref_sha256": "e4362e645c011e7d870b49666ae9519e8ad23b789f9c26062435856d20ab3ce7",
-          "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_indexed.bin",
+          "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -86808,8 +87204,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_luminance.bin",
           "encoded_ref_bytes": 3414,
           "encoded_ref_sha256": "d4ccb6962b547f59d5e9edc4b7d4b11ac3fe2888349c3488d8056779f0265643",
-          "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_luminance.bin",
+          "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -86867,8 +87263,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_luminance_alpha.bin",
           "encoded_ref_bytes": 3959,
           "encoded_ref_sha256": "8b4f6b6828fc00c401ca2c78f032b0df95762658b7a7a73d265ac8f4088d4795",
-          "ref_sha256": "c0ad0336cbf07b059de27184d72ff878a2d9b33819860e36bdfb7620959a7c87",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_luminance_alpha.bin",
+          "ref_sha256": "c0ad0336cbf07b059de27184d72ff878a2d9b33819860e36bdfb7620959a7c87",
           "ref_bytes": 32768,
           "ref_mode": "La8",
           "ref_size": [
@@ -86926,8 +87322,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_png_l16.bin",
           "encoded_ref_bytes": 3950,
           "encoded_ref_sha256": "61509b578dcefbc48b212b5f809be3863abe66a77bf4e5f1c6e23cf220d7db0f",
-          "ref_sha256": "2fd61a2cde9c0580c8008c6d8db9b21cd7f0b692adb09730dd28088e3e4055b7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_png_l16.bin",
+          "ref_sha256": "2fd61a2cde9c0580c8008c6d8db9b21cd7f0b692adb09730dd28088e3e4055b7",
           "ref_bytes": 32768,
           "ref_mode": "I;16",
           "ref_size": [
@@ -86985,8 +87381,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_24bit.bin",
           "encoded_ref_bytes": 3677,
           "encoded_ref_sha256": "262ddc0869c8f0883712e075c7935d1c47d79ef313a527a3880dfc10b8b7340b",
-          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_24bit.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -87044,8 +87440,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_32bit.bin",
           "encoded_ref_bytes": 3963,
           "encoded_ref_sha256": "78cbef39359023a90a044970e53626b4b55d9e3f2337556f51e93a55109df235",
-          "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_32bit.bin",
+          "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -87103,8 +87499,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_no_hotspot.bin",
           "encoded_ref_bytes": 839,
           "encoded_ref_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
-          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_no_hotspot.bin",
+          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -87165,8 +87561,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_hotspot.bin",
           "encoded_ref_bytes": 839,
           "encoded_ref_sha256": "6d8565c63a7f30ca61ded677679600d5621fd9b8dd7760a2689ca476b8edfb67",
-          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_hotspot.bin",
+          "ref_sha256": "df9d8a6476968f329962a607e2fe50087bd600a584cb81efa721480f37cf9352",
           "ref_bytes": 768,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -87224,8 +87620,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_rgba.bin",
           "encoded_ref_bytes": 65598,
           "encoded_ref_sha256": "042e6350ca4c7103a0b03355d3114f43e1d08207700cfcf3ee9f701e4dbd972a",
-          "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_rgba.bin",
+          "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
           "ref_bytes": 65536,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -87283,8 +87679,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_bmp_256.bin",
           "encoded_ref_bytes": 204862,
           "encoded_ref_sha256": "0036c6bf7ff6c2491f0ada14177253bb85e9141f97a08e0f2de7f5720fecc3e2",
-          "ref_sha256": "88dc86e4184001d2d100c08b9e28213ab95aa3bcd8df799adbc2cdc26b750fed",
           "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_bmp_256.bin",
+          "ref_sha256": "88dc86e4184001d2d100c08b9e28213ab95aa3bcd8df799adbc2cdc26b750fed",
           "ref_bytes": 262144,
           "ref_mode": "Rgba8",
           "ref_size": [
@@ -207320,12 +207716,12 @@
     }
   },
   "summary": {
-    "total_rows": 2457,
-    "decode_rows": 1951,
+    "total_rows": 2462,
+    "decode_rows": 1956,
     "encode_rows": 506,
     "formats": 8,
-    "assets_available": 1947,
-    "decode_active": 1951,
+    "assets_available": 1952,
+    "decode_active": 1956,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

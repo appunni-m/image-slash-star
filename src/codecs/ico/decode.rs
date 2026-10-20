@@ -75,25 +75,44 @@ pub fn decode(
         ));
     }
 
-    // Find the best entry: prefer 256x256, then largest image
-    let mut best_idx = 0;
+    // Keep ICO's area/depth order separate from CUR's hotspot-field layout and
+    // selection rule.
+    let mut best_idx: usize = 0;
     let mut best_score: u32 = 0;
+    let mut best_color_depth = u32::MAX;
 
     for i in 0..count {
         crate::codecs::error::check_cancelled(token)?;
         let entry_offset = entries_start.saturating_add(i.saturating_mul(ICO_DIR_ENTRY_SIZE));
         let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
-        let w = entry[0] as u32;
-        let h = entry[1] as u32;
-        // Width/height of 0 means 256 pixels
-        let actual_w = if w == 0 { 256 } else { w };
-        let actual_h = if h == 0 { 256 } else { h };
-
-        let score = actual_w.saturating_mul(actual_h);
-        if score > best_score {
-            best_score = score;
-            best_idx = i;
+        if icon_type == 2 {
+            let best_entry_offset =
+                entries_start.saturating_add(best_idx.saturating_mul(ICO_DIR_ENTRY_SIZE));
+            let best_entry =
+                &data[best_entry_offset..best_entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
+            if super::prefers_cursor_entry(entry[0], entry[1], best_entry[0], best_entry[1]) {
+                best_idx = i;
+            }
+        } else {
+            let width = if entry[0] == 0 {
+                256
+            } else {
+                u32::from(entry[0])
+            };
+            let height = if entry[1] == 0 {
+                256
+            } else {
+                u32::from(entry[1])
+            };
+            let score = width.saturating_mul(height);
+            let bit_count = u16::from_le_bytes([entry[6], entry[7]]);
+            let color_depth = super::entry_color_depth(entry[2], bit_count);
+            if super::prefers_entry(score, color_depth, best_score, best_color_depth) {
+                best_score = score;
+                best_color_depth = color_depth;
+                best_idx = i;
+            }
         }
     }
 
@@ -144,15 +163,15 @@ fn decode_entry(
     // `0..count`, so this private slice is bounded before dispatch.
     let entry = &data[entry_offset..entry_offset.saturating_add(ICO_DIR_ENTRY_SIZE)];
 
-    // Directory entry fields:
-    //   byte 0:    width (0 = 256)
-    //   byte 1:    height (0 = 256)
-    //   byte 2:    palette colors (0 if >= 256)
-    //   byte 3:    reserved (0)
-    //   bytes 4-5: color planes (should be 0 or 1)
-    //   bytes 6-7: bits per pixel
+    // Directory entry fields shared by ICO/CUR:
+    //   byte 0: width (0 = 256)
+    //   byte 1: height (0 = 256)
+    //   byte 2: palette colors (0 if >= 256)
+    //   byte 3: reserved (0)
     //   bytes 8-11: size of entry data in bytes
     //   bytes 12-15: offset of entry data from start of file
+    // ICO bytes 4-5 and 6-7 are planes and bits per pixel; CUR uses them for
+    // x and y hotspots, respectively.
     let _w = entry[0];
     let _h = entry[1];
     let _palette = entry[2];
