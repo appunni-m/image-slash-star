@@ -5470,6 +5470,22 @@ formats:
       params:
         lossless: false
         quality: 10
+    - id: enc_lossy_quality_0_method_0_solid_rgb_32x32
+      description: Lossy quality-zero method-zero encoding of a uniform 32x32 RGB image
+      source_format: png
+      source_asset: webp_lossy_q0_solid_rgb_32x32.png
+      params:
+        lossless: false
+        quality: 0
+        method: 0
+    - id: enc_lossy_quality_0_method_0_nonuniform_rgb_17x17
+      description: Lossy quality-zero method-zero encoding of a nonuniform 17x17 RGB image
+      source_format: png
+      source_asset: webp_subtract_green.png
+      params:
+        lossless: false
+        quality: 0
+        method: 0
   tiff:
     name: TIFF
     extensions:

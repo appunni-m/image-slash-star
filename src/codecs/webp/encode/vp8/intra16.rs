@@ -19,6 +19,20 @@ impl Intra16Mode {
     const ALL: [Self; 4] = [Self::Dc, Self::TrueMotion, Self::Vertical, Self::Horizontal];
 }
 
+fn flat_border_mode(source: &[u8; 256], has_top: bool, has_left: bool) -> Option<Intra16Mode> {
+    if (has_top && has_left) || source.iter().any(|&sample| sample != source[0]) {
+        return None;
+    }
+
+    // libwebp fixes flat border blocks to DC on the left edge and vertical
+    // prediction along the top edge to prevent a border checkerboard.
+    Some(if has_left {
+        Intra16Mode::Vertical
+    } else {
+        Intra16Mode::Dc
+    })
+}
+
 const FIXED_MODE_COSTS: [u32; 4] = [663, 919, 872, 919];
 
 fn predict(
@@ -277,21 +291,26 @@ pub(super) fn select(
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Intra16Candidate {
+    let flat_border_mode = distortion_only
+        .then(|| flat_border_mode(source, has_top, has_left))
+        .flatten();
     let selected_mode = distortion_only.then(|| {
         // The complete intra16 mode set is statically non-empty.
         #[allow(
             clippy::expect_used,
             reason = "Intra16Mode::ALL statically contains the complete non-empty prediction set."
         )]
-        Intra16Mode::ALL
-            .into_iter()
-            .min_by_key(|&mode| {
-                let prediction = predict(mode, top, left, top_left, has_top, has_left);
-                256u32
-                    .saturating_mul(squared_error_16x16(source, &prediction))
-                    .saturating_add(106u32.saturating_mul(FIXED_MODE_COSTS[mode as usize]))
-            })
-            .expect("VP8 always has intra16 candidates")
+        flat_border_mode.unwrap_or_else(|| {
+            Intra16Mode::ALL
+                .into_iter()
+                .min_by_key(|&mode| {
+                    let prediction = predict(mode, top, left, top_left, has_top, has_left);
+                    256u32
+                        .saturating_mul(squared_error_16x16(source, &prediction))
+                        .saturating_add(106u32.saturating_mul(FIXED_MODE_COSTS[mode as usize]))
+                })
+                .expect("VP8 always has intra16 candidates")
+        })
     });
     // `fixed_mode`, when present, is itself a member of this non-empty enum set.
     #[allow(

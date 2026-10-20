@@ -511,7 +511,15 @@ fn write_coefficient_probabilities<P: PartitionCheckpointControl>(
             }
         }
     }
-    encode_bool(writer, 128, false, checkpoint)?; // no skip probability
+    encode_bool(writer, 128, probabilities.use_skip_probability, checkpoint)?;
+    if probabilities.use_skip_probability {
+        encode_literal(
+            writer,
+            u32::from(probabilities.skip_probability),
+            8,
+            checkpoint,
+        )?;
+    }
     Ok(())
 }
 
@@ -607,8 +615,9 @@ fn write_modes<P: PartitionCheckpointControl>(
     writer: &mut BoolEncoder,
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
+    params: &FrameParams,
     segment_probabilities: [u8; 3],
-    segmentation_enabled: bool,
+    probabilities: &AdaptedProbabilities,
     checkpoint: &mut P,
 ) -> CodecResult<()> {
     let mode_stride = macroblock_width.saturating_mul(4);
@@ -621,8 +630,16 @@ fn write_modes<P: PartitionCheckpointControl>(
     ];
     let mut macroblock_items = 0usize;
     for decision in decisions {
-        if segmentation_enabled {
+        if params.num_segments > 1 {
             write_segment(writer, decision.segment, segment_probabilities, checkpoint)?;
+        }
+        if probabilities.use_skip_probability {
+            encode_bool(
+                writer,
+                probabilities.skip_probability,
+                decision.nonzero == 0,
+                checkpoint,
+            )?;
         }
         let is_intra16 = matches!(decision.luma, LumaDecision::Intra16(_));
         encode_bool(writer, 145, is_intra16, checkpoint)?;
@@ -728,8 +745,9 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
         &mut writer,
         decisions,
         macroblock_width,
+        &params,
         segment_probabilities,
-        params.num_segments > 1,
+        probabilities,
         checkpoint,
     )?;
     checkpoint.finish(writer)

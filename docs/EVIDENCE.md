@@ -37,8 +37,8 @@ localized branch evidence, not an aggregate coverage-gain claim. These cases
 are reachable through normal image inputs and remain Pillow parity rows; no
 fault-contract row is appropriate.
 
-The fixture matrix contains 2,466 rows: 1,957 decode / inspect / verify rows
-and 509 encode rows. Of those, 1,957 decode rows and 477 encode rows are active;
+The fixture matrix contains 2,468 rows: 1,957 decode / inspect / verify rows
+and 511 encode rows. Of those, 1,957 decode rows and 479 encode rows are active;
 the other 32 encode rows are planned. The separate fault-contract lane contains
 72 rows.
 
@@ -143,9 +143,40 @@ claim.
 
 The branch is reached through ordinary public encoding, so this case remains
 in Pillow parity and does not need a target-only fault-contract row. The
-fixture matrix now contains 2,466 total rows: 1,957 decode / inspect / verify rows and 509 encode rows.
-Of those, 1,957 decode rows and 477 encode rows are active; the other 32 encode
+fixture matrix now contains 2,468 total rows: 1,957 decode / inspect / verify rows and 511 encode rows.
+Of those, 1,957 decode rows and 479 encode rows are active; the other 32 encode
 rows are planned. The separate fault-contract lane contains 72 rows.
+
+## WebP lossy quality-zero bitstream parity — 2026-10-20
+
+Added two active Pillow encode rows for lossy WebP at quality 0 and method 0.
+The solid 32x32 RGB source is `(54, 83, 112)` throughout; its exact 64-byte
+WebP has SHA-256
+`6f7a1d39acaa69a091365e2f0f40056123e3e32557716ff641b00c74908d2467` and its
+decoded RGB reference has SHA-256
+`400ee6b557d526d51bf44bf9bb5a134f1c4180f2735f5024e6a1b4caafd902f7`. The
+nonuniform 17x17 RGB source is the existing `webp_subtract_green.png` fixture;
+its exact 158-byte WebP has SHA-256
+`dd356bbf484bad7659696b03b904f19eda8cf6a78f243ac2b2ff03ebdf09e054` and its
+decoded RGB reference has SHA-256
+`0e2113aada69ce5552318e82fb2a0187b4e90328b59cecd40323d9c389028100`.
+
+Exact byte parity required matching libwebp's flat-border Intra16 mode choice,
+the sharpness-zero filter-delta cap, and skip-probability signaling plus
+zero-coefficient macroblock context resets. Skip counts are collected during
+the existing coefficient-statistics traversal. Both quality-zero rows and the
+quality-100 control passed the selected public encode run: 3/3 rows, 12 encode
+calls, no panics. The report is
+`target/release-evidence/selected/webp-q0-nonuniform-20261020.json` (SHA-256
+`37315b6153679a21dd847a27dca58940882fabf12742ebe93c0cd7286476d466`).
+Coverage MCP found no missing branch groups in `skip_probability` or
+`flat_border_mode` for this selected slice. The report remains local evidence:
+Coverage MCP marks source identity unverified and test attribution unknown, so
+it does not support an aggregate coverage claim.
+
+These branches are reachable through ordinary public inputs and remain Pillow
+parity cases. No target-only fault contract is appropriate for them; the
+separate fault-contract lane remains at 72 rows.
 
 ## AVIF odd-size I420 film-grain chroma parity — 2026-10-20
 
@@ -7674,7 +7705,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b412d1c8f24ee03b0223f1164e1694d4574302fc634251e249f04f8bdab546d7`; matrix `20f4ac77486578565bbcdcd09061276c84415fbae8871c1e09f9b88872ecfcaa`.
+- Current fixture integrity only: manifest `365d026c563b2adce74fff22d1ef2b09ba3886dd7d0fff6804a92f9a0661fc73`; matrix `56967fce8a74aa077e39f79850bbfb05933031c89d29ece87ba3af3369e3487b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

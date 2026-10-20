@@ -9306,6 +9306,108 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_lossy_quality_0_method_0_solid_rgb_32x32",
+      "source_asset": "webp_lossy_q0_solid_rgb_32x32.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "36b92d4ae57c946bc9187336ceb0c25f65c06648db6789fce914b67b03691c8f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossy_q0_solid_rgb_32x32.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_quality_0_method_0_nonuniform_rgb_17x17",
+      "source_asset": "webp_subtract_green.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f60a0ce6bf4ce6baefba2b5e698f44a537ddec25a989c8ca48057b1d981402c7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_subtract_green.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }

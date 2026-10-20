@@ -12,6 +12,8 @@ const ANALYSIS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const ANALYSIS_HISTOGRAM_CHECKPOINT_BLOCKS: usize = 64;
 const SEGMENT_ASSIGNMENT_CHECKPOINT_MACROBLOCKS: usize = 1_024;
 const SEGMENT_CLUSTER_CHECKPOINT_ALPHA_VALUES: usize = 64;
+const MAX_FILTER_DELTA: u16 = 63;
+const DEFAULT_FILTER_STRENGTH_SCALE: i32 = 300;
 
 trait AnalysisCheckpointControl {
     fn checkpoint_analysis_macroblock(&mut self) -> CodecResult<()>;
@@ -697,8 +699,11 @@ pub(super) fn segment_params(analysis: &FrameAnalysis, quality: f64) -> FramePar
         let quantizer = trunc_quantizer(127.0 * (1.0 - compression.powf(exponent)));
         let quantizer = quantizer.clamp(0, 127).to_le_bytes()[0];
         let quantizer_step = Y_AC_QUANT[quantizer as usize] >> 2;
-        let strength = i32::from(quantizer_step)
-            .wrapping_mul(300)
+        // libwebp's default sharpness-0 lookup is min(delta, 63); its
+        // default filter strength of 60 contributes the scale factor 5 * 60.
+        let base_strength = i32::from(quantizer_step.min(MAX_FILTER_DELTA));
+        let strength = base_strength
+            .wrapping_mul(DEFAULT_FILTER_STRENGTH_SCALE)
             .checked_div(256_i32.wrapping_add(analysis.segments[index].beta))
             .unwrap_or_default();
         let filter_strength = if strength < 2 {

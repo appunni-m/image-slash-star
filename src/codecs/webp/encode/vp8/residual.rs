@@ -528,6 +528,19 @@ fn encode_coefficients_with_checkpoint<P: CoefficientCheckpointControl>(
         let mut left_y2 = 0u8;
         for decision in row {
             let x = decision.x;
+            if probabilities.use_skip_probability && decision.nonzero == 0 {
+                top_y[x] = [0; 4];
+                top_uv[x] = [0; 4];
+                if matches!(&decision.luma, LumaDecision::Intra16(_)) {
+                    top_y2[x] = 0;
+                }
+                left_y = [0; 4];
+                left_uv = [0; 4];
+                left_y2 = 0;
+                checkpoint.checkpoint_macroblock()?;
+                continue;
+            }
+
             match &decision.luma {
                 LumaDecision::Intra16(luma) => {
                     let nonzero = write_block_with_checkpoint(

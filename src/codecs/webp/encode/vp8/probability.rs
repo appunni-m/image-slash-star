@@ -11,11 +11,25 @@ type Statistics = [[[[u32; 11]; 3]; 8]; 4];
 
 const PROBABILITY_CHECKPOINT_NODES: usize = 1_024;
 const STATISTICS_CHECKPOINT_MACROBLOCKS: usize = 1_024;
+const SKIP_PROBABILITY_THRESHOLD: u8 = 250;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AdaptedProbabilities {
     pub(super) coefficients: [[[[u8; 11]; 3]; 8]; 4],
     pub(super) updates: [[[[bool; 11]; 3]; 8]; 4],
+    pub(super) skip_probability: u8,
+    pub(super) use_skip_probability: bool,
+}
+
+fn skip_probability(total: usize, skipped: usize) -> u8 {
+    let total = total.max(1);
+    let non_skipped = total.saturating_sub(skipped);
+    let total = u64::try_from(total).unwrap_or(u64::MAX);
+    let non_skipped = u64::try_from(non_skipped).unwrap_or(u64::MAX);
+    (u128::from(non_skipped)
+        .saturating_mul(u128::from(u8::MAX))
+        .div_euclid(u128::from(total)))
+    .to_le_bytes()[0]
 }
 
 fn record_event(statistic: &mut u32, bit: bool) {
@@ -170,11 +184,12 @@ fn collect_statistics_with_checkpoint<C: StatisticsCheckpointControl>(
     macroblock_width: usize,
     token_buffer: bool,
     checkpoint: &mut C,
-) -> CodecResult<Statistics> {
+) -> CodecResult<(Statistics, usize)> {
     let mut statistics = [[[[0; 11]; 3]; 8]; 4];
     let mut top_y = vec![[0u8; 4]; macroblock_width];
     let mut top_uv = vec![[0u8; 4]; macroblock_width];
     let mut top_y2 = vec![0u8; macroblock_width];
+    let mut skipped_macroblocks = 0usize;
 
     for row in decisions.chunks(macroblock_width) {
         let mut left_y = [0u8; 4];
@@ -182,6 +197,8 @@ fn collect_statistics_with_checkpoint<C: StatisticsCheckpointControl>(
         let mut left_y2 = 0u8;
         for decision in row {
             let x = decision.x;
+            skipped_macroblocks =
+                skipped_macroblocks.saturating_add(usize::from(decision.nonzero == 0));
             match &decision.luma {
                 LumaDecision::Intra16(luma) => {
                     let nonzero = record_block(
@@ -258,7 +275,7 @@ fn collect_statistics_with_checkpoint<C: StatisticsCheckpointControl>(
             checkpoint.observe()?;
         }
     }
-    Ok(statistics)
+    Ok((statistics, skipped_macroblocks))
 }
 
 pub(super) fn adapt_coefficients(
@@ -267,7 +284,7 @@ pub(super) fn adapt_coefficients(
     token_buffer: bool,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<AdaptedProbabilities> {
-    let statistics = if let Some(token) = token {
+    let (statistics, skipped_macroblocks) = if let Some(token) = token {
         let mut checkpoint = TokenStatisticsCheckpoint::new(token);
         collect_statistics_with_checkpoint(
             decisions,
@@ -323,9 +340,12 @@ pub(super) fn adapt_coefficients(
             }
         }
     }
+    let skip_probability = skip_probability(decisions.len(), skipped_macroblocks);
     Ok(AdaptedProbabilities {
         coefficients,
         updates,
+        skip_probability,
+        use_skip_probability: skip_probability < SKIP_PROBABILITY_THRESHOLD,
     })
 }
 
@@ -333,7 +353,7 @@ fn collect_statistics_without_token(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     token_buffer: bool,
-) -> CodecResult<Statistics> {
+) -> CodecResult<(Statistics, usize)> {
     let mut checkpoint = NoopStatisticsCheckpoint;
     collect_statistics_with_checkpoint(decisions, macroblock_width, token_buffer, &mut checkpoint)
 }
