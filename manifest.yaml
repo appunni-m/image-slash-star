@@ -4565,6 +4565,7 @@ formats:
       - animated.webp
       - animated_sequence_rgba_keyframes.webp
       - animated_alpha.webp
+      - animated_alpha_origin_partial.webp
       - animated_alpha_holes_partial_background.webp
       - animated_alpha_holes_opaque_background.webp
       - animated_rgb_opaque_background.webp

@@ -44,3 +44,12 @@ the first ANMF frame, and inserts one or two top-level VP8L chunks before
 ANIM. Regenerate and check them with
 `scripts/generate_webp_animated_top_level_image_fixtures.py`; Pillow 12.2.0
 rejects both during image open with `OSError: could not create decoder object`.
+
+`animated_alpha_origin_partial.webp` derives from the pinned
+`animated_alpha.webp` source by changing only the two ANMF origin fields. The
+frames start at raw offsets `(0, 0)` and `(0, 2)` while retaining their 16x16
+dimensions on a 64x64 canvas. Regenerate it with
+`scripts/generate_webp_animated_origin_partial_fixture.py`; the generator pins
+the complete-file hash and verifies both composited RGBA frames with Pillow
+12.2.0. The fixture reaches the partial-frame path after both origin checks
+pass, then the width check fails.

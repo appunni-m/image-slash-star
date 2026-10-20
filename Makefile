@@ -104,6 +104,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_tiff_palette4_fillorder2_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_ycbcr_subsampled_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_animated_top_level_image_fixtures.py --check
+	$(PYTHON) scripts/generate_webp_animated_origin_partial_fixture.py --check
 	$(PYTHON) scripts/generate_webp_lossless_run_cap_fixture.py --check
 	$(PYTHON) scripts/generate_avif_iinf_child_kind_fixture.py --check
 	$(PYTHON) scripts/generate_avif_iloc_trailing_payload_fixture.py --check
