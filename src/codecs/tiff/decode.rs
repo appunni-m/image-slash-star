@@ -320,18 +320,17 @@ fn decode_ifd(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
     }
-    let aligned_subsampled_ycbcr_predictor = predictor == 2
+    let supported_subsampled_ycbcr_predictor = predictor == 2
         && compression == COMPRESSION_LZW
         && !tiled
         && ycbcr_subsampling.is_some_and(|(horizontal, vertical)| {
             matches!((horizontal, vertical), (1, 2) | (2, 2))
                 && width_usize.is_multiple_of(horizontal)
                 && height_usize.is_multiple_of(vertical)
-                && rows_per_strip.is_multiple_of(vertical)
         });
     if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
         && predictor != 1
-        && !aligned_subsampled_ycbcr_predictor
+        && !supported_subsampled_ycbcr_predictor
     {
         return Err(CodecError::Malformed(
             "unsupported TIFF subsampled YCbCr storage layout".to_owned(),
@@ -815,12 +814,45 @@ fn decode_ifd(
             let expected = row_bytes
                 .checked_mul(stored_rows)
                 .dimensions("TIFF strip buffer size overflows")?;
-            let decoded;
+            let mut decoded;
             let samples = if compression == COMPRESSION_NONE {
                 encoded
             } else {
                 decoded = decode_block(compression, encoded, expected, token)
                     .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+                if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
+                    // Subsampled YCbCr's horizontal-predictor row spans one
+                    // vertical subsample row, including inside an unaligned
+                    // strip that is assembled independently below.
+                    let predictor_row_bytes = row_bytes
+                        .checked_div(subsampling.1)
+                        .dimensions("TIFF YCbCr predictor row stride is invalid")?;
+                    // libtiff leaves 1-by-2 YCbCr residuals untouched when the
+                    // predictor row is not divisible by three samples.
+                    let libtiff_reverses_subsampled_predictor = subsampling != (1, 2)
+                        || predictor_row_bytes.is_multiple_of(samples_per_pixel);
+                    if libtiff_reverses_subsampled_predictor {
+                        if let Some(token) = token {
+                            reverse_horizontal_predictor_with_token(
+                                &mut decoded,
+                                predictor_row_bytes,
+                                samples_per_pixel,
+                                bits_per_sample,
+                                endian,
+                                token,
+                            )
+                            .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+                        } else {
+                            reverse_horizontal_predictor(
+                                &mut decoded,
+                                predictor_row_bytes,
+                                samples_per_pixel,
+                                bits_per_sample,
+                                endian,
+                            );
+                        }
+                    }
+                }
                 &decoded
             };
             let strip_height = u32::try_from(strip_rows).map_err(|_| {

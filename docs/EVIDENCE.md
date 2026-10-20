@@ -67,11 +67,36 @@ reported totals; no coverage gain is claimed. The selected report is
 `target/release-evidence/selected/20261020T213209Z/coverage.json`. No full
 coverage campaign was run.
 
-The fixture matrix now contains 2,482 total rows: 1,967 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,967 decode rows and 483 encode
+The fixture matrix now contains 2,484 total rows: 1,969 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,969 decode rows and 483 encode
 rows are active; 32 encode rows remain planned. The separate target-only fault
 lane contains 77 rows. The coverage-origin inventory records 194 exact
 `cfg(coverage)` guards across 28 Rust files.
+
+## TIFF unaligned subsampled YCbCr Predictor=2 parity — 2026-10-21
+
+Added active public parity rows for 2-by-2 and 1-by-2 subsampled YCbCr LZW
+strips with `Predictor=2` and `RowsPerStrip=3`. The 238-byte 2-by-2 input
+SHA-256 is
+`45aef5c7eea83c4600240c0d4836d826b910723dc205b8f224187edcb40f63c0`; Pillow
+returns 48 RGB bytes with SHA-256
+`ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a`. The
+253-byte 1-by-2 input SHA-256 is
+`047e56f7916f1dca93eb034f622171ec39da0881f4679dc7f1681b075f0d243f`; Pillow
+returns 48 RGB bytes with SHA-256
+`83c2ac29ff7d103f160792e45e42d13c3cd1c5b36f7b70b62e3ed5117f207666`. In the
+1-by-2 case, libtiff leaves the 8-byte predictor scanline residuals untouched;
+in both layouts, Rust reverses eligible prediction in the existing strip
+buffer before the unaligned conversion path, without adding an allocation.
+
+The selected run passed five Pillow parity rows and the existing unaligned
+strip reservation fault contract (1/1; oracle not applicable). Coverage MCP
+returned both outcomes around `decode_ifd:323`, but reports source as
+unverified and test attribution as unknown. Comparing to the saved full report
+was incomparable because branch details differ; no coverage gain is claimed.
+The local report is
+`target/release-evidence/selected/tiff-unaligned-ycbcr-predictor-parity-20261021.json`.
+No full coverage campaign was run.
 
 ## TIFF tiled subsampled YCbCr parity and resource bounds — 2026-10-21
 
@@ -7857,7 +7882,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a44e5e58d45d4db0bc1cb0533f7b62cbb7922f9047db9d9f67968eb9027ebc38`; matrix `7fea8193482c8bcbad573a3ed3ae7829897dbe6488a58dec87cb1832e593fdca`.
+- Current fixture integrity only: manifest `0f18e535eea4867cefd05e04a81409808b6e221dfaaa47418d30d0c919253384`; matrix `19e9e1eb93567d646926cc35f3d63e4fb4e01431bd72e11cd66c6aef8d404e27`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
