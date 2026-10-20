@@ -1449,6 +1449,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("av1.tile.cdef_active_map_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1TileCdefActiveMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "av1.frame.assembled_cdef_active_map_reservation",
                 "decode_error_then_retry_succeeds",
@@ -1487,6 +1493,18 @@ fn execute_fault_contract(
             ),
             ("jpeg.upsample.h1v2_source_length_mismatch", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegH1v2UpsampleSourceLengthMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.row_invalid_geometry", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowInvalidGeometry,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.row_short_stride", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowShortStride,
                 false,
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
@@ -1556,6 +1574,20 @@ fn execute_fault_contract(
             ),
             ("tiff.ycbcr.rgb_output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffYcbcrRgbOutputReservation,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.ycbcr.tile_assembly.output_reservation", "decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::TiffYcbcrTileAssemblyReservation,
+                    false,
+                    img::ImageFormat::Tiff,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("tiff.ycbcr.tile_prefix.output_limit", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrTilePrefixLimit,
                 false,
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
@@ -1670,6 +1702,9 @@ fn execute_fault_contract(
         "av1.tile.cdef_region_map_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 CDEF region map")
         }
+        "av1.tile.cdef_active_map_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 CDEF active map")
+        }
         "av1.frame.assembled_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled AV1 CDEF active map",
         ),
@@ -1704,7 +1739,9 @@ fn execute_fault_contract(
         }
         "jpeg.upsample.h1v2_empty_geometry"
         | "jpeg.upsample.h1v2_zero_width"
-        | "jpeg.upsample.h1v2_source_length_mismatch" => {
+        | "jpeg.upsample.h1v2_source_length_mismatch"
+        | "jpeg.upsample.row_invalid_geometry"
+        | "jpeg.upsample.row_short_stride" => {
             Some("decode: invalid JPEG component upsampling geometry")
         }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
@@ -1725,6 +1762,12 @@ fn execute_fault_contract(
         }
         "tiff.ycbcr.rgb_output_reservation" => {
             Some("decode: unable to allocate TIFF YCbCr RGB buffer")
+        }
+        "tiff.ycbcr.tile_assembly.output_reservation" => {
+            Some("decode: unable to allocate TIFF tile buffer")
+        }
+        "tiff.ycbcr.tile_prefix.output_limit" => {
+            Some("decode: TIFF tile decoded prefix exceeds the output limit")
         }
         "tiff.rgb16.output_reservation" => {
             Some("decode: unable to allocate TIFF RGB16 output buffer")
@@ -1797,6 +1840,8 @@ fn execute_fault_contract(
                 | "jpeg.upsample.h1v2_empty_geometry"
                 | "jpeg.upsample.h1v2_zero_width"
                 | "jpeg.upsample.h1v2_source_length_mismatch"
+                | "jpeg.upsample.row_invalid_geometry"
+                | "jpeg.upsample.row_short_stride"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}

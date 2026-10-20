@@ -878,18 +878,47 @@ jobs:
             [(4, "actions/checkout@v4"), (5, "owner/action@v1")],
         )
 
-    def test_ci_manual_dispatches_use_unique_concurrency_groups(self) -> None:
+    def test_ci_jobs_supersede_pr_runs_without_workflow_wide_lock(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "ci.yml")
-        group = next(
-            line.strip()
-            for line in workflow.read_text(encoding="utf-8").splitlines()
-            if line.lstrip().startswith("group:")
+        contents = workflow.read_text(encoding="utf-8")
+        self.assertEqual(check_workflows.ci_job_concurrency_violations(contents), [])
+        self.assertNotRegex(contents, r"(?m)^concurrency:\s*$")
+
+        jobs = check_workflows.workflow_jobs(contents)
+        self.assertIsNotNone(jobs)
+        for job_id, job in jobs.items():
+            with self.subTest(job=job_id):
+                self.assertIn("github.event.pull_request.number || github.run_id", job)
+                self.assertIn(
+                    "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+                    job,
+                )
+
+        mutations = (
+            (
+                "      group: ${{ github.workflow }}-${{ github.event_name }}-"
+                "${{ github.event.pull_request.number || github.run_id }}-fixture-integrity\n",
+                "",
+                "CI job fixture-integrity must use a PR-scoped, run-unique concurrency group",
+            ),
+            (
+                "      cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n",
+                "      cancel-in-progress: false\n",
+                "CI job fixture-integrity must supersede stale pull-request jobs only",
+            ),
+            (
+                "jobs:\n",
+                "concurrency:\n  group: shared\n\njobs:\n",
+                "CI must not serialize entire workflow runs",
+            ),
         )
-        self.assertIn(
-            "github.event_name == 'workflow_dispatch' && github.run_id",
-            group,
-        )
+        for old, new, expected in mutations:
+            with self.subTest(expected=expected):
+                self.assertIn(old, contents)
+                mutated = contents.replace(old, new, 1)
+                violations = check_workflows.ci_job_concurrency_violations(mutated)
+                self.assertIn(expected, violations)
 
     def test_required_ci_status_covers_every_applicable_job(self) -> None:
         workflow_path = (
@@ -904,6 +933,7 @@ jobs:
         jobs = check_workflows.workflow_jobs(workflow)
         self.assertIsNotNone(jobs)
         required_job = jobs["required-checks"]
+
         needs_match = re.search(
             r"(?m)^    needs:\s*\n(?:^      - [A-Za-z0-9_-]+\s*\n)+",
             required_job,
@@ -914,14 +944,6 @@ jobs:
             r"(?m)^      - quality\s*\n", "", needs_block, count=1
         )
         self.assertNotEqual(needs_block, needs_without_quality)
-        required_job_start = (
-            "  required-checks:\n"
-            "    name: Required CI checks\n"
-            "    # Run the result gate after cancellation so canceled required lanes fail\n"
-            "    # this stable check instead of leaving a skipped, green required context.\n"
-            "    if: always()"
-        )
-
         mutations = (
             (
                 needs_block,
@@ -939,9 +961,9 @@ jobs:
                 "CI required-checks must invoke the tested result gate directly",
             ),
             (
-                required_job_start,
+                "  required-checks:\n",
                 "  unclassified-job:\n    runs-on: ubuntu-24.04\n\n"
-                f"{required_job_start}",
+                "  required-checks:\n",
                 "CI workflow jobs are not classified by required-checks",
             ),
             (
@@ -952,23 +974,26 @@ jobs:
                 "CI required-checks must check out the script before running it",
             ),
             (
-                required_job_start,
-                required_job_start.replace(
+                required_job,
+                required_job.replace(
                     "if: always()", "if: always() && !cancelled()", 1
                 ),
                 "CI required-checks job must run with if: always()",
             ),
             (
-                required_job_start,
-                required_job_start.replace(
+                required_job,
+                required_job.replace(
                     "if: always()", "if: success()", 1
                 ),
                 "CI required-checks job must run with if: always()",
             ),
             (
-                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n",
-                "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n"
-                "    continue-on-error: true\n",
+                jobs["quality"],
+                jobs["quality"].replace(
+                    "needs: fixture-integrity\n",
+                    "needs: fixture-integrity\n    continue-on-error: true\n",
+                    1,
+                ),
                 "CI required job quality and steps must not allow errors",
             ),
             (

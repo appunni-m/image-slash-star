@@ -2,9 +2,15 @@ diff --git a/src/codec_aom.c b/src/codec_aom.c
 index 4a3ece0..1924628 100644
 --- a/src/codec_aom.c
 +++ b/src/codec_aom.c
-@@ -536,0 +537,33 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha,
+@@ -535,7 +535,42 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha,
+             }
+             continue;
+         }
+ 
 +        if (avifKeyEqualsName(entry->key, "fixture-roi-lossless-inter-b32", alpha)) {
-+            if (alpha || strcmp(entry->value, "1") || (image->width != 64) || (image->height != 64)) {
++            const uint32_t imageSize = image->width;
++            if (alpha || strcmp(entry->value, "1") || imageSize != image->height ||
++                (imageSize != 60 && imageSize != 64)) {
 +                return AVIF_FALSE;
 +            }
 +            const unsigned int rows = 16;
@@ -36,3 +42,6 @@ index 4a3ece0..1924628 100644
 +            }
 +            continue;
 +        }
+         // Skip options processed by avifProcessAOMOptionsPreInit.
+         if (avifKeyEqualsName(entry->key, "end-usage", alpha)) {
+             continue;

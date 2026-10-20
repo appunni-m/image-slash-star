@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a pinned mixed-lossless AVIF inter sequence with a full B32 leaf."""
+"""Generate a pinned mixed-lossless AVIF inter sequence with a full or clipped B32 leaf."""
 
 from __future__ import annotations
 
@@ -30,6 +30,7 @@ ASSET = (
     / "avif"
     / "animated_mixed_lossless_inter_b32_i420_64x64.avif"
 )
+CLIPPED_ASSET = ASSET.with_name("animated_mixed_lossless_inter_b32_i420_60x60.avif")
 REFERENCE_FRAME_TEMPLATE = (
     ROOT
     / "tests"
@@ -38,10 +39,17 @@ REFERENCE_FRAME_TEMPLATE = (
     / "raws"
     / "Decode.avif_animated_mixed_lossless_inter_b32_i420_64x64_avif_frame_{index}.bin"
 )
+CLIPPED_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
+    "Decode.avif_animated_mixed_lossless_inter_b32_i420_60x60_avif_frame_{index}.bin"
+)
 REFERENCE = REFERENCE_FRAME_TEMPLATE.with_name(
     REFERENCE_FRAME_TEMPLATE.name.format(index=0)
 )
+CLIPPED_REFERENCE = CLIPPED_REFERENCE_FRAME_TEMPLATE.with_name(
+    CLIPPED_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
+)
 RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_64x64.receipt.json"
+CLIPPED_RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_60x60.receipt.json"
 DEFAULT_ENCODER = STAGING_ROOT / "encode-avif-mixed-lossless-inter-b32"
 
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
@@ -57,8 +65,13 @@ EXPECTED_FRAME_SHA256 = (
     "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
     "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4",
 )
+CLIPPED_EXPECTED_FILE_SHA256 = "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce"
+CLIPPED_EXPECTED_PIXEL_SHA256 = "31f32dc03ca4a9cbffe09bf77929c32931d460a97c0dceb236b9254c1284671f"
+CLIPPED_EXPECTED_FRAME_SHA256 = (
+    "a3b4b27575bef66a5eb058529aee5cac545d4d43a9bace07421cea066b4d59b8",
+    "6b6f92c82d4962e2f59502cd76f454527f3a213fafa10130620e601812aa918c",
+)
 EXPECTED_FILE_BYTES = 1083
-EXPECTED_FRAME_BYTES = 64 * 64 * 3
 
 
 def sha256(data: bytes) -> str:
@@ -91,9 +104,9 @@ def patch_receipts() -> dict[str, str]:
     }
 
 
-def run_encoder(encoder: Path, output: Path) -> str:
+def run_encoder(encoder: Path, output: Path, canvas_size: int) -> str:
     result = subprocess.run(
-        [str(encoder), str(output)],
+        [str(encoder), str(output), str(canvas_size)],
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -176,7 +189,7 @@ def validate_repeatability(first: bytes, second: bytes) -> None:
         )
 
 
-def validate_bitstream(path: Path) -> dict[str, Any]:
+def validate_bitstream(path: Path, canvas_size: int) -> dict[str, Any]:
     container = inspect_container(path)
     if container["ftyp"]["major"] != "avis":
         raise RuntimeError("fixture does not declare an AVIF sequence")
@@ -206,8 +219,8 @@ def validate_bitstream(path: Path) -> dict[str, Any]:
     ]
     expected_sequence = {
         "bit_depth": 8,
-        "max_width": 64,
-        "max_height": 64,
+        "max_width": canvas_size,
+        "max_height": canvas_size,
         "monochrome": False,
         "subsampling_x": 1,
         "subsampling_y": 1,
@@ -238,8 +251,8 @@ def validate_bitstream(path: Path) -> dict[str, Any]:
             raise RuntimeError("inter frame must explicitly update its segment map")
         if (
             frame.get("frame_type") != expected_type
-            or frame.get("frame_width") != 64
-            or frame.get("frame_height") != 64
+            or frame.get("frame_width") != canvas_size
+            or frame.get("frame_height") != canvas_size
             or frame.get("all_lossless") is not False
             or frame.get("transform_mode") not in ("largest", "select")
             or quantization.get("base", 0) <= 0
@@ -283,14 +296,19 @@ def validate_bitstream(path: Path) -> dict[str, Any]:
             "mi_origin": [8, 8],
             "pixel_origin": [32, 32],
             "block_size": [32, 32],
-            "visible_extent": [32, 32],
+            "visible_extent": [canvas_size - 32, canvas_size - 32],
             "segment": 1,
             "qindex": 0,
         },
     }
 
 
-def validate_pillow(path: Path) -> tuple[list[bytes], list[dict[str, Any]]]:
+def validate_pillow(
+    path: Path,
+    canvas_size: int,
+    expected_pixel_sha256: str,
+    expected_frame_sha256: tuple[str, str],
+) -> tuple[list[bytes], list[dict[str, Any]]]:
     observed = (PILLOW_VERSION, features.version("avif"), _avif.codec_versions())
     if observed != PINNED_PILLOW:
         raise RuntimeError(f"pinned Pillow AVIF oracle required; found {observed!r}")
@@ -300,19 +318,21 @@ def validate_pillow(path: Path) -> tuple[list[bytes], list[dict[str, Any]]]:
     with Image.open(path) as image:
         if (
             image.format != "AVIF"
-            or image.size != (64, 64)
+            or image.size != (canvas_size, canvas_size)
             or image.mode != "RGB"
             or image.n_frames != 2
         ):
-            raise RuntimeError("Pillow must decode a two-frame 64x64 RGB AVIF sequence")
-        for index, expected_hash in enumerate(EXPECTED_FRAME_SHA256):
+            raise RuntimeError(
+                f"Pillow must decode a two-frame {canvas_size}x{canvas_size} RGB AVIF sequence"
+            )
+        for index, expected_hash in enumerate(expected_frame_sha256):
             image.seek(index)
             image.load()
             frame = image.tobytes()
             digest = sha256(frame)
             duration = image.info.get("duration")
             if (
-                len(frame) != EXPECTED_FRAME_BYTES
+                len(frame) != canvas_size * canvas_size * 3
                 or digest != expected_hash
                 or duration != 100
             ):
@@ -329,7 +349,7 @@ def validate_pillow(path: Path) -> tuple[list[bytes], list[dict[str, Any]]]:
                 }
             )
 
-    if sha256(b"".join(pixels)) != EXPECTED_PIXEL_SHA256:
+    if sha256(b"".join(pixels)) != expected_pixel_sha256:
         raise RuntimeError("pinned Pillow combined frame pixels differ from their SHA-256")
     return pixels, frame_reports
 
@@ -337,10 +357,29 @@ def validate_pillow(path: Path) -> tuple[list[bytes], list[dict[str, Any]]]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--encoder", type=Path, default=DEFAULT_ENCODER)
-    parser.add_argument("--output", type=Path, default=ASSET)
-    parser.add_argument("--reference-output", type=Path, default=REFERENCE)
-    parser.add_argument("--receipt-output", type=Path, default=RECEIPT)
+    parser.add_argument("--canvas-size", type=int, choices=(60, 64), default=64)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--reference-output", type=Path)
+    parser.add_argument("--receipt-output", type=Path)
     args = parser.parse_args()
+    clipped = args.canvas_size == 60
+    expected_file_sha256 = (
+        CLIPPED_EXPECTED_FILE_SHA256 if clipped else EXPECTED_FILE_SHA256
+    )
+    expected_pixel_sha256 = (
+        CLIPPED_EXPECTED_PIXEL_SHA256 if clipped else EXPECTED_PIXEL_SHA256
+    )
+    expected_frame_sha256 = (
+        CLIPPED_EXPECTED_FRAME_SHA256 if clipped else EXPECTED_FRAME_SHA256
+    )
+    output_path = args.output or (CLIPPED_ASSET if clipped else ASSET)
+    reference_output = args.reference_output or (
+        CLIPPED_REFERENCE if clipped else REFERENCE
+    )
+    reference_frame_template = (
+        CLIPPED_REFERENCE_FRAME_TEMPLATE if clipped else REFERENCE_FRAME_TEMPLATE
+    )
+    receipt_output = args.receipt_output or (CLIPPED_RECEIPT if clipped else RECEIPT)
     encoder = args.encoder.resolve()
     if not encoder.is_file():
         raise RuntimeError(f"fixture encoder does not exist: {encoder}")
@@ -349,29 +388,34 @@ def main() -> None:
         temporary_root = Path(temporary)
         first_path = temporary_root / "first.avif"
         second_path = temporary_root / "second.avif"
-        first_trace = run_encoder(encoder, first_path)
-        second_trace = run_encoder(encoder, second_path)
+        first_trace = run_encoder(encoder, first_path, args.canvas_size)
+        second_trace = run_encoder(encoder, second_path, args.canvas_size)
         first_raw = first_path.read_bytes()
         second_raw = second_path.read_bytes()
         validate_repeatability(first_raw, second_raw)
         normalized = normalize_sequence_timestamps(first_raw)
         if normalized != normalize_sequence_timestamps(second_raw):
             raise RuntimeError("mixed-lossless inter AVIF sequence is not deterministic")
-        if len(normalized) != EXPECTED_FILE_BYTES or sha256(normalized) != EXPECTED_FILE_SHA256:
+        if len(normalized) != EXPECTED_FILE_BYTES or sha256(normalized) != expected_file_sha256:
             raise RuntimeError("encoded AVIF differs from the pinned file hash")
 
         normalized_path = temporary_root / "normalized.avif"
         normalized_path.write_bytes(normalized)
-        bitstream = validate_bitstream(normalized_path)
-        pixels, frame_reports = validate_pillow(normalized_path)
+        bitstream = validate_bitstream(normalized_path, args.canvas_size)
+        pixels, frame_reports = validate_pillow(
+            normalized_path,
+            args.canvas_size,
+            expected_pixel_sha256,
+            expected_frame_sha256,
+        )
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.reference_output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_bytes(normalized)
-    args.reference_output.write_bytes(pixels[0])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    reference_output.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(normalized)
+    reference_output.write_bytes(pixels[0])
     for index, frame in enumerate(pixels):
-        REFERENCE_FRAME_TEMPLATE.with_name(
-            REFERENCE_FRAME_TEMPLATE.name.format(index=index)
+        reference_frame_template.with_name(
+            reference_frame_template.name.format(index=index)
         ).write_bytes(frame)
 
     observed_pillow = (PILLOW_VERSION, features.version("avif"), _avif.codec_versions())
@@ -388,7 +432,7 @@ def main() -> None:
     if geometry_trace != repeat_geometry_trace:
         raise RuntimeError("encoder geometry trace differs between repeat runs")
 
-    args.receipt_output.parent.mkdir(parents=True, exist_ok=True)
+    receipt_output.parent.mkdir(parents=True, exist_ok=True)
     receipt = {
         "libavif_commit": LIBAVIF_COMMIT,
         "libaom_commit": LIBAOM_COMMIT,
@@ -399,7 +443,7 @@ def main() -> None:
         "encoded_sha256": sha256(normalized),
         "reference_bytes": sum(len(frame) for frame in pixels),
         "reference_mode": "Rgb8",
-        "reference_size": [64, 64],
+        "reference_size": [args.canvas_size, args.canvas_size],
         "reference_sha256": sha256(b"".join(pixels)),
         "pillow_frames": frame_reports,
         "pillow": {
@@ -412,11 +456,11 @@ def main() -> None:
         "repeat_geometry_trace_matches": True,
         "sequence_timestamps_normalized": ["mvhd", "tkhd", "mdhd"],
     }
-    args.receipt_output.write_text(json.dumps(receipt, indent=2) + "\n")
+    receipt_output.write_text(json.dumps(receipt, indent=2) + "\n")
 
-    print(f"Wrote {args.output} ({len(normalized)} bytes, SHA-256 {sha256(normalized)})")
+    print(f"Wrote {output_path} ({len(normalized)} bytes, SHA-256 {sha256(normalized)})")
     print(
-        f"Wrote first-frame reference {args.reference_output} "
+        f"Wrote first-frame reference {reference_output} "
         f"({len(pixels[0])} bytes, SHA-256 {sha256(pixels[0])})"
     )
     for frame in frame_reports:
@@ -424,7 +468,7 @@ def main() -> None:
             f"Pillow frame {frame['index']}: {frame['bytes']} bytes, "
             f"SHA-256 {frame['sha256']}"
         )
-    print(f"Wrote oracle receipt {args.receipt_output}")
+    print(f"Wrote oracle receipt {receipt_output}")
     print(f"Proved frame-one inter B32 at {bitstream['inter_b32']['pixel_origin']}")
 
 

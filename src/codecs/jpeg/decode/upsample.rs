@@ -312,6 +312,22 @@ pub(super) fn fancy_upsample_row(
     let src_h = component.height;
     let h_ratio = component.horizontal_ratio;
     let v_ratio = component.vertical_ratio;
+    #[cfg(coverage)]
+    let src_w = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowInvalidGeometry,
+    ) {
+        0
+    } else {
+        src_w
+    };
+    #[cfg(coverage)]
+    let src_stride = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowShortStride,
+    ) {
+        src_w.saturating_sub(1)
+    } else {
+        src_stride
+    };
     if src_w == 0 || src_h == 0 || src_stride < src_w || h_ratio == 0 || v_ratio == 0 {
         return Err(invalid_geometry());
     }

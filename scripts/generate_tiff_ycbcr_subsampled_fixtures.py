@@ -9,6 +9,7 @@ from io import BytesIO
 from math import isnan
 from pathlib import Path
 import struct
+import zlib
 
 import yaml
 
@@ -76,6 +77,7 @@ def lzw_blocks(
     clumps: tuple[tuple[int, ...], ...],
     *,
     subsampling: tuple[int, int] = (2, 2),
+    predictor: int = 1,
 ) -> list[bytes]:
     """Encode TIFF LZW strips with each strip rounded to complete clump rows."""
     if width <= 0 or height <= 0:
@@ -85,6 +87,8 @@ def lzw_blocks(
         raise ValueError("YCbCr subsampling factors must be positive")
     if rows_per_strip <= 0:
         raise ValueError("YCbCr RowsPerStrip must be positive")
+    if predictor not in (1, 2):
+        raise ValueError("YCbCr Predictor must be 1 or 2")
     clump_columns = (width + horizontal - 1) // horizontal
     strip_starts = range(0, height, rows_per_strip)
     clump_rows_per_strip = tuple(
@@ -109,7 +113,18 @@ def lzw_blocks(
     for clump_rows in clump_rows_per_strip:
         start = first_clump_row * clump_columns
         end = (first_clump_row + clump_rows) * clump_columns
-        samples = bytes(value for clump in clumps[start:end] for value in clump)
+        samples = bytearray(value for clump in clumps[start:end] for value in clump)
+        if predictor == 2:
+            predictor_row_numerator = clump_columns * samples_per_clump
+            if predictor_row_numerator % vertical:
+                raise ValueError("YCbCr predictor scanline size is not integral")
+            predictor_row_bytes = predictor_row_numerator // vertical
+            if predictor_row_bytes == 0 or len(samples) % predictor_row_bytes:
+                raise ValueError("YCbCr predictor rows do not match strip geometry")
+            for row_start in range(0, len(samples), predictor_row_bytes):
+                row_end = row_start + predictor_row_bytes
+                for index in range(row_end - 1, row_start + 2, -1):
+                    samples[index] = (samples[index] - samples[index - 3]) & 0xFF
         blocks.append(pack_lzw_codes_with_growth([256, *samples, 257]))
         first_clump_row += clump_rows
     return blocks
@@ -172,6 +187,7 @@ def build_tiff(
     *,
     subsampling: tuple[int, int] | None,
     positioning: int | None,
+    predictor: int = 1,
     coefficients: tuple[tuple[int, int], ...] | None = None,
     reference_black_white: tuple[tuple[int, int], ...] | None = None,
 ) -> bytes:
@@ -183,6 +199,7 @@ def build_tiff(
         rows_per_strip,
         clumps,
         subsampling=storage_subsampling,
+        predictor=predictor,
     )
     entries = [
         (256, 4, [width]),
@@ -200,6 +217,8 @@ def build_tiff(
         entries.append((530, 3, list(subsampling)))
     if positioning is not None:
         entries.append((531, 3, [positioning]))
+    if predictor != 1:
+        entries.append((317, 3, [predictor]))
     if coefficients is not None:
         if len(coefficients) != 3:
             raise ValueError("YCbCr coefficients must contain three rationals")
@@ -258,6 +277,166 @@ def build_tiff(
             output.append(0)
         output.extend(block)
     return bytes(output)
+
+
+def build_tiled_deflate_tiff(
+    width: int,
+    height: int,
+    tile_width: int,
+    tile_height: int,
+    subsampling: tuple[int, int],
+    tile_samples: tuple[bytes, ...],
+    *,
+    tile_sample_lengths: tuple[int, ...] | None = None,
+) -> bytes:
+    """Write contiguous YCbCr Deflate tiles with subsampled clumps."""
+    horizontal, vertical = subsampling
+    clump_bytes = horizontal * vertical + 2
+    expected_size = (
+        (tile_width + horizontal - 1) // horizontal
+        * ((tile_height + vertical - 1) // vertical)
+        * clump_bytes
+    )
+    tiles_across = (width + tile_width - 1) // tile_width
+    tiles_down = (height + tile_height - 1) // tile_height
+    expected_tiles = tiles_across * tiles_down
+    if len(tile_samples) != expected_tiles or any(
+        len(samples) != expected_size for samples in tile_samples
+    ):
+        raise ValueError("YCbCr tile samples do not match image and tile geometry")
+    if tile_sample_lengths is not None and (
+        len(tile_sample_lengths) != expected_tiles
+        or any(length < 0 or length > expected_size for length in tile_sample_lengths)
+    ):
+        raise ValueError("YCbCr tile sample lengths do not match tile geometry")
+    tile_blocks = tuple(
+        zlib.compress(samples if tile_sample_lengths is None else samples[:length])
+        for samples, length in zip(
+            tile_samples,
+            tile_sample_lengths or (expected_size,) * expected_tiles,
+        )
+    )
+    entries = [
+        (256, 4, [width]),
+        (257, 4, [height]),
+        (258, 3, [8, 8, 8]),
+        (259, 3, [8]),
+        (262, 3, [6]),
+        (277, 3, [3]),
+        (284, 3, [1]),
+        (322, 4, [tile_width]),
+        (323, 4, [tile_height]),
+        (324, 4, [0] * expected_tiles),
+        (325, 4, [len(block) for block in tile_blocks]),
+        (530, 3, list(subsampling)),
+        (531, 3, [1]),
+    ]
+    entries.sort()
+
+    def pack_values(field_type: int, values: list[int]) -> bytes:
+        scalar_type = "H" if field_type == 3 else "I"
+        return struct.pack("<" + scalar_type * len(values), *values)
+
+    def value_count(field_type: int, values: list[int]) -> int:
+        return len(values)
+
+    cursor = 8 + 2 + 12 * len(entries) + 4
+    buffers: dict[int, tuple[int, bytes]] = {}
+    for tag, field_type, values in entries:
+        packed = pack_values(field_type, values)
+        if len(packed) > 4:
+            cursor += cursor % 2
+            buffers[tag] = (cursor, packed)
+            cursor += len(packed)
+
+    cursor += cursor % 2
+    tile_offsets = []
+    for block in tile_blocks:
+        tile_offsets.append(cursor)
+        cursor += len(block)
+    entries = [
+        (tag, field_type, tile_offsets if tag == 324 else values)
+        for tag, field_type, values in entries
+    ]
+    for tag, field_type, values in entries:
+        if tag in {324, 325} and tag in buffers:
+            offset = buffers[tag][0]
+            buffers[tag] = (offset, pack_values(field_type, values))
+
+    output = bytearray(b"II*\0" + struct.pack("<I", 8) + struct.pack("<H", len(entries)))
+    for tag, field_type, values in entries:
+        packed = pack_values(field_type, values)
+        value = (
+            struct.pack("<I", buffers[tag][0])
+            if len(packed) > 4
+            else packed.ljust(4, b"\0")
+        )
+        output.extend(
+            struct.pack("<HHI", tag, field_type, value_count(field_type, values))
+            + value
+        )
+    output.extend(bytes(4))
+    for offset, buffer in sorted(buffers.values()):
+        output.extend(bytes(offset - len(output)))
+        output.extend(buffer)
+    output.extend(bytes(tile_offsets[0] - len(output)))
+    for block in tile_blocks:
+        output.extend(block)
+    return bytes(output)
+
+
+def patterned_ycbcr_tile(
+    tile_width: int,
+    tile_height: int,
+    subsampling: tuple[int, int],
+    tile_index: int,
+) -> bytes:
+    """Create distinct luma and chroma samples across each tile and clump."""
+    horizontal, vertical = subsampling
+    clump_columns = (tile_width + horizontal - 1) // horizontal
+    clump_rows = (tile_height + vertical - 1) // vertical
+    output = bytearray()
+    for row in range(clump_rows):
+        for column in range(clump_columns):
+            luma_base = 32 + tile_index * 52 + row * 4 + column * 2
+            for local_y in range(vertical):
+                for local_x in range(horizontal):
+                    output.append(luma_base + local_y + local_x)
+            output.append(92 + tile_index * 17 + row * 3 + column * 2)
+            output.append(164 - tile_index * 15 - row * 2 - column * 2)
+    return bytes(output)
+
+
+def set_ifd_value_count(data: bytes, tag: int, count: int) -> bytes:
+    """Rewrite one full-file IFD entry's value count for malformed fixtures."""
+    output = bytearray(data)
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        if struct.unpack_from("<H", output, entry_offset)[0] == tag:
+            struct.pack_into("<I", output, entry_offset + 4, count)
+            return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
+
+
+def set_ifd_long_value(data: bytes, tag: int, index: int, value: int) -> bytes:
+    """Replace one LONG entry in an external TIFF tag array."""
+    output = bytearray(data)
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    for entry_index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * entry_index
+        if struct.unpack_from("<H", output, entry_offset)[0] != tag:
+            continue
+        field_type = struct.unpack_from("<H", output, entry_offset + 2)[0]
+        value_count = struct.unpack_from("<I", output, entry_offset + 4)[0]
+        if field_type != 4 or index < 0 or index >= value_count:
+            raise ValueError(f"tag {tag} does not contain the requested LONG value")
+        value_offset = struct.unpack_from("<I", output, entry_offset + 8)[0]
+        struct.pack_into("<I", output, value_offset + 4 * index, value)
+        return bytes(output)
+    raise ValueError(f"generated TIFF does not contain tag {tag}")
 
 
 def build_full_resolution_lzw_tiff(
@@ -532,6 +711,25 @@ def fixtures() -> dict[
     str, tuple[bytes, tuple[int, int], str | None, dict[int, object], bytes | None]
 ]:
     """Return deterministic inputs and the pinned Pillow result metadata."""
+    tiled_deflate = build_tiled_deflate_tiff(
+        19,
+        19,
+        16,
+        16,
+        (2, 2),
+        tuple(patterned_ycbcr_tile(16, 16, (2, 2), index) for index in range(4)),
+    )
+    tiled_deflate_unaligned = build_tiled_deflate_tiff(
+        13,
+        11,
+        15,
+        16,
+        (2, 2),
+        (patterned_ycbcr_tile(15, 16, (2, 2), 0),),
+        tile_sample_lengths=(282,),
+    )
+    tiled_deflate_mismatched_byte_counts = set_ifd_value_count(tiled_deflate, 325, 2)
+    tiled_deflate_oob_offset = set_ifd_long_value(tiled_deflate, 324, 0, 0x7FFFFFFF)
     one_by_two_clumps = tuple(
         (
             (31 + 37 * (2 * clump_row) + 23 * x) % 256,
@@ -582,6 +780,15 @@ def fixtures() -> dict[
         TWO_STRIP_CLUMPS,
         subsampling=(2, 2),
         positioning=2,
+    )
+    two_strips_predictor_2 = build_tiff(
+        4,
+        4,
+        2,
+        TWO_STRIP_CLUMPS,
+        subsampling=(2, 2),
+        positioning=2,
+        predictor=2,
     )
     unaligned_rows_per_strip = build_tiff(
         4,
@@ -846,6 +1053,9 @@ def fixtures() -> dict[
     full_resolution_separate = build_separate_full_resolution_lzw_tiff(
         4, 4, full_resolution_pixels
     )
+    separate_subsampling_unsupported = set_ifd_subsampling_values(
+        full_resolution_separate, 3, (2, 2)
+    )
     full_resolution_custom = build_full_resolution_lzw_tiff(
         4,
         4,
@@ -1066,6 +1276,77 @@ def fixtures() -> dict[
             {530: (2, 2), 531: 1},
             REFERENCE_PIXELS,
         ),
+        "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": (
+            build_tiff(
+                4,
+                4,
+                4,
+                BASE_CLUMPS,
+                subsampling=(2, 2),
+                positioning=1,
+                predictor=2,
+            ),
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {317: 2, 530: (2, 2), 531: 1},
+            REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampled_deflate_tiled_2x2.tiff": (
+            tiled_deflate,
+            (19, 19),
+            "0962b74e00c7d65acf645da6f54c59ae920741ac59d5b62ed0f8c38122afd53d",
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff": (
+            tiled_deflate_unaligned,
+            (13, 11),
+            "71bc1731c0c1c4d51a9a8de47978453519da43c9bfa7fafc7a9e1eb9312389bf",
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 15,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff": (
+            tiled_deflate_mismatched_byte_counts,
+            (19, 19),
+            None,
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
+        ),
+        "ycbcr_subsampled_deflate_tiled_oob_offset.tiff": (
+            tiled_deflate_oob_offset,
+            (19, 19),
+            None,
+            {
+                259: 8,
+                284: 1,
+                530: (2, 2),
+                531: 1,
+                322: 16,
+                323: 16,
+            },
+            None,
+        ),
         "ycbcr_equivalent_default_rational_lzw_2x2.tiff": (
             equivalent_default_rational,
             (4, 4),
@@ -1208,6 +1489,13 @@ def fixtures() -> dict[
             (4, 4),
             "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
             {530: (2, 2), 531: 2},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": (
+            two_strips_predictor_2,
+            (4, 4),
+            "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
+            {317: 2, 530: (2, 2), 531: 2},
             None,
         ),
         "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": (
@@ -1762,6 +2050,13 @@ def fixtures() -> dict[
             {284: 2, 530: (1, 1), 531: 1},
             None,
         ),
+        "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff": (
+            separate_subsampling_unsupported,
+            (4, 4),
+            None,
+            {284: 2, 530: (2, 2), 531: 1},
+            None,
+        ),
         "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": (
             full_resolution_custom,
             (4, 4),
@@ -1838,18 +2133,24 @@ def verify_pillow_reference(
             262: tags.get(262, 1),
             277: tags.get(277, 1),
             284: tags.get(284, 1),
+            317: tags.get(317),
             530: tags.get(530),
             531: tags.get(531),
+            322: tags.get(322),
+            323: tags.get(323),
             529: tags.get(529),
             532: tags.get(532),
         }
         expected = {
-            259: 5,
+            259: expected_tags.get(259, 5),
             262: 6,
             277: 3,
             284: expected_tags.get(284, 1),
+            317: expected_tags.get(317),
             530: expected_tags.get(530),
             531: expected_tags.get(531),
+            322: expected_tags.get(322),
+            323: expected_tags.get(323),
             529: expected_tags.get(529),
             532: expected_tags.get(532),
         }
@@ -1880,7 +2181,7 @@ def verify_pillow_reference(
                         f"({type(error).__name__}: {error})"
                     ) from error
             else:
-                raise RuntimeError(f"{name}: Pillow unexpectedly decoded invalid coefficients")
+                raise RuntimeError(f"{name}: Pillow unexpectedly decoded an invalid TIFF")
             return
 
         image.load()
@@ -1905,6 +2206,11 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
+            "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": "14358eaf415ce0d216c3fa3a416a87888c66f694c35ee59e67ca23fb475b1087",
+            "ycbcr_subsampled_deflate_tiled_2x2.tiff": "0177d3f7f9e9ef9a6aacef38269246f36dea324f9a956473e9b9207b2121ae3f",
+            "ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff": "28e953f4ee67fa91f4de1bfdfbc1e6f481e0093b593166d647f7c949498935c0",
+            "ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff": "184dc855038e16deb3745fba2dd484bcd20fad4e02b499826784bf91dd1e2006",
+            "ycbcr_subsampled_deflate_tiled_oob_offset.tiff": "6803f9acc84e29e7b96fe7b935c542ec5be03312789223ba808b5e0675d44bfb",
             "ycbcr_equivalent_default_rational_lzw_2x2.tiff": "06a8a28ba0ebe1359d107ca2d7c442eb02dcc27cba8b85b06c16eaa610e7fa65",
             "ycbcr_subsampling_byte_type_lzw_2x2.tiff": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",
             "ycbcr_subsampling_long_type_lzw_2x2.tiff": "a3bc8d6110c272f34180e6e6231f88aa229ce5c87ee026464e6996a4523631cd",
@@ -1923,6 +2229,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
+            "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": "bf76628b4a022f6c6891f65fc572d3af75760777dab85e70ef1e0e933072c6c1",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
             "ycbcr_zero_green_coefficient_lzw_2x2.tiff": "ff382d3f6afa3fb5f14fba10bb2df80d1aaa820e68f75883de097387bfa047d4",
@@ -1964,6 +2271,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_and_reference_black_white_lzw_2x2.tiff": "c72ecf1c02ee1a18c9a7f41ae8917ce0668508de2555aee6172e486eb6103bb2",
             "ycbcr_full_resolution_lzw_1x1.tiff": "7a90e875697e13f98b23500bf9b4c9d5b83064b572daa102784bb84503cc167a",
             "ycbcr_separate_full_resolution_lzw_1x1.tiff": "49a0f6c148ab883d78a99fef5493eae9116a9e052113bf7b45409daa1d46c57c",
+            "ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff": "7c8a656e6d7a72c19a284b19260f5bf021f406526a17606f4f36bfaa96426905",
             "ycbcr_custom_tags_full_resolution_lzw_1x1.tiff": "ec170a210ddaf4c27f3cc69810a68ee666f57eb77001c860b8558583011e8248",
             "ycbcr_subsampled_lzw_2x2_checkpoint_32x32.tiff": "655b9b0172e44433b222cc93acdd2e14ca296e22f373e5f073e2e24d33b5111f",
             "ycbcr_subsampled_lzw_1x2_checkpoint_32x32.tiff": "5d939e561c664e1e067df3c30ed737d6fdc565c671903c283d49d2ba9a58c622",

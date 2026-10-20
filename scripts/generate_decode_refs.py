@@ -3250,6 +3250,12 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.upsample.h1v2_source_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.upsample.row_invalid_geometry": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.row_short_stride": {
+            "decode_error_then_retry_succeeds"
+        },
         "jpeg.ycck.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3269,6 +3275,12 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "tiff.ycbcr.rgb_output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.tile_assembly.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.tile_prefix.output_limit": {
             "decode_error_then_retry_succeeds"
         },
         "tiff.ycbcr.full_resolution_length_mismatch": {
@@ -3333,6 +3345,9 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "av1.tile.cdef_region_map_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.tile.cdef_active_map_reservation": {
             "decode_error_then_retry_succeeds"
         },
         "av1.frame.assembled_cdef_active_map_reservation": {

@@ -497,9 +497,9 @@
   ],
   "artifacts": [
     {
-      "bytes": 14064,
+      "bytes": 14323,
       "path": "README.md",
-      "sha256": "9eacc965b249e1b2450cb7de3a54555901f0e50f52e2ad9e8ba59f16967d6c25"
+      "sha256": "9934be53655c2df25f88dba86dc9b18f1555de42a440fc83fc1333de9d9b42f6"
     },
     {
       "bytes": 2267,
@@ -870,6 +870,11 @@
       "bytes": 1106,
       "path": "inputs/lossy_wide_monochrome_b128x128.avif",
       "sha256": "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf"
+    },
+    {
+      "bytes": 1083,
+      "path": "inputs/mixed_lossless_inter_b32_i420_60x60.avif",
+      "sha256": "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce"
     },
     {
       "bytes": 1083,
@@ -1900,6 +1905,16 @@
       "bytes": 49152,
       "path": "pixels/lossy_wide_monochrome_b128x128/frame_3.bin",
       "sha256": "35fc1c28a1bf62022dad44e28414e63ae4677f7bf4c0f529164f2bfcb935e0e8"
+    },
+    {
+      "bytes": 10800,
+      "path": "pixels/mixed_lossless_inter_b32_i420_60x60/frame_0.bin",
+      "sha256": "a3b4b27575bef66a5eb058529aee5cac545d4d43a9bace07421cea066b4d59b8"
+    },
+    {
+      "bytes": 10800,
+      "path": "pixels/mixed_lossless_inter_b32_i420_60x60/frame_1.bin",
+      "sha256": "6b6f92c82d4962e2f59502cd76f454527f3a213fafa10130620e601812aa918c"
     },
     {
       "bytes": 12288,
@@ -8517,6 +8532,54 @@
       "repeat_equal": true,
       "source": "mixed_lossless_inter_b32_i420_64x64",
       "source_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257"
+    },
+    {
+      "input_bytes": 1083,
+      "input_path": "inputs/mixed_lossless_inter_b32_i420_60x60.avif",
+      "input_sha256": "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "mixed_lossless_inter_b32_i420_60x60",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 10800,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "a3b4b27575bef66a5eb058529aee5cac545d4d43a9bace07421cea066b4d59b8",
+            "size": [
+              60,
+              60
+            ]
+          },
+          {
+            "bytes": 10800,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "6b6f92c82d4962e2f59502cd76f454527f3a213fafa10130620e601812aa918c",
+            "size": [
+              60,
+              60
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "mixed_lossless_inter_b32_i420_60x60",
+      "source_sha256": "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce"
     },
     {
       "input_bytes": 1525,

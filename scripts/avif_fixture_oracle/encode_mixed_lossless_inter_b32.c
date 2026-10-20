@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static uint8_t luma_value(unsigned frame, unsigned x, unsigned y)
 {
@@ -42,10 +43,10 @@ static int fill_frame(avifImage *image, unsigned frame)
     return 1;
 }
 
-static int write_sequence(const char *path)
+static int write_sequence(const char *path, unsigned canvas_size)
 {
     avifEncoder *encoder = avifEncoderCreate();
-    avifImage *image = avifImageCreate(64, 64, 8, AVIF_PIXEL_FORMAT_YUV420);
+    avifImage *image = avifImageCreate(canvas_size, canvas_size, 8, AVIF_PIXEL_FORMAT_YUV420);
     avifRWData output = AVIF_DATA_EMPTY;
     int success = 0;
     if (encoder == NULL || image == NULL) {
@@ -134,9 +135,17 @@ cleanup:
 
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: encode_mixed_lossless_inter_b32 OUTPUT.avif\n");
+    unsigned canvas_size = 64;
+    if (argc == 3) {
+        if (strcmp(argv[2], "60") == 0) {
+            canvas_size = 60;
+        } else if (strcmp(argv[2], "64") != 0) {
+            fprintf(stderr, "canvas size must be 60 or 64 pixels\n");
+            return 2;
+        }
+    } else if (argc != 2) {
+        fprintf(stderr, "usage: encode_mixed_lossless_inter_b32 OUTPUT.avif [60|64]\n");
         return 2;
     }
-    return write_sequence(argv[1]) ? 0 : 1;
+    return write_sequence(argv[1], canvas_size) ? 0 : 1;
 }

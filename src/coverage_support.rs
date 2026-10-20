@@ -98,6 +98,10 @@ pub enum CoverageFaultPoint {
     JpegH1v2UpsampleSourceLengthMismatch,
     /// Force reservation of the JPEG 1x2 upsampled component plane to fail.
     JpegH1v2UpsamplePlaneReservation,
+    /// Force the row-wise JPEG upsampler to reject invalid component geometry.
+    JpegFancyUpsampleRowInvalidGeometry,
+    /// Force the row-wise JPEG upsampler to reject a component stride shorter than its width.
+    JpegFancyUpsampleRowShortStride,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
     /// Force reservation of a BMP palette to fail before reading its entries.
@@ -116,6 +120,10 @@ pub enum CoverageFaultPoint {
     TiffYcbcrClumpLengthMismatch,
     /// Force specialized TIFF YCbCr RGB output reservation to fail.
     TiffYcbcrRgbOutputReservation,
+    /// Force contiguous TIFF YCbCr tile assembly reservation to fail.
+    TiffYcbcrTileAssemblyReservation,
+    /// Force a contiguous TIFF YCbCr tile prefix to exceed its output budget.
+    TiffYcbcrTilePrefixLimit,
     /// Report a TIFF full-resolution YCbCr sample-buffer length mismatch.
     TiffYcbcrFullResolutionLengthMismatch,
     /// Force AV1 partial monochrome tile-state retention to fail.
@@ -148,6 +156,8 @@ pub enum CoverageFaultPoint {
     Av1AssembledCdefRegionMapReservation,
     /// Force per-tile AV1 CDEF region-map reservation to fail.
     Av1TileCdefRegionMapReservation,
+    /// Force per-tile AV1 CDEF active-map reservation to fail.
+    Av1TileCdefActiveMapReservation,
     /// Force assembled AV1 color CDEF active-map reservation to fail.
     Av1AssembledCdefActiveMapReservation,
     /// Force AV1 partition-tree node reservation to fail.

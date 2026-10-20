@@ -1,15 +1,21 @@
 diff --git a/av1/encoder/bitstream.c b/av1/encoder/bitstream.c
-index a6a92bf..25106de 100644
+index a6a92bf..885820d 100644
 --- a/av1/encoder/bitstream.c
 +++ b/av1/encoder/bitstream.c
-@@ -4183,0 +4184,2 @@ static uint32_t write_tiles_in_tg_obus(AV1_COMP *const cpi, uint8_t *const dst,
-+    // Fixture-only: keep the ROI segment map explicit in the AVIF parity case.
-+    cm->seg.temporal_update = 0;
+@@ -4178,6 +4178,8 @@ static uint32_t write_tiles_in_tg_obus(AV1_COMP *const cpi, uint8_t *const dst,
+     }
+   }
+ 
++  // Fixture-only: keep the ROI segment map explicit in the AVIF parity case.
++  cm->seg.temporal_update = 0;
+   if (tiles->large_scale)
+     return pack_large_scale_tiles_in_tg_obus(
+         cpi, dst, saved_wb, obu_extension_header, largest_tile_id);
 diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
 index fd9e025..7776f0a 100644
 --- a/av1/encoder/partition_search.c
 +++ b/av1/encoder/partition_search.c
-@@ -3027,6 +3027,15 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
+@@ -3022,6 +3022,15 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
                  "AVIF_FIXTURE_LEAF row=%d col=%d width=%d height=%d segment=%d qindex=%d\n",
                  mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
                  mib[0]->segment_id, mib[0]->current_qindex);

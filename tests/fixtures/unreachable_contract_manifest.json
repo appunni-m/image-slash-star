@@ -104,6 +104,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "tiff_ycbcr_tile_assembly_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_tile_prefix_limit_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_ycbcr_general_rgb_output_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure",
@@ -290,6 +302,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_fancy_upsample_row_invalid_geometry",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fancy_upsample_row_short_stride",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_tile_reservation_failure",
@@ -395,6 +419,12 @@
       "id": "avif_tile_cdef_region_map_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_tile_cdef_region_map_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_tile_cdef_active_map_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_tile_cdef_active_map_reservation_failure",
       "test": "test_fault_contract_matrix"
     },
     {

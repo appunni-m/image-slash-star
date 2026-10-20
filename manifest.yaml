@@ -348,6 +348,34 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_tile_assembly_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_deflate_tiled_2x2
+    fault:
+      point: tiff.ycbcr.tile_assembly.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_tile_prefix_limit_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_deflate_tiled_2x2
+    fault:
+      point: tiff.ycbcr.tile_prefix.output_limit
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_general_rgb_output_reservation_failure
     type: fault-contract
     operation: decode
@@ -880,6 +908,34 @@ fault_contracts:
       point: jpeg.upsample.h1v2_source_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_invalid_geometry
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_invalid_geometry
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_short_stride
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_short_stride
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -1032,6 +1088,20 @@ fault_contracts:
       source_case: decode:avif:multitile_color_split_groups
     fault:
       point: av1.tile.cdef_region_map_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_tile_cdef_active_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_color_split_groups
+    fault:
+      point: av1.tile.cdef_active_map_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
   - id: avif_assembled_cdef_active_map_reservation_failure
@@ -5107,6 +5177,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_run_cap_4356x1.png
       params: {'lossless': True, 'quality': 80, 'method': 0}
+    - id: enc_lossless_method_0_run_cap_token
+      description: Token-aware VP8L method zero polls cancellation checkpoints while clamping a 4,096-pixel run at the 4,095-pixel maximum
+      source_format: png
+      source_asset: webp_lossless_run_cap_4356x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
     - id: enc_lossless_method_0_palette
       description: VP8L method zero retains the sorted palette path for a 16-color input
       source_format: webp
@@ -5769,6 +5844,28 @@ formats:
       description: Default 2-by-2 YCbCr clumps in a Pillow-compatible LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_predictor_2
+      description: Horizontal Predictor=2 on aligned 2-by-2 YCbCr clumps in one LZW strip
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_predictor_2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_2x2
+      description: Patterned contiguous 2-by-2 YCbCr clumps assemble four 16-by-16 Deflate tiles across both axes and clipped edges
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_2x2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_unaligned_2x2
+      description: Pillow accepts a 15-by-16 nonstandard Deflate tile and clipped-prefix output for 2-by-2 YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_unaligned_2x2.tiff
+    - id: ycbcr_subsampled_deflate_tiled_mismatched_byte_counts
+      description: Pillow rejects a Deflate YCbCr tile byte-count array with only two counts for four tile offsets
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_mismatched_byte_counts.tiff
+      expect_error: true
+    - id: ycbcr_subsampled_deflate_tiled_oob_offset
+      description: Pillow rejects a Deflate YCbCr tile offset that points outside the TIFF payload
+      test_assets:
+      - ycbcr_subsampled_deflate_tiled_oob_offset.tiff
+      expect_error: true
     - id: ycbcr_equivalent_default_rational_lzw_2x2
       description: Explicit noncanonical rational tags exactly equal to YCbCr defaults
       test_assets:
@@ -5789,6 +5886,11 @@ formats:
       description: Unsupported YCbCr subsampling opens and verifies but fails during pixel decoding
       test_assets:
       - ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff
+      expect_error: true
+    - id: ycbcr_separate_subsampling_unsupported_pair_lzw_1x1
+      description: Separate-planar full-resolution YCbCr with (2,2) subsampling opens and verifies but fails during pixel decoding
+      test_assets:
+      - ycbcr_separate_subsampling_unsupported_pair_lzw_1x1.tiff
       expect_error: true
     - id: ycbcr_subsampling_zero_pair_lzw_2x2
       description: Zero YCbCr subsampling values fail during pixel decoding without panicking
@@ -5871,6 +5973,10 @@ formats:
       description: Default 2-by-2 YCbCr clumps split across aligned LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_2x2_two_strips.tiff
+    - id: ycbcr_subsampled_lzw_2x2_two_strips_predictor_2
+      description: Horizontal Predictor=2 on 2-by-2 YCbCr clumps split across aligned LZW strips
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3
       description: Default 2-by-2 YCbCr clumps split across LZW strips at an unaligned row boundary
       test_assets:
@@ -9494,6 +9600,11 @@ formats:
       description: Two-frame full-range 8-bit 4:2:0 AVIF sequence with lossy and qindex-zero lossless segments in a full-visible inter-coded B32x32 leaf
       test_assets:
       - animated_mixed_lossless_inter_b32_i420_64x64.avif
+      status: active
+    - id: animated_mixed_lossless_inter_b32_i420_60x60
+      description: Two-frame full-range 8-bit 4:2:0 AVIF sequence with a bottom-right inter B32x32 leaf clipped to 28x28 pixels and mixed lossy and qindex-zero lossless segments
+      test_assets:
+      - animated_mixed_lossless_inter_b32_i420_60x60.avif
       status: active
     - id: animated_lossless_inter_420_b32x32_10bit
       description: Two-frame 32x32 10-bit full-range 4:2:0 all-lossless AVIF sequence with a translating patch and full-size B32x32 inter leaf
