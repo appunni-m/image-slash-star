@@ -9129,6 +9129,11 @@ formats:
       description: AVIF with alpha channel
       test_assets:
       - alpha.avif
+    - id: iref_version_1_alpha_auxl
+      description: Version-1 item references retain the direct auxl alpha relationship with exact Pillow RGBA output
+      test_assets:
+      - iref_version_1_alpha_auxl.avif
+      status: active
     - id: accepted_still_major_brands
       description: Complete AVIF containers using generic HEIF major brands and an AVIF compatible brand
       test_assets:

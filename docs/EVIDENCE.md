@@ -6,6 +6,43 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## AVIF version-1 item-reference alpha parity — 2026-10-20
+
+Added active public parity row
+`decode:avif:iref_version_1_alpha_auxl`. The generated fixture widens
+`alpha.avif`'s existing `auxl` reference from 16-bit to 32-bit item IDs,
+preserving the item 2 → item 1 relationship and encoded AV1 payloads. The
+version-1 `iref` grows metadata by four bytes; both file-backed `iloc` extents
+are rebased by four bytes. The 6,445-byte input SHA-256 is
+`b6f3b78c98b33b32b679d07a91b3f3030aba7c49def8bc8bad8b64243eb2c710`. Pinned
+Pillow 12.2.0 produces the exact 64×64 RGBA reference: 16,384 bytes with SHA-256
+`7b62ff36a098d8bdea49e0b72c834b6fd3e4e04f70d884eee274fc69ed869ddd`.
+
+The exact selected coverage row passed 1/1 using:
+
+```text
+PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:avif:iref_version_1_alpha_auxl' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/20261020/avif-iref-v1/coverage.json
+```
+
+The LLVM report is retained at
+`.coverage-mcp/local-evidence/20261020/avif-iref-v1/coverage.json` (SHA-256
+`453f03ef1136e645062c84287a3153301381ad7f7e3f18ce5bd04ac02d4fb289`). The
+local receipt confirms the exact row passed and fixtures stayed unchanged
+during the run; Coverage MCP still labels source/build identity unverified and
+test attribution unknown. Its selected report has 2,063/32,138 branches. At
+the `from_id` and `to_id` width checks in `container::parse_iref` (lines 1131
+and 1141) and `samples::parse_iref` (lines 1028 and 1039), the selected report
+no longer lists the false arm as missing in one parser group at each site,
+consistent with the version-1 path being exercised. Duplicate groups still
+list both arms as missing. The saved full-baseline query lists the false arm
+as missing at all four sites. Coverage MCP's incremental comparison is
+incomparable because baseline branch detail is incomplete or inconsistent with
+its 31,800-branch summary; no aggregate gain or regression is claimed.
+
+The case reaches the version-1 reference parser through public image decode
+and retains exact Pillow pixel parity. The remaining missing clone groups do
+not establish additional missing input variants.
+
 ## Separate-planar TIFF Deflate faults and WebP quality-50 parity — 2026-10-20
 
 Added two public TIFF parity inputs derived from the active separate-planar
@@ -79,8 +116,8 @@ CI filter fix is committed on `main` as `62daa2436d7802294ed253f2e54953862a6509a
 the GitHub CI, documentation, and paired SSE2/AVX2 benchmark runs were triggered
 on that commit.
 
-The current fixture matrix contains 2,443 total rows: 1,940 decode / inspect /
-verify rows and 503 encode rows. Of those, 1,940 decode rows and 471 encode
+The current fixture matrix contains 2,444 total rows: 1,941 decode / inspect /
+verify rows and 503 encode rows. Of those, 1,941 decode rows and 471 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7369,7 +7406,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `94a281a34dec44393c80edf4b576b29c4b9d0ab7babd375601cb227771c565a1`; matrix `9fd427dbcd98842fa914646f06c1685648ebc1795ddf5a45f061bda34de8bce9`.
+- Current fixture integrity only: manifest `b41c08c0a746d9a4ef8aaebd635b6805cb3d12c48e7c23d4deae59577dcc9e6f`; matrix `4bba518af49b575d3a9b7433696a068eb4dd4567a16c500f1e4ab346664d656f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

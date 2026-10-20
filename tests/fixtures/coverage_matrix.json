@@ -31663,6 +31663,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "iref_version_1_alpha_auxl",
+          "type": "decode",
+          "format": "avif",
+          "category": "iref",
+          "description": "Version-1 item references retain the direct auxl alpha relationship with exact Pillow RGBA output",
+          "asset": "iref_version_1_alpha_auxl.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b6f3b78c98b33b32b679d07a91b3f3030aba7c49def8bc8bad8b64243eb2c710",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_iref_version_1_alpha_auxl_avif.bin",
+          "ref_sha256": "7b62ff36a098d8bdea49e0b72c834b6fd3e4e04f70d884eee274fc69ed869ddd",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "accepted_still_major_brands",
           "type": "decode",
           "format": "avif",
@@ -206017,12 +206095,12 @@
     }
   },
   "summary": {
-    "total_rows": 2443,
-    "decode_rows": 1940,
+    "total_rows": 2444,
+    "decode_rows": 1941,
     "encode_rows": 503,
     "formats": 8,
-    "assets_available": 1937,
-    "decode_active": 1940,
+    "assets_available": 1938,
+    "decode_active": 1941,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
