@@ -362,7 +362,8 @@ jobs:
 
   required-checks:
     name: Required CI checks
-    if: always()
+    # Preserve failure aggregation, but let superseded runs release concurrency.
+    if: always() && !cancelled()
     needs:
       - fixture-integrity
       - quality

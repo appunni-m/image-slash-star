@@ -914,6 +914,12 @@ jobs:
             r"(?m)^      - quality\s*\n", "", needs_block, count=1
         )
         self.assertNotEqual(needs_block, needs_without_quality)
+        required_job_start = (
+            "  required-checks:\n"
+            "    name: Required CI checks\n"
+            "    # Preserve failure aggregation, but let superseded runs release concurrency.\n"
+            "    if: always() && !cancelled()"
+        )
 
         mutations = (
             (
@@ -932,9 +938,9 @@ jobs:
                 "CI required-checks must invoke the tested result gate directly",
             ),
             (
-                "  required-checks:\n    name: Required CI checks\n    if: always()",
+                required_job_start,
                 "  unclassified-job:\n    runs-on: ubuntu-24.04\n\n"
-                "  required-checks:\n    name: Required CI checks\n    if: always()",
+                f"{required_job_start}",
                 "CI workflow jobs are not classified by required-checks",
             ),
             (
@@ -945,9 +951,20 @@ jobs:
                 "CI required-checks must check out the script before running it",
             ),
             (
-                "  required-checks:\n    name: Required CI checks\n    if: always()",
-                "  required-checks:\n    name: Required CI checks\n    if: success()",
-                "CI required-checks job must run with if: always()",
+                required_job_start,
+                required_job_start.replace(
+                    "always() && !cancelled()", "always()", 1
+                ),
+                "CI required-checks job must run with if: "
+                "always() && !cancelled()",
+            ),
+            (
+                required_job_start,
+                required_job_start.replace(
+                    "always() && !cancelled()", "success()", 1
+                ),
+                "CI required-checks job must run with if: "
+                "always() && !cancelled()",
             ),
             (
                 "  quality:\n    name: Format, lint, and parity\n    needs: fixture-integrity\n",

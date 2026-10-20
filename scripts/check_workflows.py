@@ -339,8 +339,12 @@ def ci_required_checks_violations(contents: str) -> list[str]:
             )
 
     condition = workflow_job_condition(job)
-    if condition is None or normalized_expression(condition) != "always()":
-        violations.append("CI required-checks job must run with if: always()")
+    expected_condition = "always() && !cancelled()"
+    if condition is None or normalized_expression(condition) != expected_condition:
+        violations.append(
+            "CI required-checks job must run with if: "
+            "always() && !cancelled()"
+        )
     if re.search(r"(?m)^    continue-on-error:", job):
         violations.append("CI required-checks job must not allow errors")
 
