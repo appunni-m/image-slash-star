@@ -17,7 +17,10 @@ repository's `release.yml` workflow and GitHub OIDC.
    source coverage, package extraction, rustdoc, and isolated consumers.
 4. Inspect the distributable archive and its licenses. Use
    `make release-verify` from a clean checkout for release acceptance.
-5. Commit and push to main. Require successful CI for that exact commit.
+5. Commit and push to main only after the exact commit passes the
+   [`Required CI checks` ruleset](https://github.com/appunni-m/image-slash-star/settings/rules/25469704).
+   To keep direct pushes, first run CI on a `codex/**` branch, then fast-forward
+   the same tested commit to `main`.
 6. Push a new annotated `v<version>` tag on the validated commit.
 
 The alpha source-coverage floors are 59% lines, 46% branches, 52% functions,
@@ -60,11 +63,12 @@ Retry only the same source and unchanged artifacts after a transient failure.
 An uploaded registry version or released tag must never be overwritten.
 Changed source, packaging, or artifact bytes require a new version and tag.
 Verify which job actually failed before changing trusted-publisher settings.
-Protect `v*` tags with a GitHub ruleset that blocks updates and deletion; the
-workflow checks cannot eliminate the brief race between a remote-tag check and
-an upload. The publisher rechecks the annotated tag against the triggering
-commit immediately before authentication and upload. The GitHub release job
-checks it again before attestation and release creation.
+Protect `v*` tags with the active [release-tag ruleset](https://github.com/appunni-m/image-slash-star/settings/rules/25469595),
+which allows tag creation but blocks updates and deletion. The workflow checks
+cannot eliminate the brief race between a remote-tag check and an upload. The
+publisher rechecks the annotated tag against the triggering commit immediately
+before authentication and upload. The GitHub release job checks it again
+before attestation and release creation.
 
 The completed local bootstrap target has been removed. The maintainer controls
 releases through repository review and tag permissions; no maintainer-succession
