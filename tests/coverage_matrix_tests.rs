@@ -1347,6 +1347,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("av1.grid.monochrome_cell_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1MonochromeGridCellReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("avif.metadata.item_table_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::AvifItemTableReservation,
                 false,
@@ -1659,6 +1665,9 @@ fn execute_fault_contract(
         ),
         "av1.grid.cell_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to reserve AVIF grid cells")
+        }
+        "av1.grid.monochrome_cell_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to reserve AVIF monochrome grid cells")
         }
         "avif.metadata.item_table_reservation" => {
             Some("decode: AVIF container validation failed: unable to reserve AVIF item metadata")

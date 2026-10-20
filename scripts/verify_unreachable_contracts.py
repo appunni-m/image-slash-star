@@ -185,6 +185,14 @@ FAULT_CONTRACTS = {
         "point": "av1.grid.cell_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_monochrome_grid_cell_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_grid_cell_reservation_failure",
+        "source_case": "decode:avif:portable_lossless_monochrome_grid_73x64",
+        "point": "av1.grid.monochrome_cell_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_monochrome_loop_filter_metadata_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",
