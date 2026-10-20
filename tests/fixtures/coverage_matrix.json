@@ -77339,6 +77339,99 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "metadata_budget_zero",
+          "type": "decode",
+          "format": "gif",
+          "category": "metadata",
+          "description": "Unknown GIF block remains malformed under a zero-byte metadata policy",
+          "asset": "unknown_block.gif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": 0,
+          "status": "active",
+          "asset_sha256": "b3925b989aad08dd73f8211bad322927d1da06c48f933de31cf8a1a6ac0bd6e4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "GIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "GIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "GIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "GIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_malformed_lzw_truncated_output",
           "type": "decode",
           "format": "gif",
@@ -78473,6 +78566,16 @@
           },
           "source_mode": "P",
           "source_frame_count": 2,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_keep_disposal.bin",
           "encoded_ref_bytes": 13328,
           "encoded_ref_sha256": "e87179cf48c11cfe51aaa371f2b855a22e3124057d24589ea6f88e6d487d22cd",
@@ -78485,17 +78588,7 @@
             128
           ],
           "ref_frame_count": 2,
-          "ref_is_animated": true,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "not_applicable",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": true
         },
         {
           "id": "enc_animated_previous",
@@ -206933,12 +207026,12 @@
     }
   },
   "summary": {
-    "total_rows": 2453,
-    "decode_rows": 1948,
+    "total_rows": 2454,
+    "decode_rows": 1949,
     "encode_rows": 505,
     "formats": 8,
     "assets_available": 1945,
-    "decode_active": 1948,
+    "decode_active": 1949,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

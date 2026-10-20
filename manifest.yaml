@@ -3676,6 +3676,12 @@ formats:
       - zero_frame_height.gif
       - bad_gce_terminator.gif
       expect_error: true
+    - id: metadata_budget_zero
+      description: Unknown GIF block remains malformed under a zero-byte metadata policy
+      rust_decode_with_metadata_limit: 0
+      test_assets:
+      - unknown_block.gif
+      expect_error: true
     - id: error_malformed_lzw_truncated_output
       description: Token-aware decode preserves Pillow's error for a truncated GIF LZW output stream
       rust_decode_with_token: true

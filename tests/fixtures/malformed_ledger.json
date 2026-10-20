@@ -7954,6 +7954,54 @@
         "pillow_type": "builtins.ValueError",
         "spec_status": "spec_violation",
         "verify_status": "ok"
+      },
+      {
+        "asset": "unknown_block.gif",
+        "class": "metadata_budget_zero",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "GIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Unknown GIF block remains malformed under a zero-byte metadata policy",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
       }
     ],
     "ico": [
@@ -27157,7 +27205,7 @@
     "by_format": {
       "avif": 61,
       "bmp": 68,
-      "gif": 48,
+      "gif": 49,
       "ico": 30,
       "jpeg": 103,
       "png": 63,
@@ -27165,17 +27213,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 646,
+      "pillow_fixture": 647,
       "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 375,
+      "spec_violation": 376,
       "tolerated": 0,
       "truncated": 197
     },
-    "classes": 646,
+    "classes": 647,
     "formats": 8
   }
 }
