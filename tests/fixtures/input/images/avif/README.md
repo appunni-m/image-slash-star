@@ -59,6 +59,7 @@ generation provenance follow.
 | `portable_lossless_filmgrain_i444_restricted_clip_64x64.avif` | The pinned I444 film-grain source with restricted-range clipping enabled | `scripts/generate_avif_filmgrain_edge_fixtures.py`; source `portable_lossless_filmgrain_i444_64x64.avif`; set only the inspected frame-header clipping bit; preserve sample extents and tile payload; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2 | `a60b2f7ce2b1a2891d6627a5f568fe5ba5dde0ea96ff348d3271e4893a633fcb` | MIT/Apache-2.0 (repository-generated) |
 | `malformed_filmgrain_y_point_non_increasing.avif` | Full-file I444 AVIF whose second film-grain Y point repeats the first point's x value | `scripts/generate_avif_filmgrain_edge_fixtures.py`; source `portable_lossless_filmgrain_i444_64x64.avif`; replace the checked second Y-point x field; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2 | `1a7811072b8e1e3b9ea0694aaf5415d61d00f19a4dcdbbcb0048f7fddd94fe71` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame using chroma scaling from luma for film grain | `scripts/generate_avif_filmgrain_chroma_from_luma_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, CICP 1/13/6, film-grain test enabled | `80c3a157f32f190a787588c48232113c4bbe915abd80812c5e0d1d62fd51c893` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif` | Seeded 65x65 8-bit all-lossless I420 key frame with chroma scaling from luma; the final 33x33 chroma block reaches partial grain blocks, clamps the right interpolation neighbor, and accesses the last luma row | `scripts/generate_avif_filmgrain_chroma_from_luma_odd.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, CICP 1/13/6, film-grain test enabled | `5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_420_zero_y_points_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame whose update-grain syntax has zero Y points and omits conditional U/V points and coefficients | `scripts/generate_avif_filmgrain_zero_y_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; deterministic film-grain header rewrite | `c76ede4ac45599b182d023f8425744f09dc27e4011742d6295d3ec50e172ed9f` | MIT/Apache-2.0 (repository-generated) |
 | `animated_filmgrain_reference_reuse_i444_64x64.avif` | Deterministic two-frame 64x64 I444 sequence whose inter frame reuses key-frame film-grain parameters with a new seed | `scripts/generate_avif_filmgrain_reference_reuse.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34` | MIT/Apache-2.0 (repository-generated) |
 | `hdr.avif` | libavif `tests/data/colors_hdr_rec2020.avif` | libavif 1.4.1 / `6543b22` | `9980e58ddf718a923f1738c34aad1c72f8e5795ec07e68f1a5f9bd216ca19740` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
@@ -690,6 +691,18 @@ checks Pillow's RGB output. The 7,715-byte AVIF has SHA-256
 `80c3a157f32f190a787588c48232113c4bbe915abd80812c5e0d1d62fd51c893`; its
 12,288 Pillow RGB bytes have SHA-256
 `ee0b8557ef74499434382e1776a76492adc857b142f0481f4ef29c4e5a9d82cd`.
+
+`portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif` uses the same
+seeded, lossless I420 film-grain recipe at odd 65x65 dimensions. Its 33x33
+chroma planes leave a one-pixel final grain block. Chroma scaling reaches the
+last luma column and row, with the right interpolation neighbor clamped at the
+image edge. The deterministic
+generator preserves the AV1 tile payload, checks the syntax with the OBU
+inspector, and verifies repeatable Pillow 12.2.0 RGB output. The 8,189-byte
+fixture has SHA-256
+`5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330`; its
+12,675 Pillow RGB bytes have SHA-256
+`d3c620ef7742e8702d1351c33b4ae9386a67fa1a761b6c4b9ea695a6fe08f0c9`.
 
 `portable_lossless_filmgrain_420_zero_y_points_64x64.avif` uses the same
 pinned lossless I420 source. Its AV1 header keeps `apply_grain` set, sets

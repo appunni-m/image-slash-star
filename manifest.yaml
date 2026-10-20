@@ -7711,6 +7711,12 @@ formats:
       - portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_filmgrain_420_chroma_from_luma_65x65
+      description: 65x65 8-bit all-lossless 4:2:0 key frame using chroma scaling from luma and partial edge grain blocks
+      test_assets:
+      - portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_filmgrain_420_zero_y_points_64x64
       description: 64x64 8-bit all-lossless 4:2:0 key frame with update grain and zero Y points, omitting the conditional point and coefficient syntax
       test_assets:

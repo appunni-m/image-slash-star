@@ -4953,6 +4953,84 @@
           "error_contracts": {}
         },
         {
+          "id": "portable_lossless_filmgrain_420_chroma_from_luma_65x65",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "65x65 8-bit all-lossless 4:2:0 key frame using chroma scaling from luma and partial edge grain blocks",
+          "asset": "portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_filmgrain_420_chroma_from_luma_65x65_avif.bin",
+          "ref_sha256": "d3c620ef7742e8702d1351c33b4ae9386a67fa1a761b6c4b9ea695a6fe08f0c9",
+          "ref_bytes": 12675,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            65,
+            65
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "portable_lossless_filmgrain_420_zero_y_points_64x64",
           "type": "decode",
           "format": "avif",
@@ -207187,12 +207265,12 @@
     }
   },
   "summary": {
-    "total_rows": 2455,
-    "decode_rows": 1950,
+    "total_rows": 2456,
+    "decode_rows": 1951,
     "encode_rows": 505,
     "formats": 8,
-    "assets_available": 1946,
-    "decode_active": 1950,
+    "assets_available": 1947,
+    "decode_active": 1951,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

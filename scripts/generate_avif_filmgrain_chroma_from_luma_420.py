@@ -53,13 +53,13 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def encode_source() -> bytes:
+def encode_source(size: tuple[int, int] = SIZE) -> bytes:
     """Encode a deterministic lossless I420 input with pinned AOM grain syntax."""
 
     generator = random.Random(0x4672)
-    pixels = bytes(generator.randrange(256) for _ in range(SIZE[0] * SIZE[1] * 3))
+    pixels = bytes(generator.randrange(256) for _ in range(size[0] * size[1] * 3))
     output = BytesIO()
-    Image.frombytes("RGB", SIZE, pixels).save(
+    Image.frombytes("RGB", size, pixels).save(
         output,
         format="AVIF",
         quality=100,
@@ -73,7 +73,7 @@ def encode_source() -> bytes:
     return output.getvalue()
 
 
-def mutate(data: bytes) -> tuple[bytes, bytes]:
+def mutate(data: bytes, size: tuple[int, int] = SIZE) -> tuple[bytes, bytes]:
     with tempfile.NamedTemporaryFile(suffix=".avif") as temporary:
         temporary.write(data)
         temporary.flush()
@@ -99,7 +99,7 @@ def mutate(data: bytes) -> tuple[bytes, bytes]:
         or not sequence["film_grain_present"]
         or header["frame_type"] != "key"
         or not header["all_lossless"]
-        or (header["frame_width"], header["frame_height"]) != SIZE
+        or (header["frame_width"], header["frame_height"]) != size
     ):
         raise ValueError("input is not the expected 8-bit lossless I420 key frame")
     if (
@@ -226,9 +226,20 @@ def mutate(data: bytes) -> tuple[bytes, bytes]:
     verified_header = next(
         obu["frame_header"] for obu in verified_sample["obus"] if obu.get("frame_header")
     )
+    verified_sequence = next(
+        obu["sequence_header"]
+        for obu in verified_sample["obus"]
+        if "sequence_header" in obu
+    )
     verified_grain = verified_header["film_grain"]
     if (
-        not verified_grain["chroma_scaling_from_luma"]
+        verified_sequence["bit_depth"] != 8
+        or verified_sequence["monochrome"]
+        or not verified_sequence["subsampling_x"]
+        or not verified_sequence["subsampling_y"]
+        or not verified_header["all_lossless"]
+        or (verified_header["frame_width"], verified_header["frame_height"]) != size
+        or not verified_grain["chroma_scaling_from_luma"]
         or any(verified_grain["uv_points"])
         or not verified_grain["y_points"]
         or not all(verified_grain["ar_coefficients_uv"])

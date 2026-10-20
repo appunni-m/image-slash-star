@@ -6,6 +6,46 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## AVIF odd-size I420 film-grain chroma parity — 2026-10-20
+
+Added active Pillow parity row
+`decode:avif:portable_lossless_filmgrain_420_chroma_from_luma_65x65`. The
+fixture uses the pinned lossless 4:2:0 chroma-from-luma grain recipe at 65x65.
+Its 33x33 chroma planes end in a one-pixel grain block. The final chroma
+sample maps to the last luma row and column, and its horizontal interpolation
+neighbor clamps at the right image edge. The
+8,189-byte AVIF has SHA-256
+`5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330`; Pillow
+12.2.0 returns 12,675 RGB bytes with SHA-256
+`d3c620ef7742e8702d1351c33b4ae9386a67fa1a761b6c4b9ea695a6fe08f0c9`.
+
+The selected coverage-matrix run passed 1/1 on `aarch64-apple-darwin` with all
+features and branch instrumentation using:
+
+```text
+PYTHON=./.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:avif:portable_lossless_filmgrain_420_chroma_from_luma_65x65' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/20261020/avif-filmgrain-odd-i420/coverage.json
+```
+
+Its LLVM report is retained at
+`.coverage-mcp/local-evidence/20261020/avif-filmgrain-odd-i420/coverage.json`
+(SHA-256
+`69ebe07ee9fe26967cc7a2e0c5d7470ad7409c715e7bff11a077744182d5496a`). The
+local receipt records the exact selected row passing and fixture hashes
+unchanged during the run. Coverage MCP reports 1,928/32,484 branch
+observations for this selected report and still lists missing outcomes in
+`film_grain::apply_plane` and `apply_with_sampling` specializations. Source
+identity is unverified and test attribution is unknown; the comparison with
+the saved full baseline is incomparable because its detailed branch data does
+not match its reported totals. This run records selected-path evidence only;
+it does not establish aggregate coverage gain or complete branch closure.
+
+The row exercises behavior reachable through a normal image decode, so it
+remains in the Pillow parity lane. No target-only fault-contract case is
+needed. The fixture matrix now contains 2,456 total rows: 1,951 decode / inspect /
+verify rows and 505 encode rows. Of those, 1,951 decode rows and 473 encode
+rows are active; the other 32 encode rows are planned. The separate
+fault-contract lane contains 72 rows.
+
 ## AVIF auxiliary-alpha duration parity — 2026-10-20
 
 Added active Pillow parity row
@@ -7493,7 +7533,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f2ba34462bbab593f99ac4e23c5997e695dabd4d1f7dcf8d8863792ba9a64ee4`; matrix `06c72b021780f371978995885c1657fbd582a21ba632909381b0adc4fa9b954a`.
+- Current fixture integrity only: manifest `585fc1ae9cdc977b00e2dd77d2e75c27b4c667ecf7af7a8418247f1b2b07d39c`; matrix `3d4e1842b604384e520b0d9ffcbf9f583ecf728d19fee313c4e16008fdfb7f8a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

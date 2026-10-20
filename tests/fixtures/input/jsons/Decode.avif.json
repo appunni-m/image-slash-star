@@ -3436,6 +3436,58 @@
       ]
     },
     {
+      "id": "portable_lossless_filmgrain_420_chroma_from_luma_65x65",
+      "asset": "portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif",
+      "asset_sha256": "5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/portable_lossless_filmgrain_420_chroma_from_luma_65x65.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_filmgrain_420_zero_y_points_64x64",
       "asset": "portable_lossless_filmgrain_420_zero_y_points_64x64.avif",
       "asset_sha256": "c76ede4ac45599b182d023f8425744f09dc27e4011742d6295d3ec50e172ed9f",

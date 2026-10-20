@@ -5141,6 +5141,86 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "portable_lossless_filmgrain_420_chroma_from_luma_65x65",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "5f881e4c6eed5bb4c554004d72ca5e992f6b704bc39672b01d8b3a3236bb2330",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_filmgrain_420_chroma_from_luma_65x65_avif.bin",
+      "ref_bytes": 12675,
+      "ref_sha256": "d3c620ef7742e8702d1351c33b4ae9386a67fa1a761b6c4b9ea695a6fe08f0c9",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        65,
+        65
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "portable_lossless_filmgrain_420_zero_y_points_64x64",
       "status": "ok",
       "error_type": null,
