@@ -878,18 +878,47 @@ jobs:
             [(4, "actions/checkout@v4"), (5, "owner/action@v1")],
         )
 
-    def test_ci_manual_dispatches_use_unique_concurrency_groups(self) -> None:
+    def test_ci_jobs_supersede_pr_runs_without_workflow_wide_lock(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "ci.yml")
-        group = next(
-            line.strip()
-            for line in workflow.read_text(encoding="utf-8").splitlines()
-            if line.lstrip().startswith("group:")
+        contents = workflow.read_text(encoding="utf-8")
+        self.assertEqual(check_workflows.ci_job_concurrency_violations(contents), [])
+        self.assertNotRegex(contents, r"(?m)^concurrency:\s*$")
+
+        jobs = check_workflows.workflow_jobs(contents)
+        self.assertIsNotNone(jobs)
+        for job_id, job in jobs.items():
+            with self.subTest(job=job_id):
+                self.assertIn("github.event.pull_request.number || github.run_id", job)
+                self.assertIn(
+                    "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+                    job,
+                )
+
+        mutations = (
+            (
+                "      group: ${{ github.workflow }}-${{ github.event_name }}-"
+                "${{ github.event.pull_request.number || github.run_id }}-fixture-integrity\n",
+                "",
+                "CI job fixture-integrity must use a PR-scoped, run-unique concurrency group",
+            ),
+            (
+                "      cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n",
+                "      cancel-in-progress: false\n",
+                "CI job fixture-integrity must supersede stale pull-request jobs only",
+            ),
+            (
+                "jobs:\n",
+                "concurrency:\n  group: shared\n\njobs:\n",
+                "CI must not serialize entire workflow runs",
+            ),
         )
-        self.assertIn(
-            "github.event_name == 'workflow_dispatch' && github.run_id",
-            group,
-        )
+        for old, new, expected in mutations:
+            with self.subTest(expected=expected):
+                self.assertIn(old, contents)
+                mutated = contents.replace(old, new, 1)
+                violations = check_workflows.ci_job_concurrency_violations(mutated)
+                self.assertIn(expected, violations)
 
     def test_required_ci_status_covers_every_applicable_job(self) -> None:
         workflow_path = (

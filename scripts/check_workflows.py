@@ -423,6 +423,49 @@ def ci_required_checks_violations(contents: str) -> list[str]:
     return violations
 
 
+def ci_job_concurrency_violations(contents: str) -> list[str]:
+    """Supersede stale PR jobs without serializing their always-on summary."""
+
+    jobs = workflow_jobs(contents)
+    if jobs is None:
+        return ["CI workflow has no jobs section"]
+
+    violations = []
+    if re.search(r"(?m)^concurrency:\s*$", contents):
+        violations.append("CI must not serialize entire workflow runs")
+
+    expected_job_ids = {*CI_REQUIRED_CHECK_RESULTS, CI_REQUIRED_CHECK_JOB_ID}
+    for job_id in sorted(expected_job_ids):
+        job = jobs.get(job_id)
+        if job is None:
+            continue
+        if not re.search(r"(?m)^    concurrency:\s*$", job):
+            violations.append(f"CI job {job_id} must declare job-level concurrency")
+            continue
+
+        expected_group = (
+            f"${{{{ github.workflow }}}}-${{{{ github.event_name }}}}-"
+            "${{ github.event.pull_request.number || github.run_id }}-"
+            f"{job_id}"
+        )
+        if not re.search(
+            rf"(?m)^      group:\s*{re.escape(expected_group)}\s*$", job
+        ):
+            violations.append(
+                f"CI job {job_id} must use a PR-scoped, run-unique concurrency group"
+            )
+        if not re.search(
+            r"(?m)^      cancel-in-progress:\s*"
+            r"\$\{\{ github\.event_name == 'pull_request' \}\}$",
+            job,
+        ):
+            violations.append(
+                f"CI job {job_id} must supersede stale pull-request jobs only"
+            )
+
+    return violations
+
+
 def ci_documentation_job_violations(job: str) -> list[str]:
     """Keep every required documentation check active and fail-closed on PRs."""
 
@@ -1855,6 +1898,12 @@ def main() -> int:
         ci_workflow,
         ci_required_checks_violations,
         "CI required-check aggregation",
+    ):
+        return 1
+    if not verify_workflow_policy(
+        ci_workflow,
+        ci_job_concurrency_violations,
+        "CI job concurrency",
     ):
         return 1
     if not verify_apple_arm64_runner_policy():

@@ -11,13 +11,6 @@ on:
 permissions:
   contents: read
 
-# Keep main pushes and manual full-coverage dispatches in unique groups so
-# newer runs cannot replace pending release evidence. New pull requests always
-# supersede prior checks for the same PR.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || (github.ref == 'refs/heads/main' && github.event_name == 'push' && github.sha || 'shared') }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref != 'refs/heads/main' }}
-
 env:
   CARGO_TERM_COLOR: always
   # The repository Cargo config selects sccache, which hosted runners do not
@@ -30,8 +23,14 @@ env:
   NODE_VERSION: "22.14.0"
   NPM_VERSION: "11.5.1"
 
+# Per-job concurrency lets a new PR cancel its stale counterpart without a
+# canceled run's always-on summary job holding a workflow-wide lock. Non-PR
+# groups use the unique run ID so main and manual evidence is preserved.
 jobs:
   fixture-integrity:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-fixture-integrity
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Fixture and release metadata
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -45,6 +44,9 @@ jobs:
         run: make verify-fixture-integrity
 
   quality:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-quality
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Format, lint, and parity
     needs: fixture-integrity
     # The committed native fixture contract is generated on Apple ARM64.
@@ -93,6 +95,9 @@ jobs:
           retention-days: 90
 
   x86-simd-lint:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-x86-simd-lint
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: x86 SSE2 and AVX2 checks
     needs: fixture-integrity
     runs-on: ubuntu-24.04
@@ -216,6 +221,9 @@ jobs:
           retention-days: 90
 
   windows-msvc:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-windows-msvc
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Windows MSVC runtime and strict lint
     needs: fixture-integrity
     # Keep the OS/MSVC image stable; advance deliberately after CI review.
@@ -265,6 +273,9 @@ jobs:
         run: cargo test --workspace --all-features --locked
 
   supply-chain:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-supply-chain
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Dependencies and licenses
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -276,6 +287,9 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
   documentation:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-documentation
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Documentation build and examples
     # Put PR documentation checks in this workflow so the stable CI aggregate
     # waits for them on the same SHA. The Documentation workflow handles
@@ -307,6 +321,9 @@ jobs:
         run: make docs-registry-examples PYTHON=python
 
   coverage:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-coverage
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Coverage report
     # Per-push CI keeps focused parity and x86 coverage. Run the full suite
     # weekly or on demand to keep an exploration baseline without repeating it
@@ -361,6 +378,9 @@ jobs:
           if-no-files-found: error
 
   required-checks:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-required-checks
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Required CI checks
     # Run the result gate after cancellation so canceled required lanes fail
     # this stable check instead of leaving a skipped, green required context.
