@@ -535,6 +535,65 @@
       }
     },
     {
+      "id": "enc_animated_keep_disposal",
+      "source_asset": "disposal_keep.gif",
+      "source_format": "gif",
+      "source_mode": "P",
+      "source_sha256": "b5d72560b68180329d2baa57fc6cec5167947233d9f0cb76b25f668b9bb84337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1,
+        "preserve_disposal": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/disposal_keep.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "disposal": {
+            "type": "disposals_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_animated_previous",
       "source_asset": "gce_previous.gif",
       "source_format": "gif",

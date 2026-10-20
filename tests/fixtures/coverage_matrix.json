@@ -4797,6 +4797,84 @@
           "error_contracts": {}
         },
         {
+          "id": "portable_lossless_filmgrain_i444_restricted_clip_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "64x64 8-bit all-lossless 4:4:4 key frame enabling restricted-range clipping during AV1 film-grain synthesis",
+          "asset": "portable_lossless_filmgrain_i444_restricted_clip_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a60b2f7ce2b1a2891d6627a5f568fe5ba5dde0ea96ff348d3271e4893a633fcb",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_filmgrain_i444_restricted_clip_64x64_avif.bin",
+          "ref_sha256": "fb80a8679a38c9a13044b2b67b92e01d75761d4436b149b459eb55f35cf9e476",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "portable_lossless_filmgrain_420_chroma_from_luma_64x64",
           "type": "decode",
           "format": "avif",
@@ -77891,8 +77969,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_error_public_mode_contract.bin",
           "encoded_ref_bytes": 43,
           "encoded_ref_sha256": "6a7b8c054ac9554df982497ecdbb84ff703ff601329932d7e559e3a93b40b29c",
-          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_error_public_mode_contract.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -77944,8 +78022,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_static.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_static.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -77998,8 +78076,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_static_finite_one_play.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_static_finite_one_play.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78066,8 +78144,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_error_retained_source_blend.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_error_retained_source_blend.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78133,8 +78211,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_error_retained_default_image.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_error_retained_default_image.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78187,8 +78265,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated.bin",
           "encoded_ref_bytes": 14567,
           "encoded_ref_sha256": "65cdb8086a60aef8fa8eef766b9e9a929313f71b2abb79359e4ff6bf33f2b01c",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78241,8 +78319,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_luminance.bin",
           "encoded_ref_bytes": 129,
           "encoded_ref_sha256": "2417564139ecdd3b322c576f3fa85e1b3a5b88f786ae4837cf6043c2a43ac39e",
-          "ref_sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_luminance.bin",
+          "ref_sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
           "ref_bytes": 64,
           "ref_mode": "P",
           "ref_size": [
@@ -78296,8 +78374,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_loop.bin",
           "encoded_ref_bytes": 25731,
           "encoded_ref_sha256": "5c5ea2160a2baa5101d6f35c8dce22feaf26d5f7003ffb9197f3cd6cb561cc6a",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_loop.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78352,8 +78430,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_background.bin",
           "encoded_ref_bytes": 13085,
           "encoded_ref_sha256": "643ab88a06f3afb668931801efe0d049a43a0ca7f62eff3f1d77c086f6abd92d",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_background.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78362,6 +78440,62 @@
           ],
           "ref_frame_count": 2,
           "ref_is_animated": true
+        },
+        {
+          "id": "enc_animated_keep_disposal",
+          "type": "encode",
+          "format": "gif",
+          "category": "animated",
+          "description": "Preserve the Keep disposal value from a two-frame GIF",
+          "params": {
+            "animated": true,
+            "frames": 2,
+            "loop": 1,
+            "preserve_disposal": true
+          },
+          "status": "active",
+          "source_format": "gif",
+          "source_asset": "disposal_keep.gif",
+          "source_sha256": "b5d72560b68180329d2baa57fc6cec5167947233d9f0cb76b25f668b9bb84337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "P",
+          "source_frame_count": 2,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_keep_disposal.bin",
+          "encoded_ref_bytes": 13328,
+          "encoded_ref_sha256": "e87179cf48c11cfe51aaa371f2b855a22e3124057d24589ea6f88e6d487d22cd",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_keep_disposal.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "enc_animated_previous",
@@ -78408,8 +78542,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_previous.bin",
           "encoded_ref_bytes": 14567,
           "encoded_ref_sha256": "7abc367fb3180b6d5ba41ea160a8469602192e14456c50793a10f75341057aca",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_previous.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78464,8 +78598,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_reserved_disposal.bin",
           "encoded_ref_bytes": 13328,
           "encoded_ref_sha256": "dd9cf42b926ad5a2c0f3989e58518aa667d43356ed9012576678b5014f6a1c4d",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_reserved_disposal.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78520,8 +78654,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_disposal_8_reserved_bits.bin",
           "encoded_ref_bytes": 13328,
           "encoded_ref_sha256": "8a8954d61effd22db2292078adda561beb35102d50c36d2cd438094787afc190",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_disposal_8_reserved_bits.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78576,8 +78710,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_disposal_255_u8_limit.bin",
           "encoded_ref_bytes": 13328,
           "encoded_ref_sha256": "727785b857f0bbb52cddea5cbbad4a14b8721f68914eb31cc557b92344a69305",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_disposal_255_u8_limit.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78630,8 +78764,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba.bin",
           "encoded_ref_bytes": 279,
           "encoded_ref_sha256": "eb2c424fa8b8b9090a38d7700e1c89b8b452ca6c2bec03d90f7436c3d5d9e8a6",
-          "ref_sha256": "ff85621a8b98ca01c34a8b7cadd3c806505d43c33f74562bbfc543318768b3cc",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba.bin",
+          "ref_sha256": "ff85621a8b98ca01c34a8b7cadd3c806505d43c33f74562bbfc543318768b3cc",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -78684,8 +78818,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_transparency_composite.bin",
           "encoded_ref_bytes": 90,
           "encoded_ref_sha256": "e6fbf77ce827bd01c711a70ea9b48468b3ddf10dcca7bc9635e96eceeee63a7f",
-          "ref_sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_transparency_composite.bin",
+          "ref_sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2",
           "ref_bytes": 2,
           "ref_mode": "P",
           "ref_size": [
@@ -78738,8 +78872,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_opaque.bin",
           "encoded_ref_bytes": 351,
           "encoded_ref_sha256": "8e09c81f6269a733169e79a05732a76c4e4f36e3c71f67915e329bcdd52798c9",
-          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_opaque.bin",
+          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -78792,8 +78926,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_partial.bin",
           "encoded_ref_bytes": 351,
           "encoded_ref_sha256": "30d49763b6258fd139cc44dd19c5fbf71ae1fcc5b4202c0e23976291eff1a832",
-          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_partial.bin",
+          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -78846,8 +78980,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgba_background_opaque.bin",
           "encoded_ref_bytes": 351,
           "encoded_ref_sha256": "30d49763b6258fd139cc44dd19c5fbf71ae1fcc5b4202c0e23976291eff1a832",
-          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgba_background_opaque.bin",
+          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -78900,8 +79034,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb.bin",
           "encoded_ref_bytes": 19767,
           "encoded_ref_sha256": "90273c76ee300c2c1be44b1c4851d614b7edc15d5a6a62cdb736f283dce48516",
-          "ref_sha256": "7abbdc547293e3f82a297de83d65a2b0d43880e718fcd1e2af3d2e17a51da783",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb.bin",
+          "ref_sha256": "7abbdc547293e3f82a297de83d65a2b0d43880e718fcd1e2af3d2e17a51da783",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -78954,8 +79088,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_existing.bin",
           "encoded_ref_bytes": 233,
           "encoded_ref_sha256": "b61f34c885fe735db2fe98e667f9e5e9470fb0b2e09c614990f11197e051337d",
-          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_existing.bin",
+          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -79008,8 +79142,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_full_delta.bin",
           "encoded_ref_bytes": 310,
           "encoded_ref_sha256": "ff1b980dd907110c8539bb42a44f0158eecb103ea7d7f2fddd4919d47c46699d",
-          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_full_delta.bin",
+          "ref_sha256": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
           "ref_bytes": 4096,
           "ref_mode": "P",
           "ref_size": [
@@ -79062,8 +79196,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_background_full_palette.bin",
           "encoded_ref_bytes": 19767,
           "encoded_ref_sha256": "90273c76ee300c2c1be44b1c4851d614b7edc15d5a6a62cdb736f283dce48516",
-          "ref_sha256": "7abbdc547293e3f82a297de83d65a2b0d43880e718fcd1e2af3d2e17a51da783",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_background_full_palette.bin",
+          "ref_sha256": "7abbdc547293e3f82a297de83d65a2b0d43880e718fcd1e2af3d2e17a51da783",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79388,8 +79522,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_opaque.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_opaque.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79441,8 +79575,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_transparent.bin",
           "encoded_ref_bytes": 14548,
           "encoded_ref_sha256": "0cd016fa29aa45017c26c2d2e0863030af86d24d6ef5ec24c266ea1f1a91c8f4",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_transparent.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79494,8 +79628,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_interlaced.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_interlaced.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79547,8 +79681,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_non_interlaced.bin",
           "encoded_ref_bytes": 12819,
           "encoded_ref_sha256": "e55d9e09cb2061555128ebcb2bad4ceb5465036a898b0129a15206e771711afd",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_non_interlaced.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79600,8 +79734,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_none.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_none.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79653,8 +79787,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_background.bin",
           "encoded_ref_bytes": 14548,
           "encoded_ref_sha256": "a767951f833dcb2eab1f42586e54969527cc233d4c5b4e6c21a979c9b891cfb5",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_background.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79706,8 +79840,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_dispose_previous.bin",
           "encoded_ref_bytes": 14548,
           "encoded_ref_sha256": "7e185fbc4e422813a38804eb5ffad506e60b53bec74a35149946589c5312deb6",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_dispose_previous.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79759,8 +79893,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_global_ct.bin",
           "encoded_ref_bytes": 14540,
           "encoded_ref_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_global_ct.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79812,8 +79946,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_local_ct.bin",
           "encoded_ref_bytes": 15308,
           "encoded_ref_sha256": "afbb343e06fc47309b4d450e2429a41143fa37c1b2820a69d86bdac3beb030b1",
-          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_local_ct.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -79868,8 +80002,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_1x1.bin",
           "encoded_ref_bytes": 43,
           "encoded_ref_sha256": "52aa9dc78b0daa1ea5bdec0d17e8acd7a4ea0c237d5c5a2398fcf530a62e9ff0",
-          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_1x1.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -79919,8 +80053,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb.bin",
           "encoded_ref_bytes": 115,
           "encoded_ref_sha256": "c692eb057c260d24e8653480700ba944c69de9a8a62582a5fd793e0b7ad5a935",
-          "ref_sha256": "3f329d6e6312b4259091d9d7553249c043b2bcbdf347efcd41085a2a2e86a144",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb.bin",
+          "ref_sha256": "3f329d6e6312b4259091d9d7553249c043b2bcbdf347efcd41085a2a2e86a144",
           "ref_bytes": 64,
           "ref_mode": "P",
           "ref_size": [
@@ -79972,8 +80106,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_balanced_checkerboard_token_split.bin",
           "encoded_ref_bytes": 78,
           "encoded_ref_sha256": "edcba5284f8c6f34ffb4de0f7c6012a90b7a650c3c693ac97efe6ad176c74f6d",
-          "ref_sha256": "43733a9e6222420d28a2d069989624af990375f2717a83f4d0f288d7cdfd19af",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_balanced_checkerboard_token_split.bin",
+          "ref_sha256": "43733a9e6222420d28a2d069989624af990375f2717a83f4d0f288d7cdfd19af",
           "ref_bytes": 256,
           "ref_mode": "P",
           "ref_size": [
@@ -80023,8 +80157,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_high_color.bin",
           "encoded_ref_bytes": 1128,
           "encoded_ref_sha256": "326c2d099e083531c8b0060f32bb77665ee96ec141c8377a658498b28618c442",
-          "ref_sha256": "7f2cee723d65dd1744dc1bc35a9cbe92de5b009b2d0f2b63907d4bdcfcc2ceb0",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_high_color.bin",
+          "ref_sha256": "7f2cee723d65dd1744dc1bc35a9cbe92de5b009b2d0f2b63907d4bdcfcc2ceb0",
           "ref_bytes": 289,
           "ref_mode": "P",
           "ref_size": [
@@ -80076,8 +80210,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_high_color_token_checkpoint.bin",
           "encoded_ref_bytes": 1862,
           "encoded_ref_sha256": "7bbedc5d1161b6b8b00a41b9b5f4dc52e7cc2d33a4cc63b30320876a4165e43f",
-          "ref_sha256": "bd81c98169dbbeb5ced4ba6cdfda9c7b78f76648d23442c6738af311b5b29799",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_high_color_token_checkpoint.bin",
+          "ref_sha256": "bd81c98169dbbeb5ced4ba6cdfda9c7b78f76648d23442c6738af311b5b29799",
           "ref_bytes": 1089,
           "ref_mode": "P",
           "ref_size": [
@@ -80129,8 +80263,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_skewed_high_color_split.bin",
           "encoded_ref_bytes": 1148,
           "encoded_ref_sha256": "19ba2be26c7fc1d3034d5c9bcf4aafc2ec5787f7f3de0d11f77728dd2c8208c7",
-          "ref_sha256": "d699c0266f26670e0de734c1fbd814ec17416f97731866ab9a0a5a8fac8e2df3",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_skewed_high_color_split.bin",
+          "ref_sha256": "d699c0266f26670e0de734c1fbd814ec17416f97731866ab9a0a5a8fac8e2df3",
           "ref_bytes": 1312,
           "ref_mode": "P",
           "ref_size": [
@@ -80182,8 +80316,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
           "encoded_ref_bytes": 69,
           "encoded_ref_sha256": "12d504aeda9997c207857c1738038f376a6016b268422c51e3ea42dbe6850a4c",
-          "ref_sha256": "ac295c5bf12ca7d06e0cf752ea95317f39a3d610102548bf9031068449176742",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_median_cut_tie_boundary.bin",
+          "ref_sha256": "ac295c5bf12ca7d06e0cf752ea95317f39a3d610102548bf9031068449176742",
           "ref_bytes": 126,
           "ref_mode": "P",
           "ref_size": [
@@ -80235,8 +80369,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgb_257_color_low_green_dominant.bin",
           "encoded_ref_bytes": 1124,
           "encoded_ref_sha256": "f63195630ba5ccc8c680101828adceb54944bfa35dd235d48ae7a7921cf070cd",
-          "ref_sha256": "cf768684b9bc5a69a10f91730bf5c3cb45adec68af6f7de86df402f0cccc41b4",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgb_257_color_low_green_dominant.bin",
+          "ref_sha256": "cf768684b9bc5a69a10f91730bf5c3cb45adec68af6f7de86df402f0cccc41b4",
           "ref_bytes": 640,
           "ref_mode": "P",
           "ref_size": [
@@ -80286,8 +80420,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_grayscale.bin",
           "encoded_ref_bytes": 8067,
           "encoded_ref_sha256": "fb9f6b71ae41eee3de66c5c6b46e789e149ce03550cafc09e223be875d174d4b",
-          "ref_sha256": "3b86bc67a612e0da0a7a9b31d7f237ad5917b15cf748e9360ab69fae9051c967",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_grayscale.bin",
+          "ref_sha256": "3b86bc67a612e0da0a7a9b31d7f237ad5917b15cf748e9360ab69fae9051c967",
           "ref_bytes": 16384,
           "ref_mode": "P",
           "ref_size": [
@@ -80337,8 +80471,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_bilevel.bin",
           "encoded_ref_bytes": 3005,
           "encoded_ref_sha256": "14f49457df04383d2717a5240614b279aba4026656a8e77db58e458fa37a2dcb",
-          "ref_sha256": "5320d2c52e9d43bbc743ff9ca0f7be9cdfaa394584eda0cdfa7322f0dbe9da14",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_bilevel.bin",
+          "ref_sha256": "5320d2c52e9d43bbc743ff9ca0f7be9cdfaa394584eda0cdfa7322f0dbe9da14",
           "ref_bytes": 16384,
           "ref_mode": "L8",
           "ref_size": [
@@ -80388,8 +80522,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba.bin",
           "encoded_ref_bytes": 51,
           "encoded_ref_sha256": "dcc82e5a543c92c408ced3474ae89dea4b2a036f9a35d597b0475d7c1c01dc2e",
-          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -80441,8 +80575,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_mixed.bin",
           "encoded_ref_bytes": 71,
           "encoded_ref_sha256": "112c89308cf0f9e8237432fd08fd732e4a33f7021178a9c8b13bf55de6ff737d",
-          "ref_sha256": "447ec2ddd7cfa653b5c9a88091bc96acbfa14fd13777801c59d372220b7b5dd7",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_mixed.bin",
+          "ref_sha256": "447ec2ddd7cfa653b5c9a88091bc96acbfa14fd13777801c59d372220b7b5dd7",
           "ref_bytes": 8,
           "ref_mode": "P",
           "ref_size": [
@@ -80494,8 +80628,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_mixed_token_compact_checkpoint.bin",
           "encoded_ref_bytes": 229,
           "encoded_ref_sha256": "6a7ddd215e1f433d406390aabb72efcac944ff04a93770624b09b9f1d28d2c11",
-          "ref_sha256": "b7f6956635dc65e5f43c52531d985853c5704e355ec29383c147df92e7196526",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_mixed_token_compact_checkpoint.bin",
+          "ref_sha256": "b7f6956635dc65e5f43c52531d985853c5704e355ec29383c147df92e7196526",
           "ref_bytes": 1089,
           "ref_mode": "P",
           "ref_size": [
@@ -80545,8 +80679,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_high_color.bin",
           "encoded_ref_bytes": 1136,
           "encoded_ref_sha256": "59b448a415f53e93939dff5ec5b0ad5b20ccd558d8a89a791098d3651593a7b6",
-          "ref_sha256": "82b5de9a5bbd400988bde37167d7de971cdd5a2c7fd42349f80a2bc4a1dd1c2d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_high_color.bin",
+          "ref_sha256": "82b5de9a5bbd400988bde37167d7de971cdd5a2c7fd42349f80a2bc4a1dd1c2d",
           "ref_bytes": 289,
           "ref_mode": "P",
           "ref_size": [
@@ -80598,8 +80732,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_high_color_token_checkpoint.bin",
           "encoded_ref_bytes": 1936,
           "encoded_ref_sha256": "ee584ccbbe4b55eb06a9e2d3ad52ae037d74f2d3ad545cf0e954ef555e8c4e34",
-          "ref_sha256": "d789c59424e194afa6f1a67d7b01c5a1930a451ec912f792d0d51fedda26739e",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_high_color_token_checkpoint.bin",
+          "ref_sha256": "d789c59424e194afa6f1a67d7b01c5a1930a451ec912f792d0d51fedda26739e",
           "ref_bytes": 1089,
           "ref_mode": "P",
           "ref_size": [
@@ -80651,8 +80785,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_octree.bin",
           "encoded_ref_bytes": 7469,
           "encoded_ref_sha256": "83c4a592fbe4d1c90bad41ffb27893e30e9363e31746d49931bb95ed1496dc0d",
-          "ref_sha256": "9c9f64e6fb9503b818489e2d9ebe3c2d6d11d8b30d5e71d961d94f91df820d5f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_octree.bin",
+          "ref_sha256": "9c9f64e6fb9503b818489e2d9ebe3c2d6d11d8b30d5e71d961d94f91df820d5f",
           "ref_bytes": 16385,
           "ref_mode": "P",
           "ref_size": [
@@ -80704,8 +80838,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_octree_sorted.bin",
           "encoded_ref_bytes": 6256,
           "encoded_ref_sha256": "a21c6b7be06951688c5a3183fa6c7a1ffdc0901024151c294ff178fda976faba",
-          "ref_sha256": "d3a7216dcd46f84ee166a38635e70b93b30e0587885916e92a5bb901f2b679a0",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_octree_sorted.bin",
+          "ref_sha256": "d3a7216dcd46f84ee166a38635e70b93b30e0587885916e92a5bb901f2b679a0",
           "ref_bytes": 32896,
           "ref_mode": "P",
           "ref_size": [
@@ -80755,8 +80889,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_opaque.bin",
           "encoded_ref_bytes": 43,
           "encoded_ref_sha256": "6a7b8c054ac9554df982497ecdbb84ff703ff601329932d7e559e3a93b40b29c",
-          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_opaque.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
           "ref_bytes": 1,
           "ref_mode": "P",
           "ref_size": [
@@ -80811,8 +80945,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_rgb_full_palette_token.bin",
           "encoded_ref_bytes": 2963,
           "encoded_ref_sha256": "881dfb2f5a8b81575a20ac40350ccb6124bf3ef95df6b9b15c9a9cc5cb98c6f4",
-          "ref_sha256": "cd6816b77f68d70001fc3eaa4d42bdd67cb5973b3151cc5292ecc02a3daac6ab",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_rgb_full_palette_token.bin",
+          "ref_sha256": "cd6816b77f68d70001fc3eaa4d42bdd67cb5973b3151cc5292ecc02a3daac6ab",
           "ref_bytes": 256,
           "ref_mode": "P",
           "ref_size": [
@@ -80866,8 +81000,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_non_centisecond_delays.bin",
           "encoded_ref_bytes": 129,
           "encoded_ref_sha256": "52f23eb3646581d4982bed87c11bf63315ddf2e3a4cdf5d73a5b0b80c44e8509",
-          "ref_sha256": "c7723fa1e0127975e49e62e753db53924c1bd84b8ac1ac08df78d09270f3d971",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_non_centisecond_delays.bin",
+          "ref_sha256": "c7723fa1e0127975e49e62e753db53924c1bd84b8ac1ac08df78d09270f3d971",
           "ref_bytes": 63,
           "ref_mode": "P",
           "ref_size": [
@@ -80925,8 +81059,8 @@
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_animated_large_fraction_delay.bin",
           "encoded_ref_bytes": 129,
           "encoded_ref_sha256": "df760f2efb3378fd2eb3c46660ebaf5399b11086838ec28f99b5faf5e9a15792",
-          "ref_sha256": "c7723fa1e0127975e49e62e753db53924c1bd84b8ac1ac08df78d09270f3d971",
           "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_animated_large_fraction_delay.bin",
+          "ref_sha256": "c7723fa1e0127975e49e62e753db53924c1bd84b8ac1ac08df78d09270f3d971",
           "ref_bytes": 63,
           "ref_mode": "P",
           "ref_size": [
@@ -206799,12 +206933,12 @@
     }
   },
   "summary": {
-    "total_rows": 2451,
-    "decode_rows": 1947,
-    "encode_rows": 504,
+    "total_rows": 2453,
+    "decode_rows": 1948,
+    "encode_rows": 505,
     "formats": 8,
-    "assets_available": 1944,
-    "decode_active": 1947,
+    "assets_available": 1945,
+    "decode_active": 1948,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

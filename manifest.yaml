@@ -3758,6 +3758,10 @@ formats:
       description: Re-encode animation whose frames request background disposal
       source_asset: gce.gif
       params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
+    - id: enc_animated_keep_disposal
+      description: Preserve the Keep disposal value from a two-frame GIF
+      source_asset: disposal_keep.gif
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
     - id: enc_animated_previous
       description: Re-encode animation whose frames request previous-frame disposal
       source_asset: gce_previous.gif
@@ -7689,6 +7693,11 @@ formats:
       - portable_lossless_filmgrain_i444_overlap_64x64.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_filmgrain_i444_restricted_clip_64x64
+      description: 64x64 8-bit all-lossless 4:4:4 key frame enabling restricted-range clipping during AV1 film-grain synthesis
+      test_assets:
+      - portable_lossless_filmgrain_i444_restricted_clip_64x64.avif
+      status: active
     - id: portable_lossless_filmgrain_420_chroma_from_luma_64x64
       description: 64x64 8-bit all-lossless 4:2:0 key frame using AV1 chroma scaling from luma for film grain
       test_assets:

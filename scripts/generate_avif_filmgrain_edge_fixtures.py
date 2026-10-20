@@ -48,9 +48,11 @@ I422_NAME = "portable_lossless_filmgrain_i422_64x64.avif"
 INACTIVE_REUSE_NAME = "animated_filmgrain_inactive_reference_reuse_i444_64x64.avif"
 NON_INCREASING_Y_POINTS_NAME = "malformed_filmgrain_y_point_non_increasing.avif"
 OVERLAP_NAME = "portable_lossless_filmgrain_i444_overlap_64x64.avif"
+RESTRICTED_CLIP_NAME = "portable_lossless_filmgrain_i444_restricted_clip_64x64.avif"
 FIXTURE_SHA256 = {
     I422_NAME: "7c0241226c98d663df8b704b60fabb22e625bf7b010ad194f41db4b80afa0344",
     OVERLAP_NAME: "345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a",
+    RESTRICTED_CLIP_NAME: "a60b2f7ce2b1a2891d6627a5f568fe5ba5dde0ea96ff348d3271e4893a633fcb",
     "malformed_filmgrain_y_point_count_15.avif": (
         "81be05bdc9f5004a0c8afbbad23cf94bed8b888affbb45a728d05600940fd444"
     ),
@@ -76,6 +78,9 @@ PILLOW_RGB_SHA256 = {
     ),
     OVERLAP_NAME: (
         "46bfc877578f36fc8d3b376c3ac41e6be9ff98bb14fda447a0b0baeeba0b97d7",
+    ),
+    RESTRICTED_CLIP_NAME: (
+        "fb80a8679a38c9a13044b2b67b92e01d75761d4436b149b459eb55f35cf9e476",
     ),
     INACTIVE_REUSE_NAME: (
         "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84",
@@ -336,6 +341,50 @@ def enable_grain_overlap(source: bytes) -> bytes:
     return changed
 
 
+def enable_restricted_range_clipping(source: bytes) -> bytes:
+    """Enable only the checked key-frame grain range-clipping flag."""
+
+    sample, obu = frame_location(source)
+    frame = obu["frame_header"]
+    grain = frame["film_grain"]
+    if (
+        frame["frame_type"] != "key"
+        or not grain["update"]
+        or grain["clip_to_restricted_range"]
+    ):
+        raise ValueError(
+            "source is not a key frame with restricted-range clipping disabled"
+        )
+
+    clip_bit = frame["header_bits"] - 1
+    if clip_bit < frame["film_grain_start_bit"]:
+        raise ValueError("restricted-range clipping flag is outside the frame header")
+    changed = replace_field(source, obu, clip_bit, 1, 0, 1)
+    changed_sample, changed_obu = frame_location(changed)
+    expected_frame = deepcopy(frame)
+    expected_frame["film_grain"]["clip_to_restricted_range"] = True
+    if changed_obu["frame_header"] != expected_frame:
+        raise ValueError("clipping mutation changed fields beyond the clipping flag")
+    if len(changed) != len(source) or changed_sample["spans"] != sample["spans"]:
+        raise ValueError("clipping mutation changed AVIF sample geometry")
+
+    source_span = obu["payload_spans"][0]
+    changed_span = changed_obu["payload_spans"][0]
+    source_tile_offset = source_span["offset"] + obu["tile_group"]["data_bit"] // 8
+    changed_tile_offset = (
+        changed_span["offset"] + changed_obu["tile_group"]["data_bit"] // 8
+    )
+    source_tile = source[
+        source_tile_offset:source_span["offset"] + source_span["length"]
+    ]
+    changed_tile = changed[
+        changed_tile_offset:changed_span["offset"] + changed_span["length"]
+    ]
+    if source_tile != changed_tile:
+        raise ValueError("clipping mutation changed the AV1 tile payload")
+    return changed
+
+
 def inactive_reference_reuse(source: bytes) -> bytes:
     """Disable key-frame grain while the inter frame reuses its listed reference.
 
@@ -416,6 +465,7 @@ def fixture_bytes() -> dict[str, bytes]:
     _, obu = frame_location(i444)
     grain = obu["frame_header"]["film_grain"]
     overlap = enable_grain_overlap(i444)
+    restricted_clip = enable_restricted_range_clipping(i444)
     # Key frames have apply_grain, a 16-bit seed, and then num_y_points.
     y_count_bit = obu["frame_header"]["film_grain_start_bit"] + 1 + 16
     # The U count follows Y points and chroma_scaling_from_luma, which is clear.
@@ -425,6 +475,7 @@ def fixture_bytes() -> dict[str, bytes]:
     fixtures = {
         I422_NAME: i422,
         OVERLAP_NAME: overlap,
+        RESTRICTED_CLIP_NAME: restricted_clip,
         "malformed_filmgrain_y_point_count_15.avif": replace_field(
             i444, obu, y_count_bit, 4, len(grain["y_points"]), 15
         ),
