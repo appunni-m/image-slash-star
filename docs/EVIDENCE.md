@@ -38,11 +38,60 @@ libavif observation supplies loop semantics. This parity case tests accepted
 public input behavior; it does not claim support for every AVIF track
 arrangement.
 
-The current fixture matrix contains 2,445 total rows: 1,942 decode / inspect /
-verify rows and 503 encode rows. Of those, 1,942 decode rows and 471 encode
+The current fixture matrix contains 2,450 total rows: 1,947 decode / inspect /
+verify rows and 503 encode rows. Of those, 1,947 decode rows and 471 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
+
+## JPEG marker-tail and YCCK singleton parity — 2026-10-20
+
+Added active Pillow-backed rows
+`decode:jpeg:baseline_444_single_scan_com_tail_junk`,
+`decode:jpeg:baseline_444_single_scan_com_eoi_marker_fill`,
+`decode:jpeg:baseline_444_single_scan_com_ff00_tail`,
+`decode:jpeg:baseline_444_single_scan_two_trailing_com`, and
+`decode:jpeg:ycck_h2v2_single_sample_1x1`. The COM-tail rows derive from the
+8×8 baseline COM control by inserting a `00` junk byte, a legal `FF`
+marker-fill byte, or an `FF00` stuffed pair before EOI; the fourth case adds a
+second valid COM segment before EOI. Pillow 12.2.0 verifies and decodes all
+four to the control's same 192 RGB bytes. The FF00 candidate SHA-256 is
+`7ee7bd8d0fd0734f5b51cc0cd29e8fae262b29f0d6366ab5dcf081ea787e5dc3`;
+its pinned base SHA-256 is
+`cf8e4443dcff4df7858b6573664aa3fe73dd401827aa293d0eca84eb0667f666`. The YCCK
+case changes only the SOF0 dimensions from 2×2 to 1×1; Pillow returns one CMYK
+pixel, `ff ff fd ff`. The second-COM candidate SHA-256 is
+`c23f18f246085b1b088d82f9c660e1939d9d3198dda3c05ea5fe1dcf961a78e8`.
+
+The COM-tail rows exposed that the baseline decoder's validated single-scan
+fast path rejected bytes after a trailing marker, then sent the valid scan
+through generic extraction with the post-scan marker bytes included as entropy.
+It now skips intervening bytes and FF00 stuffed pairs only after a valid
+allow-listed trailing segment and bounds repeated marker-fill scanning at
+parsed EOI. `parse_jpeg` guarantees the initial cursor is at an FF marker, so
+the previously uncovered pre-segment non-marker guard was unreachable for
+parser-produced input and was removed instead of adding an artificial test.
+This preserves the entropy boundary and accepts the Pillow-observable inputs.
+
+The exact selected regression run passed 7/7 rows on `aarch64-apple-darwin`
+with all features and branch instrumentation, including the existing trailing
+COM control and DQT marker-fill case:
+
+```text
+PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:jpeg:baseline_444_single_scan_trailing_com decode:jpeg:baseline_444_single_scan_com_tail_junk decode:jpeg:baseline_444_single_scan_com_eoi_marker_fill decode:jpeg:baseline_444_single_scan_com_ff00_tail decode:jpeg:baseline_444_single_scan_two_trailing_com decode:jpeg:baseline_444_single_scan_dqt_marker_fill decode:jpeg:ycck_h2v2_single_sample_1x1' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/20261020/jpeg-tail-parity-seven/coverage.json
+```
+
+The selected LLVM report is retained at
+`.coverage-mcp/local-evidence/20261020/jpeg-tail-parity-seven-final-code/coverage.json`
+(SHA-256 `16086ef71e98c042dec010bedb8d59be50ee21aecd5d3bc83e87edfc850f3932`);
+its local execution receipt records all seven cases passing with no fixture
+changes during the run. Coverage MCP reports no missing branches at the
+post-segment byte check (line 2766) or FF00 condition (line 2789) in this
+report. The selected report totals 408/32,484 observed branches, while Coverage
+MCP marks source identity unverified and test attribution unknown. Incremental
+comparison is incomparable because the saved full baseline has incomplete
+branch detail, so this run does not establish an aggregate coverage gain or
+regression.
 
 ## AVIF version-1 item-reference alpha parity — 2026-10-20
 
@@ -7444,7 +7493,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4bdc0da0a93a650f34c2d6144009a03b6913fcc98553326efdfde452172ea3ab`; matrix `f38d91675ff79c057db3603114f1cf427601185095c8e31a89665f39afa9dce1`.
+- Current fixture integrity only: manifest `ece1dfc8ce5bdcaccbbd638dc084a688b538e2683880eb388de4f4565ac7c565`; matrix `107733dbd6124e79a8be157b4a906e8f101505f21ee530c502c1e771dd891148`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

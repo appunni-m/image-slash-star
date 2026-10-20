@@ -86,6 +86,10 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_com_eoi_marker_fill_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_com_ff00_tail_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_two_trailing_com_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app2_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app0_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_post_scan_app14_fixture.py --check
@@ -94,6 +98,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_custom_active_ac_chroma_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_ycck_subsampled_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_ycck_h2v2_singleton_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_rgb16_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_palette4_fillorder2_fixtures.py --check

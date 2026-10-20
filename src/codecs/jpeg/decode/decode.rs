@@ -1964,8 +1964,9 @@ pub(super) fn reconstruct_image(
     let converter = YccColorConverter::shared();
 
     // Extract entropy segments (between RST markers)
-    let entropy_end = single_baseline_scan_entropy_end(info, data).unwrap_or(info.eoi_pos);
-    let entropy_segments = known_single_baseline_entropy_segment(info, data)
+    let validated_entropy_end = single_baseline_scan_entropy_end(info, data);
+    let entropy_end = validated_entropy_end.unwrap_or(info.eoi_pos);
+    let entropy_segments = known_single_baseline_entropy_segment(info, validated_entropy_end)
         .unwrap_or_else(|| extract_entropy_segments(data, info.entropy_start, entropy_end));
     if entropy_segments.segments.is_empty() {
         return Err(CodecError::Malformed(
@@ -2734,17 +2735,17 @@ pub(super) struct EntropySegments {
 }
 
 #[inline(always)]
-fn known_single_baseline_entropy_segment(info: &JpegInfo, data: &[u8]) -> Option<EntropySegments> {
-    let scan = info.scans.first()?;
-    if info.scans.len() != 1
-        || info.entropy_has_restart_markers
-        || single_baseline_scan_entropy_end(info, data).is_none()
-    {
+fn known_single_baseline_entropy_segment(
+    info: &JpegInfo,
+    validated_entropy_end: Option<usize>,
+) -> Option<EntropySegments> {
+    if info.scans.len() != 1 || info.entropy_has_restart_markers {
         return None;
     }
+    let entropy_end = validated_entropy_end?;
     Some(EntropySegments {
-        segments: vec![(info.entropy_start, scan.entropy_end)],
-        eoi_pos: scan.entropy_end,
+        segments: vec![(info.entropy_start, entropy_end)],
+        eoi_pos: entropy_end,
     })
 }
 
@@ -2760,16 +2761,36 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
     }
 
     let mut marker_start = scan.entropy_end;
+    let mut saw_trailing_segment = false;
     while marker_start < info.eoi_pos {
         if data.get(marker_start) != Some(&0xFF) {
-            return None;
+            // parse_jpeg starts this cursor at an FF marker; after a validated
+            // trailing segment, Pillow skips bytes through the next marker,
+            // including bytes immediately before EOI.
+            let tail = data.get(marker_start..info.eoi_pos)?;
+            let Some(next_marker) = tail.iter().position(|&byte| byte == 0xFF) else {
+                marker_start = info.eoi_pos;
+                break;
+            };
+            marker_start = marker_start.checked_add(next_marker)?;
+            continue;
         }
 
         let mut code_pos = marker_start.checked_add(1)?;
-        while data.get(code_pos) == Some(&0xFF) {
+        while code_pos < info.eoi_pos && data.get(code_pos) == Some(&0xFF) {
             code_pos = code_pos.checked_add(1)?;
         }
+        if code_pos >= info.eoi_pos {
+            // The parsed EOI may be preceded by legal marker-fill bytes.
+            marker_start = info.eoi_pos;
+            break;
+        }
         let marker_code = *data.get(code_pos)?;
+        if saw_trailing_segment && marker_code == 0x00 {
+            // Pillow skips stuffed FF00 pairs while scanning a post-scan tail.
+            marker_start = code_pos.checked_add(1)?;
+            continue;
+        }
         let marker = u16::from_be_bytes([0xFF, marker_code]);
         if !matches!(marker, M_APP0..=M_APP15 | M_COM | M_DHT | M_DQT | M_DRI) {
             // Other markers may follow malformed entropy and must still go
@@ -2809,6 +2830,7 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
             }
         }
 
+        saw_trailing_segment = true;
         marker_start = segment_end;
     }
 

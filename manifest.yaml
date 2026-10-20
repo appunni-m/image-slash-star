@@ -1110,6 +1110,22 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid COM segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_com.jpg
+    - id: baseline_444_single_scan_com_tail_junk
+      description: Baseline 4:4:4 JPEG has one trailing junk byte between its post-scan COM segment and EOI
+      test_assets:
+      - baseline_444_single_scan_com_tail_junk.jpg
+    - id: baseline_444_single_scan_com_eoi_marker_fill
+      description: Baseline 4:4:4 JPEG has a marker-fill byte between its trailing COM segment and EOI
+      test_assets:
+      - baseline_444_single_scan_com_eoi_marker_fill.jpg
+    - id: baseline_444_single_scan_com_ff00_tail
+      description: Baseline 4:4:4 JPEG has a stuffed FF00 pair between its trailing COM segment and EOI
+      test_assets:
+      - baseline_444_single_scan_com_ff00_tail.jpg
+    - id: baseline_444_single_scan_two_trailing_com
+      description: Baseline 4:4:4 JPEG has two valid COM segments after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_two_trailing_com.jpg
     - id: baseline_444_single_scan_trailing_app1
       description: Baseline 4:4:4 JPEG has a valid APP1 segment after its only entropy scan
       test_assets:
@@ -1365,6 +1381,16 @@ formats:
       - baseline_ycck_h2v2_single_sample_2x2.jpg
       pillow_call:
         open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v2_single_sample_2x2.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v2_single_sample_1x1
+      description: A 1x1 YCCK image with 2x2 luma and 1x1 chroma exercises singleton upsampling output
+      test_assets:
+      - baseline_ycck_h2v2_single_sample_1x1.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v2_single_sample_1x1.jpg
         operations:
         - PIL.Image.open
         - load
