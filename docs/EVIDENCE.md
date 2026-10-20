@@ -38,8 +38,8 @@ libavif observation supplies loop semantics. This parity case tests accepted
 public input behavior; it does not claim support for every AVIF track
 arrangement.
 
-The current fixture matrix contains 2,450 total rows: 1,947 decode / inspect /
-verify rows and 503 encode rows. Of those, 1,947 decode rows and 471 encode
+The current fixture matrix contains 2,451 total rows: 1,947 decode / inspect /
+verify rows and 504 encode rows. Of those, 1,947 decode rows and 472 encode
 rows are active; the other 32 encode rows are planned. The separate
 fault-contract lane contains 72 rows. The coverage-origin inventory records
 189 exact `cfg(coverage)` guards across 28 Rust files.
@@ -7493,7 +7493,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ece1dfc8ce5bdcaccbbd638dc084a688b538e2683880eb388de4f4565ac7c565`; matrix `107733dbd6124e79a8be157b4a906e8f101505f21ee530c502c1e771dd891148`.
+- Current fixture integrity only: manifest `167b029f309c3c1bebe2dbee384297a6b24514507d3a3814bdb8234160ea0f93`; matrix `35fb05ae218ae6088c63a00a4ac631658976bb2925973c33955116b29d996c0a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

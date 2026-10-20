@@ -647,6 +647,59 @@
       }
     },
     {
+      "id": "enc_sub_444_aligned_partial_height",
+      "source_asset": "average_filter_source.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "7bac964754f671bd440157da69eb98c24f89808b889bd7e8c0dc31f58c79bea0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "subsampling": "444",
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/average_filter_source.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_sub_444_streaming_exif_restart_rows",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",

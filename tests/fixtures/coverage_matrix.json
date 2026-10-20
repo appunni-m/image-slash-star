@@ -110834,6 +110834,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_sub_444_aligned_partial_height",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 64x4 RGB PNG keeps the 4:4:4 width aligned while the partial height selects the generic fallback",
+          "params": {
+            "subsampling": "444",
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "average_filter_source.png",
+          "source_sha256": "7bac964754f671bd440157da69eb98c24f89808b889bd7e8c0dc31f58c79bea0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_aligned_partial_height.bin",
+          "encoded_ref_bytes": 672,
+          "encoded_ref_sha256": "507900a8880167699a349b730d0ace70ec7645aa148cf9f3fcd122e77073b014",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444_aligned_partial_height.bin",
+          "ref_sha256": "9e98dbaa45010e0d4dd7156d9ca518fb9169a78cbdee7065c7638013cae6574f",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_sub_444_streaming_exif_restart_rows",
           "type": "encode",
           "format": "jpeg",
@@ -206743,9 +206799,9 @@
     }
   },
   "summary": {
-    "total_rows": 2450,
+    "total_rows": 2451,
     "decode_rows": 1947,
-    "encode_rows": 503,
+    "encode_rows": 504,
     "formats": 8,
     "assets_available": 1944,
     "decode_active": 1947,

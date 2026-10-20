@@ -2160,6 +2160,11 @@ formats:
       description: A 64x8 RGB source exercises the aligned baseline 4:4:4 row-streaming path below the pixel threshold
       params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
       source_asset: baseline_422_aligned_64x8.jpg
+    - id: enc_sub_444_aligned_partial_height
+      description: A 64x4 RGB PNG keeps the 4:4:4 width aligned while the partial height selects the generic fallback
+      params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
+      source_format: png
+      source_asset: average_filter_source.png
     - id: enc_sub_444_streaming_exif_restart_rows
       description: A 128x128 RGB source exercises baseline 4:4:4 row streaming with EXIF metadata and restart markers at every MCU row
       params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False, 'restart_interval': 1, 'exif_hex': '4578696600004d4d002a00000008000000000000'}
