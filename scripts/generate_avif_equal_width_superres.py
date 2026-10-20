@@ -280,6 +280,9 @@ def validate_pillow(path: Path, profile: FixtureProfile) -> None:
         raise RuntimeError(f"Pillow oracle differs from pin: {observed!r}")
 
     with Image.open(path) as image:
+        image.verify()
+
+    with Image.open(path) as image:
         image.load()
         pixels = image.tobytes()
         if (

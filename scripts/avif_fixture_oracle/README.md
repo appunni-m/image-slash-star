@@ -68,7 +68,8 @@ Generate an actual-upscaled odd-width 4:2:0 case with the same pinned encoder:
 This 17x17 lossy I420 still signals denominator 9, with coded luma width 16
 and upscaled width 17; ceil-rounded chroma width grows from 8 to 9. The
 generator checks the AV1 header, two byte-identical encodes, and exact pinned
-Pillow RGB pixels before writing `superres_actual_upscaled_i420_17x17.avif`.
+Pillow verify/load results and RGB pixels before writing
+`superres_actual_upscaled_i420_17x17.avif`.
 The source Y4M, AVIF, and decoded-pixel SHA-256 values are respectively
 `2b6a7a2db94663d55e4be325b666b9dbae21bf8ef368863772ebacdef37dcb86`,
 `5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f`, and

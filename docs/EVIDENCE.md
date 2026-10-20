@@ -46,7 +46,8 @@ Added `decode:avif:superres_actual_upscaled_i420_17x17`, a lossy 17x17 AVIF
 still that signals super-resolution denominator 9. Its coded luma width is 16
 and upscales to 17; ceil-rounded I420 chroma width grows from 8 to 9. The
 fixture generator validates the AV1 geometry, repeat-encodes byte-identically,
-and checks the exact pinned Pillow 12.2.0 RGB output. Input SHA-256:
+and checks Pillow 12.2.0 `verify()`/`load()` plus the exact RGB output. Input
+SHA-256:
 `5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f`; the
 867-byte decoded pixel SHA-256 is
 `0140c8dab75efad711db2af0b7f1f837e76e2a8d578ac43052fea15b7693d926`.
@@ -68,8 +69,8 @@ identity and unknown named-test attribution, so this does not establish an
 aggregate or marginal coverage gain. No full coverage campaign was run.
 
 The selected report is
-`target/release-evidence/selected/20261019T234416Z/coverage.json` (SHA-256
-`b8fd5e36e6ff450011a4c6c1b397210ddbb9b1ff200edd51c1a1a9995f457c1a`).
+`target/release-evidence/selected/20261020T000909Z/coverage.json` (SHA-256
+`ad5903cec36bcdcb8f8c9d7a219c2e902d2fd5d8e571de08ac50c0f6943b8c3d`).
 The selected fault-contract report is
 `target/release-evidence/selected/20261019T234822Z/coverage.json` (SHA-256
 `f102498b91b8b11e8034b16ec7315cc4edf802e9998d0608dd02f2639676feba`).
