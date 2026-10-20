@@ -111170,6 +111170,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_aligned_partial_height.bin",
           "encoded_ref_bytes": 672,
           "encoded_ref_sha256": "507900a8880167699a349b730d0ace70ec7645aa148cf9f3fcd122e77073b014",
@@ -111182,17 +111192,7 @@
             4
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_sub_444_streaming_exif_restart_rows",
@@ -114838,6 +114838,61 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_progressive_correction_buffer_flush_256x256",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Repeated grayscale rows flush the progressive AC correction buffer",
+          "params": {
+            "quality": 75,
+            "progressive": true,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_progressive_correction_source_256x256.png",
+          "source_sha256": "a50cef6ddd8ace094ab3db04f0d205abbd8d6a70b2b618d93fb03e494c47eca9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_progressive_correction_buffer_flush_256x256.bin",
+          "encoded_ref_bytes": 3228,
+          "encoded_ref_sha256": "7bf0311dd950a11befc00859db41ae78298875a015be7958dcdafaf71c091b18",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_progressive_correction_buffer_flush_256x256.bin",
+          "ref_sha256": "a4a0e46682c88558c990bf50dd41bcab8098ebea8fc91c91b13a1cbeca56ebf2",
+          "ref_bytes": 65536,
+          "ref_mode": "L8",
+          "ref_size": [
+            256,
+            256
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "description": "",
@@ -207265,9 +207320,9 @@
     }
   },
   "summary": {
-    "total_rows": 2456,
+    "total_rows": 2457,
     "decode_rows": 1951,
-    "encode_rows": 505,
+    "encode_rows": 506,
     "formats": 8,
     "assets_available": 1947,
     "decode_active": 1951,

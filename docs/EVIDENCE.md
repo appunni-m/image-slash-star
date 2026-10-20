@@ -6,6 +6,37 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## JPEG progressive correction-buffer parity — 2026-10-20
+
+Added the public encode row
+`encode:jpeg:enc_progressive_correction_buffer_flush_256x256`. Its source is a
+256x256 L8 PNG whose 256-byte rows repeat `[0, 32, 64, 96, 128, 160, 192, 224]`
+32 times. The generated PNG is 371 bytes with SHA-256
+`a50cef6ddd8ace094ab3db04f0d205abbd8d6a70b2b618d93fb03e494c47eca9`. Pillow
+12.2.0 encodes it as JPEG with quality 75, progressive scans enabled, and
+optimization disabled. The exact 3,228-byte JPEG has SHA-256
+`7bf0311dd950a11befc00859db41ae78298875a015be7958dcdafaf71c091b18`.
+
+The selected all-feature branch-coverage case passed 1/1 and made five public
+encode calls, including sink and token parity. The local LLVM report is
+`.coverage-mcp/local-evidence/20261020/jpeg-progressive-correction-256/coverage.json`
+(SHA-256
+`6cfefcf4cb26ef7e31efcf10cdf0669668b58cf9fb36226b7e6400a105064487`). Its
+branch counters recorded six true evaluations of
+`correction_bits.len() > 937` for `NoopProgressiveScanCheckpoint` and two for
+`TokenProgressiveScanCheckpoint`; the `eob_run == 0x7fff` condition remained
+false in this case. Coverage MCP marks source identity unverified and test
+attribution unknown, and incremental comparison with the saved full baseline
+is incomparable because baseline detail does not match its reported totals.
+This records selected-path evidence only and makes no aggregate coverage-gain
+claim.
+
+The branch is reached through ordinary public encoding, so this case remains
+in Pillow parity and does not need a target-only fault-contract row. The
+fixture matrix now contains 2,457 total rows: 1,951 decode / inspect / verify rows and 506 encode rows.
+Of those, 1,951 decode rows and 474 encode rows are active; the other 32 encode
+rows are planned. The separate fault-contract lane contains 72 rows.
+
 ## AVIF odd-size I420 film-grain chroma parity — 2026-10-20
 
 Added active Pillow parity row
@@ -7533,7 +7564,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `585fc1ae9cdc977b00e2dd77d2e75c27b4c667ecf7af7a8418247f1b2b07d39c`; matrix `3d4e1842b604384e520b0d9ffcbf9f583ecf728d19fee313c4e16008fdfb7f8a`.
+- Current fixture integrity only: manifest `2445e8df9b7570c342f18f29f119378940a4526bd6d657d14344a4c82ef49c77`; matrix `bd32c33c6dfa3942b8b086dda7decf5f11a9916fa38dbd3f137a4e2fbe5f7b82`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

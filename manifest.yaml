@@ -2432,6 +2432,11 @@ formats:
       description: Progressive EOB run flush at the JPEG limit
       params: {'progressive': True, 'grayscale': True}
       source_asset: progressive_eob_source.jpg
+    - id: enc_progressive_correction_buffer_flush_256x256
+      description: Repeated grayscale rows flush the progressive AC correction buffer
+      source_format: png
+      source_asset: jpeg_progressive_correction_source_256x256.png
+      params: {'quality': 75, 'progressive': True, 'optimize': False}
     - id: enc_no_optimize
       description: 
       params: {'optimize': False}

@@ -4089,6 +4089,57 @@
       }
     },
     {
+      "id": "enc_progressive_correction_buffer_flush_256x256",
+      "source_asset": "jpeg_progressive_correction_source_256x256.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "a50cef6ddd8ace094ab3db04f0d205abbd8d6a70b2b618d93fb03e494c47eca9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 75,
+        "progressive": true,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_progressive_correction_source_256x256.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 75,
+          "optimize": false,
+          "progressive": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_no_optimize",
       "source_asset": "baseline_444.jpg",
       "source_format": "jpeg",
