@@ -24,6 +24,7 @@ on:
       - 'src/cancel.rs'
       - 'src/encode_options.rs'
       - 'src/encode_policy.rs'
+      - 'src/diagnostic.rs'
       - 'src/lib.rs'
       - 'src/types/**'
       - 'src/codecs/mod.rs'
