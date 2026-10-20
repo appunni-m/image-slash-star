@@ -489,6 +489,36 @@ def ci_x86_coverage_violations(contents: str) -> list[str]:
     steps = re.split(r"(?m)^      - ", job)
     violations = []
 
+    selector_checks = [
+        step
+        for step in steps
+        if re.search(
+            r"(?m)^name: Verify x86 coverage selectors resolve to runnable tests$",
+            step,
+        )
+    ]
+    if len(selector_checks) != 1:
+        violations.append(
+            "CI x86 coverage selector check must be defined exactly once"
+        )
+    else:
+        selector_script = run_script(selector_checks[0])
+        if (
+            selector_script is None
+            or "-- --list" not in selector_script
+            or "grep -Fqx" not in selector_script
+        ):
+            violations.append(
+                "CI x86 coverage selector check must list runnable tests exactly"
+            )
+        else:
+            for _, test_name in CI_X86_COVERAGE_RUNS:
+                if selector_script.count(test_name) != 1:
+                    violations.append(
+                        "CI x86 coverage selector check must require "
+                        f"{test_name} exactly once"
+                    )
+
     reports = []
     for profile, step_name, suffix in CI_X86_COVERAGE_PROFILES:
         matching_steps = [
@@ -512,7 +542,7 @@ def ci_x86_coverage_violations(contents: str) -> list[str]:
                 'cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch '
                 "--locked --json --output-path "
                 f"target/release-evidence/{report} --test coverage_matrix_tests "
-                f"{test_name}"
+                f"{test_name} -- --exact"
             )
             if normalized_script.count(expected_command) != 1:
                 violations.append(

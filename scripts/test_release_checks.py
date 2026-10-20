@@ -1448,6 +1448,26 @@ jobs:
             check_workflows.ci_x86_coverage_violations(workflow), []
         )
 
+        without_selector_gate = workflow.replace(
+            "name: Verify x86 coverage selectors resolve to runnable tests",
+            "name: Disabled x86 coverage selector check",
+        )
+        self.assertIn(
+            "CI x86 coverage selector check must be defined exactly once",
+            check_workflows.ci_x86_coverage_violations(without_selector_gate),
+        )
+
+        without_fault_selector = workflow.replace(
+            "            test_fault_contract_matrix; do\n",
+            "            ; do\n",
+            1,
+        )
+        self.assertIn(
+            "CI x86 coverage selector check must require "
+            "test_fault_contract_matrix exactly once",
+            check_workflows.ci_x86_coverage_violations(without_fault_selector),
+        )
+
         for profile, _, suffix in check_workflows.CI_X86_COVERAGE_PROFILES:
             for report_prefix, test_name in check_workflows.CI_X86_COVERAGE_RUNS:
                 report = f"{report_prefix}-x86_64{suffix}.json"
@@ -1455,7 +1475,7 @@ jobs:
                     '          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test '
                     "--all-features --branch --locked --json \\\n"
                     f"            --output-path target/release-evidence/{report} \\\n"
-                    f"            --test coverage_matrix_tests {test_name}\n"
+                    f"            --test coverage_matrix_tests {test_name} -- --exact\n"
                 )
                 without_run = workflow.replace(command, "", 1)
                 with self.subTest(profile=profile, report=report, gate="run"):

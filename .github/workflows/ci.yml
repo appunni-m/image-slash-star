@@ -115,9 +115,12 @@ jobs:
       - name: Install pinned coverage driver
         run: cargo +"$COVERAGE_TOOLCHAIN" install cargo-llvm-cov --locked --version 0.8.7
       - name: Verify x86 coverage selectors resolve to runnable tests
+        env:
+          CARGO_TARGET_DIR: target/x86_64-sse2-coverage
+          RUSTFLAGS: -C target-cpu=x86-64 --cfg coverage --cfg coverage_nightly
         run: |
           set -euo pipefail
-          test_list="$(cargo test --all-features --locked --test coverage_matrix_tests -- --list)"
+          test_list="$(cargo +"$COVERAGE_TOOLCHAIN" test --all-features --locked --test coverage_matrix_tests -- --list)"
           for test_name in \
             test_decode_matrix_jpeg \
             test_encode_matrix_jpeg \
