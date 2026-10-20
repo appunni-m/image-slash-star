@@ -6,6 +6,46 @@ all-feature report and the historical managed coverage baseline are recorded
 separately; later entries retain the report-specific observations made when
 each entry was recorded.
 
+## WebP VP8 method-zero sampling parity — 2026-10-20
+
+Corrected libwebp parity in VP8 coefficient adaptation: method 0 samples the
+first 50 macroblocks through 200 macroblocks, then samples one quarter of the
+frame; skip probability uses the full frame macroblock count. Token-buffer
+methods no longer signal skip probability, and an Intra4 macroblock skipped
+after zero residuals preserves the Y2 contexts as libwebp does. These changes
+reuse the existing macroblock decisions and add no extra per-macroblock pass.
+
+Added Pillow-backed parity rows `enc_lossy_quality_0_method_0_capped_statistics`
+and `enc_lossy_quality_0_method_0_large_frame_skip_sample`. The first uses the
+existing 128x128 `rgb.png` (64 macroblocks) and matches a 698-byte WebP
+(SHA-256 `66771f67573da043e1b72af996adf0d8b694ae86e03332369361be65ff305860`).
+The second uses `large.png` at 513x257 (561 macroblocks; 140 sampled) and
+matches a 506-byte WebP (SHA-256
+`79e192628a654aa8745d528b5eef7537cfcb9463fafc24ddf7f28afe5bdc1a96`).
+
+The selected all-feature run passed 10/10 existing and new WebP encode rows,
+with 40 public encode calls and no panics. The capped-statistics row also
+passed alone (1/1, four public calls). Reports are
+`target/release-evidence/selected/webp-skip-method0-sampling-final-20261020.json`
+(SHA-256 `61db78820e9506dfd16c93731b5f4fccb3b1480bd5b6dc2533dab0c13f748621`)
+and
+`target/release-evidence/selected/webp-method0-capped-statistics-only-20261020.json`
+(SHA-256 `80227fb8b4a5ad8149831f684c6810e077de62a9e9beb506cd68ac1922b33fa7`).
+
+Coverage MCP's focused branch query returned missing outcomes in
+`adapt_coefficients` and the VP8 residual skip branch at line 531. These are
+selected-report locations only: source/build identity is unverified and test
+attribution is unknown. The attempted incremental comparison is incomparable
+because the prior report's detailed branch inventory does not reconcile with
+its totals. No aggregate coverage gain or full-suite claim is made, and no
+full coverage campaign was run. These are ordinary input parity cases, not
+target-only fault contracts.
+
+The current public fixture matrix contains 2,470 total rows: 1,957 decode /
+inspect / verify rows and 513 encode rows. Of those, 1,957 decode rows and 481
+encode rows are active; the other 32 encode rows are planned. The separate
+fault-contract lane contains 72 rows.
+
 ## ICO/CUR entry-selection parity — 2026-10-20
 
 Added five active Pillow parity rows covering ICO directory selection and CUR
@@ -7705,7 +7745,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `365d026c563b2adce74fff22d1ef2b09ba3886dd7d0fff6804a92f9a0661fc73`; matrix `56967fce8a74aa077e39f79850bbfb05933031c89d29ece87ba3af3369e3487b`.
+- Current fixture integrity only: manifest `b0c2e8a11b661a62f3531e88d91fef711708cb1aca53c436818bfcba0c74c200`; matrix `092f60559f4a909589e281da382d8e6011ec106d651250dd147898019397439c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

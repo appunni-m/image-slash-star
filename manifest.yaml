@@ -5486,6 +5486,22 @@ formats:
         lossless: false
         quality: 0
         method: 0
+    - id: enc_lossy_quality_0_method_0_capped_statistics
+      description: Lossy quality-zero method-zero encoding capped at 50 macroblocks
+      source_format: png
+      source_asset: rgb.png
+      params:
+        lossless: false
+        quality: 0
+        method: 0
+    - id: enc_lossy_quality_0_method_0_large_frame_skip_sample
+      description: Lossy quality-zero method-zero encoding with quarter-frame skip statistics
+      source_format: png
+      source_asset: large.png
+      params:
+        lossless: false
+        quality: 0
+        method: 0
   tiff:
     name: TIFF
     extensions:

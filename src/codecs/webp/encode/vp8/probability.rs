@@ -282,6 +282,7 @@ pub(super) fn adapt_coefficients(
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
     token_buffer: bool,
+    frame_macroblock_count: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<AdaptedProbabilities> {
     let (statistics, skipped_macroblocks) = if let Some(token) = token {
@@ -340,12 +341,12 @@ pub(super) fn adapt_coefficients(
             }
         }
     }
-    let skip_probability = skip_probability(decisions.len(), skipped_macroblocks);
+    let skip_probability = skip_probability(frame_macroblock_count, skipped_macroblocks);
     Ok(AdaptedProbabilities {
         coefficients,
         updates,
         skip_probability,
-        use_skip_probability: skip_probability < SKIP_PROBABILITY_THRESHOLD,
+        use_skip_probability: !token_buffer && skip_probability < SKIP_PROBABILITY_THRESHOLD,
     })
 }
 

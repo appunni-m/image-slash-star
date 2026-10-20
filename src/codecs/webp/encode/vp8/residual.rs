@@ -533,10 +533,10 @@ fn encode_coefficients_with_checkpoint<P: CoefficientCheckpointControl>(
                 top_uv[x] = [0; 4];
                 if matches!(&decision.luma, LumaDecision::Intra16(_)) {
                     top_y2[x] = 0;
+                    left_y2 = 0;
                 }
                 left_y = [0; 4];
                 left_uv = [0; 4];
-                left_y2 = 0;
                 checkpoint.checkpoint_macroblock()?;
                 continue;
             }
