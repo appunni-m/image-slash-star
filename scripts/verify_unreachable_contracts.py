@@ -385,6 +385,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.upsample.row_short_stride",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_row_upsample_source_length_mismatch": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch",
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2",
+        "point": "jpeg.upsample.row_source_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "bmp_palette_reservation_failure": {
         "format": "bmp",
         "category": "structured-diagnostics",
