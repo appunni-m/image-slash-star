@@ -119780,6 +119780,90 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "interlace_adam7_rgb_16bit",
+          "type": "decode",
+          "format": "png",
+          "category": "interlace",
+          "description": "Adam7 16-bit RGB samples across all seven passes",
+          "asset": "adam7_rgb16.png",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "243f253a436c595237e54fddb58f7b5b9fa5fbf07a18b35531399a821cb7a5dc",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 16,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_rgb16_png.bin",
+          "ref_sha256": "fdd488e078dac07ca3813a65dce0146ee1b9fc2f451301d579356f95f512920e",
+          "ref_bytes": 243,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            9,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": {
+            "srgb": null,
+            "gamma": null,
+            "chromaticities": null,
+            "icc_profile_present": false
+          },
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "decoded_source_color": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "filter_none.png",
           "asset_path": "tests/fixtures/input/images/png/filter_none.png",
           "category": "filter",
@@ -204976,6 +205060,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_run_cap_token.bin",
           "encoded_ref_bytes": 186,
           "encoded_ref_sha256": "d99c88b7b040f8f34dd8048f54ef0fcb4db4f43a7ffa1a048ddd9008dc863f7c",
@@ -204988,17 +205082,7 @@
             1
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_method_0_palette",
@@ -209623,12 +209707,12 @@
     }
   },
   "summary": {
-    "total_rows": 2488,
-    "decode_rows": 1973,
+    "total_rows": 2489,
+    "decode_rows": 1974,
     "encode_rows": 515,
     "formats": 8,
-    "assets_available": 1969,
-    "decode_active": 1973,
+    "assets_available": 1970,
+    "decode_active": 1974,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
