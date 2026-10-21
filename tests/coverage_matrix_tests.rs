@@ -4,6 +4,7 @@
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
 use std::any::Any;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::ffi::OsString;
 use std::fs;
@@ -4623,24 +4624,37 @@ fn assert_pixel_parity(
         ));
     }
 
+    let expected_bytes = if expected.mode.as_deref() == Some("I;16B") {
+        // Pillow exposes big-endian samples here; the public L16 transfer
+        // contract stores every 16-bit sample in little-endian order.
+        let mut samples = expected.bytes.chunks_exact(2);
+        let mut normalized = samples
+            .by_ref()
+            .flat_map(|sample| [sample[1], sample[0]])
+            .collect::<Vec<_>>();
+        normalized.extend_from_slice(samples.remainder());
+        Cow::Owned(normalized)
+    } else {
+        Cow::Borrowed(expected.bytes.as_slice())
+    };
     let actual_bytes = actual.as_bytes();
-    if actual_bytes.len() != expected.bytes.len() {
+    if actual_bytes.len() != expected_bytes.len() {
         return Err(format!(
             "byte length mismatch: actual {}, expected {}",
             actual_bytes.len(),
-            expected.bytes.len()
+            expected_bytes.len()
         ));
     }
 
-    if actual_bytes == expected.bytes.as_slice() {
+    if actual_bytes == expected_bytes.as_ref() {
         return Ok(());
     }
 
     let bytes_per_pixel = mode_bytes_per_pixel(expected.mode.as_deref())
         .unwrap_or_else(|| usize::from(actual.color.bytes_per_pixel()));
     let width = expected.width.unwrap_or(actual.width).max(1);
-    let mismatch_count = count_mismatched_bytes(&expected.bytes, actual_bytes);
-    let examples = first_pixel_mismatches(&expected.bytes, actual_bytes, width, bytes_per_pixel)
+    let mismatch_count = count_mismatched_bytes(&expected_bytes, actual_bytes);
+    let examples = first_pixel_mismatches(&expected_bytes, actual_bytes, width, bytes_per_pixel)
         .into_iter()
         .map(|m| {
             format!(
