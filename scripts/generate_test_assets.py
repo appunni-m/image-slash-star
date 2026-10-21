@@ -3123,6 +3123,11 @@ def gen_png():
         "427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef"
     ):
         raise RuntimeError("JPEG 4:2:0 generic source PNG differs from its pinned hash")
+    pattern_img("RGB", (32, 16)).save(
+        d / "jpeg_422_batch_source_32x16.png",
+        format="PNG",
+        compress_level=9,
+    )
     append_png_idat_empty_zlib_member(
         d / "rgb.png", d / "idat_trailing_zlib_member.png"
     )
