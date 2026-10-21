@@ -9636,6 +9636,11 @@ formats:
       test_assets:
       - animated_lossy_wide_monochrome_b128x128.avif
       status: active
+    - id: animated_lossy_wide_i422_b128x64
+      description: Two-frame 128x128 8-bit lossy 4:2:2 AVIF sequence whose second frame has a horizontal 128x128 root split into two 128x64 inter leaves with largest transforms
+      test_assets:
+      - animated_lossy_wide_i422_b128x64.avif
+      status: active
     - id: animated_lossy_wide_i444_b128x128
       description: Two-frame 256x256 8-bit lossy 4:4:4 AVIF sequence with unsplit 128x128 inter blocks
       test_assets:

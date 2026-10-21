@@ -125,3 +125,19 @@ limitations above still apply.
 
 Regenerate this bundle with the same command plus
 `--fixture animated_error_resilient` and a fresh `--output` path.
+
+## Lossy wide I422 B128x64 geometry
+
+The `lossy_wide_i422_b128x64` bundle records the unchanged complete input
+`animated_lossy_wide_i422_b128x64.avif`. Independent AV1 OBU parsing reports
+an inter frame with largest-transform mode. The pinned scalar dav1d trace
+asserts that the second frame's I422 root splits horizontally into exactly two
+128x64 leaves at MI origins (0, 0) and (0, 16), with 8-bit samples. This is a
+valid I422 wide-chunk parity case; it does not represent the invalid B64x128
+chroma geometry.
+
+The bundle retains two exact 128x128 RGB8 Pillow frames (49,152 bytes each),
+two displayed YUV canvases, the AV1 syntax and container reports, the pinned
+dav1d instrumentation patch and trace, and the independent libavif loop
+observation. The frame hashes and source identities are recorded in
+[lossy_wide_i422_b128x64/index.json](lossy_wide_i422_b128x64/index.json).

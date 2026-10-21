@@ -1,0 +1,1556 @@
+{
+  "artifacts": [
+    {
+      "bytes": 32768,
+      "path": "decoded/color/display_0.yuv",
+      "sha256": "fd7badfcb100433b01bdb0b07ef96a1ba9f4b4a74be6f39f2787994d79c6741e"
+    },
+    {
+      "bytes": 32768,
+      "path": "decoded/color/display_1.yuv",
+      "sha256": "34a7a8cd7d8e054400d9440f6b52318873e7a0ec7cce8be901118ad70cef2f96"
+    },
+    {
+      "bytes": 49152,
+      "path": "decoded/pillow/frame_0.rgb",
+      "sha256": "180e2a96e64100f8d42892dcfd2a19b6d16329d325a527811fbeee5008682c65"
+    },
+    {
+      "bytes": 49152,
+      "path": "decoded/pillow/frame_1.rgb",
+      "sha256": "8cd9f587054f3e1d17152aa6b8c2b743c3f9d75061a2d165bd9d333156133ada"
+    },
+    {
+      "bytes": 10200,
+      "path": "inputs/color.ivf",
+      "sha256": "64aa43ffeb658c062773e2cd70699f60f11e0df2bdec8cb75abd60514bcf435e"
+    },
+    {
+      "bytes": 8790,
+      "path": "provenance/color-sequence-trace.patch",
+      "sha256": "07554540d43ecb44a1e692d77254a23d4e56d62947da8b9a89d35bc521cac699"
+    },
+    {
+      "bytes": 1052,
+      "path": "provenance/loop-observer.cc",
+      "sha256": "b0156f76b6aec46d47204c68406f01351532ae74e8a792dc56b85f86f01db5a7"
+    },
+    {
+      "bytes": 50309,
+      "path": "syntax/av1-obus.json",
+      "sha256": "a9b03af2f05f0eb93e8f508e750a56b3ec68652c56f176f88c84e95d07028281"
+    },
+    {
+      "bytes": 1758,
+      "path": "syntax/avif-container.json",
+      "sha256": "c1bd2259c5272fa4a4882459d6aa3fb443368cdda0165c0e52a20e284b1ed603"
+    },
+    {
+      "bytes": 5255,
+      "path": "traces/color.jsonl",
+      "sha256": "a3df1106e8d11a481baafecc0bb3a3b0a7fa6602d47f8b9bc693dc6e10aec36e"
+    }
+  ],
+  "container": {
+    "alpha_track_id": null,
+    "color_track_id": 1,
+    "sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc",
+    "tracks": [
+      {
+        "av1c": {
+          "hex": "81400800",
+          "length": 4,
+          "offset": 826,
+          "sha256": "3a56b95c9ac312120e7d46e6c5866fa68661278737b9930438ce21038626f98c"
+        },
+        "handler": "pict",
+        "samples": [
+          {
+            "duration": 100,
+            "index": 0,
+            "length": 3775,
+            "offset": 993,
+            "sha256": "ed438666deb805845c062578ff59387adabf163d137390b84a6f2a03068c3dd2",
+            "sync": true
+          },
+          {
+            "duration": 100,
+            "index": 1,
+            "length": 6369,
+            "offset": 4768,
+            "sha256": "02e7b1118bdf1f8ddff6284af9397235676c3b8b852d2db4c7b2ff5a4fcda60d",
+            "sync": false
+          }
+        ],
+        "timescale": 1000,
+        "track_id": 1
+      }
+    ]
+  },
+  "fixture": {
+    "bytes": 11137,
+    "path": "tests/fixtures/input/images/avif/animated_lossy_wide_i422_b128x64.avif",
+    "sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc"
+  },
+  "identity": {
+    "decoded_frame_index": "actual dav1d frame_submitted order; excludes show-existing",
+    "display_index": "actual dav1d picture_output order, associated by unique PTS",
+    "hidden_frames": "actual dav1d frame_header/frame_submitted with show_frame false",
+    "sample_index": "BMFF track sample order and IVF PTS index",
+    "show_existing": "actual dav1d show_existing_queued event; no tile decode expected"
+  },
+  "native_loop": {
+    "compile_argv": [
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-shared",
+      "-fPIC",
+      "-I<libavif-source>/include",
+      "<work>/animated/provenance/loop-observer.cc",
+      "-o",
+      "<work>/loop-observer.so"
+    ],
+    "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+    "native_repeat_equal": true,
+    "observer_path": "provenance/loop-observer.cc",
+    "observer_sha256": "dd0cdb889878713837b197d9265785864338c54f85e2b96d679349312f04b32e",
+    "origin": "libavif.avifDecoder.repetitionCount",
+    "repetition_count": 0,
+    "source": {
+      "commit": "6543b22b5bc706c53f038a16fe515f921556d9b3",
+      "files": [
+        {
+          "path": "include/avif/avif.h",
+          "sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e"
+        },
+        {
+          "path": "src/read.c",
+          "sha256": "d2e4062f7030ffa5843a3c9cc4984e382a07782ce2241d8b5354fda888266e85"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "165abf92cc04b39e80d29cadea7a6a7e8fddf59407d4ad2616507a7ebe8216f9"
+        }
+      ],
+      "tree_sha256": "9a4323fe85047fecdc1822ce82e447fba7e329bf1f0dd9bbd9e5fb09fc5f5454"
+    }
+  },
+  "oracle": {
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "libavif": "1.4.1",
+    "pillow": "12.2.0",
+    "pillow_avif_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+    "pillow_imaging_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+    "pillow_repeat_equal": true
+  },
+  "pillow": {
+    "frame_count": 2,
+    "frames": [
+      {
+        "duration": 100,
+        "duration_observation": "Pillow.Image.info",
+        "index": 0,
+        "mode": "RGB",
+        "native_duration": 100,
+        "native_pts": 0,
+        "native_timescale": 1000,
+        "raw_bytes": 49152,
+        "raw_path": "decoded/pillow/frame_0.rgb",
+        "raw_sha256": "180e2a96e64100f8d42892dcfd2a19b6d16329d325a527811fbeee5008682c65",
+        "size": [
+          128,
+          128
+        ]
+      },
+      {
+        "duration": 100,
+        "duration_observation": "Pillow.Image.info",
+        "index": 1,
+        "mode": "RGB",
+        "native_duration": 100,
+        "native_pts": 100,
+        "native_timescale": 1000,
+        "raw_bytes": 49152,
+        "raw_path": "decoded/pillow/frame_1.rgb",
+        "raw_sha256": "8cd9f587054f3e1d17152aa6b8c2b743c3f9d75061a2d165bd9d333156133ada",
+        "size": [
+          128,
+          128
+        ]
+      }
+    ],
+    "loop_count": null,
+    "loop_observation": "not_present",
+    "mode": "RGB",
+    "size": [
+      128,
+      128
+    ]
+  },
+  "roles": {
+    "alpha": {
+      "reason": "animated_lossy_wide_i422_b128x64.avif has no auxiliary alpha track",
+      "status": "not_applicable"
+    },
+    "color": {
+      "av1c": {
+        "hex": "81400800",
+        "length": 4,
+        "offset": 826,
+        "sha256": "3a56b95c9ac312120e7d46e6c5866fa68661278737b9930438ce21038626f98c"
+      },
+      "build": {
+        "instrumented": {
+          "compile_argv": [
+            "meson",
+            "compile",
+            "-C",
+            "<build>",
+            "tools/dav1d"
+          ],
+          "configure_argv": [
+            "meson",
+            "setup",
+            "<build>",
+            "<source-copy>",
+            "--buildtype=debug",
+            "-Denable_tools=true",
+            "-Denable_tests=false",
+            "-Denable_examples=false",
+            "-Dtestdata_tests=false",
+            "-Denable_asm=false"
+          ],
+          "meson_version": "1.12.0",
+          "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+          "ninja_version": "1.13.2",
+          "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+          "tool_version": "1.5.3-0-gb546257f",
+          "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+        },
+        "plain": {
+          "compile_argv": [
+            "meson",
+            "compile",
+            "-C",
+            "<build>",
+            "tools/dav1d"
+          ],
+          "configure_argv": [
+            "meson",
+            "setup",
+            "<build>",
+            "<source-copy>",
+            "--buildtype=debug",
+            "-Denable_tools=true",
+            "-Denable_tests=false",
+            "-Denable_examples=false",
+            "-Dtestdata_tests=false",
+            "-Denable_asm=false"
+          ],
+          "meson_version": "1.12.0",
+          "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+          "ninja_version": "1.13.2",
+          "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+          "tool_version": "1.5.3-0-gb546257f",
+          "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+        }
+      },
+      "counts": {
+        "block_class_histogram": {
+          "leaf:1:1": 2,
+          "leaf:3:0": 4,
+          "partition:0:1": 1,
+          "partition:0:3": 1,
+          "partition:1:0": 4
+        },
+        "block_class_histogram_by_frame_offset": {
+          "0": {
+            "leaf:3:0": 4,
+            "partition:0:3": 1,
+            "partition:1:0": 4
+          },
+          "1": {
+            "leaf:1:1": 2,
+            "partition:0:1": 1
+          }
+        },
+        "block_count": 12,
+        "decoded_frame_count": 2,
+        "display_count": 2,
+        "hidden_decoded_count": 0,
+        "show_existing_count": 0
+      },
+      "display_frames": [
+        {
+          "bit_depth": 8,
+          "display_index": 0,
+          "duration": 0,
+          "height": 128,
+          "layout": "I422",
+          "layout_code": 2,
+          "planes": [
+            {
+              "bytes": 16384,
+              "height": 128,
+              "name": "y",
+              "sha256": "568f5deb6a92137ac553c5ae25156fc8fd69bc5aa949f55026b4bf1d6f2551b4",
+              "width": 128
+            },
+            {
+              "bytes": 8192,
+              "height": 128,
+              "name": "u",
+              "sha256": "43a6f13a25301690d66b0d2c1c96a31e0d78602e4377a41636170192bebc4b55",
+              "width": 64
+            },
+            {
+              "bytes": 8192,
+              "height": 128,
+              "name": "v",
+              "sha256": "e4a7b27bf171fe3a7a672c3feceedf09e9090df3c0eeb4b67db61c066e9fd5c2",
+              "width": 64
+            }
+          ],
+          "pts": 0,
+          "raw_bytes": 32768,
+          "raw_path": "decoded/color/display_0.yuv",
+          "raw_sha256": "fd7badfcb100433b01bdb0b07ef96a1ba9f4b4a74be6f39f2787994d79c6741e",
+          "width": 128
+        },
+        {
+          "bit_depth": 8,
+          "display_index": 1,
+          "duration": 0,
+          "height": 128,
+          "layout": "I422",
+          "layout_code": 2,
+          "planes": [
+            {
+              "bytes": 16384,
+              "height": 128,
+              "name": "y",
+              "sha256": "ccdd2fb78cb57a1f23c877ad18753c54afa6e40db402852155c20902423c6234",
+              "width": 128
+            },
+            {
+              "bytes": 8192,
+              "height": 128,
+              "name": "u",
+              "sha256": "7ad2284663b2d367b907a4b82c458d8d4902bc55dcb38cd48aab72ebaed5bc65",
+              "width": 64
+            },
+            {
+              "bytes": 8192,
+              "height": 128,
+              "name": "v",
+              "sha256": "7f4e1717fa2fe2a9a39f42b9d473c1271cfa9b636508aaf8040a4529dde10c43",
+              "width": 64
+            }
+          ],
+          "pts": 1,
+          "raw_bytes": 32768,
+          "raw_path": "decoded/color/display_1.yuv",
+          "raw_sha256": "34a7a8cd7d8e054400d9440f6b52318873e7a0ec7cce8be901118ad70cef2f96",
+          "width": 128
+        }
+      ],
+      "geometry": {
+        "bit_depth": 8,
+        "height": 128,
+        "monochrome": false,
+        "profile": 2,
+        "subsampling_x": 1,
+        "subsampling_y": 0,
+        "width": 128
+      },
+      "handler": "pict",
+      "identity": [
+        {
+          "duration_den": 1000,
+          "duration_num": 100,
+          "frames": [
+            {
+              "block_count": 9,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 1,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 0,
+                "frame_type": 0,
+                "header_index": 0,
+                "height": 128,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 0,
+                "references_before": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                "refresh_frame_flags": 255,
+                "render_height": 128,
+                "render_width": 128,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 0,
+                "width": 128
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": false,
+              "decoded_frame_index": 0,
+              "display_index": 0,
+              "display_reason": "show_frame",
+              "frame_offset": 0,
+              "frame_type": 0,
+              "header_index": 0,
+              "references_before": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ],
+              "refresh_frame_flags": 255,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": false,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": false,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": true,
+                "allow_warped_motion": false,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 0,
+                  "uv_strengths": [],
+                  "y_strengths": []
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": true,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "film_grain_start_bit": 52,
+                "force_integer_mv": true,
+                "frame_height": 128,
+                "frame_id": 0,
+                "frame_size_override": false,
+                "frame_type": "key",
+                "frame_width": 128,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 52,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": false,
+                "order_hint": 0,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 61,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [],
+                "reference_mode": "single",
+                "reference_mode_bit": null,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 255,
+                "render_height": 128,
+                "render_width": 128,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  61,
+                  61,
+                  61,
+                  61,
+                  61,
+                  61,
+                  61,
+                  61
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": false,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    1
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 0,
+                  "maximum_log2_rows": 0,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    1
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 128,
+                "use_ref_frame_mvs": false
+              }
+            }
+          ],
+          "pts": 0,
+          "pts_den": 1000,
+          "pts_num": 0,
+          "sample_index": 0,
+          "sample_length": 3775,
+          "sample_offset": 993,
+          "sample_sha256": "ed438666deb805845c062578ff59387adabf163d137390b84a6f2a03068c3dd2",
+          "sync": true
+        },
+        {
+          "duration_den": 1000,
+          "duration_num": 100,
+          "frames": [
+            {
+              "block_count": 3,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 1,
+                "frame_type": 1,
+                "header_index": 1,
+                "height": 128,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 1,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 1,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 2,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 3,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 128
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 128,
+                    "refresh_frame_flags": 255,
+                    "render_height": 128,
+                    "render_width": 128,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 128
+                  }
+                ],
+                "refresh_frame_flags": 2,
+                "render_height": 128,
+                "render_width": 128,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 1,
+                "width": 128
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 1,
+              "display_index": 1,
+              "display_reason": "show_frame",
+              "frame_offset": 1,
+              "frame_type": 1,
+              "header_index": 1,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 1,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 2,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 3,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 128
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 128,
+                  "refresh_frame_flags": 255,
+                  "render_height": 128,
+                  "render_width": 128,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 128
+                }
+              ],
+              "refresh_frame_flags": 2,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": true,
+                "allow_warped_motion": false,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 0,
+                  "uv_strengths": [],
+                  "y_strengths": []
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "film_grain_start_bit": 99,
+                "force_integer_mv": false,
+                "frame_height": 128,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 128,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 99,
+                "interpolation_filter": "eighttap_smooth",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 1,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 88,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 90,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 2,
+                "render_height": 128,
+                "render_width": 128,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  88,
+                  88,
+                  88,
+                  88,
+                  88,
+                  88,
+                  88,
+                  88
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    1
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 0,
+                  "maximum_log2_rows": 0,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    1
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 128,
+                "use_ref_frame_mvs": true
+              }
+            }
+          ],
+          "pts": 1,
+          "pts_den": 1000,
+          "pts_num": 100,
+          "sample_index": 1,
+          "sample_length": 6369,
+          "sample_offset": 4768,
+          "sample_sha256": "02e7b1118bdf1f8ddff6284af9397235676c3b8b852d2db4c7b2ff5a4fcda60d",
+          "sync": false
+        }
+      ],
+      "ivf": {
+        "bytes": 10200,
+        "codec": "AV01",
+        "height": 128,
+        "path": "inputs/color.ivf",
+        "rate_den": 1,
+        "rate_num": 30,
+        "samples": [
+          {
+            "length": 3775,
+            "offset": 993,
+            "pts": 0,
+            "sample_index": 0,
+            "sha256": "ed438666deb805845c062578ff59387adabf163d137390b84a6f2a03068c3dd2"
+          },
+          {
+            "length": 6369,
+            "offset": 4768,
+            "pts": 1,
+            "sample_index": 1,
+            "sha256": "02e7b1118bdf1f8ddff6284af9397235676c3b8b852d2db4c7b2ff5a4fcda60d"
+          }
+        ],
+        "sha256": "64aa43ffeb658c062773e2cd70699f60f11e0df2bdec8cb75abd60514bcf435e",
+        "timestamps": [
+          0,
+          1
+        ],
+        "width": 128
+      },
+      "msac_detail": {
+        "reason": "High-level lifecycle/block evidence is complete; detailed MSAC instrumentation is deferred until a relevant unsupported block class is isolated.",
+        "status": "not_collected"
+      },
+      "noninterference": {
+        "byte_equal": true,
+        "bytes": 65536,
+        "plain_yuv_sha256": "28eed053eb6b83a989b18395ef2123f950da6462d3ffb650a5de328f1b9b947c",
+        "trace_yuv_sha256": "28eed053eb6b83a989b18395ef2123f950da6462d3ffb650a5de328f1b9b947c"
+      },
+      "patch": {
+        "bytes": 8790,
+        "path": "provenance/color-sequence-trace.patch",
+        "sha256": "07554540d43ecb44a1e692d77254a23d4e56d62947da8b9a89d35bc521cac699"
+      },
+      "timescale": 1000,
+      "trace_assertions": [
+        {
+          "frame_offset": 1,
+          "frame_type": "inter",
+          "leaf_count": 2,
+          "leaf_mi_origins": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              16
+            ]
+          ],
+          "origin": {
+            "bit_depth": 8,
+            "height_px": 64,
+            "layout": "I422",
+            "width_px": 128
+          },
+          "pts": 1,
+          "sample_index": 1,
+          "status": "asserted_from_pinned_dav1d_block_trace_and_syntax",
+          "transform_mode": "largest"
+        }
+      ],
+      "trace_event_count": 20,
+      "trace_path": "traces/color.jsonl",
+      "trace_sha256": "a3df1106e8d11a481baafecc0bb3a3b0a7fa6602d47f8b9bc693dc6e10aec36e",
+      "track_id": 1
+    }
+  },
+  "rust_source_comparison": {
+    "av1_module": {
+      "contains": [
+        "selected_display_for_temporal_unit_with_token"
+      ],
+      "path": "src/codecs/avif/av1/mod.rs",
+      "sha256": "bd3bb8cc8ba69acbfeb3f4c702a3b479ee489373fb44fd15faa497f26ca2e509",
+      "status": "source_only_no_target_execution"
+    },
+    "decode": {
+      "contains": [
+        "decode_sequence",
+        "decode_portable"
+      ],
+      "path": "src/codecs/avif/decode.rs",
+      "sha256": "ee8f8cddae317ee7829d5b231079769f3e29da6f7343759e50749092bea2d4d4",
+      "status": "source_only_no_target_execution"
+    },
+    "entropy": {
+      "contains": [
+        "validate_complete_lossy_420_partition",
+        "decode_complete"
+      ],
+      "path": "src/codecs/avif/av1/entropy.rs",
+      "sha256": "71306a86dd303ee37a07ca9d5e12178e3f22b5ace95b7cb6a9e24c4e467ac99b",
+      "status": "source_only_no_target_execution"
+    },
+    "frame": {
+      "contains": [
+        "decode_complete",
+        "complete_show_existing",
+        "selected_display"
+      ],
+      "path": "src/codecs/avif/av1/frame.rs",
+      "sha256": "2fac0b2d4395417b17ca45b9a0dcfa432d3dc44601e762628c935bcff6229549",
+      "status": "source_only_no_target_execution"
+    },
+    "interpretation": "Pinned dav1d syntax and block traces are independent codec evidence. They do not establish the Rust branch outcome; the selected public parity case must be run under the managed Rust coverage collector.",
+    "trace_predicate_context": {
+      "bit_depth": 8,
+      "block_count": 3,
+      "dimensions": [
+        128,
+        128
+      ],
+      "frame_type": "inter",
+      "layout": "I420",
+      "sample_index": 1,
+      "status": "observation_only_source_comparison"
+    }
+  },
+  "schema": "image-slash-star/av1-sequence-oracle@2",
+  "source_provenance": {
+    "anchors": {
+      "cli_send_get_drain": {
+        "contains": [
+          "dav1d_send_data(c, &data)",
+          "dav1d_get_picture(c, &p)",
+          "// flush"
+        ],
+        "path": "tools/dav1d.c",
+        "sha256": "64e465f2ae1f2c2c9d45ca7ab6698c9b1ac47fe2a8a27ce54964afd9cc57e277"
+      },
+      "decode_exit": {
+        "contains": [
+          "dav1d_decode_frame_exit",
+          "f->n_tile_data",
+          "f->frame_hdr"
+        ],
+        "path": "src/decode.c",
+        "sha256": "a0aa36d9d821e69027321cb43f9363053ea09ac4c4e28d874130931e4b058384"
+      },
+      "frame_header_and_submit": {
+        "contains": [
+          "parse_frame_hdr(c, &gb)",
+          "show_existing_frame",
+          "dav1d_submit_frame(c)"
+        ],
+        "path": "src/obu.c",
+        "sha256": "965692214aa625e43a14d739081cdc5959abfb0e918d38b81e1116d166114587"
+      },
+      "ivf_timestamp": {
+        "contains": [
+          "timebase[0]",
+          "*ts = rl64(data)",
+          "buf->m.timestamp = ts"
+        ],
+        "path": "tools/input/ivf.c",
+        "sha256": "11abf622d39f47a8b7764523abd0911fe36fbb390810d1100ac19b3ca2f56259"
+      }
+    },
+    "copying_path": "COPYING",
+    "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+    "dav1d_commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "dav1d_source_tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6",
+    "source_checkout": "external clean checkout; invocation path intentionally omitted",
+    "syntax_inspectors": [
+      {
+        "path": "scripts/inspect_av1_obus.py",
+        "sha256": "4e54a34f9e336f96b34aca4d2e501420492ae682f6f89ee4d39aba1e30ef0875"
+      },
+      {
+        "path": "scripts/inspect_avif_bitstreams.py",
+        "sha256": "556b75aa2c2a9649ed1b8b63d2d460037e9b79635156cc3a31d7677f86a181ca"
+      }
+    ],
+    "verify_after": {
+      "clean": true,
+      "commit": "b546257f770768b2c88258c533da38b91a06f737",
+      "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+      "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+    },
+    "verify_before": {
+      "clean": true,
+      "commit": "b546257f770768b2c88258c533da38b91a06f737",
+      "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+      "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+    }
+  },
+  "trace_scope": {
+    "msac_detail": "not_collected",
+    "state_provenance": "instrumented pinned dav1d scalar decoder",
+    "syntax_provenance": "independent inspect_avif_bitstreams and inspect_av1_obus",
+    "target_rust_execution": "deferred_by_slice_contract"
+  }
+}
