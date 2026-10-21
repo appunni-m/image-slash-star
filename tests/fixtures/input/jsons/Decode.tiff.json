@@ -5844,6 +5844,58 @@
       ]
     },
     {
+      "id": "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2",
+      "asset": "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff",
+      "asset_sha256": "047e56f7916f1dca93eb034f622171ec39da0881f4679dc7f1681b075f0d243f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "ycbcr_subsampled_lzw_1x2_predictor_2_aligned",
       "asset": "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff",
       "asset_sha256": "b1ebb064f9f7f330ce1a1e0b7e8abdab9919791f6c364067542dc656e09e6681",
@@ -6560,6 +6612,58 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/tiff/ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2",
+      "asset": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff",
+      "asset_sha256": "45aef5c7eea83c4600240c0d4836d826b910723dc205b8f224187edcb40f63c0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff",
         "operations": [
           "PIL.Image.open",
           "load",

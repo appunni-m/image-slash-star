@@ -757,6 +757,15 @@ def fixtures() -> dict[
         positioning=1,
         predictor=2,
     )
+    one_by_two_unaligned_predictor_2 = build_tiff(
+        4,
+        4,
+        3,
+        deterministic_factor_clumps(4, 6, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        predictor=2,
+    )
     one_by_two_predictor_2_aligned = build_tiff(
         3,
         4,
@@ -815,6 +824,15 @@ def fixtures() -> dict[
         UNALIGNED_STRIP_CLUMPS,
         subsampling=(2, 2),
         positioning=1,
+    )
+    unaligned_rows_per_strip_predictor_2 = build_tiff(
+        4,
+        4,
+        3,
+        UNALIGNED_STRIP_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        predictor=2,
     )
     custom_coefficients = build_tiff(
         4,
@@ -1478,6 +1496,16 @@ def fixtures() -> dict[
             {317: 2, 530: (1, 2), 531: 1},
             None,
         ),
+        "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff": (
+            one_by_two_unaligned_predictor_2,
+            (4, 4),
+            "83c2ac29ff7d103f160792e45e42d13c3cd1c5b36f7b70b62e3ed5117f207666",
+            {317: 2, 530: (1, 2), 531: 1},
+            bytes.fromhex(
+                "430a00140039214f00000f72501700f6d7ff2e5c02c1ffff28410000096b0586"
+                "330023a40c792a001e9d00bd700038d5"
+            ),
+        ),
         "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff": (
             one_by_two_predictor_2_aligned,
             (3, 4),
@@ -1535,6 +1563,16 @@ def fixtures() -> dict[
             (4, 4),
             "ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a",
             {530: (2, 2), 531: 1},
+            bytes.fromhex(
+                "4111005525000098c000acd46939007d4d0003c0e817d4fcff7c82ff9096001f"
+                "950033a9001ec6002ed60066ff0076ff"
+            ),
+        ),
+        "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff": (
+            unaligned_rows_per_strip_predictor_2,
+            (4, 4),
+            "ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a",
+            {317: 2, 530: (2, 2), 531: 1},
             bytes.fromhex(
                 "4111005525000098c000acd46939007d4d0003c0e817d4fcff7c82ff9096001f"
                 "950033a9001ec6002ed60066ff0076ff"
@@ -2258,6 +2296,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampling_short_count_three_lzw_2x2.tiff": "701521f18c666bc757bd68835e0bd6f90316ceb1e1b549a90ec63545fe3bfd26",
             "ycbcr_subsampled_lzw_1x2.tiff": "d659443b0f3eb3c6de349a45d3e007e482b6727c4682f82545df0ac5b49971c9",
             "ycbcr_subsampled_lzw_1x2_predictor_2.tiff": "e5dd405646c7e6f44ea0c82e5f01cd770cd395ad38b93bb1011ccc176c17a095",
+            "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff": "047e56f7916f1dca93eb034f622171ec39da0881f4679dc7f1681b075f0d243f",
             "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff": "b1ebb064f9f7f330ce1a1e0b7e8abdab9919791f6c364067542dc656e09e6681",
             "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
@@ -2265,6 +2304,7 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
             "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": "bf76628b4a022f6c6891f65fc572d3af75760777dab85e70ef1e0e933072c6c1",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
+            "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff": "45aef5c7eea83c4600240c0d4836d826b910723dc205b8f224187edcb40f63c0",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
             "ycbcr_zero_green_coefficient_lzw_2x2.tiff": "ff382d3f6afa3fb5f14fba10bb2df80d1aaa820e68f75883de097387bfa047d4",
             "ycbcr_zero_red_coefficient_denominator_lzw_2x2.tiff": "046eff0e1e9ededa25698a2e7e8b27f92685ff9b5daa474a1b20ef23d0466ea8",

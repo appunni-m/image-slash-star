@@ -5951,6 +5951,10 @@ formats:
       description: Horizontal Predictor=2 on vertically subsampled 1-by-2 YCbCr LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_1x2_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2
+      description: 1-by-2 YCbCr LZW Predictor=2 strips split at an unaligned row boundary
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_1x2_predictor_2_aligned
       description: 1-by-2 YCbCr LZW Predictor=2 scanlines aligned to the RGB sample stride
       test_assets:
@@ -6007,6 +6011,10 @@ formats:
       description: Default 2-by-2 YCbCr clumps split across LZW strips at an unaligned row boundary
       test_assets:
       - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff
+    - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2
+      description: Horizontal Predictor=2 on 2-by-2 YCbCr LZW strips split at an unaligned row boundary
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff
     - id: ycbcr_custom_coefficients_lzw_2x2
       description: Rec. 709 YCbCr coefficients in a compressed 2-by-2 TIFF
       test_assets:
