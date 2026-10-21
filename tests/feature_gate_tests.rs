@@ -12244,6 +12244,90 @@ fn output_sinks_receive_the_exact_encoded_bytes() -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+#[cfg(feature = "avif")]
+#[test]
+fn avif_quality_validation_precedes_backend_unavailability()
+-> Result<(), Box<dyn std::error::Error>> {
+    // Valid quality would encode successfully in Pillow, so this public
+    // contract check stays outside the input-driven parity matrix.
+    let image = DecodedImage::new(1, 1, vec![0, 0, 0], ColorType::Rgb8);
+    let options_for_quality = |quality| match EncodeOptions::for_format(ImageFormat::Avif) {
+        EncodeOptions::Avif(mut options) => {
+            options.quality = Some(quality);
+            EncodeOptions::Avif(options)
+        }
+        _ => unreachable!("AVIF options must name AVIF"),
+    };
+    let valid_options = options_for_quality(100);
+
+    let still_error = match image_slash_star::encode(&image, ImageFormat::Avif, &valid_options) {
+        Ok(_) => return Err("the AVIF still encoder unexpectedly succeeded".into()),
+        Err(error) => error,
+    };
+    assert_eq!(
+        still_error.kind(),
+        image_slash_star::ImageErrorKind::Unsupported
+    );
+    assert_eq!(still_error.format(), Some(ImageFormat::Avif));
+    assert_eq!(
+        still_error.unsupported_reason(),
+        Some(UnsupportedReason::NotImplemented)
+    );
+    assert_eq!(still_error.stage(), Some(ImageErrorStage::StillEncode));
+
+    let sequence = DecodedSequence::from_image(image);
+    let sequence_error =
+        match image_slash_star::encode_sequence(&sequence, ImageFormat::Avif, &valid_options) {
+            Ok(_) => return Err("the AVIF sequence encoder unexpectedly succeeded".into()),
+            Err(error) => error,
+        };
+    assert_eq!(
+        sequence_error.kind(),
+        image_slash_star::ImageErrorKind::Unsupported
+    );
+    assert_eq!(sequence_error.format(), Some(ImageFormat::Avif));
+    assert_eq!(
+        sequence_error.unsupported_reason(),
+        Some(UnsupportedReason::NotImplemented)
+    );
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+
+    let invalid_options = options_for_quality(101);
+    let still_error = match image_slash_star::encode(
+        &sequence.frames[0].image,
+        ImageFormat::Avif,
+        &invalid_options,
+    ) {
+        Ok(_) => return Err("quality above 100 unexpectedly encoded as AVIF still".into()),
+        Err(error) => error,
+    };
+    assert_eq!(
+        still_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    assert_eq!(still_error.format(), Some(ImageFormat::Avif));
+    assert_eq!(still_error.stage(), Some(ImageErrorStage::StillEncode));
+
+    let sequence_error =
+        match image_slash_star::encode_sequence(&sequence, ImageFormat::Avif, &invalid_options) {
+            Ok(_) => return Err("quality above 100 unexpectedly encoded as AVIF sequence".into()),
+            Err(error) => error,
+        };
+    assert_eq!(
+        sequence_error.kind(),
+        image_slash_star::ImageErrorKind::Parameter
+    );
+    assert_eq!(sequence_error.format(), Some(ImageFormat::Avif));
+    assert_eq!(
+        sequence_error.stage(),
+        Some(ImageErrorStage::SequenceEncode)
+    );
+    Ok(())
+}
+
 #[test]
 fn partial_structural_sink_write_preserves_prefix_without_flush()
 -> Result<(), Box<dyn std::error::Error>> {

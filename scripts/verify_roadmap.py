@@ -216,6 +216,14 @@ def verify() -> str:
             fail(f"coverage matrix summary {key} is {summary.get(key)!r}, expected {expected}")
     if len(rows) != expected_summary["total_rows"]:
         fail(f"coverage matrix has {len(rows)} rows, expected {expected_summary['total_rows']}")
+    active_encode_rows = sum(
+        row.get("status") == "active" and row.get("type") == "encode" for row in rows
+    )
+    if active_encode_rows != matrix_state.get("encode_active"):
+        fail(
+            "roadmap current-state active encode count differs from the coverage matrix: "
+            f"{matrix_state.get('encode_active')} != {active_encode_rows}"
+        )
 
     avif_decode = [
         row for row in rows if row["format"] == "avif" and row["type"] == "decode"
@@ -243,9 +251,13 @@ def verify() -> str:
             fail(f"planned AVIF row {row_id} has no concrete gap reason")
         if any(row.get(key) is not None for key in ("ref_path", "ref_bytes", "ref_sha256")):
             fail(f"planned AVIF row {row_id} claims pixel or byte evidence")
-    if any(row.get("pure_rust_work_item") != "AVF-ENCODE-001" for row in avif_encode):
+    planned_avif_encode = [row for row in avif_encode if row["status"] == "planned"]
+    if any(
+        row.get("pure_rust_work_item") != "AVF-ENCODE-001"
+        for row in planned_avif_encode
+    ):
         fail("planned AVIF encoder rows must all map to AVF-ENCODE-001")
-    if any(row.get("former_native_only") is not True for row in avif_encode):
+    if any(row.get("former_native_only") is not True for row in planned_avif_encode):
         fail("planned AVIF encoder rows must identify former native-only provenance")
     if any(row.get("former_native_only") for row in rows if row["status"] != "planned"):
         fail("active rows must not retain former-native-only planned provenance")
@@ -367,8 +379,9 @@ def verify() -> str:
     )
     exact_match(
         roadmap,
-        rf"AVIF encode: {avif_state['encode_rows']} rows total, all "
-        rf"{avif_state['encode_planned']} explicit planned",
+        rf"AVIF encode: {avif_state['encode_rows']} rows total, "
+        rf"{avif_state['encode_active']} active parity cases? and "
+        rf"{avif_state['encode_planned']} explicit planned gaps",
         "AVIF encode count",
     )
     exact_match(

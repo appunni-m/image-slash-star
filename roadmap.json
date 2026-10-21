@@ -269,13 +269,6 @@
       {
         "former_native_only": true,
         "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
-        "id": "enc_invalid_quality",
-        "status": "planned",
-        "work_item": "AVF-ENCODE-001"
-      },
-      {
-        "former_native_only": true,
-        "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
         "id": "enc_invalid_advanced",
         "status": "planned",
         "work_item": "AVF-ENCODE-001"
@@ -334,7 +327,7 @@
         "status": "implemented_for_fixture"
       },
       "AVF-ENCODE-001": {
-        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. A separate ten-file native encoder corpus binds twelve tile streams to exact entropy traces and unmodified native replay. Rust AV1 compression remains unimplemented; all 32 public encode rows remain planned.",
+        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. A separate ten-file native encoder corpus binds twelve tile streams to exact entropy traces and unmodified native replay. Rust AV1 compression remains unimplemented; invalid quality validation is active parity, and the remaining 31 public encode rows remain planned.",
         "current_slice_update_2026_09_17_encoder_oracle": {
           "boundary_scope": "Separate valid native algorithm models cover alphabets 2..16, Q15 probabilities 1 and 32767, valid plateaus, frozen adaptation, count 15->16/31->32/32->32 and empty/short termination. These are not independent full-file syntax witnesses.",
           "checks": [
@@ -5698,10 +5691,10 @@
       "decode_active": 566,
       "decode_planned": 0,
       "decode_rows": 566,
-      "encode_active": 0,
-      "encode_planned": 32,
+      "encode_active": 1,
+      "encode_planned": 31,
       "encode_rows": 32,
-      "former_native_remaining": 32
+      "former_native_remaining": 31
     },
     "coverage": {
       "branch": {
@@ -6747,8 +6740,8 @@
       "decode_active": 1978,
       "decode_planned": 0,
       "decode_rows": 1978,
-      "encode_active": 483,
-      "encode_planned": 32,
+      "encode_active": 484,
+      "encode_planned": 31,
       "encode_rows": 515,
       "total_rows": 2493
     },
