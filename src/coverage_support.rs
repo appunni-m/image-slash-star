@@ -54,6 +54,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444AlphaPlaneLengthMismatch,
     /// Shorten a valid AVIF full-resolution alpha plane to test its generic length guard.
     AvifI444AlphaPlaneLengthMismatch,
+    /// Shorten a valid AVIF monochrome alpha plane to test its dimension guard.
+    AvifMonochromeAlphaPlaneLengthMismatch,
     /// Shorten a valid generic AVIF I444 U plane to test its length guard.
     AvifGenericI444UPlaneLengthMismatch,
     /// Shorten a valid generic AVIF I444 V plane to test its length guard.

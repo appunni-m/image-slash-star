@@ -455,10 +455,9 @@ fn monochrome_plane_dimensions(
     frame_dimensions: Option<(u32, u32)>,
     plane: Option<&block::ReconstructedPlane>,
 ) -> Option<(u32, u32)> {
+    // Monochrome reconstruction has already upscaled samples when the AV1
+    // frame signals super-resolution, so validate the displayed plane shape.
     let geometry = display_geometry?;
-    if geometry.superres_enabled {
-        return None;
-    }
     let dimensions = frame_dimensions?;
     if dimensions.0 == 0
         || dimensions.1 == 0
@@ -1186,6 +1185,22 @@ fn validate_still_with_token(
                     return Ok(None);
                 }
                 let mut alpha = validate_plane_with_token(extracted.input, alpha, token)?;
+                #[cfg(coverage)]
+                {
+                    use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+                    if take_fault_point(CoverageFaultPoint::AvifMonochromeAlphaPlaneLengthMismatch)
+                    {
+                        let alpha_plane = alpha
+                            .complete_monochrome_plane
+                            .as_mut()
+                            .ok_or_else(|| malformed("missing coverage fault alpha plane"))?;
+                        alpha_plane
+                            .samples
+                            .pop()
+                            .ok_or_else(|| malformed("empty coverage fault alpha plane"))?;
+                    }
+                }
                 if !monochrome_alpha_matches(&alpha, dimensions, color.sequence.bit_depth) {
                     return Ok(None);
                 }

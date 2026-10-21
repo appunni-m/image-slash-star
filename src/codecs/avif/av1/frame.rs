@@ -509,7 +509,6 @@ impl FrameSurface {
                     .transpose()?,
                 dimensions: Some((self.upscaled_width, self.frame_height)),
                 geometry: Some(DisplayGeometryProof {
-                    superres_enabled: self.superres_enabled,
                     render_width: self.render_width,
                     render_height: self.render_height,
                 }),
@@ -554,7 +553,6 @@ impl FrameSurface {
             monochrome_plane: None,
             dimensions: Some((self.upscaled_width, self.frame_height)),
             geometry: Some(DisplayGeometryProof {
-                superres_enabled: self.superres_enabled,
                 render_width: self.render_width,
                 render_height: self.render_height,
             }),
@@ -564,7 +562,6 @@ impl FrameSurface {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct DisplayGeometryProof {
-    pub(super) superres_enabled: bool,
     pub(super) render_width: u32,
     pub(super) render_height: u32,
 }

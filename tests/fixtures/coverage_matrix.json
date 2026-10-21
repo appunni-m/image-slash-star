@@ -47863,6 +47863,84 @@
           "error_contracts": {}
         },
         {
+          "id": "superres_actual_upscaled_monochrome_17x16",
+          "type": "decode",
+          "format": "avif",
+          "category": "superres",
+          "description": "17x16 lossy 4:0:0 AVIF still uses denominator 9 to resize its monochrome plane from coded width 16 to visible width 17",
+          "asset": "superres_actual_upscaled_monochrome_17x16.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d2c485bd5da5d3ea1a6c7af4c95807176f71949c312ca37756caed3e2eae6446",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_superres_actual_upscaled_monochrome_17x16_avif.bin",
+          "ref_sha256": "90cb1ee739f1819fd58c121b50d8ed032e298361ec5a897a1b88b3e61d103dd6",
+          "ref_bytes": 816,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "superres_actual_upscaled_i422_33x17",
           "type": "decode",
           "format": "avif",
@@ -209952,12 +210030,12 @@
     }
   },
   "summary": {
-    "total_rows": 2491,
-    "decode_rows": 1976,
+    "total_rows": 2492,
+    "decode_rows": 1977,
     "encode_rows": 515,
     "formats": 8,
     "assets_available": 1972,
-    "decode_active": 1976,
+    "decode_active": 1977,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -211441,6 +211519,25 @@
       "fault": {
         "point": "av1.partition_context.above_reservation",
         "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_alpha_plane_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_alpha.plane_length_mismatch",
+        "contract": "decode_unsupported_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
     }

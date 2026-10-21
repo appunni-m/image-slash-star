@@ -195,7 +195,7 @@
       "path": "src/codecs/avif/av1/frame.rs"
     },
     {
-      "guard_count": 12,
+      "guard_count": 13,
       "guards": [
         {
           "index": 1,
@@ -227,7 +227,7 @@
         },
         {
           "index": 8,
-          "origin": "independent_implementation"
+          "origin": "defensive_model"
         },
         {
           "index": 9,
@@ -243,6 +243,10 @@
         },
         {
           "index": 12,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 13,
           "origin": "independent_implementation"
         }
       ],

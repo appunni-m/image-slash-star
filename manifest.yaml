@@ -1146,6 +1146,21 @@ fault_contracts:
       point: av1.partition_context.above_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_monochrome_alpha_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_alpha.plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+
 formats:
   jpeg:
     name: JPEG
@@ -9921,6 +9936,11 @@ formats:
       description: 17x17 lossy 4:2:0 AVIF still uses denominator 9 to resize coded luma width 16 to 17 and ceil-rounded chroma width 8 to 9
       test_assets:
       - superres_actual_upscaled_i420_17x17.avif
+      status: active
+    - id: superres_actual_upscaled_monochrome_17x16
+      description: 17x16 lossy 4:0:0 AVIF still uses denominator 9 to resize its monochrome plane from coded width 16 to visible width 17
+      test_assets:
+      - superres_actual_upscaled_monochrome_17x16.avif
       status: active
     - id: superres_actual_upscaled_i422_33x17
       description: 33x17 lossy 4:2:2 AVIF still uses denominator 9 with coded width 29 and restoration disabled, exercising generic super-resolution across odd luma and chroma edges

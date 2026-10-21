@@ -3186,6 +3186,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.i444_generic_alpha.plane_length_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },
+        "avif.monochrome_alpha.plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
         "avif.i444_generic_rgb.u_plane_length_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },

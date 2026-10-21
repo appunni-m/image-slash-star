@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate pinned AVIF super-resolution fixtures for 4:2:0, 4:2:2, and 4:4:4."""
+"""Generate pinned AVIF super-resolution fixtures for YUV400, 4:2:0, 4:2:2, and 4:4:4."""
 
 from __future__ import annotations
 
@@ -38,6 +38,7 @@ class FixtureProfile:
     subsampling_x: int
     subsampling_y: int
     advanced_options: tuple[tuple[str, str], ...]
+    monochrome: bool = False
     cicp: tuple[int, int, int] | None = None
     full_range: bool | None = None
 
@@ -98,6 +99,20 @@ PROFILES = {
         subsampling_x=1,
         subsampling_y=1,
         advanced_options=ADVANCED_OPTIONS,
+    ),
+    "400-actual": FixtureProfile(
+        chroma_format="mono",
+        asset_name="superres_actual_upscaled_monochrome_17x16.avif",
+        width=17,
+        height=16,
+        superres_denominator=9,
+        source_sha256="5f2b1cf6d7a2ce66f3f815cffc3965f03c6788cd61503d56aeb43bb75a5e18dd",
+        asset_sha256="d2c485bd5da5d3ea1a6c7af4c95807176f71949c312ca37756caed3e2eae6446",
+        pixels_sha256="90cb1ee739f1819fd58c121b50d8ed032e298361ec5a897a1b88b3e61d103dd6",
+        subsampling_x=1,
+        subsampling_y=1,
+        advanced_options=ADVANCED_OPTIONS,
+        monochrome=True,
     ),
     "444": FixtureProfile(
         chroma_format="444",
@@ -172,7 +187,7 @@ def source_y4m(profile: FixtureProfile) -> bytes:
         f"YUV4MPEG2 W{width} H{height} F30:1 Ip A1:1 C{profile.chroma_format} "
         "XCOLORRANGE=FULL\nFRAME\n"
     ).encode("ascii")
-    return header + luma + chroma_u + chroma_v
+    return header + luma if profile.monochrome else header + luma + chroma_u + chroma_v
 
 
 def encode_command(
@@ -237,7 +252,7 @@ def validate_bitstream(path: Path, profile: FixtureProfile) -> None:
         "bit_depth": 8,
         "max_width": profile.width,
         "max_height": profile.height,
-        "monochrome": False,
+        "monochrome": profile.monochrome,
         "subsampling_x": profile.subsampling_x,
         "subsampling_y": profile.subsampling_y,
         "enable_superres": True,
@@ -270,6 +285,11 @@ def validate_bitstream(path: Path, profile: FixtureProfile) -> None:
         "superres_denominator": profile.superres_denominator,
         "all_lossless": False,
     }
+    if profile.monochrome:
+        expected_frame["restoration"] = {
+            "types": [3, 0, 0],
+            "unit_size_log2": [8, 8],
+        }
     if any(frame.get(key) != value for key, value in expected_frame.items()):
         raise RuntimeError("AV1 frame header differs from the requested super-resolution geometry")
 
@@ -310,7 +330,7 @@ def generate(avifenc: Path, profile: FixtureProfile) -> None:
 
     STAGING_ROOT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(
-        prefix=".avif-equal-width-superres-",
+        prefix=".avif-superres-",
         dir=STAGING_ROOT,
     ) as temporary:
         work = Path(temporary)
@@ -329,7 +349,7 @@ def generate(avifenc: Path, profile: FixtureProfile) -> None:
             encoded_runs.append(data)
 
         if encoded_runs[0] != encoded_runs[1]:
-            raise RuntimeError("independent equal-width AVIF encodes differ")
+            raise RuntimeError("independent AVIF super-resolution encodes differ")
 
         asset = ASSET_ROOT / profile.asset_name
         asset.parent.mkdir(parents=True, exist_ok=True)
