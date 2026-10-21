@@ -103,6 +103,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_trailing_dht_malformed_fixtures.py --check
 	$(PYTHON) scripts/generate_bmp_gif_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_gif_finite_loop_fixture.py --check
+	$(PYTHON) scripts/generate_gif_split_loop_subblocks_fixture.py --check
 	$(PYTHON) scripts/generate_bmp_top_down_24_odd_width_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_custom_active_ac_chroma_fixture.py --check

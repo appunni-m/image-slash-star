@@ -4839,6 +4839,195 @@ fn assert_sequence_frame_pixels(
         .map_err(|message| format!("frame {}: {message}", expected.index))
 }
 
+fn assert_gif_sequence_frame_pixels(
+    manifest_dir: &Path,
+    row_id: &str,
+    expected: &FrameParityRef,
+    actual: &img::DecodedFrame,
+    previous_canvas: Option<&[u8]>,
+) -> Result<Vec<u8>, String> {
+    let pixel_origin = expected
+        .pixel_origin
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack an origin", expected.index))?;
+    if !is_assertion_origin(pixel_origin) {
+        return Err(format!(
+            "frame {} pixel origin is invalid: {pixel_origin}",
+            expected.index
+        ));
+    }
+    let ref_path = expected
+        .ref_path
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack a path", expected.index))?;
+    let ref_bytes = expected
+        .ref_bytes
+        .ok_or_else(|| format!("frame {} exact pixels lack a byte length", expected.index))?;
+    let ref_sha256 = expected
+        .ref_sha256
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack SHA-256", expected.index))?;
+    let ref_mode = expected
+        .ref_mode
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack a mode", expected.index))?;
+    let ref_size = expected
+        .ref_size
+        .as_ref()
+        .ok_or_else(|| format!("frame {} exact pixels lack dimensions", expected.index))?;
+    let bytes = fs::read(manifest_dir.join(ref_path))
+        .map_err(|error| format!("frame {} reference unreadable: {error}", expected.index))?;
+    if bytes.len() != ref_bytes {
+        return Err(format!(
+            "frame {} reference length mismatch: actual {}, declared {}",
+            expected.index,
+            bytes.len(),
+            ref_bytes
+        ));
+    }
+    assert_sha256(
+        &bytes,
+        Some(ref_sha256),
+        &format!("frame {} pixels", expected.index),
+    )?;
+    let reference = PixelParityRef {
+        id: format!("{row_id} frame {}", expected.index),
+        bytes,
+        width: ref_size.first().copied(),
+        height: ref_size.get(1).copied(),
+        mode: Some(ref_mode.to_owned()),
+    };
+    if ref_size.len() != 2
+        || reference.width != Some(actual.image.width)
+        || reference.height != Some(actual.image.height)
+    {
+        return Err(format!(
+            "frame {} reference dimensions {:?} differ from decoded {}x{}",
+            expected.index, ref_size, actual.image.width, actual.image.height
+        ));
+    }
+    let pixel_count = usize::try_from(actual.image.width)
+        .ok()
+        .and_then(|width| {
+            usize::try_from(actual.image.height)
+                .ok()
+                .and_then(|height| width.checked_mul(height))
+        })
+        .ok_or_else(|| format!("frame {} dimensions overflow usize", expected.index))?;
+    let bytes_per_pixel = mode_bytes_per_pixel(Some(ref_mode)).ok_or_else(|| {
+        format!(
+            "frame {} has unsupported reference mode {ref_mode}",
+            expected.index
+        )
+    })?;
+    let expected_byte_count = pixel_count
+        .checked_mul(bytes_per_pixel)
+        .ok_or_else(|| format!("frame {} reference byte count overflows", expected.index))?;
+    if reference.bytes.len() != expected_byte_count {
+        return Err(format!(
+            "frame {} reference contains {} bytes, expected {} for {}x{} {ref_mode}",
+            expected.index,
+            reference.bytes.len(),
+            expected_byte_count,
+            actual.image.width,
+            actual.image.height
+        ));
+    }
+
+    let rendered = render_gif_indexed_frame_rgb(&actual.image, previous_canvas)?;
+    if ref_mode == "P" {
+        assert_pixel_parity(&reference, &actual.image)
+            .map_err(|message| format!("frame {}: {message}", expected.index))?;
+    } else if ref_mode == "RGB" || ref_mode == "Rgb8" {
+        if actual.image.mode != img::ImageMode::P8 {
+            return Err(format!(
+                "frame {} must retain indexed pixels, found {:?}",
+                expected.index, actual.image.mode
+            ));
+        }
+        if rendered != reference.bytes {
+            return Err(format!(
+                "frame {} rendered RGB bytes differ: actual {}, expected {}",
+                expected.index,
+                rendered.len(),
+                reference.bytes.len()
+            ));
+        }
+    } else {
+        assert_pixel_parity(&reference, &actual.image)
+            .map_err(|message| format!("frame {}: {message}", expected.index))?;
+    }
+
+    Ok(rendered)
+}
+
+fn render_gif_indexed_frame_rgb(
+    actual: &img::DecodedImage,
+    previous_canvas: Option<&[u8]>,
+) -> Result<Vec<u8>, String> {
+    if actual.mode != img::ImageMode::P8 {
+        return Err(format!("indexed GIF rendering received {:?}", actual.mode));
+    }
+    let palette = actual
+        .palette
+        .as_ref()
+        .ok_or_else(|| "indexed frame has no palette".to_owned())?;
+    let rgb_byte_count = actual
+        .pixels
+        .len()
+        .checked_mul(3)
+        .ok_or_else(|| "rendered RGB canvas length overflows".to_owned())?;
+    if previous_canvas.is_some_and(|canvas| canvas.len() != rgb_byte_count) {
+        return Err(format!(
+            "prior GIF canvas has {} bytes, expected {}",
+            previous_canvas.map_or(0, |canvas| canvas.len()),
+            rgb_byte_count
+        ));
+    }
+    let mut rendered = Vec::new();
+    rendered
+        .try_reserve_exact(rgb_byte_count)
+        .map_err(|error| format!("cannot reserve rendered GIF canvas: {error}"))?;
+
+    for (pixel_index, &palette_index) in actual.pixels.iter().enumerate() {
+        let palette_start = usize::from(palette_index)
+            .checked_mul(3)
+            .ok_or_else(|| "palette byte offset overflows".to_owned())?;
+        let palette_end = palette_start
+            .checked_add(3)
+            .ok_or_else(|| "palette entry end overflows".to_owned())?;
+        let actual_rgb = palette
+            .rgb
+            .get(palette_start..palette_end)
+            .ok_or_else(|| format!("palette index {palette_index} is out of range"))?;
+        match palette.alpha.get(usize::from(palette_index)).copied() {
+            Some(0) => {
+                let canvas = previous_canvas.ok_or_else(|| {
+                    format!("transparent GIF pixel {pixel_index} has no prior canvas")
+                })?;
+                let rgb_start = pixel_index
+                    .checked_mul(3)
+                    .ok_or_else(|| "rendered GIF pixel offset overflows".to_owned())?;
+                let rgb_end = rgb_start
+                    .checked_add(3)
+                    .ok_or_else(|| "rendered GIF pixel end overflows".to_owned())?;
+                rendered.extend_from_slice(
+                    canvas
+                        .get(rgb_start..rgb_end)
+                        .ok_or_else(|| "prior GIF pixel is out of range".to_owned())?,
+                );
+            }
+            Some(alpha) if alpha != u8::MAX => {
+                return Err(format!(
+                    "GIF palette alpha {alpha} is unsupported for indexed frame rendering"
+                ));
+            }
+            _ => rendered.extend_from_slice(actual_rgb),
+        }
+    }
+    Ok(rendered)
+}
+
 fn assert_avif_loop_evidence(expected: &SequenceParityRef, input: &[u8]) -> Result<(), String> {
     fn field<T: FromJson>(value: &Value, key: &str) -> Result<T, String> {
         let value = value
@@ -4973,6 +5162,7 @@ fn assert_sequence_reference_parity(
             expected.frames.len()
         ));
     }
+    let mut previous_gif_canvas = None;
     for (index, (actual_frame, expected_frame)) in
         actual.frames.iter().zip(&expected.frames).enumerate()
     {
@@ -5075,7 +5265,47 @@ fn assert_sequence_reference_parity(
                 expected_byte_order
             ));
         }
-        assert_sequence_frame_pixels(manifest_dir, row_id, expected_frame, actual_frame)?;
+        if expected_format == img::ImageFormat::Gif && expected_frame.pixel_assertion == "exact" {
+            if actual_frame.source.rect.left != 0
+                || actual_frame.source.rect.top != 0
+                || actual_frame.source.rect.width != actual.width
+                || actual_frame.source.rect.height != actual.height
+                || actual_frame.image.width != actual.width
+                || actual_frame.image.height != actual.height
+            {
+                return Err(format!(
+                    "frame {} exact GIF pixels require a full-canvas source frame",
+                    expected_frame.index
+                ));
+            }
+            if index > 0 {
+                let previous_frame =
+                    expected
+                        .frames
+                        .get(index.saturating_sub(1))
+                        .ok_or_else(|| {
+                            format!(
+                                "frame {} exact GIF pixels lack prior-frame evidence",
+                                expected_frame.index
+                            )
+                        })?;
+                if !matches!(previous_frame.disposal.as_str(), "unspecified" | "keep") {
+                    return Err(format!(
+                        "frame {} exact GIF pixels need an explicitly supported prior-frame disposal",
+                        expected_frame.index
+                    ));
+                }
+            }
+            previous_gif_canvas = Some(assert_gif_sequence_frame_pixels(
+                manifest_dir,
+                row_id,
+                expected_frame,
+                actual_frame,
+                previous_gif_canvas.as_deref(),
+            )?);
+        } else {
+            assert_sequence_frame_pixels(manifest_dir, row_id, expected_frame, actual_frame)?;
+        }
     }
     Ok(())
 }

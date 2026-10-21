@@ -229,6 +229,116 @@
       ]
     },
     {
+      "id": "netscape_loop_split_subblocks",
+      "asset": "netscape_loop_split_subblocks.gif",
+      "asset_sha256": "f37bed09e23a28e757415e9a2e238743ca8e14010bc8f2a9f4203560e193326a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/netscape_loop_split_subblocks.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "netscape_loop_empty_payload",
+      "asset": "netscape_loop_empty_payload.gif",
+      "asset_sha256": "20dad1519e7cd65f7f2aff71ca773bfedea1eb4d475b9ac795d0b71eb26202db",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/netscape_loop_empty_payload.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "transparent",
       "asset": "transparent.gif",
       "asset_sha256": "0cd016fa29aa45017c26c2d2e0863030af86d24d6ef5ec24c266ea1f1a91c8f4",

@@ -1,5 +1,34 @@
 # Versioned compatibility evidence
 
+## GIF NETSCAPE loop-payload parity — 2026-10-21
+
+Added active input-only parity rows `decode:gif:netscape_loop_split_subblocks`
+and `decode:gif:netscape_loop_empty_payload`. Their deterministic inputs are
+derived structurally from `animated.gif`, with SHA-256 values
+`f37bed09e23a28e757415e9a2e238743ca8e14010bc8f2a9f4203560e193326a` and
+`20dad1519e7cd65f7f2aff71ca773bfedea1eb4d475b9ac795d0b71eb26202db`.
+Pillow 12.2.0 verifies and decodes both as two-frame 128x128 animations, leaves
+loop metadata unspecified, and returns identical frame references: frame 0
+(`P`, SHA-256 `5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9`)
+and frame 1 (`Rgb8`, SHA-256
+`589579c365ba1aee1b7f5eb46af957d2d5f9dc32c22bc35c8f5d331263ebb4fb`).
+
+The first case splits the loop record across data sub-blocks. The second has an
+empty first sub-block; a following zero padding marker lets Pillow finish its
+extension-data loop and is ignored by the Rust GIF block parser. The decoder
+now reads the first NETSCAPE2.0 sub-block, matching Pillow's loop metadata
+behavior. The coverage harness checks exact frame pixels while preserving the
+decoder's indexed frame representation.
+
+The selected run passed 5/5 rows (the two new cases, two loop controls, and the
+existing ANIMEXTS1.0 control). Its local LLVM report is
+`.coverage-mcp/local-evidence/20261021/gif-netscape-loop-edge-parity-r6/coverage.json`
+(SHA-256 `540056e37567817f86d1b1c13ae9976981b0a6735eb163ba0d496083ca2a7df0`).
+Coverage MCP measured 142/32,016 branch observations overall and found no
+missing observations under `read_first_sub_block_and_skip_rest`. Source identity
+is unverified and test attribution is unknown, so this is selected-run evidence
+only; no full-coverage result or aggregate gain is claimed.
+
 ## AVIF monochrome super-resolution parity — 2026-10-21
 
 Added active case `decode:avif:superres_actual_upscaled_monochrome_17x16` for a
@@ -89,9 +118,9 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,493 total rows: 1,978 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,978 decode rows and 483 encode
-rows are active; 32 encode rows remain planned. The separate target-only fault
+The current fixture matrix contains 2,495 total rows: 1,980 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,980 decode rows and 484 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 79 rows.
 
 ## AVIF monochrome grid parity and reservation failure — 2026-10-21
@@ -8025,7 +8054,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `7eef386bb9448d067bb84254a974b63d314de0d273c69f3ebade07d37cde36b2`; matrix `b254120f4debfabe205253ed036d1730939d1879912e1c09f047c3aec13fe5b0`.
+- Current fixture integrity only: manifest `704c43d7197f8b44947763ea32de3c1b59778a1727a88564752b3cce234271bd`; matrix `f54dc94d8222825cc210003c66b218195e170232fe07dfb5d7f7bf70db42ef57`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

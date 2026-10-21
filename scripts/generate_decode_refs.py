@@ -398,6 +398,14 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                         "status": case_status,
                     }
                 )
+                if case.get("assert_sequence_frame_pixels", False):
+                    if fmt_name != "gif":
+                        raise RuntimeError(
+                            f"{fmt_name}/{row_id}: exact sequence-frame pixels are currently supported only for GIF"
+                        )
+                    row["_assert_sequence_frame_pixels"] = True
+                else:
+                    row.pop("_assert_sequence_frame_pixels", None)
                 if case.get("rust_expected_metadata") is None:
                     row.pop("rust_expected_metadata", None)
                 else:
@@ -2518,7 +2526,11 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
         else:
             frame["source_byte_order"] = None
             frame["source_byte_order_origin"] = None
-        if fmt_name != "gif":
+        if fmt_name != "gif" or row.get("_assert_sequence_frame_pixels", False):
+            if fmt_name == "gif" and source["source_rect"] != [0, 0, image.width, image.height]:
+                raise ValueError(
+                    f"{fmt_name}/{row['id']}: exact frame pixels require a full-canvas frame"
+                )
             raw = image.tobytes()
             ref_name = (
                 f"Decode.{fmt_name}_{asset_name.replace('.', '_')}_frame_{index}.bin"
@@ -5787,6 +5799,7 @@ def generate(target_format=None):
     for format_data in matrix.get("formats", {}).values():
         for row in format_data.get("decode", []):
             row.pop("_pixel_reference_case", None)
+            row.pop("_assert_sequence_frame_pixels", None)
     matrix.pop("operations", None)
     update_summary(matrix)
     validate_generated_outputs(matrix, target_format)
