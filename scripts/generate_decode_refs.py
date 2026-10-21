@@ -5789,7 +5789,7 @@ def generate(target_format=None):
     validate_generated_outputs(matrix, target_format)
 
     # Save matrix
-    MATRIX_PATH.write_text(json.dumps(matrix, indent=2))
+    MATRIX_PATH.write_text(json.dumps(matrix, indent=2) + "\n")
     print(f"Written: {MATRIX_PATH}")
 
     # Commit outputs

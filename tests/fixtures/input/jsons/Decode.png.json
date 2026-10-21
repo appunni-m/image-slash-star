@@ -4368,6 +4368,99 @@
       ]
     },
     {
+      "id": "error_near_miss_signature",
+      "asset": "near_miss_signature.png",
+      "asset_sha256": "a3b94311d64b39503ea188d69a3717b2e99cbfd768ce979866000d9e52b809b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "error",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "detect": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/near_miss_signature.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "error_malformed_structure",
       "asset": "wrong_ihdr_kind.png",
       "asset_sha256": "85f39564cc4f03218ddd9368e6d85ee978ff7c18ee2b12c8fe165bd97a6e10fd",

@@ -2995,6 +2995,11 @@ formats:
       test_assets:
       - not_a_png.png
       expect_error: true
+    - id: error_near_miss_signature
+      description: Complete PNG file with one signature byte changed
+      test_assets:
+      - near_miss_signature.png
+      expect_error: true
     - id: error_malformed_structure
       description: Invalid PNG headers, chunks, and scanline filters
       test_assets:
