@@ -81,11 +81,21 @@ struct PreparedStill<'a> {
 /// failure here preserves public validation and cancellation precedence.
 fn prepare_still<'a>(
     _image: &DecodedImage,
-    _options: &'a AvifEncodeOptions,
+    options: &'a AvifEncodeOptions,
 ) -> CodecResult<PreparedStill<'a>> {
+    validate_options(options)?;
     Err(CodecError::NotImplemented(
         PURE_RUST_ENCODER_UNAVAILABLE.to_owned(),
     ))
+}
+
+fn validate_options(options: &AvifEncodeOptions) -> CodecResult<()> {
+    if options.quality.is_some_and(|quality| quality > 100) {
+        return Err(CodecError::Parameter(
+            "AVIF quality must be between 0 and 100".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(coverage)]
@@ -153,11 +163,12 @@ pub fn encode_sequence(
 /// token.
 pub fn encode_sequence_with_token(
     sequence: &DecodedSequence,
-    _options: &AvifEncodeOptions,
+    options: &AvifEncodeOptions,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     sequence.validate().map_err(CodecError::from_image_error)?;
+    validate_options(options)?;
     Err(CodecError::NotImplemented(
         PURE_RUST_ENCODER_UNAVAILABLE.to_owned(),
     ))

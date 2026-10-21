@@ -10512,6 +10512,7 @@ formats:
       source_format: png
       source_asset: 2x3.png
       expect_error: true
+      status: active
       params:
         size: [2, 3]
         color_type: RGB

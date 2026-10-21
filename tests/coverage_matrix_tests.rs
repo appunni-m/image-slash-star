@@ -5641,7 +5641,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_encode.len(),
-        32,
+        31,
         "the AVIF former-native encode census changed"
     );
     assert!(
@@ -5657,12 +5657,12 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     );
     assert_eq!(
         former_native_decode.len() + promoted_decode.len() + former_native_encode.len(),
-        35,
+        34,
         "the complete former-native AVIF census changed"
     );
     assert_eq!(
         planned_encodes.len(),
-        32,
+        31,
         "the AVIF planned encoder ledger changed"
     );
     assert_eq!(

@@ -33,8 +33,8 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 ## AVIF planned-gap ledger (current tree)
 
 - AVIF decode/inspect/verify: 566 rows total, 566 active, 0 explicit planned gaps.
-- AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,493 rows total, 1,978 active decode rows, 483 active encode rows, 0 planned decode rows, and 32 planned encode rows. TIFF has 393 decode rows. Typed fault contracts remain outside Pillow parity totals.
+- AVIF encode: 32 rows total, 1 active parity case and 31 explicit planned gaps.
+- Whole matrix: 2,493 rows total, 1,978 active decode rows, 484 active encode rows, 0 planned decode rows, and 31 planned encode rows. TIFF has 393 decode rows. Typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
@@ -209,8 +209,9 @@ separate model checks cover invalid descriptors, target-independent EXIF
 offset errors, size overflow and interruption. All native mux witnesses are
 8-bit; higher-depth descriptors still need native encoder witnesses. AV1
 compression, metadata preparation, sequence/grid/layered containers and total
-resource accounting remain open. Public encoding still returns NotImplemented,
-all 32 encode rows remain planned, and Rust behavior/coverage remain deferred.
+resource accounting remain open. Valid-parameter AVIF encoding still returns
+NotImplemented; the invalid-quality validation case is active parity, and 31
+encode rows remain planned. Broader Rust behavior and coverage remain deferred.
 All 16 strict native/WASM ordinary/coverage compile configurations pass,
 including native no-codec/default lanes. Rustdoc, formatting and static
 roadmap/provenance checks pass; no Rust runtime result is inferred from them.

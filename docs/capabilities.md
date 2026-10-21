@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `c4df78ad9bd496b348f68d9b43c48e7ba22786b39bb630cfd322ea8330686fa3`.
+- Active fixture source SHA-256: `b254120f4debfabe205253ed036d1730939d1879912e1c09f047c3aec13fe5b0`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 2,461 (1,978 decode; 483 encode).
-- Planned fixture rows excluded: 32 (0 decode; 32 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 130.
+- Active fixture rows: 2,462 (1,978 decode; 484 encode).
+- Planned fixture rows excluded: 31 (0 decode; 31 encode).
+- Active `not_applicable` operation outcomes excluded from evidence groups: 131.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -366,6 +366,7 @@ Verification scope is a format-level property derived from active decode rows. I
 
 | Target format | Operation | Outcome | Public input mode witness | Input frame shape | Oracle-decoded output mode | Target sequence semantics | Rust error kind | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| AVIF | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `avif:enc_invalid_quality` |
 | BMP | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `bmp:enc_1bit` |
 | BMP | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 1: `bmp:enc_grayscale` |
 | BMP | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 2: `bmp:enc_8bit`, `bmp:enc_indexed_missing_palette` |

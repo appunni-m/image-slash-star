@@ -56369,7 +56369,7 @@
             "quality": 101
           },
           "expect_error": true,
-          "status": "planned",
+          "status": "active",
           "source_format": "png",
           "source_asset": "2x3.png",
           "source_mode": "Rgb8",
@@ -56411,10 +56411,7 @@
           "oracle_status": "error",
           "oracle_error_type": "builtins.ValueError",
           "oracle_error_message": "Invalid quality setting",
-          "oracle_error_kind": "parameter",
-          "gap": "Pure Rust AVIF encoding is not implemented yet; no encoder is a runtime dependency.",
-          "pure_rust_work_item": "AVF-ENCODE-001",
-          "former_native_only": true
+          "oracle_error_kind": "parameter"
         },
         {
           "id": "enc_invalid_advanced",
@@ -210197,7 +210194,7 @@
     "assets_available": 1974,
     "decode_active": 1978,
     "decode_planned": 0,
-    "encode_not_wired": 32
+    "encode_not_wired": 31
   },
   "fault_contracts": [
     {
