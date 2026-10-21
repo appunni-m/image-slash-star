@@ -1241,6 +1241,10 @@ formats:
       description: Baseline 4:4:4 JPEG has one trailing junk byte between its post-scan COM segment and EOI
       test_assets:
       - baseline_444_single_scan_com_tail_junk.jpg
+    - id: baseline_444_single_scan_com_tail_junk_then_com
+      description: Baseline 4:4:4 JPEG has trailing junk followed by another post-scan COM segment
+      test_assets:
+      - baseline_444_single_scan_com_tail_junk_then_com.jpg
     - id: baseline_444_single_scan_com_eoi_marker_fill
       description: Baseline 4:4:4 JPEG has a marker-fill byte between its trailing COM segment and EOI
       test_assets:

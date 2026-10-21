@@ -94,6 +94,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_then_com_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_eoi_marker_fill_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_ff00_tail_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_two_trailing_com_fixture.py --check

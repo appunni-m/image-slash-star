@@ -118,8 +118,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,501 total rows: 1,985 decode / inspect /
-verify rows and 516 encode rows. Of those, 1,985 decode rows and 485 encode
+The current fixture matrix contains 2,502 total rows: 1,986 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,986 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 81 rows.
 
@@ -716,6 +716,26 @@ non-YCbCr path. Both comparisons are coordinate-only: the local reports have
 no source revision or build identity, and Coverage MCP marks test status
 unknown. They establish the selected inputs' observed paths, not an aggregate
 coverage gain or regression.
+
+## JPEG post-scan junk followed by another marker — 2026-10-22
+
+Added active parity row
+`decode:jpeg:baseline_444_single_scan_com_tail_junk_then_com`. The 750-byte
+JPEG is derived from the pinned single-scan COM fixture by adding one junk byte
+and a second COM segment before EOI. Its SHA-256 is
+`1cc70897b39aad9b13eade241695dd0628c4aade3f660ab4d8557d013ea7952c`. Pillow
+12.2.0 verifies and decodes it as an 8×8 RGB image. The 192 output bytes match
+the existing post-scan COM reference exactly (SHA-256
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`).
+
+The new row and the existing two-trailing-COM control each passed 1/1 in
+separate selected coverage runs. Coverage MCP's selected-test comparison
+observed three additional branch coordinates: the post-scan marker search in
+`decode.rs:2766` and `decode.rs:2771`, plus junk skipping in
+`parser.rs:107`. The reports use the same branch denominator, but have no
+source revision or build receipt and Coverage MCP reports test status unknown;
+the comparison is coordinate-only and does not establish an aggregate gain.
+The parser's false arm remains an open candidate for a different input.
 
 ## AVIF version-1 item-reference alpha parity — 2026-10-20
 
@@ -8117,7 +8137,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ab47ae92057a2d7f2b4239cb5ced7ae799e2069044bbb559785d8d99b762395c`; matrix `302f278dc1919e90d05eaf0e2e92513a5e1a53d4778abb3927dcafd5f49e3e8c`.
+- Current fixture integrity only: manifest `fa018214e6984ba40b94165c88dd6320c70845e59c290fe877aad864a995433d`; matrix `cd82335f32d17c08f423f85aaef7e32ba4f32fdff7cef10e510b194a80508866`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
