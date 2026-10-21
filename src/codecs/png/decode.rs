@@ -202,6 +202,20 @@ pub(super) fn validate_color_chunk_structure(
     }
 }
 
+/// Match Pillow's accepted ASCII bytes for PNG chunk types.
+pub(super) fn validate_chunk_type(kind: &[u8; 4]) -> CodecResult<()> {
+    if kind
+        .iter()
+        .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+    {
+        Ok(())
+    } else {
+        Err(CodecError::Malformed(
+            "PNG chunk type contains an unsupported byte".to_owned(),
+        ))
+    }
+}
+
 fn record_invalid_compressed_metadata(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
@@ -2063,6 +2077,7 @@ impl<'a> Iterator for Chunks<'a> {
                 "PNG chunk type is truncated",
             )?;
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
+            validate_chunk_type(&kind)?;
             let start = self.position.saturating_add(8);
             // Pillow validates construction-critical CRCs before the first
             // IDAT, then checks image-data and post-IDAT chunks at verification

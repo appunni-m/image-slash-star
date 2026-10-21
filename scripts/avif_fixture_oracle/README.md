@@ -75,6 +75,24 @@ The source Y4M, AVIF, and decoded-pixel SHA-256 values are respectively
 `5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f`, and
 `0140c8dab75efad711db2af0b7f1f837e76e2a8d578ac43052fea15b7693d926`.
 
+Generate the two-tile monochrome super-resolution case with the same pinned
+encoder:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_equal_width_superres.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc \
+  --chroma 400-multitile-actual
+```
+
+This 288x64 4:0:0 still signals denominator 9, with coded width 256, two full-width tile
+columns, and restoration disabled. The generator checks the AV1 sequence, frame and tile headers,
+byte-for-byte re-encoding, and exact Pillow 12.2.0 pixels before writing
+`multitile_monochrome_superres_288x64.avif`. The source Y4M, AVIF, and decoded
+pixel SHA-256 values are respectively
+`c8ebdc997141ba1718abe3b81819e6383f2d3724f54a646525f98e3059c30b60`,
+`cc88ed36062a37989bef826649d01c2fa872f41c3668c59509f310ff081a93d4`, and
+`30ba32d9eda130257562b74f7fa6a49025176071264bfca20a3d87cae6951479`.
+
 Generate the actual-upscaled 4:2:2 odd-edge case with the same pinned encoder:
 
 ```sh

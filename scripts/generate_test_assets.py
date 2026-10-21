@@ -3123,6 +3123,11 @@ def gen_png():
         "427e0a7d6532ab94abf4ecf3d96d891719c060780eaa9243d161f278d97e9eef"
     ):
         raise RuntimeError("JPEG 4:2:0 generic source PNG differs from its pinned hash")
+    pattern_img("RGB", (32, 16)).save(
+        d / "jpeg_422_batch_source_32x16.png",
+        format="PNG",
+        compress_level=9,
+    )
     append_png_idat_empty_zlib_member(
         d / "rgb.png", d / "idat_trailing_zlib_member.png"
     )
@@ -7629,6 +7634,50 @@ def gen_webp():
 
     write_anim_payload_eof_after_anmf()
 
+    def write_anmf_beyond_riff_extent():
+        source = (d / "animated.webp").read_bytes()
+        riff_end = 8 + struct.unpack_from("<I", source, 4)[0]
+        if riff_end != len(source) or source[:4] != b"RIFF" or source[8:12] != b"WEBP":
+            raise RuntimeError("animated WebP source has an invalid declared RIFF extent")
+
+        anmf_chunks = []
+        position = 12
+        while position < riff_end:
+            if position + 8 > riff_end:
+                raise RuntimeError("animated WebP source has a truncated chunk header")
+            chunk_size = struct.unpack_from("<I", source, position + 4)[0]
+            chunk_end = position + 8 + chunk_size + (chunk_size & 1)
+            if chunk_end > riff_end:
+                raise RuntimeError("animated WebP source has a truncated chunk payload")
+            if source[position : position + 4] == b"ANMF":
+                anmf_chunks.append(source[position:chunk_end])
+            position = chunk_end
+        if position != riff_end or len(anmf_chunks) != 2:
+            raise RuntimeError("animated WebP source must contain two complete ANMF chunks")
+
+        candidate = source + anmf_chunks[0]
+        if 8 + struct.unpack_from("<I", candidate, 4)[0] != len(source):
+            raise RuntimeError("trailing ANMF changed the declared RIFF extent")
+        path = d / "animated_anmf_beyond_riff_extent.webp"
+        path.write_bytes(candidate)
+
+        with Image.open(BytesIO(source)) as reference:
+            reference_frames = []
+            for index in range(reference.n_frames):
+                reference.seek(index)
+                reference.load()
+                reference_frames.append((reference.mode, reference.size, reference.tobytes()))
+        with Image.open(BytesIO(candidate)) as image:
+            if image.format != "WEBP" or image.n_frames != len(reference_frames):
+                raise RuntimeError("Pillow did not ignore the ANMF beyond the RIFF extent")
+            for index, expected in enumerate(reference_frames):
+                image.seek(index)
+                image.load()
+                if (image.mode, image.size, image.tobytes()) != expected:
+                    raise RuntimeError("trailing ANMF changed Pillow's decoded animation")
+
+    write_anmf_beyond_riff_extent()
+
     def truncate_after_first_nested_alpha(data):
         anmf = data.find(b"ANMF")
         alpha = data.find(b"ALPH", anmf + 8)
@@ -9769,6 +9818,81 @@ def mutate_tiff_tag_id(source, destination, tag, replacement):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def write_tiff_unknown_signed_extension_tags(source, destination):
+    """Append valid signed integer extension tags to a simple TIFF image."""
+    data = bytearray(source.read_bytes())
+    if data[:4] != b"II*\0":
+        raise ValueError("signed-extension TIFF source must be little-endian classic TIFF")
+
+    ifd_offset = struct.unpack_from("<I", data, 4)[0]
+    entry_count = struct.unpack_from("<H", data, ifd_offset)[0]
+    insertion_position = ifd_offset + 2 + entry_count * 12
+    next_ifd_offset = struct.unpack_from("<I", data, insertion_position)[0]
+    if next_ifd_offset != 0:
+        raise ValueError("signed-extension TIFF source must have one IFD")
+
+    strip_offset_entry = None
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", data, start)
+        if tag == 273:
+            if field_type != 4 or count != 1:
+                raise ValueError("signed-extension TIFF source must have one LONG strip offset")
+            strip_offset_entry = start
+        elif tag in (65000, 65001, 65002):
+            raise ValueError("signed-extension TIFF source already contains an extension tag")
+    if strip_offset_entry is None:
+        raise ValueError("signed-extension TIFF source has no strip offset")
+
+    shift = 3 * 12
+    strip_offset = struct.unpack_from("<I", data, strip_offset_entry + 8)[0]
+    if strip_offset < insertion_position + 4 or strip_offset > len(data):
+        raise ValueError("signed-extension TIFF source has an invalid strip offset")
+
+    # Existing out-of-line values follow the first IFD and move with the image data.
+    type_sizes = {
+        1: 1,
+        2: 1,
+        3: 2,
+        4: 4,
+        5: 8,
+        6: 1,
+        7: 1,
+        8: 2,
+        9: 4,
+        10: 8,
+        11: 4,
+        12: 8,
+    }
+    external_value_offsets = []
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        _, field_type, count = struct.unpack_from("<HHI", data, start)
+        type_size = type_sizes.get(field_type)
+        if type_size is None or count * type_size <= 4:
+            continue
+        value_offset = struct.unpack_from("<I", data, start + 8)[0]
+        if value_offset >= insertion_position:
+            external_value_offsets.append(start)
+
+    data[insertion_position:insertion_position] = b"\0" * shift
+    extension_tags = (
+        (65000, 6, struct.pack("<b", -1) + b"\0\0\0"),
+        (65001, 8, struct.pack("<h", -2) + b"\0\0"),
+        (65002, 9, struct.pack("<i", -3)),
+    )
+    for index, (tag, field_type, value) in enumerate(extension_tags):
+        start = insertion_position + index * 12
+        data[start : start + 12] = struct.pack("<HHI", tag, field_type, 1) + value
+
+    struct.pack_into("<H", data, ifd_offset, entry_count + len(extension_tags))
+    struct.pack_into("<I", data, strip_offset_entry + 8, strip_offset + shift)
+    for start in external_value_offsets:
+        old_offset = struct.unpack_from("<I", data, start + 8)[0]
+        struct.pack_into("<I", data, start + 8, old_offset + shift)
+    destination.write_bytes(data)
+
+
 def mutate_tiff_next_ifd(source, destination, next_offset):
     """Patch the first classic-TIFF directory's next-IFD pointer."""
     data = bytearray(source.read_bytes())
@@ -9869,6 +9993,9 @@ def gen_tiff():
     d = OUT / "tiff"; d.mkdir(parents=True, exist_ok=True)
     img = pattern_img("RGB")
     img.save(d / "rgb.tiff")
+    write_tiff_unknown_signed_extension_tags(
+        d / "rgb.tiff", d / "rgb_unknown_signed_extension_types.tiff"
+    )
     img.save(d / "rgb_dpi.tiff", dpi=(96, 96))
     img.save(d / "single.tiff")
     rgba_frame = Image.new("RGBA", (2, 1))

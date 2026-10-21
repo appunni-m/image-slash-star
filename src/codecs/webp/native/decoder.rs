@@ -293,7 +293,9 @@ impl<'a> WebPDecoder<'a> {
                 self.height = info.canvas_height;
 
                 let mut position = start + chunk_size_rounded;
-                let max_position = position + riff_size.saturating_sub(12);
+                // RIFF size counts from byte 8 through the declared payload;
+                // convert it to the absolute end before scanning top-level chunks.
+                let max_position = riff_size.saturating_add(8);
                 self.r.set_position(position);
 
                 while position < max_position {

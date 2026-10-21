@@ -39,6 +39,8 @@ class FixtureProfile:
     subsampling_y: int
     advanced_options: tuple[tuple[str, str], ...]
     monochrome: bool = False
+    tile_cols_log2: int = 0
+    monochrome_restoration_types: tuple[int, int, int] = (3, 0, 0)
     cicp: tuple[int, int, int] | None = None
     full_range: bool | None = None
 
@@ -113,6 +115,22 @@ PROFILES = {
         subsampling_y=1,
         advanced_options=ADVANCED_OPTIONS,
         monochrome=True,
+    ),
+    "400-multitile-actual": FixtureProfile(
+        chroma_format="mono",
+        asset_name="multitile_monochrome_superres_288x64.avif",
+        width=288,
+        height=64,
+        superres_denominator=9,
+        source_sha256="c8ebdc997141ba1718abe3b81819e6383f2d3724f54a646525f98e3059c30b60",
+        asset_sha256="cc88ed36062a37989bef826649d01c2fa872f41c3668c59509f310ff081a93d4",
+        pixels_sha256="30ba32d9eda130257562b74f7fa6a49025176071264bfca20a3d87cae6951479",
+        subsampling_x=1,
+        subsampling_y=1,
+        advanced_options=NO_RESTORATION_OPTIONS,
+        monochrome=True,
+        tile_cols_log2=1,
+        monochrome_restoration_types=(0, 0, 0),
     ),
     "444": FixtureProfile(
         chroma_format="444",
@@ -205,7 +223,7 @@ def encode_command(
         "-j",
         "1",
         "--tilecolslog2",
-        "0",
+        str(profile.tile_cols_log2),
         "--tilerowslog2",
         "0",
     ]
@@ -287,11 +305,28 @@ def validate_bitstream(path: Path, profile: FixtureProfile) -> None:
     }
     if profile.monochrome:
         expected_frame["restoration"] = {
-            "types": [3, 0, 0],
+            "types": list(profile.monochrome_restoration_types),
             "unit_size_log2": [8, 8],
         }
     if any(frame.get(key) != value for key, value in expected_frame.items()):
         raise RuntimeError("AV1 frame header differs from the requested super-resolution geometry")
+
+    tiling = frame.get("tiling", {})
+    expected_columns = 1 << profile.tile_cols_log2
+    if (
+        tiling.get("log2_columns") != profile.tile_cols_log2
+        or tiling.get("columns") != expected_columns
+        or tiling.get("rows") != 1
+    ):
+        raise RuntimeError("AV1 tile geometry differs from the requested profile")
+    tile_count = sum(
+        len(obu["tile_group"]["tiles"])
+        for sample in report["samples"]
+        for obu in sample["obus"]
+        if "tile_group" in obu
+    )
+    if tile_count != expected_columns:
+        raise RuntimeError("AV1 tile-group payload count differs from its frame header")
 
 
 def validate_pillow(path: Path, profile: FixtureProfile) -> None:

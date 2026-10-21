@@ -1161,6 +1161,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_sub_422_repeated_full_batches",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_repeated_full_batches.bin",
+      "ref_bytes": 1536,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        16
+      ],
+      "ref_sha256": "fb570711fd0dba8e5ee7bfcb114770764990b2a3b3763e66e538c78bd6d02bf2",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_repeated_full_batches.bin",
+      "encoded_ref_bytes": 1085,
+      "encoded_ref_sha256": "265a9ad873e8561a91c44e8d4ab234ea19f7337019818d97f75479cec59db8a5",
+      "source_mode": "Rgb8",
+      "source_sha256": "3f6c806893929219184e17b205945f3fe5c7b642bd47e855e001eb746537b7a1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_sub_422_aligned_width_partial_height",
       "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_aligned_width_partial_height.bin",
       "ref_bytes": 192,
