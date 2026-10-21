@@ -118,10 +118,10 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,506 total rows: 1,990 decode / inspect /
-verify rows and 516 encode rows. Of those, 1,990 decode rows and 485 encode
+The current fixture matrix contains 2,508 total rows: 1,992 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,992 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
-lane contains 81 rows.
+lane contains 82 rows.
 
 ## TIFF 2x2 Predictor=2 odd-edge parity — 2026-10-22
 
@@ -133,9 +133,9 @@ the inputs to RGB; input and pixel SHA-256 values are `3aba39db3897b58eebb6a5476
 `363e81d857d75ba4b3ecf5a7da2db8cb8e35ff825abcd2856f292eb1c902ddef` /
 `a8f4c5318a22ef4da79c4febbf6d8d838ba9415afacc1fe55a568a4c93fcdc30`.
 
-The Rust TIFF gate now admits odd-edge 2x2 Predictor=2 geometry. The existing
-ceiling-based clump and predictor-row calculations handle the padding; the 1x2
-Predictor=2 alignment rule remains unchanged. A focused selected run passed
+The Rust TIFF gate admits odd-edge 2x2 Predictor=2 geometry. The existing
+ceiling-based clump and predictor-row calculations handle the padding. A focused
+selected run passed
 5/5 exact decode rows, including both new cases and three controls; the
 control-only run passed 3/3. Coverage MCP selected-test comparisons reported
 zero new branch and line coordinates. Both reports lack source/build receipts,
@@ -144,6 +144,28 @@ coverage gain. Reports:
 `.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor-2-controls/coverage.json`
 and
 `.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor2-controls-only/coverage.json`.
+
+## TIFF 1x2 Predictor=2 odd-height parity — 2026-10-22
+
+Added active parity rows for 4x3 and 3x3 contiguous YCbCr TIFFs using LZW,
+1x2 subsampling, and Predictor=2. Both images end with a padded clump row. The
+4x3 fixture has an 8-byte predictor row, so Pillow/libtiff preserves its
+residual bytes; the 3x3 fixture has a 6-byte predictor row and takes horizontal
+predictor reversal. Pinned Pillow 12.2.0 / libtiff 4.7.1 produces RGB references.
+Input / pixel SHA-256 values are `f6e68880226a3e0d995cc73a931cd5b2905709d0bea15299aa572b0c62eef046` /
+`7e55ac763e029f17ce869538b69db5f9a3c61078802c4a0ce8a254c992cd11e3` and
+`4dca2e6335e895e6b88a6f8caa8b5c6aece3c1dac43b568044f283f74afd6967` /
+`c52188185662eb2a565288b837ba81c29535ca8ddfa9a1fdfd3eecd7b077dfd9`.
+
+Both exact selected parity rows passed individually and together (2/2). Coverage
+MCP found the missing false arm at `src/codecs/tiff/decode.rs:957` when measuring
+the 3x3 selector alone. The paired LLVM report covers both arms there (false=4,
+true=5), and the focused `coverage_gaps` query returns no missing group at that
+line. Coverage MCP marks source identity unverified and test attribution unknown;
+the incremental comparison is incomparable because the earlier LLVM branch
+detail is incomplete. This evidence is limited to these selected rows and is
+not a full-suite coverage claim. The paired report is
+`target/release-evidence/selected/tiff-1x2-odd-height-predictor2-pair.json`.
 
 ## PNG chunk-type byte parity — 2026-10-22
 
@@ -8202,7 +8224,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ed26cdfc530e9438b3087f2cf3785127207ac5056e29b46e9429c292676aada8`; matrix `81313c66bf1d5b40fbbc45de6deb20ae9cf3cf099f2967f10b7a98c7abcfde61`.
+- Current fixture integrity only: manifest `fd5021a526458d5488f9599b79704a9d950b9674d4741257ffb4911f5ba8ae31`; matrix `c01a605e3c63ab8ac0fce14836809535dec932b52d3787b21189d77b8fe1286a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
