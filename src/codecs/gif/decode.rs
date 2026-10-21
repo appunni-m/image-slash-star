@@ -97,25 +97,28 @@ pub fn decode_sequence(
                 } else if label == 0xff {
                     let identifier_len = usize::from(input.read_u8()?);
                     let identifier = input.read_bytes(identifier_len)?;
-                    let payload = input.read_sub_blocks()?;
                     // Pillow 12.2.0 recognizes only NETSCAPE2.0 here. It
+                    // reads the loop record from the first sub-block and
                     // exposes ANIMEXTS1.0 as an opaque application extension.
                     let is_loop_extension = identifier == b"NETSCAPE2.0";
-                    if is_loop_extension && payload.len() >= 3 && payload[0] == 1 {
-                        let bytes = [payload[1], payload[2]];
-                        let repetitions = u32::from(u16::from_le_bytes(bytes));
-                        loop_count = if repetitions == 0 {
-                            AnimationLoop::Infinite
-                        } else {
-                            AnimationLoop::Finite {
-                                // The source field is u16, so widening before
-                                // adding one cannot overflow the public u32
-                                // total-play representation.
-                                total_plays: repetitions + 1,
-                            }
-                        };
-                    }
-                    if !is_loop_extension {
+                    if is_loop_extension {
+                        let payload = input.read_first_sub_block_and_skip_rest()?;
+                        if payload.len() >= 3 && payload[0] == 1 {
+                            let bytes = [payload[1], payload[2]];
+                            let repetitions = u32::from(u16::from_le_bytes(bytes));
+                            loop_count = if repetitions == 0 {
+                                AnimationLoop::Infinite
+                            } else {
+                                AnimationLoop::Finite {
+                                    // The source field is u16, so widening before
+                                    // adding one cannot overflow the public u32 total-play
+                                    // representation.
+                                    total_plays: repetitions + 1,
+                                }
+                            };
+                        }
+                    } else {
+                        input.skip_sub_blocks()?;
                         metadata.push(crate::types::OpaqueMetadata {
                             kind: vec![label],
                             data: data[payload_start..input.position()].to_vec(),
@@ -790,6 +793,15 @@ impl<'a> Input<'a> {
             }
             output.extend_from_slice(self.read_bytes(len)?);
         }
+    }
+
+    fn read_first_sub_block_and_skip_rest(&mut self) -> CodecResult<&'a [u8]> {
+        let len = usize::from(self.read_u8()?);
+        let first = self.read_bytes(len)?;
+        if len != 0 {
+            self.skip_sub_blocks()?;
+        }
+        Ok(first)
     }
 
     fn skip_sub_blocks(&mut self) -> CodecResult<()> {

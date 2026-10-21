@@ -3624,6 +3624,16 @@ formats:
       description: Maximum finite repeat count in the NETSCAPE2.0 application extension
       test_assets:
       - finite_loop_u16_max.gif
+    - id: netscape_loop_split_subblocks
+      description: Pillow reads NETSCAPE2.0 loop metadata only from its first sub-block
+      assert_sequence_frame_pixels: true
+      test_assets:
+      - netscape_loop_split_subblocks.gif
+    - id: netscape_loop_empty_payload
+      description: Empty first NETSCAPE2.0 sub-block leaves loop metadata unspecified
+      assert_sequence_frame_pixels: true
+      test_assets:
+      - netscape_loop_empty_payload.gif
     - id: transparent
       description: GIF with transparency index
       test_assets:
