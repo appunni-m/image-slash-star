@@ -149933,6 +149933,162 @@
           "error_contracts": {}
         },
         {
+          "id": "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 decodes the padded final 1-by-2 clump row of a 4-by-3 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f6e68880226a3e0d995cc73a931cd5b2905709d0bea15299aa572b0c62eef046",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_odd_height_predictor_2_tiff.bin",
+          "ref_sha256": "7e55ac763e029f17ce869538b69db5f9a3c61078802c4a0ce8a254c992cd11e3",
+          "ref_bytes": 36,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 reverses the padded final 1-by-2 clump row of a 3-by-3 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "4dca2e6335e895e6b88a6f8caa8b5c6aece3c1dac43b568044f283f74afd6967",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2_tiff.bin",
+          "ref_sha256": "c52188185662eb2a565288b837ba81c29535ca8ddfa9a1fdfd3eecd7b077dfd9",
+          "ref_bytes": 27,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            3,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2",
           "type": "decode",
           "format": "tiff",
@@ -211459,12 +211615,12 @@
     }
   },
   "summary": {
-    "total_rows": 2506,
-    "decode_rows": 1990,
+    "total_rows": 2508,
+    "decode_rows": 1992,
     "encode_rows": 516,
     "formats": 8,
-    "assets_available": 1986,
-    "decode_active": 1990,
+    "assets_available": 1988,
+    "decode_active": 1992,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
