@@ -49,6 +49,14 @@ FAULT_CONTRACTS = {
         "point": "av1.segment_map.reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_monochrome_alpha_plane_length_mismatch": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch",
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16",
+        "point": "avif.monochrome_alpha.plane_length_mismatch",
+        "contract": "decode_unsupported_then_retry_succeeds",
+    },
     "avif_10bit_i444_alpha_plane_length_mismatch": {
         "format": "avif",
         "category": "structured-diagnostics",

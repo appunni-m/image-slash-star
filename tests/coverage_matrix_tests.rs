@@ -1157,6 +1157,15 @@ fn execute_fault_contract(
                 img::ImageErrorStage::StillDecode,
             ),
             (
+                "avif.monochrome_alpha.plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromeAlphaPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
                 "avif.i444_generic_rgb.u_plane_length_mismatch",
                 "decode_unsupported_then_retry_succeeds",
             ) => (
@@ -1642,7 +1651,8 @@ fn execute_fault_contract(
         | "avif.i444_generic_rgb.invalid_sample"
         | "avif.i444_10bit_alpha.u_plane_length_mismatch"
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
-        | "avif.i444_10bit_alpha.invalid_sample" => {
+        | "avif.i444_10bit_alpha.invalid_sample"
+        | "avif.monochrome_alpha.plane_length_mismatch" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
         }
         "avif.i444_10bit_alpha.output_reservation" => {
@@ -1893,6 +1903,7 @@ fn execute_fault_contract(
                 | "avif.i444_10bit_alpha.u_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.v_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.invalid_sample"
+                | "avif.monochrome_alpha.plane_length_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}

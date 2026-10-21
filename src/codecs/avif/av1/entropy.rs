@@ -17922,7 +17922,9 @@ fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> 
         || context.frame_tools.segment_lossless
         || context.frame_tools.segment_qindex != quantization.base
         || quantization.base == 0
-        || quantization.using_matrix
+        // Intra luma matrices are decoded by the shared coefficient path;
+        // keep the existing exclusion on the inter reconstruction path.
+        || (quantization.using_matrix && !context.intra_frame)
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
