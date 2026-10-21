@@ -15,13 +15,14 @@ import re
 import shlex
 import subprocess
 import sys
+import uuid
 from typing import Any, Optional
 
 ROOT = Path(__file__).resolve().parent.parent
 MATRIX_PATH = Path("tests/fixtures/coverage_matrix.json")
 SELECTOR_PREFIX = "__image_slash_star_matrix_row_selector__="
 RECEIPT_SCHEMA = "image-slash-star.selected-coverage.local-evidence.v1"
-REPORT_DIR = Path("target/release-evidence/selected")
+REPORT_DIR = Path(".coverage-mcp/local-evidence/selected")
 
 SELECTION_LINE = re.compile(
     r"^matrix row selection: selected=(\d+) active=(\d+) "
@@ -487,8 +488,9 @@ def report_totals(path: Path) -> dict[str, Any]:
 
 def _absolute_report_path(value: Optional[str]) -> Path:
     if value is None:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = REPORT_DIR / stamp / "coverage.json"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+        run_id = f"{stamp}-{uuid.uuid4().hex}"
+        path = REPORT_DIR / run_id / "coverage.json"
     else:
         path = Path(value)
         if path.is_absolute():
