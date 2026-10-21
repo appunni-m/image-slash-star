@@ -7629,6 +7629,50 @@ def gen_webp():
 
     write_anim_payload_eof_after_anmf()
 
+    def write_anmf_beyond_riff_extent():
+        source = (d / "animated.webp").read_bytes()
+        riff_end = 8 + struct.unpack_from("<I", source, 4)[0]
+        if riff_end != len(source) or source[:4] != b"RIFF" or source[8:12] != b"WEBP":
+            raise RuntimeError("animated WebP source has an invalid declared RIFF extent")
+
+        anmf_chunks = []
+        position = 12
+        while position < riff_end:
+            if position + 8 > riff_end:
+                raise RuntimeError("animated WebP source has a truncated chunk header")
+            chunk_size = struct.unpack_from("<I", source, position + 4)[0]
+            chunk_end = position + 8 + chunk_size + (chunk_size & 1)
+            if chunk_end > riff_end:
+                raise RuntimeError("animated WebP source has a truncated chunk payload")
+            if source[position : position + 4] == b"ANMF":
+                anmf_chunks.append(source[position:chunk_end])
+            position = chunk_end
+        if position != riff_end or len(anmf_chunks) != 2:
+            raise RuntimeError("animated WebP source must contain two complete ANMF chunks")
+
+        candidate = source + anmf_chunks[0]
+        if 8 + struct.unpack_from("<I", candidate, 4)[0] != len(source):
+            raise RuntimeError("trailing ANMF changed the declared RIFF extent")
+        path = d / "animated_anmf_beyond_riff_extent.webp"
+        path.write_bytes(candidate)
+
+        with Image.open(BytesIO(source)) as reference:
+            reference_frames = []
+            for index in range(reference.n_frames):
+                reference.seek(index)
+                reference.load()
+                reference_frames.append((reference.mode, reference.size, reference.tobytes()))
+        with Image.open(BytesIO(candidate)) as image:
+            if image.format != "WEBP" or image.n_frames != len(reference_frames):
+                raise RuntimeError("Pillow did not ignore the ANMF beyond the RIFF extent")
+            for index, expected in enumerate(reference_frames):
+                image.seek(index)
+                image.load()
+                if (image.mode, image.size, image.tobytes()) != expected:
+                    raise RuntimeError("trailing ANMF changed Pillow's decoded animation")
+
+    write_anmf_beyond_riff_extent()
+
     def truncate_after_first_nested_alpha(data):
         anmf = data.find(b"ANMF")
         alpha = data.find(b"ALPH", anmf + 8)

@@ -2241,16 +2241,20 @@ def apng_sequence_source(data):
 
 def webp_sequence_source(data):
     """Read exact ANIM/ANMF presentation fields from the standardized container."""
+    if len(data) < 12 or data[:4] != b"RIFF" or data[8:12] != b"WEBP":
+        raise ValueError("animated WebP has an invalid RIFF header")
+    riff_end = min(len(data), 8 + int.from_bytes(data[4:8], "little"))
     frames = []
     background = None
     loop_count = None
     offset = 12
-    while offset + 8 <= len(data):
+    while offset + 8 <= riff_end:
         chunk_type = data[offset : offset + 4]
         chunk_size = int.from_bytes(data[offset + 4 : offset + 8], "little")
         payload_start = offset + 8
         payload_end = payload_start + chunk_size
-        if payload_end > len(data):
+        chunk_end = payload_end + (chunk_size & 1)
+        if chunk_end > riff_end:
             break
         if chunk_type == b"ANIM" and chunk_size >= 6:
             payload = data[payload_start:payload_end]
@@ -2280,7 +2284,7 @@ def webp_sequence_source(data):
                     "source_origin": "specification_reference",
                 }
             )
-        offset = payload_end + (chunk_size & 1)
+        offset = chunk_end
     if background is None or loop_count is None or not frames:
         raise ValueError("animated WebP lacks complete ANIM/ANMF source metadata")
     return background, loop_count, frames

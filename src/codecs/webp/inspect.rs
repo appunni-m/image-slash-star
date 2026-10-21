@@ -25,6 +25,9 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     if &header[..4] != b"RIFF" || &header[8..12] != b"WEBP" {
         return Err(CodecError::Malformed("invalid WebP signature".to_owned()).at(0, "webp_header"));
     }
+    let riff_size = u32::from_le_bytes([header[4], header[5], header[6], header[7]]) as usize;
+    let riff_end = codec_add_end(8, riff_size).min(data.len());
+    let data = &data[..riff_end];
     let first_chunk_offset = RIFF_HEADER_SIZE;
     let (kind, payload, next) = read_chunk(data, first_chunk_offset)?;
     match &kind {

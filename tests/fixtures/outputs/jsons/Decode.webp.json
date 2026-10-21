@@ -9841,6 +9841,169 @@
       }
     },
     {
+      "id": "animated_trailing_anmf_outside_riff_ignored",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "WEBP",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "0a546dd8355a3ee46365c871f929b269951750e2bea7cc157e6b84cb6a039a00",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "specification_reference",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "pillow_fixture",
+        "background": {
+          "rgba": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "origin": "specification_reference"
+        },
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "pillow_fixture",
+            "disposal": "keep",
+            "blend": "over",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
       "id": "size_small",
       "status": "ok",
       "error_type": null,

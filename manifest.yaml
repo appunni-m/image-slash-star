@@ -4714,6 +4714,10 @@ formats:
       - animated_dispose.webp
       - animated_rgb_full_dispose.webp
       - animated_rgb_partial_dispose.webp
+    - id: animated_trailing_anmf_outside_riff_ignored
+      description: Ignore a complete duplicate ANMF chunk after the declared RIFF extent
+      test_assets:
+      - animated_anmf_beyond_riff_extent.webp
     - id: size_small
       description: Small image (16x16)
       test_assets:
