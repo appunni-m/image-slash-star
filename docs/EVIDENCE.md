@@ -118,8 +118,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,499 total rows: 1,983 decode / inspect /
-verify rows and 516 encode rows. Of those, 1,983 decode rows and 485 encode
+The current fixture matrix contains 2,502 total rows: 1,986 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,986 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 81 rows.
 
@@ -682,6 +682,60 @@ MCP marks source identity unverified and test attribution unknown. Incremental
 comparison is incomparable because the saved full baseline has incomplete
 branch detail, so this run does not establish an aggregate coverage gain or
 regression.
+
+## Signed-tag TIFF and singleton YCCK coverage — 2026-10-22
+
+Added active public parity rows `decode:jpeg:ycck_h2v1_single_sample_1x1` and
+`decode:tiff:grayscale_unknown_signed_private_tags`. The JPEG fixture changes
+only the SOF0 dimensions of the pinned 2×2 H2V1 YCCK input; its SHA-256 is
+`6ef8f392eb8f93b3afccc85b36981cbad1c080d92c81ce99a9bce32c80f5ca40`. Pillow
+12.2.0 verifies it and returns one CMYK pixel, `fb ff fd ff` (SHA-256
+`fe4cfd863d3977883fd52b5794e14c8ea1cadd264db6925f83b128d1df2ce3e3`).
+
+The TIFF fixture adds private SBYTE, SSHORT, and SLONG fields 65000–65002,
+each with value −1, to the pinned grayscale input. Its SHA-256 is
+`5e7b1dfc00abf38207e020dc3b39d6fe37fb32e77c7b5382227590057bc63c38`. Pillow
+12.2.0 reads all three signed values and produces the same 128×128 grayscale
+pixels as `gray.tiff` (SHA-256
+`1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707`).
+
+Both selected public parity runs passed 1/1 on `aarch64-apple-darwin` with all
+features and branch instrumentation:
+
+```text
+PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:jpeg:ycck_h2v1_single_sample_1x1' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/selected/jpeg-ycck-h2v1-singleton-20261022/coverage.json
+PYTHON=.oracle-venv/bin/python make coverage-selected COVERAGE_CASES='decode:tiff:grayscale_unknown_signed_private_tags' SELECTED_COVERAGE_REPORT=.coverage-mcp/local-evidence/selected/tiff-signed-private-tags-20261022/coverage.json
+```
+
+Coverage MCP's selected-test comparison against the active 2×2 YCCK control
+observed the previously missing false arm of `upsample_h2v1_row` at
+`src/codecs/jpeg/decode/upsample.rs:436`. Comparing the TIFF row with the
+existing `grayscale` row observed six false-arm branch observations at
+`src/codecs/tiff/decode.rs:3915–3917`, where the signed private tags take the
+non-YCbCr path. Both comparisons are coordinate-only: the local reports have
+no source revision or build identity, and Coverage MCP marks test status
+unknown. They establish the selected inputs' observed paths, not an aggregate
+coverage gain or regression.
+
+## JPEG post-scan junk followed by another marker — 2026-10-22
+
+Added active parity row
+`decode:jpeg:baseline_444_single_scan_com_tail_junk_then_com`. The 750-byte
+JPEG is derived from the pinned single-scan COM fixture by adding one junk byte
+and a second COM segment before EOI. Its SHA-256 is
+`1cc70897b39aad9b13eade241695dd0628c4aade3f660ab4d8557d013ea7952c`. Pillow
+12.2.0 verifies and decodes it as an 8×8 RGB image. The 192 output bytes match
+the existing post-scan COM reference exactly (SHA-256
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`).
+
+The new row and the existing two-trailing-COM control each passed 1/1 in
+separate selected coverage runs. Coverage MCP's selected-test comparison
+observed three additional branch coordinates: the post-scan marker search in
+`decode.rs:2766` and `decode.rs:2771`, plus junk skipping in
+`parser.rs:107`. The reports use the same branch denominator, but have no
+source revision or build receipt and Coverage MCP reports test status unknown;
+the comparison is coordinate-only and does not establish an aggregate gain.
+The parser's false arm remains an open candidate for a different input.
 
 ## AVIF version-1 item-reference alpha parity — 2026-10-20
 
@@ -8083,7 +8137,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3d2c6c640675f9bfb7b2b9dd9e8a15fea516f40e57a2608891427a78bccb01dc`; matrix `048bcb868e3f9856c96afd5e8c3f9f772c2e706529df7ace98b99c8a2c8c8c45`.
+- Current fixture integrity only: manifest `fa018214e6984ba40b94165c88dd6320c70845e59c290fe877aad864a995433d`; matrix `cd82335f32d17c08f423f85aaef7e32ba4f32fdff7cef10e510b194a80508866`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -1241,6 +1241,10 @@ formats:
       description: Baseline 4:4:4 JPEG has one trailing junk byte between its post-scan COM segment and EOI
       test_assets:
       - baseline_444_single_scan_com_tail_junk.jpg
+    - id: baseline_444_single_scan_com_tail_junk_then_com
+      description: Baseline 4:4:4 JPEG has trailing junk followed by another post-scan COM segment
+      test_assets:
+      - baseline_444_single_scan_com_tail_junk_then_com.jpg
     - id: baseline_444_single_scan_com_eoi_marker_fill
       description: Baseline 4:4:4 JPEG has a marker-fill byte between its trailing COM segment and EOI
       test_assets:
@@ -1528,6 +1532,16 @@ formats:
       - baseline_ycck_h2v1_single_sample_2x2.jpg
       pillow_call:
         open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_2x2.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v1_single_sample_1x1
+      description: A 1x1 YCCK image reaches the singleton destination path in h2v1 row upsampling
+      test_assets:
+      - baseline_ycck_h2v1_single_sample_1x1.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_1x1.jpg
         operations:
         - PIL.Image.open
         - load
@@ -5896,6 +5910,11 @@ formats:
       description: Grayscale
       test_assets:
       - gray.tiff
+    - id: grayscale_unknown_signed_private_tags
+      description: Unknown private SBYTE, SSHORT, and SLONG tags preserve grayscale pixels
+      test_assets:
+      - gray_signed_private_tags.tiff
+      pixel_reference_case: grayscale
     - id: grayscale_alpha
       description: Grayscale with alpha
       test_assets:
