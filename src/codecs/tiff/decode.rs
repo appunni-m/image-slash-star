@@ -325,8 +325,12 @@ fn decode_ifd(
         && !tiled
         && ycbcr_subsampling.is_some_and(|(horizontal, vertical)| {
             matches!((horizontal, vertical), (1, 2) | (2, 2))
-                && width_usize.is_multiple_of(horizontal)
-                && height_usize.is_multiple_of(vertical)
+                // The 2x2 path already uses ceiling clump geometry and can
+                // decode libtiff's padded edge clumps. Keep the 1x2 path's
+                // aligned-height restriction unchanged.
+                && ((horizontal, vertical) == (2, 2)
+                    || (width_usize.is_multiple_of(horizontal)
+                        && height_usize.is_multiple_of(vertical)))
         });
     if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
         && predictor != 1

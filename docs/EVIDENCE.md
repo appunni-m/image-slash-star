@@ -118,10 +118,32 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,502 total rows: 1,986 decode / inspect /
-verify rows and 516 encode rows. Of those, 1,986 decode rows and 485 encode
+The current fixture matrix contains 2,504 total rows: 1,988 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,988 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 81 rows.
+
+## TIFF 2x2 Predictor=2 odd-edge parity — 2026-10-22
+
+Added active parity rows for a 5x4 TIFF with an odd-width padded clump and a
+4x5 TIFF with a padded final clump row. Both use LZW, contiguous 2x2 YCbCr,
+Predictor=2, and RowsPerStrip=4. Pinned Pillow 12.2.0 / libtiff 4.7.1 decodes
+the inputs to RGB; input and pixel SHA-256 values are `3aba39db3897b58eebb6a54769267ca7c0c46c3111fd06748a08c258d862b86c` /
+`6d8e08b0b2dd2e2620535846b713064c48abca47c6d57ad654433136c0735e70` and
+`363e81d857d75ba4b3ecf5a7da2db8cb8e35ff825abcd2856f292eb1c902ddef` /
+`a8f4c5318a22ef4da79c4febbf6d8d838ba9415afacc1fe55a568a4c93fcdc30`.
+
+The Rust TIFF gate now admits odd-edge 2x2 Predictor=2 geometry. The existing
+ceiling-based clump and predictor-row calculations handle the padding; the 1x2
+Predictor=2 alignment rule remains unchanged. A focused selected run passed
+5/5 exact decode rows, including both new cases and three controls; the
+control-only run passed 3/3. Coverage MCP selected-test comparisons reported
+zero new branch and line coordinates. Both reports lack source/build receipts,
+so the comparison is limited to coordinates and does not establish a verified
+coverage gain. Reports:
+`.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor-2-controls/coverage.json`
+and
+`.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor2-controls-only/coverage.json`.
 
 ## AVIF full-width multi-tile monochrome super-resolution — 2026-10-21
 
@@ -8137,7 +8159,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fa018214e6984ba40b94165c88dd6320c70845e59c290fe877aad864a995433d`; matrix `cd82335f32d17c08f423f85aaef7e32ba4f32fdff7cef10e510b194a80508866`.
+- Current fixture integrity only: manifest `4911330d2ce69ba69bef738786e4f25a6840f9c604b3aa6b68a8149b68a39ebe`; matrix `7eaf31e34c73747fa12049a0d06c8123cc9ec1421411c2890c8e43c58e3b578d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
