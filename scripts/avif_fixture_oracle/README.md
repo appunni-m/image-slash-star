@@ -266,3 +266,51 @@ patch, encoder, bitstream, frame-header, trace, and Pillow identities. Only
 the three version-one BMFF timestamp pairs are normalized; all other bytes
 must be deterministic. Keep these patched builds apart from the clean pinned
 libavif checkout used by the loop observer.
+
+## Lossy wide I422 B128x64 sequence
+
+`animated_lossy_wide_i422_b128x64.avif` is encoded from deterministic 8-bit I422 planes by `encode_lossy_wide_i422_b128x64.c`. It uses a fixture-only libaom patch at the pinned 3.13.2 commit to select a valid horizontal split of the inter B128x128 root. It does not alter AV1 plane block-size mapping. The second frame therefore contains two I422 B128x64 leaves, and does not claim a B64x128 chroma block.
+
+Build the fixture-only libraries and encoder from a fresh staging directory:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-b128x64-source
+git -C target/oracle-staging/libaom-i422-b128x64-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i422-b128x64-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-wide-i422-b128x64.patch"
+cmake -S target/oracle-staging/libaom-i422-b128x64-source \
+  -B target/oracle-staging/libaom-i422-b128x64-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i422-b128x64-prefix"
+cmake --build target/oracle-staging/libaom-i422-b128x64-build -j 4
+cmake --install target/oracle-staging/libaom-i422-b128x64-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i422-b128x64-source
+git -C target/oracle-staging/libavif-i422-b128x64-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i422-b128x64-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i422-b128x64-source \
+  -B target/oracle-staging/libavif-i422-b128x64-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i422-b128x64-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i422-b128x64-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i422-b128x64-prefix/include"
+cmake --build target/oracle-staging/libavif-i422-b128x64-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i422-b128x64-source/include \
+  -I target/oracle-staging/libavif-i422-b128x64-build/include \
+  -I target/oracle-staging/libaom-i422-b128x64-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_wide_i422_b128x64.c \
+  target/oracle-staging/libavif-i422-b128x64-build/libavif.a \
+  target/oracle-staging/libaom-i422-b128x64-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossy-wide-i422-b128x64
+.oracle-venv/bin/python scripts/generate_avif_lossy_wide_i422_b128x64.py \
+  --encoder target/oracle-staging/encode-avif-lossy-wide-i422-b128x64
+```
+
+The generator normalizes only the version-one BMFF movie, track, and media creation/modification timestamps. It rejects a different normalized file digest, changed repeated encodes, or different Pillow RGB frame hashes. A separate clean pinned libavif checkout is used for native loop evidence.

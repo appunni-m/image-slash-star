@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 108 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. One hundred accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 338 hashed artifacts total
-12,179,935 bytes, including 108 inputs, the compiled observer source, and
-11,596,028 bytes of Pillow-decoded frame outputs. Mutation cases share the
+This bundle records 109 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. One hundred one accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 341 hashed artifacts total
+12,289,856 bytes, including 109 inputs, the compiled observer source, and
+11,694,332 bytes of Pillow-decoded frame outputs. Mutation cases share the
 original frame artifacts; each observation records complete per-frame pixel
 hashes and durations.
 
-The 76 fixture sources are declared in
+The 77 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -212,3 +212,5 @@ The active Pillow parity matrix compares complete decoded frames, timing,
 repetition and first-image pixels. This native evidence bundle does not prove
 complete Rust sequence reconstruction or resource accounting; those remain
 bounded by the separate Rust parity and coverage reports.
+
+The lossy 8-bit I422 B128x64 source selects a horizontal split of its 128x128 inter root into two 128x64 leaves. Its two exact Pillow RGB frames and an independent pinned libavif repetition observation are retained.

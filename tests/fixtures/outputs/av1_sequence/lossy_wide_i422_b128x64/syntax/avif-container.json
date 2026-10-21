@@ -1,0 +1,76 @@
+{
+  "alpha_track_id": null,
+  "color_track_id": 1,
+  "file": "animated_lossy_wide_i422_b128x64.avif",
+  "ftyp": {
+    "compatible": [
+      "avif",
+      "avis",
+      "msf1",
+      "iso8",
+      "mif1",
+      "miaf"
+    ],
+    "major": "avis",
+    "minor": 0
+  },
+  "items": {
+    "alpha": [],
+    "color": [
+      {
+        "av1c": {
+          "hex": "81400800",
+          "length": 4,
+          "offset": 229,
+          "sha256": "3a56b95c9ac312120e7d46e6c5866fa68661278737b9930438ce21038626f98c"
+        },
+        "construction": "file",
+        "item_id": 1,
+        "length": 3775,
+        "sha256": "ed438666deb805845c062578ff59387adabf163d137390b84a6f2a03068c3dd2",
+        "spans": [
+          {
+            "length": 3775,
+            "offset": 993
+          }
+        ],
+        "type": "av01"
+      }
+    ],
+    "primary_item_id": 1
+  },
+  "length": 11137,
+  "sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc",
+  "tracks": [
+    {
+      "aux_for_track_id": null,
+      "av1c": {
+        "hex": "81400800",
+        "length": 4,
+        "offset": 826,
+        "sha256": "3a56b95c9ac312120e7d46e6c5866fa68661278737b9930438ce21038626f98c"
+      },
+      "handler": "pict",
+      "samples": [
+        {
+          "duration": 100,
+          "index": 0,
+          "length": 3775,
+          "offset": 993,
+          "sha256": "ed438666deb805845c062578ff59387adabf163d137390b84a6f2a03068c3dd2",
+          "sync": true
+        },
+        {
+          "duration": 100,
+          "index": 1,
+          "length": 6369,
+          "offset": 4768,
+          "sha256": "02e7b1118bdf1f8ddff6284af9397235676c3b8b852d2db4c7b2ff5a4fcda60d",
+          "sync": false
+        }
+      ],
+      "timescale": 1000,
+      "track_id": 1
+    }
+  ]
+}

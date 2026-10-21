@@ -59,6 +59,10 @@ FIXTURES = {
         "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
         2, [64, 64], (2, 2, 2, 0),
     ),
+    "animated_lossy_wide_i422_b128x64": (
+        "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc",
+        2, [128, 128], (2, 2, 2, 0),
+    ),
 }
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
 LOOP_OBSERVER = r'''
@@ -1087,6 +1091,61 @@ def assert_high_bitdepth_b32_inter_leaves(
     }
 
 
+def assert_lossy_wide_i422_b128x64_inter_frame(
+    syntax_sample: dict[str, object],
+    trace_records: list[dict[str, object]],
+) -> dict[str, object]:
+    headers = frame_headers(syntax_sample)
+    leaves = [
+        record
+        for record in trace_records
+        if record.get("kind") == "block"
+        and record.get("block_kind") == "leaf"
+        and record.get("pts") == 1
+        and record.get("frame_offset") == 1
+    ]
+    expected_locations = {(0, 0), (0, 16)}
+    observed_locations = {(int(leaf["x4"]), int(leaf["y4"])) for leaf in leaves}
+    if (
+        len(headers) != 1
+        or headers[0].get("frame_type") != "inter"
+        or headers[0].get("frame_width") != 128
+        or headers[0].get("frame_height") != 128
+        or headers[0].get("transform_mode") != "largest"
+        or len(leaves) != 2
+        or observed_locations != expected_locations
+        or any(
+            int(leaf["width4"]) != 32
+            or int(leaf["height4"]) != 16
+            or int(leaf["bpc"]) != 8
+            or int(leaf["layout"]) != 2
+            for leaf in leaves
+        )
+    ):
+        raise RuntimeError(
+            "pinned dav1d trace lacks two 128x64 I422 leaves in the second inter frame"
+        )
+    return {
+        "sample_index": 1,
+        "pts": 1,
+        "frame_offset": 1,
+        "frame_type": "inter",
+        "transform_mode": "largest",
+        "leaf_count": len(leaves),
+        "leaf_mi_origins": [
+            [int(leaf["x4"]), int(leaf["y4"])]
+            for leaf in sorted(leaves, key=lambda leaf: (leaf["y4"], leaf["x4"]))
+        ],
+        "origin": {
+            "width_px": 128,
+            "height_px": 64,
+            "bit_depth": 8,
+            "layout": "I422",
+        },
+        "status": "asserted_from_pinned_dav1d_block_trace_and_syntax",
+    }
+
+
 def collect_role(
     role: str,
     track: dict[str, object],
@@ -1125,6 +1184,10 @@ def collect_role(
     trace_assertions = []
     if FIXTURE.stem == "animated_lossless_inter_420_b32x32_10bit_64x64" and role == "color":
         trace_assertions.append(assert_high_bitdepth_b32_inter_leaves(trace_records))
+    if FIXTURE.stem == "animated_lossy_wide_i422_b128x64" and role == "color":
+        trace_assertions.append(
+            assert_lossy_wide_i422_b128x64_inter_frame(syntax_samples[1], trace_records)
+        )
     trace_events = [record for record in trace_records if record["kind"] == "output"]
     trace_relative = Path("traces") / f"{role}.jsonl"
     trace_path = bundle / trace_relative
@@ -1453,7 +1516,10 @@ def build_bundle(
     source_anchors = source_anchor_report(source)
     color_sample_index = (
         1
-        if FIXTURE.stem == "animated_lossless_inter_420_b32x32_10bit_64x64"
+        if FIXTURE.stem in {
+            "animated_lossless_inter_420_b32x32_10bit_64x64",
+            "animated_lossy_wide_i422_b128x64",
+        }
         else 0
     )
     color_trace_sample = role_reports["color"]["identity"][color_sample_index]
