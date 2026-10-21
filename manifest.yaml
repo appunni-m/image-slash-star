@@ -2324,6 +2324,11 @@ formats:
       description: A small odd-width 4:2:2 source exercises the generic RGB conversion batch and scalar tail
       params: {'subsampling': '422', 'quality': 85}
       source_asset: 17x17.jpg
+    - id: enc_sub_422_repeated_full_batches
+      description: A 32x16 RGB PNG exercises two full eight-pixel 4:2:2 chroma downsampling batches without a scalar tail
+      params: {'subsampling': '422', 'quality': 85, 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_422_batch_source_32x16.png
     - id: enc_sub_422_aligned_width_partial_height
       description: A 64x1 source exercises the aligned-width 4:2:2 height false arm below the size threshold
       params: {'subsampling': '422', 'quality': 85}

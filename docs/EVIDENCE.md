@@ -118,8 +118,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,497 total rows: 1,982 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,982 decode rows and 484 encode
+The current fixture matrix contains 2,498 total rows: 1,982 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,982 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 79 rows.
 
@@ -8083,7 +8083,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e346430a673f9166e7becd0cba60445fc598a84d6e2020e77c4a834f1127dd3f`; matrix `dbf7c9edc06fdaa3e482d3c6d17ff8561bb09bfe9090aebc56f9f36041e4ed54`.
+- Current fixture integrity only: manifest `502967ad265caefc8b4752eb7bdd092cca3d7e8043a2e628533148cd2abc946d`; matrix `ca77345a665a0816e0f90699a4135b8cf96b9bbce1dd0cb85534fa57f380002b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
