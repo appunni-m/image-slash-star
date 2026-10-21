@@ -285,6 +285,11 @@ def validate_bitstream(path: Path, profile: FixtureProfile) -> None:
         "superres_denominator": profile.superres_denominator,
         "all_lossless": False,
     }
+    if profile.monochrome:
+        expected_frame["restoration"] = {
+            "types": [3, 0, 0],
+            "unit_size_log2": [8, 8],
+        }
     if any(frame.get(key) != value for key, value in expected_frame.items()):
         raise RuntimeError("AV1 frame header differs from the requested super-resolution geometry")
 
