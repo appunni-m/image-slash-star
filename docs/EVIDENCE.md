@@ -64,16 +64,17 @@ padding byte per row. The complete input SHA-256 is
 Pinned Pillow 12.2.0 returns 135 exact RGB bytes with SHA-256
 `3ea707e3df8c76a38c8c72d2c3e263806f92aef645741ed183127b35ce04f925`.
 
-The exact selected parity run passed 1/1. A follow-up run with the existing
-bottom-up BMP control passed 2/2. Coverage MCP found the top-down scanline
-branch at `decode.rs:710`; the paired report observed the previously missing
-bottom-up arm. Its selected-report comparison is limited because source/build
-identity is unverified and test attribution is unknown. Comparing the report
-with the saved full report was incomparable because the baseline branch detail
-does not match its totals. The local reports are
-`target/release-evidence/selected/bmp-top-down-odd-width-20261021.json` and
-`target/release-evidence/selected/bmp-top-down-odd-width-with-bottom-up-control-20261021.json`.
-No marginal coverage gain or full coverage result is claimed.
+The exact selected parity run passed 1/1; its report records 94/31,900
+branch observations. Coverage MCP found the bottom-up arm missing at
+`decode.rs:710`. A follow-up run with the existing bottom-up BMP control
+passed 2/2 and recorded 95/31,900 branch observations. The selected-report
+comparison found one newly observed branch arm, but remains limited because
+source/build identity is unverified and test attribution is unknown. Comparing
+with the saved full report was incomparable: its branch detail is incomplete
+and its denominator is 31,800. No marginal coverage gain or full coverage
+result is claimed. The local reports are
+`target/release-evidence/selected/bmp-top-down-odd-width-merged-main-20261021.json` and
+`target/release-evidence/selected/bmp-top-down-odd-width-with-bottom-up-control-merged-main-20261021.json`.
 
 The saved full BMP report still lists a missing false arm at
 `decode.rs:801` in palette attachment. Existing no-palette BMP input is
