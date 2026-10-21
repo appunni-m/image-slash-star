@@ -207,6 +207,27 @@ coverage gain is claimed. The current selected fault report is
 inputs were `target/release-evidence/selected/20261020T200320Z/coverage.json`
 and `target/release-evidence/selected/20261020T200430Z/coverage.json`.
 
+Added target-only fault-contract case
+`fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch` on the active
+`decode:jpeg:color_ycck_app14_transform_2` input. Its coverage-only one-shot
+hook shortens the selected component sample slice below the computed row
+requirement. The public result must be a malformed JPEG `StillDecode` error,
+followed by a retry that matches a clean decode. The selected run passed 1/1;
+its local receipt records the exact selected ID, `oracle_status: not_applicable`,
+clean source state before and after, and no fixture changes.
+At revision `936bc563111847de84d8926c4eae4f2ed9f80a4a`, the retained report is
+`.coverage-mcp/local-evidence/selected/jpeg-row-source-length-mismatch-20261021-clean/coverage.json`
+with SHA-256
+`51a038f39db8f0c26f9acd3abf6b208e885a0e8e44f821cd5f25c063ed13d063`. Its
+single-case totals are 1,891/138,817 lines (1.3622%), 274/31,906 branches
+(0.8588%), 132/8,881 functions (1.4863%), and 3,155/215,542 regions (1.4638%).
+Coverage MCP returned `measured`; the focused helper query listed 17 remaining
+branch observations, while the line-filtered query for the source-length guard
+returned no missing group. MCP source identity is unverified, test attribution
+is unknown, and build ID and recorded revision are absent. No compatible full
+baseline was queried for this source revision, so no aggregate gain is claimed. No full coverage run
+was made.
+
 Added active parity case
 `decode:tiff:ycbcr_subsampled_lzw_2x2_two_strips_predictor_2`. The 224-byte
 little-endian input SHA-256 is
