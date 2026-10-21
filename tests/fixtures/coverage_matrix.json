@@ -136013,9 +136013,10 @@
           "type": "encode",
           "format": "png",
           "category": "compress",
-          "description": "Quick strategy finishing with less than one hash",
+          "description": "Four-byte RGB scanline leaves the level-1 matcher with no matches",
           "params": {
-            "compression": 1
+            "compression": 1,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",

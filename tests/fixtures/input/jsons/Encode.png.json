@@ -972,7 +972,8 @@
       },
       "error_contracts": {},
       "params": {
-        "compression": 1
+        "compression": 1,
+        "rust_encode_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
@@ -985,7 +986,12 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
