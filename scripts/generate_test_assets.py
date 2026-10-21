@@ -3537,6 +3537,9 @@ def gen_png():
         la16_rows.append(bytes(la_row))
         rgba16_rows.append(bytes(rgba_row))
     write_png_scanlines(d / "rgb16.png", wide_width, wide_height, 16, 2, rgb16_rows)
+    from generate_png_adam7_rgb16_fixture import build_fixture as build_adam7_rgb16_png
+
+    (d / "adam7_rgb16.png").write_bytes(build_adam7_rgb16_png())
     write_png_scanlines(d / "la16.png", wide_width, wide_height, 16, 4, la16_rows)
     write_png_scanlines(d / "rgba16.png", wide_width, wide_height, 16, 6, rgba16_rows)
     # Pillow decodes Adam7 but does not expose Adam7 encoding. Build the input
