@@ -1,5 +1,42 @@
 # Versioned compatibility evidence
 
+## Selected coverage artifact retention — 2026-10-21
+
+The selected coverage runner now defaults to a unique
+`.coverage-mcp/local-evidence/selected/<run-id>/` directory outside `target/`.
+The report, captured command log, and local execution receipt remain adjacent.
+Explicit `SELECTED_COVERAGE_REPORT` paths retain their repository containment
+and no-overwrite checks.
+
+The selected-only verification ran
+`RUSTC_WRAPPER= PYTHON=/Users/lazytrot/work/image-slash-star/.oracle-venv/bin/python CARGO_NET_OFFLINE=true make coverage-selected COVERAGE_CASES='decode:webp:lossy_vp8'`
+from source revision `65d094e0bf2024735f5db932f7e7621b034a9576`. It passed 1/1:
+selected, executed, and passed IDs were all `decode:webp:lossy_vp8`; no row failed
+or remained planned. The local receipt records a clean worktree before and after
+the run, `source_changed_during_run: false`, and
+`fixtures_changed_during_run: false`.
+
+The retained report is
+`.coverage-mcp/local-evidence/selected/20261021T125859.070656Z-544ea994e4de47c8b33548801213f084/coverage.json`
+(SHA-256 `b40b8a5d2e0491dfd80ca5ae96f6efd47ae4397fbb1338b020f74d66a1cf5454`).
+Its adjacent files are `coverage.log` and `coverage.local-evidence.json`.
+
+| Selected-run metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 2,744 / 139,295 | 1.97% |
+| Branches | 267 / 32,016 | 0.83% |
+| Functions | 227 / 8,908 | 2.55% |
+| Regions | 4,587 / 216,342 | 2.12% |
+
+Coverage MCP `coverage_gaps` was queried with this report, `metric=branches`,
+and `query=src/codecs/webp`. It returned `status=measured`, with 267/32,016
+branches in the report and 757 matching groups (five shown on the first page).
+Source identity is `unverified`, test attribution is `unknown`, and build ID and
+recorded revision are null. These missing provider receipts prevent a
+compatible incremental union or a marginal coverage claim. Missing observations
+are selected-run locations, not regressions; selected reports do not establish
+full coverage or enforce full-suite floors.
+
 ## GIF NETSCAPE loop-payload parity — 2026-10-21
 
 Added active input-only parity rows `decode:gif:netscape_loop_split_subblocks`
