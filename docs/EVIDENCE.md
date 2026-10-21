@@ -8,17 +8,43 @@ Added active public parity case `decode:png:interlace_adam7_rgb_16bit`. Its
 Pillow 12.2.0 decodes it as RGB with 243 bytes and SHA-256
 `fdd488e078dac07ca3813a65dce0146ee1b9fc2f451301d579356f95f512920e`.
 
-The exact selected parity run passed 1/1. Coverage MCP measured 167/31,900
-branches in the selected report and listed an `unpack_into` branch locator at
-`src/codecs/png/decode.rs:1794`. The report has no verified source/build receipt
-and unknown test attribution. Incremental comparison with the saved full report
-was incomparable because its branch detail does not reconcile with its totals;
-no aggregate coverage gain is claimed. The report is
-`target/release-evidence/selected/png-adam7-rgb16-20261021.json`. No full
-coverage campaign or production decoder change was made.
+The selected parity run passed 1/1 on the combined matrix. Coverage MCP
+measured 167/31,900 branches and reported both `unpack_into` arms at
+`src/codecs/png/decode.rs:1794` as missing from this selected report. Source/build
+identity is unverified and test attribution is unknown. The saved full report
+comparison was incomparable because its branch detail does not reconcile with
+its totals; no aggregate coverage gain is claimed. The refreshed report is
+`target/release-evidence/selected/png-adam7-rgb16-merged-main-20261021.json`. No
+full coverage campaign or production decoder change was made.
 
-The current fixture matrix contains 2,488 total rows: 1,973 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,973 decode rows and 483 encode
+## BMP top-down odd-width 24-bit parity — 2026-10-21
+
+Added active parity case `decode:bmp:top_down_24_odd_width`. Its 194-byte
+9x5 INFO-header BMP uses a negative height, 27-byte BGR pixel rows, and one
+padding byte per row. The complete input SHA-256 is
+`e33cd8541c6e05f96d02f256fdc94baa80d072ec4146f08129ef9f87053d0b19`.
+Pinned Pillow 12.2.0 returns 135 exact RGB bytes with SHA-256
+`3ea707e3df8c76a38c8c72d2c3e263806f92aef645741ed183127b35ce04f925`.
+
+The exact selected parity run passed 1/1; its report records 94/31,900
+branch observations. Coverage MCP found the bottom-up arm missing at
+`decode.rs:710`. A follow-up run with the existing bottom-up BMP control
+passed 2/2 and recorded 95/31,900 branch observations. The selected-report
+comparison found one newly observed branch arm, but remains limited because
+source/build identity is unverified and test attribution is unknown. Comparing
+with the saved full report was incomparable: its branch detail is incomplete
+and its denominator is 31,800. No marginal coverage gain or full coverage
+result is claimed. The local reports are
+`target/release-evidence/selected/bmp-top-down-odd-width-merged-main-20261021.json` and
+`target/release-evidence/selected/bmp-top-down-odd-width-with-bottom-up-control-merged-main-20261021.json`.
+
+The saved full BMP report still lists a missing false arm at
+`decode.rs:801` in palette attachment. Existing no-palette BMP input is
+rejected by Pillow as truncated, so the branch remains a reachability question
+rather than a justified new parity case.
+
+The current fixture matrix contains 2,489 total rows: 1,974 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,974 decode rows and 483 encode
 rows are active; 32 encode rows remain planned. The separate target-only fault
 lane contains 78 rows.
 
@@ -7953,7 +7979,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a7e9416c8611b77888c17d7f74f5b6b080f5092484c04e49fd13d32ea3cb1cbf`; matrix `8b2d191f54525f54313098d51dd406c9641839469eb996e696a87e87dafce095`.
+- Current fixture integrity only: manifest `b8676e601637a5b7aca6f47212dfd14c6a66bc8788c2cab9cb3c4c70a39f2134`; matrix `8e3b80e09a3ccc12507031b608411f9de614197be0f2f2960545bc3b2af07ba5`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -4197,6 +4197,10 @@ formats:
       test_assets:
       - bottom_up.bmp
       - bottom_up_1_palette.bmp
+    - id: top_down_24_odd_width
+      description: Top-down 24-bit RGB with odd-width rows and one padding byte per scanline
+      test_assets:
+      - top_down_24_odd_width.bmp
     - id: os2_v1
       description: OS/2 BMP v1 header
       test_assets:
