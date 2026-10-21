@@ -138,6 +138,8 @@ pub enum CoverageFaultPoint {
     Av1RetainedTemporalSampleReservation,
     /// Force AVIF color-grid cell retention to fail.
     Av1GridCellReservation,
+    /// Force AVIF monochrome-grid cell retention to fail.
+    Av1MonochromeGridCellReservation,
     /// Force assembled AV1 monochrome loop-filter metadata reservation to fail.
     Av1AssembledMonochromeLoopFilterMetadataReservation,
     /// Force assembled AV1 monochrome CDEF region-map reservation to fail.
