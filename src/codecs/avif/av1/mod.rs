@@ -632,8 +632,18 @@ fn validate_monochrome_grid_with_token(
     let first_geometry = first_color.display_geometry;
     let mut first_color = Some(first_color);
 
+    #[cfg(coverage)]
+    let cell_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1MonochromeGridCellReservation,
+    ) {
+        usize::MAX
+    } else {
+        cell_count
+    };
+    #[cfg(not(coverage))]
+    let cell_reservation_count = cell_count;
     let mut cells = Vec::new();
-    cells.try_reserve(cell_count).map_err(|_| {
+    cells.try_reserve(cell_reservation_count).map_err(|_| {
         CodecError::Dimensions("unable to reserve AVIF monochrome grid cells".to_owned())
     })?;
     for index in 0..cell_count {

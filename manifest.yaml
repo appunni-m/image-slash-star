@@ -544,6 +544,20 @@ fault_contracts:
       point: av1.grid.cell_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_monochrome_grid_cell_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_grid_73x64
+    fault:
+      point: av1.grid.monochrome_cell_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_loop_filter_metadata_reservation_failure
     type: fault-contract
     operation: decode
@@ -7874,6 +7888,24 @@ formats:
       description: 17x17 8-bit lossless monochrome key frame with an auxiliary alpha plane
       test_assets:
       - portable_lossless_monochrome_alpha_17x17.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_grid_73x64
+      description: 73x64 8-bit lossless monochrome 2x1 AVIF grid with auxiliary alpha and a clipped right cell
+      test_assets:
+      - portable_lossless_monochrome_grid_73x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_grid_no_alpha_73x64
+      description: 73x64 lossless monochrome 2x1 AVIF grid without auxiliary alpha and with a clipped right cell
+      test_assets:
+      - portable_lossless_monochrome_grid_no_alpha_73x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_grid_bottom_clip_64x73
+      description: 64x73 lossless monochrome 1x2 AVIF grid with auxiliary alpha and a bottom cell clipped to nine rows
+      test_assets:
+      - portable_lossless_monochrome_grid_bottom_clip_64x73.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: portable_i444_quality100_64x64
