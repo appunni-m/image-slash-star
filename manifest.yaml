@@ -3605,6 +3605,10 @@ formats:
       test_assets:
       - animated.gif
       - animated_3frame.gif
+    - id: finite_loop_u16_max
+      description: Maximum finite repeat count in the NETSCAPE2.0 application extension
+      test_assets:
+      - finite_loop_u16_max.gif
     - id: transparent
       description: GIF with transparency index
       test_assets:

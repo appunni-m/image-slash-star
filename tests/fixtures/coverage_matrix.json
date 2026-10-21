@@ -69174,6 +69174,149 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "finite_loop_u16_max",
+          "type": "decode",
+          "format": "gif",
+          "category": "finite",
+          "description": "Maximum finite repeat count in the NETSCAPE2.0 application extension",
+          "asset": "finite_loop_u16_max.gif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "fe32a8a09ef03cb17ee55e231435cfb7cef35705dc91331c08828a5a57120a9b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "GIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_finite_loop_u16_max_gif.bin",
+          "ref_sha256": "5c14fc6f08efde212c935cb3f9e414e282357d8ceca54b8cb932023c15e4f5f9",
+          "ref_bytes": 16384,
+          "ref_mode": "P",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.gif_finite_loop_u16_max_gif.inspect-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "b0e6042306acff158aac89a67e7f52844eeaeec58e280dfa5bbde0dab41f519a"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.gif_finite_loop_u16_max_gif.decoded-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "b0e6042306acff158aac89a67e7f52844eeaeec58e280dfa5bbde0dab41f519a"
+          },
+          "sequence": {
+            "canvas_size": [
+              128,
+              128
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 65535,
+            "loop_origin": "pillow_fixture",
+            "background": {
+              "palette_index": 0,
+              "origin": "pillow_fixture"
+            },
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 10,
+                "duration_den": 100,
+                "duration_origin": "pillow_fixture",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "source_rectangle",
+                "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "pixel_assertion": "not_asserted_source_layout"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 10,
+                "duration_den": 100,
+                "duration_origin": "pillow_fixture",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "source_rectangle",
+                "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "pixel_assertion": "not_asserted_source_layout"
+              }
+            ]
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "transparent.gif",
           "asset_path": "tests/fixtures/input/images/gif/transparent.gif",
           "category": "transparent",
@@ -209809,12 +209952,12 @@
     }
   },
   "summary": {
-    "total_rows": 2490,
-    "decode_rows": 1975,
+    "total_rows": 2491,
+    "decode_rows": 1976,
     "encode_rows": 515,
     "formats": 8,
-    "assets_available": 1971,
-    "decode_active": 1975,
+    "assets_available": 1972,
+    "decode_active": 1976,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
