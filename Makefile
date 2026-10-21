@@ -78,6 +78,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_1bit_odd_width_fixture.py --check
 	$(PYTHON) scripts/generate_png_adam7_rgb16_fixture.py --check
 	$(PYTHON) scripts/generate_png_signature_nearmiss_fixture.py --check
+	$(PYTHON) scripts/generate_png_chunk_type_parity_fixtures.py --check
 	$(PYTHON) scripts/generate_png_itxt_missing_keyword_separator.py --check
 	$(PYTHON) scripts/generate_png_idat_split_zlib_header_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dri_fixture.py --check

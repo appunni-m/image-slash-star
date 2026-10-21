@@ -118,8 +118,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,504 total rows: 1,988 decode / inspect /
-verify rows and 516 encode rows. Of those, 1,988 decode rows and 485 encode
+The current fixture matrix contains 2,506 total rows: 1,990 decode / inspect /
+verify rows and 516 encode rows. Of those, 1,990 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 81 rows.
 
@@ -144,6 +144,28 @@ coverage gain. Reports:
 `.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor-2-controls/coverage.json`
 and
 `.coverage-mcp/local-evidence/selected/20261022/tiff-ycbcr-odd-predictor2-controls-only/coverage.json`.
+
+## PNG chunk-type byte parity — 2026-10-22
+
+Added malformed input `decode:png:error_malformed_structure_invalid_chunk_type_non_letter`
+with a complete, CRC-correct `a@Cd` chunk before IDAT. Pinned Pillow 12.2.0
+rejects the file during `Image.open` with `UnidentifiedImageError`. Its chunk
+name check also accepts ASCII digits and underscores, so the positive control
+`decode:png:pillow_tolerated_chunk_type_digit_underscore` covers `a1cd` and
+`a_cd`; the Rust parser preserves those Pillow-observed outcomes. The malformed
+and accepted fixture SHA-256 values are
+`edac414911843c23dac2cba7f194ed34fc43addfd40877440e29b676dce55ae8` and
+`92f4b333a2dc484ceae684e89dac4cac8d3c11c96c03e287b0e2a0e4a71785de`.
+
+The shared chunk-type validator now runs in both decode iteration and PNG
+inspection. The focused selected run passed 4/4 rows: the malformed case, the
+digit/underscore control, and the existing lowercase-reserved-bit and
+post-IDAT ancillary controls. Coverage MCP found no missing branch groups in
+`validate_chunk_type`. Its report marks source identity unverified and test
+attribution unknown; the local receipt records the four selected cases and no
+source changes during the run, so this remains selected-scope evidence rather
+than an aggregate coverage claim. Report:
+`.coverage-mcp/local-evidence/20261022/png-chunk-type-parity-final/coverage.json`.
 
 ## AVIF full-width multi-tile monochrome super-resolution — 2026-10-21
 
@@ -8159,7 +8181,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4911330d2ce69ba69bef738786e4f25a6840f9c604b3aa6b68a8149b68a39ebe`; matrix `7eaf31e34c73747fa12049a0d06c8123cc9ec1421411c2890c8e43c58e3b578d`.
+- Current fixture integrity only: manifest `2e7f65f349e431e8285d03a202bd5c96aaac5b26da7b2269d85f5290a367b5f6`; matrix `e793c0836188edc937445fd2ac3a6aeaad483ad457b31bf47c79a0d73d96c362`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
