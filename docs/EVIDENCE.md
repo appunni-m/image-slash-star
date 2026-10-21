@@ -1,5 +1,33 @@
 # Versioned compatibility evidence
 
+## TIFF signed Gray32 tiled Predictor 2 parity — 2026-10-21
+
+Added active public case `decode:tiff:tiled_gray32_signed_be_deflate_predictor_clipped_edges`.
+Its 17x17 big-endian signed Gray32 TIFF uses Adobe Deflate, horizontal Predictor=2,
+contiguous 16x16 tiles, varied values across both tile boundaries, and clipped
+right and bottom edges. The 605-byte input SHA-256 is
+`76c3020ca1ee787d4c0b077499039c29d111637d75c2e66f419b0e64a77784cb`. Pinned
+Pillow 12.2.0 returns mode `I` with 1,156 exact source-order bytes and SHA-256
+`1ee37ae67023d9e46d8ba1b66f304436e4b161e68e5f5bd94d90c0db56ca9ba3`.
+
+The deterministic fixture generator verifies Pillow metadata, signed samples,
+source-order pixels, and TIFF tags; its `--check` path passed. The exact selected
+parity run passed 1/1; a same-checkout Gray16 Predictor 2 control also passed
+1/1. Coverage MCP compared their regions and reported 125
+newly observed regions, with an estimated 0.058 percentage-point gain on the
+shared 215,491-region denominator (2,916/215,491 combined). This estimate is
+limited: MCP marks source/build identity unverified and test status unknown,
+although both local execution receipts record passing selected runs. The branch
+comparison was incomparable because exact detail did not reconcile with totals;
+a focused Gray32 query listed five remaining observations in
+`reverse_horizontal_predictor_with_token`. No verified marginal gain or
+regression claim is made. The local reports are
+`.coverage-mcp/local-evidence/20261021/tiff-gray32-tiled-predictor-final/coverage.json`
+and
+`.coverage-mcp/local-evidence/20261021/tiff-gray16-predictor-control-final/coverage.json`.
+No full coverage campaign, production decoder change, or new fault-contract row
+was needed for this successful Pillow parity case.
+
 ## Adam7 RGB16 PNG parity — 2026-10-21
 
 Added active public parity case `decode:png:interlace_adam7_rgb_16bit`. Its
@@ -43,8 +71,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,492 total rows: 1,977 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,977 decode rows and 483 encode
+The current fixture matrix contains 2,493 total rows: 1,978 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,978 decode rows and 483 encode
 rows are active; 32 encode rows remain planned. The separate target-only fault
 lane contains 78 rows.
 
@@ -7979,7 +8007,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4febe136b67498a1e110b7ddfb55dc225b01e0e5df4eaa5bd96ca09726877584`; matrix `1e8cfa200469f367d4104fcf873d68e16aa871db78d7b70204b728f0532c71b9`.
+- Current fixture integrity only: manifest `ae089d92a433230c6ca956baa3145427a9ac9a024658e007d11a189c42e18b85`; matrix `ca64bb147eda858f186f7409fbb5b1287801685ed3c4909209bd038ab416d408`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
