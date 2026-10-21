@@ -5964,6 +5964,14 @@ formats:
       description: Horizontal Predictor=2 on aligned 2-by-2 YCbCr clumps in one LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_odd_width_predictor_2
+      description: Horizontal Predictor=2 decodes a padded right-edge clump in a 5-by-4 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_odd_width_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_odd_height_predictor_2
+      description: Horizontal Predictor=2 decodes the padded final clump row of a 4-by-5 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff
     - id: ycbcr_subsampled_deflate_tiled_2x2
       description: Patterned contiguous 2-by-2 YCbCr clumps assemble four 16-by-16 Deflate tiles across both axes and clipped edges
       test_assets:
