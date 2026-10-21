@@ -3279,6 +3279,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.upsample.row_short_stride": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.upsample.row_source_length_mismatch": {
+            "decode_error_then_retry_succeeds"
+        },
         "jpeg.ycck.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

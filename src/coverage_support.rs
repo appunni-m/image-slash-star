@@ -104,6 +104,8 @@ pub enum CoverageFaultPoint {
     JpegFancyUpsampleRowInvalidGeometry,
     /// Force the row-wise JPEG upsampler to reject a component stride shorter than its width.
     JpegFancyUpsampleRowShortStride,
+    /// Force the row-wise JPEG upsampler to reject a component sample buffer that is too short.
+    JpegFancyUpsampleRowSourceLengthMismatch,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
     /// Force reservation of a BMP palette to fail before reading its entries.
