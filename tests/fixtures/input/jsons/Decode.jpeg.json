@@ -2932,6 +2932,38 @@
       ]
     },
     {
+      "id": "ycck_h2v1_single_sample_1x1",
+      "asset": "baseline_ycck_h2v1_single_sample_1x1.jpg",
+      "asset_sha256": "6ef8f392eb8f93b3afccc85b36981cbad1c080d92c81ce99a9bce32c80f5ca40",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_1x1.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "progressive_ycck_subsampled_17x9",
       "asset": "progressive_ycck_subsampled_17x9.jpg",
       "asset_sha256": "fdcb83551e242178ccef25f4e47943c555a362d37530a7118cb54f939830f014",

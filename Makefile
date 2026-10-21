@@ -110,10 +110,12 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_progressive_correction_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_ycck_subsampled_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_ycck_h2v2_singleton_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_ycck_h2v1_singleton_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_rgb16_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_palette4_fillorder2_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_ycbcr_subsampled_fixtures.py --check
+	$(PYTHON) scripts/generate_tiff_signed_private_tags_fixture.py --check
 	$(PYTHON) scripts/generate_webp_animated_top_level_image_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_animated_origin_partial_fixture.py --check
 	$(PYTHON) scripts/generate_webp_lossless_run_cap_fixture.py --check
