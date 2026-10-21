@@ -15970,6 +15970,62 @@
         "verify_status": "error"
       },
       {
+        "asset": "near_miss_signature.png",
+        "class": "error_near_miss_signature",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "detect": {
+            "origin": "pillow_fixture",
+            "pillow_message": null,
+            "pillow_type": null,
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          }
+        },
+        "description": "Complete PNG file with one signature byte changed",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "not_the_format",
+        "verify_status": "error"
+      },
+      {
         "asset": "zlib_reserved_distance_symbol.png",
         "class": "error_token_aware_reserved_deflate_distance",
         "contracts": {
@@ -27304,22 +27360,22 @@
       "gif": 49,
       "ico": 30,
       "jpeg": 103,
-      "png": 63,
+      "png": 64,
       "tiff": 135,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 650,
+      "pillow_fixture": 651,
       "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
-      "not_the_format": 39,
+      "not_the_format": 40,
       "spec_violation": 379,
       "tolerated": 0,
       "truncated": 197
     },
-    "classes": 650,
+    "classes": 651,
     "formats": 8
   }
 }
