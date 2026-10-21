@@ -1239,26 +1239,21 @@ jobs:
         self.assertIsNotNone(match, "benchmark must retain the x86 SIMD job")
         job = match.group("body")
         self.assertIn("UBUNTU_APT_SNAPSHOT: '20261017T000000Z'", job)
-        self.assertIn("-o Acquire::Retries=3", job)
-        self.assertIn("-o APT::Update::Error-Mode=any", job)
-        self.assertIn('update --snapshot "$UBUNTU_APT_SNAPSHOT"', job)
-        self.assertIn("for attempt in 1 2 3; do", job)
-        self.assertIn("Keep Release metadata between attempts", job)
-        self.assertNotIn("find /var/lib/apt/lists", job)
-        self.assertIn(
-            "sudo apt-get --simulate --yes --snapshot \"$UBUNTU_APT_SNAPSHOT\" install",
-            job,
-        )
-        self.assertIn("cmake=3.28.3-1build7 nasm=2.16.01-1build1", job)
-        self.assertIn('sleep "$((attempt * 10))"', job)
-        self.assertIn(
-            'sudo apt-get -o Acquire::Retries=3 install --yes --snapshot '
-            '"$UBUNTU_APT_SNAPSHOT"',
-            job,
-        )
+        self.assertIn("run: bash scripts/install_x86_benchmark_packages.sh", job)
         self.assertIn(
             "printf 'ubuntu_apt_snapshot=%s\\n' \"$UBUNTU_APT_SNAPSHOT\"",
             job,
+        )
+        self.assertIn(
+            "printf 'ubuntu_apt_source=%s\\n' \"$BENCHMARK_APT_SOURCE\"",
+            job,
+        )
+        self.assertIn("apt-cache policy cmake nasm", job)
+        self.assertIn("cat /etc/apt/apt-mirrors.txt", job)
+        self.assertEqual(
+            contents.count("      - 'scripts/install_x86_benchmark_packages.sh'"),
+            2,
+            "push and pull-request path filters must include the package installer",
         )
 
     def test_x86_simd_benchmark_runs_on_relevant_pull_requests_only(self) -> None:
@@ -1734,6 +1729,219 @@ jobs:
             "candidate checksum must run after the download/rebuild paths",
             check_workflows.release_candidate_fallback_violations(reordered),
         )
+
+
+class BenchmarkAptInstallTests(unittest.TestCase):
+    SNAPSHOT = "20261017T000000Z"
+    PACKAGES = ["cmake=3.28.3-1build7", "nasm=2.16.01-1build1"]
+    SNAPSHOT_503 = (
+        "Err:1 https://snapshot.ubuntu.com/ubuntu/20261017T000000Z noble InRelease\n"
+        "  503 Service Unavailable [IP: 192.0.2.1 443]\n"
+        "E: Failed to fetch https://snapshot.ubuntu.com/ubuntu/20261017T000000Z/dists/noble/InRelease 503 Service Unavailable\n"
+    )
+
+    APT_GET_STUB = r'''#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+import sys
+
+state_path = Path(os.environ["APT_STUB_STATE"])
+state = json.loads(state_path.read_text(encoding="utf-8"))
+args = sys.argv[1:]
+state.setdefault("apt_get_calls", []).append(args)
+
+if "update" in args:
+    key = "snapshot_update" if "--snapshot" in args else "live_update"
+elif "--simulate" in args:
+    key = "snapshot_simulate" if "--snapshot" in args else "live_simulate"
+else:
+    key = "snapshot_install" if "--snapshot" in args else "live_install"
+
+responses = state.setdefault("responses", {}).setdefault(key, [])
+response = responses.pop(0) if responses else {}
+state_path.write_text(json.dumps(state), encoding="utf-8")
+print(response.get("output", ""))
+raise SystemExit(int(response.get("status", 0)))
+'''
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.bin_dir = self.root / "bin"
+        self.bin_dir.mkdir()
+        self.state_path = self.root / "apt-state.json"
+        self.github_env = self.root / "github-env"
+        self.sleep_log = self.root / "sleep.log"
+        (self.bin_dir / "sudo").write_text(
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "case \"${1:-}\" in\n"
+            "  apt-get|apt-cache) exec \"$@\" ;;\n"
+            "  *) echo \"unexpected sudo command: ${1:-}\" >&2; exit 99 ;;\n"
+            "esac\n",
+            encoding="utf-8",
+        )
+        (self.bin_dir / "apt-get").write_text(
+            self.APT_GET_STUB,
+            encoding="utf-8",
+        )
+        (self.bin_dir / "apt-cache").write_text(
+            "#!/usr/bin/env python3\n"
+            "import json, os, sys\n"
+            "from pathlib import Path\n"
+            "path = Path(os.environ['APT_STUB_STATE'])\n"
+            "state = json.loads(path.read_text(encoding='utf-8'))\n"
+            "state.setdefault('apt_cache_calls', []).append(sys.argv[1:])\n"
+            "path.write_text(json.dumps(state), encoding='utf-8')\n"
+            "print('cmake: Candidate: 3.28.3-1build7')\n"
+            "print('nasm: Candidate: 2.16.01-1build1')\n",
+            encoding="utf-8",
+        )
+        (self.bin_dir / "sleep").write_text(
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "printf '%s\\n' \"$*\" >> \"$APT_SLEEP_LOG\"\n",
+            encoding="utf-8",
+        )
+        for stub in self.bin_dir.iterdir():
+            stub.chmod(0o755)
+        self.script = (
+            Path(__file__).resolve().parent
+            / "install_x86_benchmark_packages.sh"
+        )
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def run_installer(
+        self,
+        responses: dict[str, list[dict[str, object]]] | None = None,
+    ) -> tuple[subprocess.CompletedProcess[str], dict[str, object]]:
+        state: dict[str, object] = {"responses": responses or {}}
+        self.state_path.write_text(json.dumps(state), encoding="utf-8")
+        self.github_env.write_text("", encoding="utf-8")
+        self.sleep_log.write_text("", encoding="utf-8")
+        env = os.environ.copy()
+        env.update({
+            "APT_STUB_STATE": str(self.state_path),
+            "APT_SLEEP_LOG": str(self.sleep_log),
+            "GITHUB_ENV": str(self.github_env),
+            "UBUNTU_APT_SNAPSHOT": self.SNAPSHOT,
+            "PATH": str(self.bin_dir) + os.pathsep + env["PATH"],
+        })
+        result = subprocess.run(
+            ["bash", str(self.script)],
+            cwd=self.root,
+            env=env,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        final_state = json.loads(self.state_path.read_text(encoding="utf-8"))
+        return result, final_state
+
+    def assert_pinned_install_commands(
+        self,
+        calls: list[list[str]],
+        *,
+        snapshot: bool,
+    ) -> None:
+        commands = [
+            call for call in calls
+            if "--simulate" in call or ("install" in call and "--simulate" not in call)
+        ]
+        self.assertEqual(len(commands), 2, commands)
+        for command in commands:
+            self.assertEqual(command[-2:], self.PACKAGES)
+            self.assertIn("install", command)
+            if snapshot:
+                snapshot_index = command.index("--snapshot")
+                self.assertEqual(command[snapshot_index + 1], self.SNAPSHOT)
+            else:
+                self.assertNotIn("--snapshot", command)
+        self.assertTrue(all(
+            package in command
+            for command in commands
+            for package in self.PACKAGES
+        ))
+
+    def test_snapshot_path_installs_exact_pinned_versions_and_records_source(self) -> None:
+        result, state = self.run_installer()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_pinned_install_commands(state["apt_get_calls"], snapshot=True)
+        self.assertEqual(
+            self.github_env.read_text(encoding="utf-8"),
+            f"BENCHMARK_APT_SOURCE=ubuntu-apt-snapshot:{self.SNAPSHOT}\n",
+        )
+        self.assertFalse(self.sleep_log.read_text(encoding="utf-8"))
+
+    def test_snapshot_5xx_uses_signed_live_sources_with_exact_pins(self) -> None:
+        failed_snapshot_updates = [
+            {"status": 100, "output": self.SNAPSHOT_503}
+            for _ in range(3)
+        ]
+        result, state = self.run_installer({"snapshot_update": failed_snapshot_updates})
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = state["apt_get_calls"]
+        update_calls = [call for call in calls if "update" in call]
+        self.assertEqual(len(update_calls), 4, update_calls)
+        self.assertTrue(all("--snapshot" in call for call in update_calls[:3]))
+        self.assertNotIn("--snapshot", update_calls[3])
+        self.assert_pinned_install_commands(calls, snapshot=False)
+        self.assertEqual(
+            self.github_env.read_text(encoding="utf-8"),
+            "BENCHMARK_APT_SOURCE=ubuntu-noble-live-fallback\n",
+        )
+        self.assertEqual(self.sleep_log.read_text(encoding="utf-8").splitlines(), ["10", "20"])
+
+    def test_unclassified_snapshot_error_fails_closed_without_live_fallback(self) -> None:
+        missing_snapshot = {
+            "status": 100,
+            "output": "E: snapshot endpoint returned 404 Not Found\n",
+        }
+        result, state = self.run_installer({
+            "snapshot_update": [missing_snapshot for _ in range(3)],
+        })
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing fallback", result.stderr)
+        self.assertEqual(len(state["apt_get_calls"]), 3)
+        self.assertFalse(self.github_env.read_text(encoding="utf-8"))
+
+    def test_missing_snapshot_package_version_does_not_use_live_fallback(self) -> None:
+        result, state = self.run_installer({
+            "snapshot_simulate": [{
+                "status": 100,
+                "output": "E: Version '2.16.01-1build1' for 'nasm' was not found\n",
+            }],
+        })
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("could not be resolved from the Ubuntu snapshot", result.stderr)
+        self.assertTrue(all("--snapshot" in call for call in state["apt_get_calls"]))
+        self.assertEqual(len(state["apt_get_calls"]), 2)
+        self.assertFalse(self.github_env.read_text(encoding="utf-8"))
+
+    def test_live_fallback_fails_when_pinned_versions_are_unavailable(self) -> None:
+        failed_snapshot_updates = [
+            {"status": 100, "output": self.SNAPSHOT_503}
+            for _ in range(3)
+        ]
+        result, state = self.run_installer({
+            "snapshot_update": failed_snapshot_updates,
+            "live_simulate": [{
+                "status": 100,
+                "output": "E: Version '2.16.01-1build1' for 'nasm' was not found\n",
+            }],
+        })
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unavailable from the runner's signed Ubuntu sources", result.stderr)
+        self.assertEqual(len(state["apt_get_calls"]), 5)
+        self.assertFalse(self.github_env.read_text(encoding="utf-8"))
 
 
 class GitHubReleaseRecoveryTests(unittest.TestCase):

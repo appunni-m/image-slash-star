@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/benchmark-x86.yml'
       - 'benchmarks/jpeg-production/**'
+      - 'scripts/install_x86_benchmark_packages.sh'
       - 'scripts/setup_benchmark_oracle.py'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -15,6 +16,7 @@ on:
     paths:
       - '.github/workflows/benchmark-x86.yml'
       - 'benchmarks/jpeg-production/**'
+      - 'scripts/install_x86_benchmark_packages.sh'
       - 'scripts/setup_benchmark_oracle.py'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -59,34 +61,8 @@ jobs:
           python-version: '3.12.10'
       - name: Install the pinned Rust toolchain
         run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
-      - name: Refresh and verify the pinned Ubuntu package snapshot
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3; do
-            echo "Refreshing Ubuntu package snapshot (attempt ${attempt}/3)"
-            # Keep Release metadata between attempts so Noble can detect
-            # snapshot-capable sources before fetching the pinned snapshot.
-            if sudo apt-get \
-              -o Acquire::Retries=3 \
-              -o APT::Update::Error-Mode=any \
-              update --snapshot "$UBUNTU_APT_SNAPSHOT" && \
-              sudo apt-get --simulate --yes --snapshot "$UBUNTU_APT_SNAPSHOT" install \
-                cmake=3.28.3-1build7 nasm=2.16.01-1build1; then
-              exit 0
-            fi
-
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "Pinned CMake and NASM are unavailable from Ubuntu snapshot $UBUNTU_APT_SNAPSHOT" >&2
-              sudo apt-cache policy cmake nasm || true
-              exit 1
-            fi
-
-            sleep "$((attempt * 10))"
-          done
       - name: Install pinned CMake and NASM
-        run: |
-          sudo apt-get -o Acquire::Retries=3 install --yes --snapshot "$UBUNTU_APT_SNAPSHOT" \
-            cmake=3.28.3-1build7 nasm=2.16.01-1build1
+        run: bash scripts/install_x86_benchmark_packages.sh
       - name: Build the pinned SIMD benchmark oracle
         run: make bench-setup PYTHON=python3
       - name: Verify and record native benchmark tool versions
@@ -101,8 +77,14 @@ jobs:
           {
             printf 'runner_image=ubuntu-24.04\n'
             printf 'ubuntu_apt_snapshot=%s\n' "$UBUNTU_APT_SNAPSHOT"
+            printf 'ubuntu_apt_source=%s\n' "$BENCHMARK_APT_SOURCE"
             dpkg-query -W -f='cmake_package=${Version}\n' cmake
             dpkg-query -W -f='nasm_package=${Version}\n' nasm
+            apt-cache policy cmake nasm
+            if [[ -r /etc/apt/apt-mirrors.txt ]]; then
+              printf 'apt_mirror_list:\n'
+              cat /etc/apt/apt-mirrors.txt
+            fi
             printf 'cmake_executable=%s\n' "$BENCHMARK_CMAKE"
             "$BENCHMARK_CMAKE" --version
             nasm -v
