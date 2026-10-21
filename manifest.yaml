@@ -5676,6 +5676,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - gray16_be_deflate_contiguous_tiled.tiff
+    - id: tiled_gray16_be_deflate_predictor_clipped_edges
+      description: Big-endian unsigned Gray16 in contiguous Deflate-compressed 16x16 tiles with horizontal Predictor=2 and clipped right and bottom edges
+      rust_decode_with_token: true
+      test_assets:
+      - gray16_be_deflate_predictor_contiguous_tiled.tiff
     - id: registered_header_variants_over_classic_ifd
       description: Pillow accepts legacy swapped-magic and BigTIFF signatures over these classic IFD payloads
       test_assets:
