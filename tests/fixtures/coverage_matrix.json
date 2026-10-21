@@ -147256,6 +147256,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "rgb_unknown_signed_extension_types",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb",
+          "description": "Unknown TIFF extension tags preserve RGB output with signed BYTE, SHORT, and LONG values",
+          "asset": "rgb_unknown_signed_extension_types.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d24739cc3d03006d0b73940326b4dd0794c0bfdc10e69cab07866b858fce558e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_unknown_signed_extension_types_tiff.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "rgba.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/rgba.tiff",
           "category": "rgba",
@@ -210806,12 +210884,12 @@
     }
   },
   "summary": {
-    "total_rows": 2498,
-    "decode_rows": 1982,
+    "total_rows": 2499,
+    "decode_rows": 1983,
     "encode_rows": 516,
     "formats": 8,
-    "assets_available": 1978,
-    "decode_active": 1982,
+    "assets_available": 1979,
+    "decode_active": 1983,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
@@ -211208,6 +211286,44 @@
       "verification": "fault-contract",
       "input": {
         "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_table_clump_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_table_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2"
       },
       "fault": {
         "point": "tiff.ycbcr.rgb_output_reservation",

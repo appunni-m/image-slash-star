@@ -348,6 +348,34 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_table_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_table_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_tile_assembly_reservation_failure
     type: fault-contract
     operation: decode
@@ -5892,6 +5920,10 @@ formats:
       - rgb_dpi.tiff
       - byte_strip_offset.tiff
       - unknown_field_type.tiff
+    - id: rgb_unknown_signed_extension_types
+      description: Unknown TIFF extension tags preserve RGB output with signed BYTE, SHORT, and LONG values
+      test_assets:
+      - rgb_unknown_signed_extension_types.tiff
     - id: rgba
       description: RGBA with extrasamples
       test_assets:

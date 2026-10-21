@@ -465,6 +465,22 @@ FAULT_CONTRACTS = {
         "point": "tiff.ycbcr.rgb_output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_ycbcr_custom_table_clump_length_mismatch": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch",
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2",
+        "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "tiff_ycbcr_custom_table_rgb_output_reservation_failure": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure",
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2",
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_ycbcr_tile_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",
