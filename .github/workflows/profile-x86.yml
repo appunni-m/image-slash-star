@@ -1,0 +1,247 @@
+name: Profile x86 JPEG
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: profile-x86-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  RUSTC_WRAPPER: ''
+  RUST_TOOLCHAIN: '1.96.1'
+jobs:
+  x86-profile:
+    name: Diagnostic RGB 4:2:0 x86 profiles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.10'
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+      - name: Record the x86 profiling host
+        run: |
+          set -euo pipefail
+          output=target/benchmarks/jpeg/simd-x86_64/profile
+          mkdir -p "$output"
+          {
+            printf 'source_revision=%s\n' "$GITHUB_SHA"
+            printf 'runner_image=ubuntu-24.04\n'
+            printf 'rust_toolchain=%s\n' "$RUST_TOOLCHAIN"
+            rustc +"$RUST_TOOLCHAIN" -Vv
+            cargo +"$RUST_TOOLCHAIN" -V
+            uname -a
+            lscpu
+            printf 'kernel.perf_event_paranoid='
+            sysctl -n kernel.perf_event_paranoid || true
+          } > "$output/host.txt"
+          if ! grep -qw avx2 /proc/cpuinfo; then
+            echo "The x86 profile lane requires an AVX2-capable host" >&2
+            exit 1
+          fi
+      - name: Install perf for the hosted runner kernel
+        run: |
+          set -euo pipefail
+          output=target/benchmarks/jpeg/simd-x86_64/profile
+          kernel_version=$(uname -r)
+          perf_package="linux-tools-${kernel_version}"
+          {
+            printf 'kernel_version=%s\n' "$kernel_version"
+            printf 'perf_package=%s\n' "$perf_package"
+          } | tee "$output/perf-package.txt"
+          sudo apt-get update 2>&1 | tee "$output/perf-package-install.txt"
+          apt-cache policy "$perf_package" | tee -a "$output/perf-package.txt"
+          candidate=$(apt-cache policy "$perf_package" | awk '/Candidate:/ { print $2; exit }')
+          if [[ -z "$candidate" || "$candidate" == '(none)' ]]; then
+            echo "No perf tools package matches the hosted kernel $kernel_version" | tee -a "$output/perf-package-install.txt" >&2
+            exit 1
+          fi
+          printf 'perf_package_candidate=%s\n' "$candidate" | tee -a "$output/perf-package.txt"
+          sudo apt-get install --yes linux-tools-common "$perf_package=$candidate" binutils \
+            2>&1 | tee -a "$output/perf-package-install.txt"
+          dpkg-query -W -f='${Package}=${Version}\n' linux-tools-common "$perf_package" binutils \
+            | tee -a "$output/perf-package.txt"
+          command -v perf | tee -a "$output/perf-package.txt"
+          command -v objdump | tee -a "$output/perf-package.txt"
+          perf --version | tee "$output/perf-version.txt"
+          perf -vv > "$output/perf-capabilities.txt" 2>&1
+      - name: Check user perf events and DWARF call graphs
+        run: |
+          set -euo pipefail
+          output=target/benchmarks/jpeg/simd-x86_64/profile
+          if ! perf stat -e cycles:u -- sleep 1 > "$output/perf-stat-preflight.txt" 2>&1; then
+            cat "$output/perf-stat-preflight.txt" >&2
+            echo "The hosted runner does not permit user-space performance events" >&2
+            exit 1
+          fi
+          perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+            -o "$output/perf-preflight.data" -- \
+            python3 -c 'from timeit import timeit; timeit("sum(range(1000))", number=200_000)' \
+            > "$output/perf-record-preflight.stdout.txt" \
+            2> "$output/perf-record-preflight.stderr.txt"
+          perf report --stdio --header -i "$output/perf-preflight.data" \
+            > "$output/perf-record-preflight.report.txt"
+          python3 - "$output/perf-record-preflight.report.txt" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          text = Path(sys.argv[1]).read_text(encoding="utf-8")
+          match = re.search(r"^# Samples:\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([KMG]?)(?:\s|$)", text, re.MULTILINE)
+          if match is None:
+              raise SystemExit("perf DWARF preflight produced no sample count")
+          multiplier = {"": 1, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[match.group(2)]
+          samples = int(float(match.group(1).replace(",", "")) * multiplier)
+          if samples < 250:
+              raise SystemExit(f"perf DWARF preflight collected only {samples} samples")
+          print(f"perf DWARF preflight collected {samples} samples")
+          PY
+      - name: Build and profile exact public RGB 4:2:0 encodes
+        run: |
+          set -euo pipefail
+          output=target/benchmarks/jpeg/simd-x86_64/profile
+          minimum_samples=1000
+
+          sample_count() {
+            python3 - "$1" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          text = Path(sys.argv[1]).read_text(encoding="utf-8")
+          match = re.search(r"^# Samples:\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([KMG]?)(?:\s|$)", text, re.MULTILINE)
+          if match is None:
+              raise SystemExit("perf report is missing its actual sample count")
+          multiplier = {"": 1, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[match.group(2)]
+          print(int(float(match.group(1).replace(",", "")) * multiplier))
+          PY
+          }
+
+          profile_variant() {
+            local variant=$1
+            local flags=$2
+            local target_dir="target/jpeg-profile-${variant}"
+            local binary="${target_dir}/release/jpeg-production-matrix-rust"
+
+            {
+              printf 'variant=%s\n' "$variant"
+              printf 'cargo_target_dir=%s\n' "$target_dir"
+              printf 'rustflags=%s\n' "$flags"
+              printf 'cargo_command=cargo +%s build --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked\n' "$RUST_TOOLCHAIN"
+              rustc +"$RUST_TOOLCHAIN" -Vv
+              cargo +"$RUST_TOOLCHAIN" -V
+            } >> "$output/build-metadata.txt"
+            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="$flags" \
+              cargo +"$RUST_TOOLCHAIN" build \
+                --manifest-path benchmarks/jpeg-production/rust/Cargo.toml \
+                --release --locked
+
+            objdump -d -S -l -C -M intel "$binary" > "$output/${variant}.disassembly.txt"
+            python3 - "$output/${variant}.disassembly.txt" \
+              "$output/${variant}-420-converter-disassembly.txt" \
+              "$output/${variant}.codegen-summary.txt" <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          disassembly = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace")
+          function_header = re.compile(r"^[0-9a-f]+ <[^>]*convert_rgb_420_mcu_row_aligned[^>]*>:$")
+          any_function_header = re.compile(r"^[0-9a-f]+ <[^>]+>:$")
+          converter_lines = []
+          collecting = False
+          for line in disassembly.splitlines():
+              if function_header.match(line):
+                  collecting = True
+              elif collecting and any_function_header.match(line):
+                  collecting = False
+              if collecting:
+                  converter_lines.append(line)
+          if not converter_lines:
+              raise SystemExit("linked binary is missing convert_rgb_420_mcu_row_aligned disassembly")
+          converter = "\n".join(converter_lines) + "\n"
+          Path(sys.argv[2]).write_text(converter, encoding="utf-8")
+          summary = {
+              "converter_symbol": "convert_rgb_420_mcu_row_aligned",
+              "assembly_instruction_count": len(re.findall(r"(?m)^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+[a-z][a-z0-9_.]*\s", converter)),
+              "kernel_source_line_mentions": len(re.findall(r"(?m)^.*src/codecs/jpeg/kernels\.rs:\d+.*$", converter)),
+              "xmm_register_mentions": len(re.findall(r"\bxmm[0-9]+\b", converter)),
+              "ymm_register_mentions": len(re.findall(r"\bymm[0-9]+\b", converter)),
+              "zmm_register_mentions": len(re.findall(r"\bzmm[0-9]+\b", converter)),
+              "vex_or_evex_mnemonic_mentions": len(re.findall(r"(?m)^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+v[a-z0-9]+\s", converter)),
+          }
+          Path(sys.argv[3]).write_text(
+              "".join(f"{name}={value}\n" for name, value in summary.items()),
+              encoding="utf-8",
+          )
+          PY
+
+            for size in 512 1024; do
+              local iterations
+              if [[ "$size" == 512 ]]; then
+                iterations=2000
+              else
+                iterations=512
+              fi
+
+              local profile="$output/${variant}-${size}.perf.data"
+              local report="$output/${variant}-${size}.report.txt"
+              printf 'profile=%s size=%s iterations=%s event=cycles:u frequency_hz=997 call_graph=dwarf,8192\n' \
+                "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
+              perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+                -o "$profile" -- "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
+                > "$output/${variant}-${size}.stdout.txt" \
+                2> "$output/${variant}-${size}.stderr.txt"
+              test -s "$profile"
+              perf report --stdio --header --inline -i "$profile" > "$report"
+              local samples
+              samples=$(sample_count "$report")
+              if (( samples < minimum_samples )); then
+                echo "${variant} ${size} profile collected only ${samples} samples; expected at least ${minimum_samples}" >&2
+                exit 1
+              fi
+              printf 'sample_count=%s\n' "$samples" >> "$output/run-metadata.txt"
+              perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
+                > "$output/${variant}-${size}.annotate.txt"
+            done
+          }
+
+          profile_variant sse2 '-C target-cpu=x86-64 -C debuginfo=2'
+          profile_variant avx2 '-C target-cpu=x86-64 -C target-feature=+avx2 -C debuginfo=2'
+      - name: Confirm profiled SSE2 and AVX2 outputs match
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("target/benchmarks/jpeg/simd-x86_64/profile")
+
+          def signature(variant: str, size: int) -> tuple[str, ...]:
+              text = (root / f"{variant}-{size}.stdout.txt").read_text(encoding="utf-8")
+              fields = ("input_fnv1a", "output_bytes", "output_fnv1a")
+              values = []
+              for field in fields:
+                  match = re.search(rf"^{field}=(.+)$", text, re.MULTILINE)
+                  if match is None:
+                      raise SystemExit(f"missing {field} for {variant} {size}")
+                  values.append(match.group(1))
+              return tuple(values)
+
+          for size in (512, 1024):
+              sse2 = signature("sse2", size)
+              avx2 = signature("avx2", size)
+              if sse2 != avx2:
+                  raise SystemExit(f"profiled SSE2/AVX2 output mismatch for {size}: {sse2} != {avx2}")
+              print(f"{size}x{size} RGB 4:2:0 profile outputs match: {sse2[2]}")
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: x86-jpeg-profiles-${{ github.run_id }}
+          overwrite: true
+          path: target/benchmarks/jpeg/simd-x86_64/profile/
+          if-no-files-found: warn
+          retention-days: 90
