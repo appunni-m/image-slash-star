@@ -18,6 +18,37 @@ is `target/release-evidence/selected/avif-monochrome-grid-mono-fault-final-20261
 The report is local-only and has no Coverage MCP source/build receipt; no full
 coverage claim is made.
 
+## AVIF monochrome grid edge parity — 2026-10-21
+
+Added active parity cases
+`decode:avif:portable_lossless_monochrome_grid_no_alpha_73x64` and
+`decode:avif:portable_lossless_monochrome_grid_bottom_clip_64x73`. The first
+fixture has no auxiliary-alpha items, references, or properties; its input
+SHA-256 is
+`a33a40230675d388722a13e45849205e24ff7f36486502907472c5f9ebd719d0`. Pinned
+Pillow 12.2.0 returns RGB 73x64 with 14,016 exact bytes and SHA-256
+`1b4a716a8f76555d37d08901f0582e195b2bdcedad46b00f781995d42e4cb1b6`. The
+second is a 1x2 monochrome grid clipped to 64x73; its input SHA-256 is
+`453945fc2524dabc77162d97896b21d8399a7171a909d19babb908603c0a4201`. Pillow
+returns RGBA with 18,688 exact bytes and SHA-256
+`20b867857750340cae5d682bb6f5a162508395c242dfe331321cbff0bae90bb4`.
+
+The deterministic generator checks the BMFF item graph and extents, encodes
+both cell variants twice, and verifies the complete decoded pixels through the
+pinned oracle. The selected run passed 2/2 new parity rows. Coverage MCP's
+focused branch query for `validate_monochrome_grid_with_token` returned 30
+remaining observations in the selected report: the no-alpha `still.alpha`
+branch at line 693 and visible-height calculation at line 807 had no missing
+locations; it still listed the first-leaf arm at line 625, the unsupported
+monochrome-dimension arm at line 628, the reservation-failpoint arm at line
+636, and both zero-visible-sample rejection arms at line 811. The report is
+`target/release-evidence/selected/avif-grid-edge-cases-20261021.json`; Coverage
+MCP marks its source/build identity unverified and test attribution unknown.
+The prior selected local report was unavailable after cleanup, and Coverage MCP
+could not resolve the recorded 2026-08 baseline snapshot (composite snapshot not
+found), so no marginal coverage gain is claimed. No full coverage campaign or production decoder
+change was made.
+
 Fixture declarations, executed comparisons, source coverage, and release
 publication have different identities and denominators. The latest local
 all-feature report and the historical managed coverage baseline are recorded
@@ -85,8 +116,8 @@ reported totals; no coverage gain is claimed. The selected report is
 `target/release-evidence/selected/20261020T213209Z/coverage.json`. No full
 coverage campaign was run.
 
-The fixture matrix now contains 2,483 total rows: 1,968 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,968 decode rows and 483 encode
+The fixture matrix now contains 2,485 total rows: 1,970 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,970 decode rows and 483 encode
 rows are active; 32 encode rows remain planned. The separate target-only fault
 lane contains 78 rows. The coverage-origin inventory records 195 exact
 `cfg(coverage)` guards across 28 Rust files.
@@ -7875,7 +7906,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `aede99ad489a8a4bce7fa6b13ecffc473ca7abcd13122cfff3ff2d0ac0e09837`; matrix `86d34183c6899ccd0a01dcbad317f3d4004bb8891e14623dc4e8ae0587eb483d`.
+- Current fixture integrity only: manifest `10968e0d49798977591ba5f30b5322586b344234dbde389fff20946f1cd9da38`; matrix `944cef4044f49024f5d680abf940216d6dca78f5c6a8a3f015f8aff77238b163`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

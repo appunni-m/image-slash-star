@@ -7888,6 +7888,18 @@ formats:
       - portable_lossless_monochrome_grid_73x64.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_grid_no_alpha_73x64
+      description: 73x64 lossless monochrome 2x1 AVIF grid without auxiliary alpha and with a clipped right cell
+      test_assets:
+      - portable_lossless_monochrome_grid_no_alpha_73x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_grid_bottom_clip_64x73
+      description: 64x73 lossless monochrome 1x2 AVIF grid with auxiliary alpha and a bottom cell clipped to nine rows
+      test_assets:
+      - portable_lossless_monochrome_grid_bottom_clip_64x73.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_i444_quality100_64x64
       description: 64x64 8-bit quality-100 RGB 4:4:4 key frame with fixed 64-pixel partitions
       test_assets:

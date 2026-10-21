@@ -118,6 +118,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_multi_entry_stsc_fixture.py --check
 	$(PYTHON) scripts/generate_avif_imir_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_iref_v1_alpha_fixture.py --check
+	$(PYTHON) scripts/generate_avif_monochrome_grid_edges.py --check
 	$(PYTHON) scripts/generate_avif_filmgrain_chroma_from_luma_odd.py --check
 	$(PYTHON) scripts/generate_avif_inter_i444_frame_header_b64.py --check
 	$(PYTHON) scripts/verify_diagnostic_provenance.py

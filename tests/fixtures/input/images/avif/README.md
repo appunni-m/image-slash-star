@@ -55,6 +55,8 @@ generation provenance follow.
 | `portable_lossless_monochrome_limited_alpha_10bit_16x16.avif` | Deterministic 16x16 10-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `2497017931a998c26e7328b0e940b736ccbaaab5f3dfc4d3e6637ebb7e7168f2` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_alpha_12bit_16x16.avif` | Deterministic 16x16 12-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `27aed8594e5d60179e6596dd950800fdf43f6809038ed30c0b86aaf4c20ac3c7` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_grid_73x64.avif` | Deterministic 73x64 8-bit lossless monochrome 2x1 grid with two 64x64 color cells, auxiliary alpha items, and a clipped right cell | `scripts/generate_avif_monochrome_grid_fixture.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 6, one thread, 4:0:0; metadata layout adapted from `grid.avif` | `3e69167291d846470673b297e9a30e51d7027e182918b0a8c1d95f24719e9828` | BSD-2-Clause (`third_party/libavif/LICENSE`; derived from `grid.avif`) |
+| `portable_lossless_monochrome_grid_no_alpha_73x64.avif` | Deterministic 73x64 8-bit lossless monochrome 2x1 grid with no auxiliary-alpha items or properties and a clipped right cell | `scripts/generate_avif_monochrome_grid_edges.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 6, one thread, 4:0:0; metadata adapted from `grid.avif` | `a33a40230675d388722a13e45849205e24ff7f36486502907472c5f9ebd719d0` | BSD-2-Clause (`third_party/libavif/LICENSE`; derived from `grid.avif`) |
+| `portable_lossless_monochrome_grid_bottom_clip_64x73.avif` | Deterministic 64x73 8-bit lossless monochrome 1x2 grid with two 64x64 color cells, auxiliary alpha items, and a bottom cell clipped to nine rows | `scripts/generate_avif_monochrome_grid_edges.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 6, one thread, 4:0:0; metadata adapted from `grid.avif` | `453945fc2524dabc77162d97896b21d8399a7171a909d19babb908603c0a4201` | BSD-2-Clause (`third_party/libavif/LICENSE`; derived from `grid.avif`) |
 | `portable_i444_quality100_64x64.avif` | Deterministic 64x64 8-bit quality-100 RGB 4:4:4 key frame with fixed 64-pixel partitions | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, CICP 1/13/6 | `5ceb66b47bda43bec5c421222eeb3ef858c62702bc41833986fdf678f6867737` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_i444_64x64.avif` | Seeded 64x64 8-bit all-lossless RGB 4:4:4 key frame with film grain | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, DCT only, CICP 1/13/6, film-grain test enabled | `5e40ca71068fdd232d11f356103f53c1fdd7b94356fa91b0004d7307de4cbd25` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_filmgrain_i444_overlap_64x64.avif` | The pinned I444 film-grain source with only the AV1 overlap flag enabled, covering all 32x32 block-edge blends | `scripts/generate_avif_filmgrain_edge_fixtures.py`; source `portable_lossless_filmgrain_i444_64x64.avif`; set the inspected frame-header overlap bit; preserve sample extents and tile payload; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2 | `345a3e16a1d9574a6ac39c4b14eaa93ba70b5d49714cae2188fdff03c252e03a` | MIT/Apache-2.0 (repository-generated) |
@@ -627,6 +629,20 @@ script verifies every rewritten item extent, then uses Pillow 12.2.0 to verify,
 load, and compare the full RGBA output to the composed raw cell pixels. The
 18,688-byte Pillow output SHA-256 is
 `a553e8c265e29b0644101cff0da8cb54ac351ac4541b86d095ad960445cea987`.
+
+The companion `portable_lossless_monochrome_grid_no_alpha_73x64.avif` uses
+two deterministic 64x64 `L` cells in a clean 2x1 grid with no auxiliary-alpha
+items, references, or properties. The pinned generator verifies the BMFF item
+inventory and extents, then checks the exact 14,016-byte RGB result from
+Pillow 12.2.0; its pixel SHA-256 is
+`1b4a716a8f76555d37d08901f0582e195b2bdcedad46b00f781995d42e4cb1b6`.
+
+`portable_lossless_monochrome_grid_bottom_clip_64x73.avif` reuses the
+deterministic alpha-bearing 64x64 cells in a 1x2 grid with descriptor
+`0000010000400049`. The canvas contains all 64 rows of the top cell and the
+first nine rows of the bottom cell. The generator verifies each BMFF extent
+and the exact 18,688-byte Pillow RGBA output, whose pixel SHA-256 is
+`20b867857750340cae5d682bb6f5a162508395c242dfe331321cbff0bae90bb4`.
 
 `portable_lossless_monochrome_1x1.avif` is generated as a one-pixel Pillow
 `L` image with sample 127. The pinned AVIF encoder uses quality 100, speed 0,

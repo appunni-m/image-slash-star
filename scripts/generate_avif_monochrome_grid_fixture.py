@@ -248,6 +248,9 @@ def rewrite_iloc(
 def assemble_fixture(
     template: bytes,
     cells: tuple[tuple[bytes, bytes, bytes], tuple[bytes, bytes, bytes]],
+    *,
+    grid_size: tuple[int, int] = GRID_SIZE,
+    grid_descriptor: bytes = GRID_DESCRIPTOR,
 ) -> bytes:
     top = parse_boxes(template, 0, len(template))
     if [box.kind for box in top] != [b"ftyp", b"meta", b"mdat"]:
@@ -307,7 +310,7 @@ def assemble_fixture(
         raise RuntimeError("source AVIF one-channel pixi property differs from the pinned layout")
 
     patched = bytearray(template)
-    struct.pack_into(">III", patched, properties[0].payload_start, 0, *GRID_SIZE)
+    struct.pack_into(">III", patched, properties[0].payload_start, 0, *grid_size)
     struct.pack_into(">III", patched, properties[3].payload_start, 0, *CELL_SIZE)
     patched[
         properties[4].payload_start : properties[4].end
@@ -320,7 +323,7 @@ def assemble_fixture(
         6: cells[1][1],
     }
     payloads = {
-        1: GRID_DESCRIPTOR,
+        1: grid_descriptor,
         **cells_by_item,
     }
     mdat_payload = b"".join(payloads[item_id] for item_id in CELL_ORDER)
@@ -343,7 +346,9 @@ def assemble_fixture(
     result = bytes(patched[: ftyp.end]) + rewritten_meta + rewritten_mdat
     if result[: meta.start] != template[: meta.start]:
         raise RuntimeError("AVIF template file-type box changed unexpectedly")
-    verify_fixture_structure(result, payloads)
+    verify_fixture_structure(
+        result, payloads, grid_size=grid_size, grid_descriptor=grid_descriptor
+    )
     return result
 
 
@@ -354,7 +359,13 @@ def iprp_associations(template: bytes, iprp: object) -> object:
     return associations
 
 
-def verify_fixture_structure(data: bytes, expected_payloads: dict[int, bytes]) -> None:
+def verify_fixture_structure(
+    data: bytes,
+    expected_payloads: dict[int, bytes],
+    *,
+    grid_size: tuple[int, int] = GRID_SIZE,
+    grid_descriptor: bytes = GRID_DESCRIPTOR,
+) -> None:
     top = parse_boxes(data, 0, len(data))
     if [box.kind for box in top] != [b"ftyp", b"meta", b"mdat"]:
         raise RuntimeError("generated AVIF grid top-level boxes are invalid")
@@ -365,8 +376,18 @@ def verify_fixture_structure(data: bytes, expected_payloads: dict[int, bytes]) -
     pitm = unique_box(meta_children, b"pitm")
     iloc = unique_box(meta_children, b"iloc")
     iref = unique_box(meta_children, b"iref")
-    if any(box is None for box in (pitm, iloc, iref)):
+    iprp = unique_box(meta_children, b"iprp")
+    if any(box is None for box in (pitm, iloc, iref, iprp)):
         raise RuntimeError("generated AVIF grid metadata boxes are incomplete")
+    ipco = unique_box(children(data, iprp), b"ipco")
+    if ipco is None:
+        raise RuntimeError("generated AVIF grid is missing its property table")
+    properties = children(data, ipco)
+    if not properties or properties[0].kind != b"ispe":
+        raise RuntimeError("generated AVIF grid is missing its spatial extent")
+    width, height = struct.unpack_from(">II", data, properties[0].payload_start + 4)
+    if (width, height) != grid_size:
+        raise RuntimeError("generated AVIF grid spatial extent differs from its descriptor")
     if parse_pitm(data, pitm) != 1:
         raise RuntimeError("generated AVIF grid has an unexpected primary item")
     if parse_iref(data, iref) != [
@@ -380,8 +401,8 @@ def verify_fixture_structure(data: bytes, expected_payloads: dict[int, bytes]) -
     locations = parse_iloc(data, iloc, idat=None)
     if locations.get(1) is None or locations[1][0] != "file":
         raise RuntimeError("generated AVIF grid descriptor is not file-backed")
-    if [data[start:end] for start, end in locations[1][1]] != [GRID_DESCRIPTOR]:
-        raise RuntimeError("generated AVIF grid payload differs from the 73x64 descriptor")
+    if [data[start:end] for start, end in locations[1][1]] != [grid_descriptor]:
+        raise RuntimeError("generated AVIF grid payload differs from its pinned descriptor")
     for item_id, expected_payload in expected_payloads.items():
         location = locations.get(item_id)
         if location is None or location[0] != "file" or len(location[1]) != 1:
@@ -397,33 +418,64 @@ def verify_fixture_structure(data: bytes, expected_payloads: dict[int, bytes]) -
 
 
 def expected_pixels(
-    cell0: bytes, cell1: bytes
+    cell0: bytes,
+    cell1: bytes,
+    *,
+    grid_size: tuple[int, int] = GRID_SIZE,
+    orientation: str = "horizontal",
 ) -> bytes:
-    """Construct the Pillow-visible 73x64 RGBA canvas from the two cells."""
+    """Compose two RGBA cells into a grid clipped on its final edge."""
     row_bytes = CELL_SIZE[0] * 4
-    visible_right_bytes = (GRID_SIZE[0] - CELL_SIZE[0]) * 4
-    result = bytearray()
-    for y in range(GRID_SIZE[1]):
-        start = y * row_bytes
-        result.extend(cell0[start : start + row_bytes])
-        result.extend(cell1[start : start + visible_right_bytes])
-    return bytes(result)
+    if orientation == "horizontal":
+        if (
+            grid_size[1] != CELL_SIZE[1]
+            or grid_size[0] <= CELL_SIZE[0]
+            or grid_size[0] > 2 * CELL_SIZE[0]
+        ):
+            raise ValueError("horizontal grid dimensions do not fit two cell columns")
+        visible_right_bytes = (grid_size[0] - CELL_SIZE[0]) * 4
+        result = bytearray()
+        for y in range(grid_size[1]):
+            start = y * row_bytes
+            result.extend(cell0[start : start + row_bytes])
+            result.extend(cell1[start : start + visible_right_bytes])
+        return bytes(result)
+    if orientation == "vertical":
+        if (
+            grid_size[0] != CELL_SIZE[0]
+            or grid_size[1] <= CELL_SIZE[1]
+            or grid_size[1] > 2 * CELL_SIZE[1]
+        ):
+            raise ValueError("vertical grid dimensions do not fit two cell rows")
+        visible_bottom_bytes = (grid_size[1] - CELL_SIZE[1]) * row_bytes
+        return cell0 + cell1[:visible_bottom_bytes]
+    raise ValueError(f"unsupported two-cell grid orientation: {orientation}")
 
 
-def verify_fixture_pixels(data: bytes, cell0: bytes, cell1: bytes) -> bytes:
+def verify_fixture_pixels(
+    data: bytes,
+    cell0: bytes,
+    cell1: bytes,
+    *,
+    grid_size: tuple[int, int] = GRID_SIZE,
+    expected_hash: str = EXPECTED_PIXELS_SHA256,
+    orientation: str = "horizontal",
+) -> bytes:
     with Image.open(io.BytesIO(data)) as image:
         image.verify()
     with Image.open(io.BytesIO(data)) as image:
         image.load()
-        if image.format != "AVIF" or image.mode != "RGBA" or image.size != GRID_SIZE:
+        if image.format != "AVIF" or image.mode != "RGBA" or image.size != grid_size:
             raise RuntimeError("Pillow decoded an unexpected monochrome AVIF grid descriptor")
         actual = image.tobytes()
 
-    expected = expected_pixels(cell0, cell1)
+    expected = expected_pixels(
+        cell0, cell1, grid_size=grid_size, orientation=orientation
+    )
     if actual != expected:
         raise RuntimeError("Pillow output differs from the exact lossless cell pixels")
-    if sha256(actual) != EXPECTED_PIXELS_SHA256:
-        raise RuntimeError("Pillow pixels differ from the pinned 73x64 output reference")
+    if sha256(actual) != expected_hash:
+        raise RuntimeError("Pillow pixels differ from the pinned output reference")
     return actual
 
 
