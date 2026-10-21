@@ -2820,6 +2820,10 @@ formats:
       description: Adam7 16-bit grayscale samples across all seven passes
       test_assets:
       - adam7_gray_16bit.png
+    - id: interlace_adam7_rgb_16bit
+      description: Adam7 16-bit RGB samples across all seven passes
+      test_assets:
+      - adam7_rgb16.png
     - id: filter_none
       description: No filter
       test_assets:

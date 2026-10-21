@@ -1,5 +1,27 @@
 # Versioned compatibility evidence
 
+## Adam7 RGB16 PNG parity — 2026-10-21
+
+Added active public parity case `decode:png:interlace_adam7_rgb_16bit`. Its
+9x9 RGB16 source serializes all seven Adam7 passes and has input SHA-256
+`243f253a436c595237e54fddb58f7b5b9fa5fbf07a18b35531399a821cb7a5dc`. Pinned
+Pillow 12.2.0 decodes it as RGB with 243 bytes and SHA-256
+`fdd488e078dac07ca3813a65dce0146ee1b9fc2f451301d579356f95f512920e`.
+
+The exact selected parity run passed 1/1. Coverage MCP measured 167/31,900
+branches in the selected report and listed an `unpack_into` branch locator at
+`src/codecs/png/decode.rs:1794`. The report has no verified source/build receipt
+and unknown test attribution. Incremental comparison with the saved full report
+was incomparable because its branch detail does not reconcile with its totals;
+no aggregate coverage gain is claimed. The report is
+`target/release-evidence/selected/png-adam7-rgb16-20261021.json`. No full
+coverage campaign or production decoder change was made.
+
+The current fixture matrix contains 2,488 total rows: 1,973 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,973 decode rows and 483 encode
+rows are active; 32 encode rows remain planned. The separate target-only fault
+lane contains 78 rows.
+
 ## AVIF monochrome grid parity and reservation failure — 2026-10-21
 
 Added active parity case `decode:avif:portable_lossless_monochrome_grid_73x64`.
@@ -7931,7 +7953,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `faa4e49d59407d41565ca6c6acc70ccd0fa5ee3d98744226c133f295343a7271`; matrix `4e97261618bcb6cd9a1f542cb23bdf64004691643dd42285c4d19ad41dc93b9f`.
+- Current fixture integrity only: manifest `a7e9416c8611b77888c17d7f74f5b6b080f5092484c04e49fd13d32ea3cb1cbf`; matrix `8b2d191f54525f54313098d51dd406c9641839469eb996e696a87e87dafce095`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
