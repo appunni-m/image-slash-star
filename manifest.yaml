@@ -3000,6 +3000,10 @@ formats:
       description: Unknown ancillary chunk after image data preserves decoded pixels
       test_assets:
       - unknown_ancillary_after_idat.png
+    - id: pillow_tolerated_chunk_type_digit_underscore
+      description: Pillow accepts digit and underscore bytes in unknown chunk types
+      test_assets:
+      - chunk_type_digit_underscore.png
     - id: pillow_tolerated_post_idat_ancillary_bad_crc
       description: Invalid CRC on an unknown post-IDAT ancillary chunk preserves Pillow pixels but fails verification
       test_assets:
@@ -3104,6 +3108,7 @@ formats:
       - actl_short.png
       - actl_after_idat_short.png
       - iend_without_idat.png
+      - invalid_chunk_type_non_letter.png
       expect_error: true
     - id: error_token_aware_reserved_deflate_distance
       description: Token-aware PNG decode rejects a reserved DEFLATE distance symbol

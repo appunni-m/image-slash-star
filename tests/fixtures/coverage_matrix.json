@@ -123402,6 +123402,90 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "pillow_tolerated_chunk_type_digit_underscore",
+          "type": "decode",
+          "format": "png",
+          "category": "pillow",
+          "description": "Pillow accepts digit and underscore bytes in unknown chunk types",
+          "asset": "chunk_type_digit_underscore.png",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "92f4b333a2dc484ceae684e89dac4cac8d3c11c96c03e287b0e2a0e4a71785de",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_chunk_type_digit_underscore_png.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": {
+            "srgb": null,
+            "gamma": null,
+            "chromaticities": null,
+            "icc_profile_present": false
+          },
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "decoded_source_color": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "pillow_tolerated_post_idat_ancillary_bad_crc",
           "type": "decode",
           "format": "png",
@@ -128186,6 +128270,99 @@
           "inspect_source_byte_order_origin": null,
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "error_malformed_structure_invalid_chunk_type_non_letter",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "invalid_chunk_type_non_letter.png",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "edac414911843c23dac2cba7f194ed34fc43addfd40877440e29b676dce55ae8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "id": "error_token_aware_reserved_deflate_distance",
@@ -211282,12 +211459,12 @@
     }
   },
   "summary": {
-    "total_rows": 2504,
-    "decode_rows": 1988,
+    "total_rows": 2506,
+    "decode_rows": 1990,
     "encode_rows": 516,
     "formats": 8,
-    "assets_available": 1984,
-    "decode_active": 1988,
+    "assets_available": 1986,
+    "decode_active": 1990,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
