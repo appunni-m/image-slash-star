@@ -48101,6 +48101,84 @@
           "error_contracts": {}
         },
         {
+          "id": "multitile_monochrome_superres_288x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "multitile",
+          "description": "288x64 lossy monochrome AVIF still uses denominator 9 to resize a 256-pixel coded plane across two full-width tile columns",
+          "asset": "multitile_monochrome_superres_288x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "cc88ed36062a37989bef826649d01c2fa872f41c3668c59509f310ff081a93d4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_multitile_monochrome_superres_288x64_avif.bin",
+          "ref_sha256": "30ba32d9eda130257562b74f7fa6a49025176071264bfca20a3d87cae6951479",
+          "ref_bytes": 55296,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            288,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "superres_actual_upscaled_i422_33x17",
           "type": "decode",
           "format": "avif",
@@ -210511,12 +210589,12 @@
     }
   },
   "summary": {
-    "total_rows": 2495,
-    "decode_rows": 1980,
+    "total_rows": 2496,
+    "decode_rows": 1981,
     "encode_rows": 515,
     "formats": 8,
-    "assets_available": 1976,
-    "decode_active": 1980,
+    "assets_available": 1977,
+    "decode_active": 1981,
     "decode_planned": 0,
     "encode_not_wired": 31
   },

@@ -9957,6 +9957,11 @@ formats:
       test_assets:
       - superres_actual_upscaled_monochrome_17x16.avif
       status: active
+    - id: multitile_monochrome_superres_288x64
+      description: 288x64 lossy monochrome AVIF still uses denominator 9 to resize a 256-pixel coded plane across two full-width tile columns
+      test_assets:
+      - multitile_monochrome_superres_288x64.avif
+      status: active
     - id: superres_actual_upscaled_i422_33x17
       description: 33x17 lossy 4:2:2 AVIF still uses denominator 9 with coded width 29 and restoration disabled, exercising generic super-resolution across odd luma and chroma edges
       test_assets:

@@ -118,10 +118,39 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,495 total rows: 1,980 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,980 decode rows and 484 encode
+The current fixture matrix contains 2,496 total rows: 1,981 decode / inspect /
+verify rows and 515 encode rows. Of those, 1,981 decode rows and 484 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 79 rows.
+
+## AVIF full-width multi-tile monochrome super-resolution — 2026-10-21
+
+Added public Pillow parity case
+`decode:avif:multitile_monochrome_superres_288x64`. The pinned libavif 1.4.1 /
+libaom 3.13.2 generator verifies two deterministic encodes and an actual
+denominator-9 AV1 frame with a 256x64 coded plane, a 288x64 upscaled plane, and
+two full-width tile columns. The source Y4M, AVIF, and Pillow RGB pixel hashes
+are `c8ebdc997141ba1718abe3b81819e6383f2d3724f54a646525f98e3059c30b60`,
+`cc88ed36062a37989bef826649d01c2fa872f41c3668c59509f310ff081a93d4`, and
+`30ba32d9eda130257562b74f7fa6a49025176071264bfca20a3d87cae6951479`.
+
+The Rust decoder now admits only two complete tile columns, one tile row,
+monochrome 8/10/12-bit reconstruction, actual super-resolution, and neutral
+CDEF, deblocking, restoration, and film-grain settings for this path. The
+existing frame assembler combines coded tile planes before applying the shared
+upscaler. The initial 256x64 candidate had a cropped second tile and differed
+from Pillow in 171 bytes at the right edge; it was replaced and is not active.
+
+The selected public case passed exact RGB parity. The focused controls
+`decode:avif:multitile_monochrome` and
+`decode:avif:superres_actual_upscaled_monochrome_17x16` also passed. The local
+selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-mono-288-final-20261021/coverage.json`.
+Coverage MCP observed the super-resolution true arm at
+`src/codecs/avif/av1/frame.rs:1714`; its false arm was absent from this selected
+run. MCP reports 1,785/31,970 branches in this small selected report, with
+source identity unverified and test inventory unknown, so it is only
+coordinate-level evidence and not an aggregate coverage claim.
 
 ## AVIF monochrome grid parity and reservation failure — 2026-10-21
 
@@ -8054,7 +8083,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `704c43d7197f8b44947763ea32de3c1b59778a1727a88564752b3cce234271bd`; matrix `f54dc94d8222825cc210003c66b218195e170232fe07dfb5d7f7bf70db42ef57`.
+- Current fixture integrity only: manifest `ee34eb7b8270d2064edf887dd10e91cb278d6d961af6452cd8ee4d795326e9fe`; matrix `eb9bee92fe6425acb08c47aa085c8bf1e14432831d9d62af4709a48030532123`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
