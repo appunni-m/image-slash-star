@@ -191,6 +191,13 @@ def build_inputs() -> list[tuple[dict, bytes]]:
             emit(f"info_zero_{dimension}_compression{code}", "1x1.bmp",
                  f"INFO zero {dimension} with Windows compression {code} precedence",
                  compression=code, words=((offset, 0),))
+    for dimension, offset in (("width", 18), ("height", 22)):
+        emit(f"info_zero_{dimension}_compression3_invalid_masks", "16bit.bmp",
+             f"INFO zero {dimension} with invalid BI_BITFIELDS masks precedence",
+             compression=3,
+             words=((offset, 0), (2, 66), (10, 66), (34, 0),
+                    (54, 0), (58, 0), (62, 0)),
+             truncate=66)
     for depth, source in ((1, "1bit.bmp"), (8, "8bit.bmp"), (4, "4bit.bmp")):
         emit(f"os2_depth{depth}_huffman_nonzero_tail", source,
              f"OS/2 depth {depth} Huffman rejects despite nonzero tail words",
@@ -229,7 +236,9 @@ def observe(data: bytes, operation: str) -> dict:
 def pending_contract(row: dict) -> dict | None:
     """Repository-defined expected fields, never a claim about Rust execution."""
     outcome = row["pillow_decode"]
-    if outcome["status"] != "error" or row["id"].startswith("info_zero_"):
+    if outcome["status"] != "error" or (
+        row["id"].startswith("info_zero_") and "invalid_masks" not in row["id"]
+    ):
         return None
     message = outcome["message"]
     kind, identity, offset = "unsupported", "bmp_compression_unknown", 30
@@ -237,10 +246,12 @@ def pending_contract(row: dict) -> dict | None:
         kind, identity, offset = "dimensions", "bmp_dib_header", 18
     elif message.startswith("Unsupported BMP pixel depth"):
         identity, offset = "bmp_dib_header", 28
-    elif message == "Truncated File Read":
-        kind, identity, offset = "malformed", "bmp_dib_header", 14
     elif row["header_size"] == 64 and row["compression"] == 3:
         identity = "bmp_compression_os2_huffman_1d"
+    elif message == "Truncated File Read":
+        kind, identity, offset = "malformed", "bmp_dib_header", 14
+    elif message == "Unsupported BMP bitfields layout":
+        identity, offset = "bmp_bitfields", 54
     elif row["header_size"] == 64 and row["compression"] == 4:
         identity = "bmp_compression_os2_rle24"
     elif row["header_size"] != 64 and row["compression"] == 4:
@@ -272,6 +283,9 @@ def build_report(manifest: dict, inputs: list[tuple[dict, bytes]]) -> dict:
         "status": "tracked_by_active_parity_rows", "pillow_error": row["pillow_decode"],
         "manifest_row": f"decode:bmp:error_{row['id'].removeprefix('info_')}",
         "source_review": (
+            "INFO inspection and decode read and validate BI_BITFIELDS masks before zero "
+            "dimensions; unsupported masks take precedence."
+            if "compression3_invalid_masks" in row["id"] else
             "INFO inspection and decode validate unsupported compression before zero dimensions; "
             "supported compression retains the zero-dimension error."
         ),
