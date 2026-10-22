@@ -4095,6 +4095,162 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "portable_lossless_monochrome_fullrange_12bit_17x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "17x9 full-range 12-bit lossless monochrome key frame with varied low sample bits and an irregular sample count",
+          "asset": "portable_lossless_monochrome_fullrange_12bit_17x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "07793973838382f7de986377c7ed2ea139144b1a4413092e65bb6713db10ae57",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_monochrome_fullrange_12bit_17x9_avif.bin",
+          "ref_sha256": "02e8eedf632446b91a506c81aafd795b434a14723394faeb249b74a3cfb2e908",
+          "ref_bytes": 459,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "portable_lossless_monochrome_fullrange_alpha_12bit_17x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "17x9 full-range 12-bit lossless monochrome key frame with varied 12-bit auxiliary alpha samples and an irregular sample count",
+          "asset": "portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "3acad68f56c9eced8f975303cce603d3404fd00d10bb2f92b24573395b34c25b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_monochrome_fullrange_alpha_12bit_17x9_avif.bin",
+          "ref_sha256": "2a39c5bb870685946e9b0906f6a860916225086d138851b8e324af5bb93a678f",
+          "ref_bytes": 612,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "portable_lossless_monochrome_limited_bt2020_pq_16x16",
           "type": "decode",
           "format": "avif",
@@ -213405,12 +213561,12 @@
     }
   },
   "summary": {
-    "total_rows": 2528,
-    "decode_rows": 2011,
+    "total_rows": 2530,
+    "decode_rows": 2013,
     "encode_rows": 517,
     "formats": 8,
-    "assets_available": 2007,
-    "decode_active": 2011,
+    "assets_available": 2009,
+    "decode_active": 2013,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
