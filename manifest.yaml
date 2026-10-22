@@ -147,7 +147,7 @@ fault_contracts:
       - structured-diagnostics
     verification: fault-contract
     input:
-      source_case: decode:avif:baseline
+      source_case: decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9
     fault:
       point: avif.subsampled_rgb.output_reservation
       contract: decode_error_then_retry_succeeds
@@ -9678,6 +9678,12 @@ formats:
       description: Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF with an auxiliary 12-bit alpha plane, exercising a vector batch and scalar tail
       test_assets:
       - high_bitdepth_still_12bit_444_alpha_9x9.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_12bit_420_alpha_odd_edge_17x9
+      description: Single-frame full-range 12-bit AV1 profile-2 all-lossless 4:2:0 AVIF with 12-bit auxiliary alpha and varied low-nibble chroma at the odd right and bottom edges
+      test_assets:
+      - high_bitdepth_still_12bit_420_alpha_odd_edge_17x9.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
     - id: profile2_identity_12bit_444

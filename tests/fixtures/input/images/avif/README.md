@@ -29,6 +29,7 @@ generation provenance follow.
 | `sequence_alpha_duration_mismatch.avif` | `10bit.avif` with only the auxiliary alpha-track sample delta changed from 1 to 2; Pillow retains five RGBA frames with color-track durations | `scripts/generate_test_assets.py`; Pillow 12.2.0 / libavif 1.4.1 parity | `b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `high_bitdepth_still_12bit_444_lossless.avif` | Deterministic 16x16 RGB source encoded as a single-frame 12-bit 4:4:4 witness | libavif 1.4.1 / `6543b22`; libaom 3.13.2 fixture build | `8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd` | MIT/Apache-2.0 (repository-generated) |
 | `high_bitdepth_still_12bit_444_alpha_9x9.avif` | Deterministic 9x9 12-bit YUV444 still with a monochrome 12-bit auxiliary alpha item; both AV1 frames are all-lossless | `scripts/generate_av1_encoder_refs.py` case `high12_444_alpha_9x9`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `f7eb5b9edfdd7b11d00094aadb91320e7cc6cc01961470e3c2040d91e68610aa` | MIT/Apache-2.0 (repository-generated) |
+| `high_bitdepth_still_12bit_420_alpha_odd_edge_17x9.avif` | Deterministic 17x9 full-range 12-bit YUV420 still with a 12-bit auxiliary alpha item; varied decoded Y/U/V low nibbles include the odd right and bottom chroma edges | `scripts/generate_avif_12bit420_alpha_odd_edge.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 0, one thread, CICP 1/13/6; Pillow 12.2.0 exact RGBA reference | `ce408e4a66fe57b734544c2f30f17e90f725e2f2bae75d748f9eda75bdf23761` | MIT/Apache-2.0 (repository-generated) |
 | `profile2_identity_12bit_444.avif` | Deterministic 16x16 RGB source encoded as a profile-2 12-bit full-range 4:4:4 identity-CICP still | `scripts/generate_avif_profile2_identity.py`; libavif 1.4.1 / libaom 3.13.2; `--qcolor 100 --cicp 1/13/0 --range full --speed 8 --jobs 1` | `1ce2aae5539074e3a65092f185c4db34537462d637859d4fd85449bb15557931` | MIT/Apache-2.0 (repository-generated) |
 | `profile2_identity_12bit_444_9x9.avif` | The pinned 16x16 identity-CICP still with its AV1 sequence and item spatial extent reduced to 9x9 | `scripts/generate_avif_profile2_identity_tail.py`; Pillow 12.2.0 exact RGB reference; frame payload preserved | `2329ba1c0b8cb384727b1a3c0b817998fee4da5a3aa0254801afdcefb2f70c0d` | MIT/Apache-2.0 (repository-generated mutation) |
 | `high_bitdepth_still_10bit_420_lossy_16x16.avif` | Deterministic 16x16 planar 10-bit I420 source encoded as a single-frame lossy profile-0 AVIF | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `60c40a86c0409add22d7ab678b579ea4ccf979624bf3b127a4448d0a83e18d18` | MIT/Apache-2.0 (repository-generated) |
@@ -675,6 +676,32 @@ builds, regenerate or verify both assets with:
   --avifenc target/oracle-staging/libavif-kpzg-clean-build/avifenc \
   --avifdec target/oracle-staging/libavif-kpzg-clean-build/avifdec --check
 ```
+
+`high_bitdepth_still_12bit_420_alpha_odd_edge_17x9.avif` uses a generated
+16-bit RGBA source encoded as full-range 12-bit YUV420 with a 12-bit auxiliary
+alpha item. The generator checks repeated byte-identical encodes, AV1 profile,
+depth, range, subsampling and lossless frame declarations, decoded Y/U/V sample
+depth and low-nibble variation along both odd chroma edges, and the pinned
+Pillow RGBA8 hash. Build the pinned clean libavif tools above, then regenerate
+or verify the fixture with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_12bit420_alpha_odd_edge.py \
+  --avifenc target/oracle-staging/libavif-kpzg-clean-build/avifenc \
+  --avifdec target/oracle-staging/libavif-kpzg-clean-build/avifdec
+.oracle-venv/bin/python scripts/generate_avif_12bit420_alpha_odd_edge.py \
+  --avifenc target/oracle-staging/libavif-kpzg-clean-build/avifenc \
+  --avifdec target/oracle-staging/libavif-kpzg-clean-build/avifdec --check
+```
+
+Pillow's pinned libavif 1.4.1 uses automatic chroma upsampling for the RGBA
+decode. Its 12-bit 4:2:0 dispatch selects the high-depth `I012ToARGBMatrix`
+route, which samples nearest chroma and preserves luma low bits through the
+matrix; libavif converts the auxiliary alpha plane separately with full-range
+round-half-up scaling. The pinned libyuv source is commit
+`6067afde563c3946eebd94f146b3824ab7a97a9c`. The generator's `avifdec` checks
+encoded plane shape and edge variation only; the exact Pillow RGBA8 reference
+is the pixel oracle.
 
 `portable_lossless_monochrome_limited_16x16.avif` uses the
 `mono_limited_lossless_16x16` case in `scripts/generate_av1_encoder_refs.py`.
