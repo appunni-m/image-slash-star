@@ -62702,6 +62702,160 @@
           }
         },
         {
+          "id": "error_malformed_core_oversized_width",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_oversized_width.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "98c756244f01a652ea8589d9135f8ed4c62fe302739d15f524450ca6821698f1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (4 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (4 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (4 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_core_oversized_height",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_oversized_height.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ee23fb4e9066735d79fbb935c14b35e5e18d394f2324947fd470937aab0881b0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_malformed_4bit_gray",
           "type": "decode",
           "format": "bmp",
@@ -67267,6 +67421,564 @@
               "pillow_type": "PIL.Image.DecompressionBombError",
               "pillow_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
               "rust_kind": "dimensions",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_negative_width_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before a negative INFO-header width",
+          "asset": "info_negative_width_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a37b4e868dd235e60d5486726fe02fa697eba5a795879b2d2e8d5fc98410e2ab",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_negative_width_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before a negative INFO-header width",
+          "asset": "info_negative_width_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "22ce1102e139582203627564d7d9c67e769386f025d897f5647e5e08851b965f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_width_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before an oversized INFO-header width",
+          "asset": "info_oversized_width_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5a8696ef576f2771c45834de8d4235938b42c213545a39d506024ae2de72264c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_width_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before an oversized INFO-header width",
+          "asset": "info_oversized_width_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b81d5d9478ecc0f314616f00b66a4f65ff5003b96e604552cb1f2c25033e4de1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_height_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before an oversized INFO-header height",
+          "asset": "info_oversized_height_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b06eeef01256a68500cebf0d51186f50b1e3bcd8928ce2f938384f20518edf8c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_height_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before an oversized INFO-header height",
+          "asset": "info_oversized_height_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "253357f9077175dbf2829f2078f34f43d388bfbec092e53ae78192b1c53fc6a4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
               "rust_format": "BMP",
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
@@ -212359,12 +213071,12 @@
     }
   },
   "summary": {
-    "total_rows": 2516,
-    "decode_rows": 2000,
+    "total_rows": 2524,
+    "decode_rows": 2008,
     "encode_rows": 516,
     "formats": 8,
-    "assets_available": 1996,
-    "decode_active": 2000,
+    "assets_available": 2004,
+    "decode_active": 2008,
     "decode_planned": 0,
     "encode_not_wired": 31
   },

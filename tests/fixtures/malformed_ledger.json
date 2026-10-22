@@ -3402,6 +3402,70 @@
         "verify_status": "error"
       },
       {
+        "asset": "core_oversized_height.bmp",
+        "class": "error_malformed_core_oversized_height",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Malformed BMP headers, palettes, and pixel payloads",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (0 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "core_oversized_width.bmp",
+        "class": "error_malformed_core_oversized_width",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (4 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (4 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Malformed BMP headers, palettes, and pixel payloads",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (4 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "core_zero_height.bmp",
         "class": "error_malformed_core_zero_height",
         "contracts": {
@@ -5122,6 +5186,102 @@
         "verify_status": "error"
       },
       {
+        "asset": "info_negative_width_compression4.bmp",
+        "class": "error_negative_width_compression4",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 4 before a negative INFO-header width",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (4)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "info_negative_width_compression5.bmp",
+        "class": "error_negative_width_compression5",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 5 before a negative INFO-header width",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (5)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "not_bmp.bmp",
         "class": "error_not_bmp",
         "contracts": {
@@ -5175,6 +5335,198 @@
         "pillow_status": "error",
         "pillow_type": "PIL.UnidentifiedImageError",
         "spec_status": "not_the_format",
+        "verify_status": "error"
+      },
+      {
+        "asset": "info_oversized_height_compression4.bmp",
+        "class": "error_oversized_height_compression4",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 4 before an oversized INFO-header height",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (4)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "info_oversized_height_compression5.bmp",
+        "class": "error_oversized_height_compression5",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 5 before an oversized INFO-header height",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (5)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "info_oversized_width_compression4.bmp",
+        "class": "error_oversized_width_compression4",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (4)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 4 before an oversized INFO-header width",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (4)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "info_oversized_width_compression5.bmp",
+        "class": "error_oversized_width_compression5",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Unsupported BMP compression (5)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "BMP",
+            "rust_kind": "unsupported",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects Windows compression 5 before an oversized INFO-header width",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Unsupported BMP compression (5)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
         "verify_status": "error"
       },
       {
@@ -27788,7 +28140,7 @@
   "summary": {
     "by_format": {
       "avif": 61,
-      "bmp": 76,
+      "bmp": 84,
       "gif": 49,
       "ico": 30,
       "jpeg": 103,
@@ -27797,17 +28149,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 660,
+      "pillow_fixture": 668,
       "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 388,
+      "spec_violation": 396,
       "tolerated": 0,
       "truncated": 197
     },
-    "classes": 660,
+    "classes": 668,
     "formats": 8
   }
 }

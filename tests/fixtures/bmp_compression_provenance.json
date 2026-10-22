@@ -27,14 +27,14 @@
     }
   ],
   "summary": {
-    "observations": 62,
-    "new_full_files": 60,
+    "observations": 68,
+    "new_full_files": 66,
     "existing_controls": 2,
     "new_successful_controls": 7,
-    "classification_and_control_rows": 53,
+    "classification_and_control_rows": 59,
     "zero_dimension_parity_rows": 6,
     "pillow_successes": 9,
-    "pillow_errors": 53
+    "pillow_errors": 59
   },
   "pillow_cases": [
     {
@@ -1719,6 +1719,276 @@
         "stage": "open",
         "class": "PIL.Image.DecompressionBombError",
         "message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+      }
+    },
+    {
+      "id": "info_negative_width_compression4",
+      "description": "Windows compression 4 rejection precedes a signed negative INFO width",
+      "asset": "info_negative_width_compression4.bmp",
+      "asset_sha256": "a37b4e868dd235e60d5486726fe02fa697eba5a795879b2d2e8d5fc98410e2ab",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 4
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 4294967295
+        }
+      ],
+      "header_size": 40,
+      "compression": 4,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      }
+    },
+    {
+      "id": "info_oversized_width_compression4",
+      "description": "Windows compression 4 rejection precedes an oversized INFO width",
+      "asset": "info_oversized_width_compression4.bmp",
+      "asset_sha256": "5a8696ef576f2771c45834de8d4235938b42c213545a39d506024ae2de72264c",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 4
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 16385
+        }
+      ],
+      "header_size": 40,
+      "compression": 4,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      }
+    },
+    {
+      "id": "info_oversized_height_compression4",
+      "description": "Windows compression 4 rejection precedes an oversized INFO height",
+      "asset": "info_oversized_height_compression4.bmp",
+      "asset_sha256": "b06eeef01256a68500cebf0d51186f50b1e3bcd8928ce2f938384f20518edf8c",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 4
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 22,
+          "value": 16385
+        }
+      ],
+      "header_size": 40,
+      "compression": 4,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (4)"
+      }
+    },
+    {
+      "id": "info_negative_width_compression5",
+      "description": "Windows compression 5 rejection precedes a signed negative INFO width",
+      "asset": "info_negative_width_compression5.bmp",
+      "asset_sha256": "22ce1102e139582203627564d7d9c67e769386f025d897f5647e5e08851b965f",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 5
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 4294967295
+        }
+      ],
+      "header_size": 40,
+      "compression": 5,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      }
+    },
+    {
+      "id": "info_oversized_width_compression5",
+      "description": "Windows compression 5 rejection precedes an oversized INFO width",
+      "asset": "info_oversized_width_compression5.bmp",
+      "asset_sha256": "b81d5d9478ecc0f314616f00b66a4f65ff5003b96e604552cb1f2c25033e4de1",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 5
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 16385
+        }
+      ],
+      "header_size": 40,
+      "compression": 5,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      }
+    },
+    {
+      "id": "info_oversized_height_compression5",
+      "description": "Windows compression 5 rejection precedes an oversized INFO height",
+      "asset": "info_oversized_height_compression5.bmp",
+      "asset_sha256": "253357f9077175dbf2829f2078f34f43d388bfbec092e53ae78192b1c53fc6a4",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 5
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 22,
+          "value": 16385
+        }
+      ],
+      "header_size": 40,
+      "compression": 5,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP compression (5)"
       }
     },
     {
@@ -3522,6 +3792,96 @@
       "expected_kind": "dimensions",
       "expected_identity": "bmp_dib_header",
       "expected_offset": 18,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_negative_width_compression4",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_jpeg",
+      "expected_offset": 30,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_oversized_width_compression4",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_jpeg",
+      "expected_offset": 30,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_oversized_height_compression4",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_jpeg",
+      "expected_offset": 30,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_negative_width_compression5",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_png",
+      "expected_offset": 30,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_oversized_width_compression5",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_png",
+      "expected_offset": 30,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_oversized_height_compression5",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_compression_png",
+      "expected_offset": 30,
       "operations": [
         "inspect",
         "verify",

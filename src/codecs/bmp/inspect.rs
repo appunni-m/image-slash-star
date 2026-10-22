@@ -22,7 +22,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let _data_offset = le_u32(data, 10)?;
     let header_size = le_u32(data, FILE_HEADER_SIZE)?;
     let header_end = FILE_HEADER_SIZE.saturating_add(header_size as usize);
-    let (width, height, bit_depth, compression, colors_used, palette_entry_size) =
+    let (width, height, bit_depth, compression, colors_used, palette_entry_size, negative_width) =
         if header_size == CORE_HEADER_SIZE {
             let width = u32::from(le_u16(data, 18)?);
             let height = u32::from(le_u16(data, 20)?);
@@ -33,15 +33,9 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                         .at(18, "bmp_dib_header"),
                 );
             }
-            (width, height, le_u16(data, 24)?, 0, 0, 3usize)
+            (width, height, le_u16(data, 24)?, 0, 0, 3usize, false)
         } else if super::is_supported_info_dib_header_size(header_size) {
             let width = le_i32(data, 18)?;
-            if width < 0 {
-                return Err(
-                    CodecError::Dimensions("BMP width must be positive".to_owned())
-                        .at(18, "bmp_dib_header"),
-                );
-            }
             (
                 width.cast_unsigned(),
                 le_i32(data, 22)?.unsigned_abs(),
@@ -49,6 +43,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                 le_u32(data, 30)?,
                 le_u32(data, 46)?,
                 4usize,
+                width < 0,
             )
         } else {
             return Err(CodecError::Unsupported(format!(
@@ -71,6 +66,12 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     }
     super::validate_compression(data, header_size, bit_depth, compression)?;
     // INFO headers check zero dimensions after the depth and compression contract.
+    if negative_width {
+        return Err(
+            CodecError::Dimensions("BMP width must be positive".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
     if width == 0 || height == 0 {
         return Err(
             CodecError::Malformed("BMP dimensions must be nonzero".to_owned())

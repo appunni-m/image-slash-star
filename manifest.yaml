@@ -4389,6 +4389,8 @@ formats:
       - invalid_header_size.bmp
       - core_zero_width.bmp
       - core_zero_height.bmp
+      - core_oversized_width.bmp
+      - core_oversized_height.bmp
       - 4bit_gray.bmp
       - invalid_width.bmp
       - invalid_height.bmp
@@ -4445,6 +4447,36 @@ formats:
       description: Pillow rejects a signed negative INFO-header width as an invalid dimension
       test_assets:
       - info_negative_width.bmp
+      expect_error: true
+    - id: error_negative_width_compression4
+      description: Pillow rejects Windows compression 4 before a negative INFO-header width
+      test_assets:
+      - info_negative_width_compression4.bmp
+      expect_error: true
+    - id: error_negative_width_compression5
+      description: Pillow rejects Windows compression 5 before a negative INFO-header width
+      test_assets:
+      - info_negative_width_compression5.bmp
+      expect_error: true
+    - id: error_oversized_width_compression4
+      description: Pillow rejects Windows compression 4 before an oversized INFO-header width
+      test_assets:
+      - info_oversized_width_compression4.bmp
+      expect_error: true
+    - id: error_oversized_width_compression5
+      description: Pillow rejects Windows compression 5 before an oversized INFO-header width
+      test_assets:
+      - info_oversized_width_compression5.bmp
+      expect_error: true
+    - id: error_oversized_height_compression4
+      description: Pillow rejects Windows compression 4 before an oversized INFO-header height
+      test_assets:
+      - info_oversized_height_compression4.bmp
+      expect_error: true
+    - id: error_oversized_height_compression5
+      description: Pillow rejects Windows compression 5 before an oversized INFO-header height
+      test_assets:
+      - info_oversized_height_compression5.bmp
       expect_error: true
     - id: error_unsupported_windows_embedded_jpeg
       description: Pillow rejects Windows BMP compression code 4 in a complete INFO header

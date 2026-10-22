@@ -145,6 +145,16 @@ def build_inputs() -> list[tuple[dict, bytes]]:
     emit("info_negative_width", "1x1.bmp",
          "Signed negative INFO-header width is rejected as an invalid dimension before allocation",
          words=((18, 0xFFFFFFFF),))
+    for code in (4, 5):
+        emit(f"info_negative_width_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes a signed negative INFO width",
+             compression=code, words=((18, 0xFFFFFFFF),))
+        emit(f"info_oversized_width_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes an oversized INFO width",
+             compression=code, words=((18, 16_385),))
+        emit(f"info_oversized_height_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes an oversized INFO height",
+             compression=code, words=((22, 16_385),))
     emit("control_os2_compatible_bitfields32", "v4header.bmp",
          "Pillow accepts Windows-compatible RGBA32 bitfields in OS/2 DIB 64", header=64)
     emit("control_os2_compatible_bitfields16", "16bit.bmp",

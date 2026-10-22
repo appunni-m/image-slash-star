@@ -424,14 +424,8 @@ pub fn decode(
             CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
         );
     }
-    if !is_core_header && width < 0 {
-        return Err(
-            CodecError::Dimensions("BMP width must be positive".to_owned())
-                .at(18, "bmp_dib_header"),
-        );
-    }
     let w = width.cast_unsigned();
-    if (is_core_header && h == 0) || w > 16_384 || h > 16_384 {
+    if is_core_header && (h == 0 || w > 16_384 || h > 16_384) {
         return Err(CodecError::Malformed(
             "BMP dimensions are empty or exceed the supported bounds".to_owned(),
         )
@@ -441,14 +435,26 @@ pub fn decode(
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
         .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
     super::validate_compression(data, header_size, bit_depth_raw, compression)?;
-    // INFO headers let unsupported compression outrank empty dimensions, as
-    // Pillow does. Keep the existing dimension errors for supported formats.
+    // INFO headers let unsupported compression outrank invalid dimensions, as
+    // Pillow does. Keep every dimension check before allocation.
+    if !is_core_header && width < 0 {
+        return Err(
+            CodecError::Dimensions("BMP width must be positive".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
     if !is_core_header && width == 0 {
         return Err(
             CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
         );
     }
     if !is_core_header && h == 0 {
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        )
+        .at(18, "bmp_dib_header"));
+    }
+    if !is_core_header && (w > 16_384 || h > 16_384) {
         return Err(CodecError::Malformed(
             "BMP dimensions are empty or exceed the supported bounds".to_owned(),
         )
