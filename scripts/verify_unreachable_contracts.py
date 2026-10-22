@@ -417,6 +417,22 @@ FAULT_CONTRACTS = {
         "point": "bmp.decoded_pixels.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "bmp_rle_entry_work_budget_exceeded": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_rle_entry_work_budget_exceeded",
+        "source_case": "decode:bmp:compression_rle8",
+        "point": "bmp.rle.entry_work_budget",
+        "contract": "decode_work_budget_exceeded_then_retry_succeeds",
+    },
+    "bmp_rle_command_work_budget_exceeded": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_rle_command_work_budget_exceeded",
+        "source_case": "decode:bmp:compression_rle8",
+        "point": "bmp.rle.command_work_budget",
+        "contract": "decode_work_budget_exceeded_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

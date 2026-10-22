@@ -464,7 +464,7 @@
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 46,
+      "guard_count": 47,
       "guards": [
         {
           "index": 1,
@@ -496,7 +496,7 @@
         },
         {
           "index": 8,
-          "origin": "independent_implementation"
+          "origin": "defensive_model"
         },
         {
           "index": 9,
@@ -648,6 +648,10 @@
         },
         {
           "index": 46,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 47,
           "origin": "defensive_model"
         }
       ],
