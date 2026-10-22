@@ -415,16 +415,17 @@ pub fn decode(
     // After the standard 40-byte fields, the cursor is at position 14 + 40 = 54.
     let pos_after_standard = r.position();
 
+    let is_core_header = header_size == 12;
     // Top-down if height is negative.
     let top_down = height < 0;
     let h = height.unsigned_abs();
-    if width <= 0 {
+    if is_core_header && width <= 0 {
         return Err(
             CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
         );
     }
     let w = width.cast_unsigned();
-    if h == 0 || w > 16_384 || h > 16_384 {
+    if is_core_header && (h == 0 || w > 16_384 || h > 16_384) {
         return Err(CodecError::Malformed(
             "BMP dimensions are empty or exceed the supported bounds".to_owned(),
         )
@@ -434,6 +435,31 @@ pub fn decode(
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
         .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
     super::validate_compression(data, header_size, bit_depth_raw, compression)?;
+    // INFO headers let unsupported compression outrank invalid dimensions, as
+    // Pillow does. Keep every dimension check before allocation.
+    if !is_core_header && width < 0 {
+        return Err(
+            CodecError::Dimensions("BMP width must be positive".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
+    if !is_core_header && width == 0 {
+        return Err(
+            CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
+        );
+    }
+    if !is_core_header && h == 0 {
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        )
+        .at(18, "bmp_dib_header"));
+    }
+    if !is_core_header && (w > 16_384 || h > 16_384) {
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        )
+        .at(18, "bmp_dib_header"));
+    }
     if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
         return Err(CodecError::Malformed(
             "BMP RLE compression requires indexed pixels".to_owned(),

@@ -142,6 +142,19 @@ def build_inputs() -> list[tuple[dict, bytes]]:
             emit(f"os2_depth{depth}_compression{code}", source,
                  f"OS/2 DIB 64 depth {depth} compression {code} rejection",
                  header=64, compression=code)
+    emit("info_negative_width", "1x1.bmp",
+         "Signed negative INFO-header width is rejected as an invalid dimension before allocation",
+         words=((18, 0xFFFFFFFF),))
+    for code in (4, 5):
+        emit(f"info_negative_width_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes a signed negative INFO width",
+             compression=code, words=((18, 0xFFFFFFFF),))
+        emit(f"info_oversized_width_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes an oversized INFO width",
+             compression=code, words=((18, 16_385),))
+        emit(f"info_oversized_height_compression{code}", "1x1.bmp",
+             f"Windows compression {code} rejection precedes an oversized INFO height",
+             compression=code, words=((22, 16_385),))
     emit("control_os2_compatible_bitfields32", "v4header.bmp",
          "Pillow accepts Windows-compatible RGBA32 bitfields in OS/2 DIB 64", header=64)
     emit("control_os2_compatible_bitfields16", "16bit.bmp",
@@ -169,13 +182,14 @@ def build_inputs() -> list[tuple[dict, bytes]]:
             emit(f"info_depth{depth}_compression{code}", "1x1.bmp",
                  f"Invalid depth {depth} precedes Windows compression {code} rejection",
                  compression=code, shorts=((28, depth),))
-    for code in (4, 5):
-        emit(f"info_palette_claim_compression{code}", "1x1.bmp",
-             f"Windows compression {code} rejects before an oversized palette claim",
-             compression=code, words=((46, 256),))
+    for code in (0, 4, 5):
+        if code in (4, 5):
+            emit(f"info_palette_claim_compression{code}", "1x1.bmp",
+                 f"Windows compression {code} rejects before an oversized palette claim",
+                 compression=code, words=((46, 256),))
         for dimension, offset in (("width", 18), ("height", 22)):
             emit(f"info_zero_{dimension}_compression{code}", "1x1.bmp",
-                 f"Unresolved zero {dimension} versus compression {code} error precedence",
+                 f"INFO zero {dimension} with Windows compression {code} precedence",
                  compression=code, words=((offset, 0),))
     for depth, source in ((1, "1bit.bmp"), (8, "8bit.bmp"), (4, "4bit.bmp")):
         emit(f"os2_depth{depth}_huffman_nonzero_tail", source,
@@ -219,7 +233,9 @@ def pending_contract(row: dict) -> dict | None:
         return None
     message = outcome["message"]
     kind, identity, offset = "unsupported", "bmp_compression_unknown", 30
-    if message.startswith("Unsupported BMP pixel depth"):
+    if outcome["class"] == "PIL.Image.DecompressionBombError":
+        kind, identity, offset = "dimensions", "bmp_dib_header", 18
+    elif message.startswith("Unsupported BMP pixel depth"):
         identity, offset = "bmp_dib_header", 28
     elif message == "Truncated File Read":
         kind, identity, offset = "malformed", "bmp_dib_header", 14
@@ -251,12 +267,19 @@ def build_report(manifest: dict, inputs: list[tuple[dict, bytes]]) -> dict:
                      "pillow_detection": {"format": "BMP" if BmpImagePlugin._accept(data[:16]) else None},
                      "pillow_open": observe(data, "open"), "pillow_decode": decoded,
                      "pillow_verify": observe(data, "verify")})
-    unresolved = [{
+    zero_dimension_cases = [{
         "id": row["id"], "asset": row["asset"], "asset_sha256": row["asset_sha256"],
-        "status": "pending", "pillow_error": row["pillow_decode"],
-        "source_review": "Rust currently checks malformed dimensions before compression.",
+        "status": "tracked_by_active_parity_rows", "pillow_error": row["pillow_decode"],
+        "manifest_row": f"decode:bmp:error_{row['id'].removeprefix('info_')}",
+        "source_review": (
+            "INFO inspection and decode validate unsupported compression before zero dimensions; "
+            "supported compression retains the zero-dimension error."
+        ),
         "rust_verification": PENDING_RUST,
-        "required_followup": "Resolve the dimension/compression precedence differential before parity acceptance.",
+        "required_followup": (
+            "Keep this case active in the Rust parity matrix and run the selected coverage harness; "
+            "this native recipe does not execute Rust."
+        ),
     } for row in rows if row["id"].startswith("info_zero_")]
     new_full_files = sum(row["registration"] == "new_full_file" for row in rows)
     existing_controls = sum(row["registration"] == "existing_control" for row in rows)
@@ -281,12 +304,12 @@ def build_report(manifest: dict, inputs: list[tuple[dict, bytes]]) -> dict:
                     "existing_controls": existing_controls,
                     "new_successful_controls": successful_controls,
                     "classification_and_control_rows": new_full_files - successful_controls,
-                    "unresolved_precedence_rows": len(unresolved),
+                    "zero_dimension_parity_rows": len(zero_dimension_cases),
                     "pillow_successes": sum(row["pillow_decode"]["status"] == "ok" for row in rows),
                     "pillow_errors": sum(row["pillow_decode"]["status"] == "error" for row in rows)},
         "pillow_cases": rows,
         "pending_rust_contracts": [contract for row in rows if (contract := pending_contract(row))],
-        "unresolved_precedence": unresolved,
+        "zero_dimension_parity_cases": zero_dimension_cases,
     }
 
 
@@ -297,8 +320,8 @@ def planned_manifest_cases(report: dict) -> list[dict]:
         if row["registration"] == "existing_control":
             continue
         if row["id"].startswith("info_zero_"):
-            gap = ("Unresolved: Pillow rejects compression before zero dimensions; Rust currently "
-                   "checks dimensions first. Resolve precedence and run final Rust verification.")
+            gap = ("Pinned Pillow precedence is registered; keep the corresponding Rust parity row "
+                   "active and run it through the selected coverage harness.")
         else:
             gap = ("Native Pillow evidence is registered; Rust behavior and exact pixels/errors "
                    "remain unverified until all implementation work is complete.")
