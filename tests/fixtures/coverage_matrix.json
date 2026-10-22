@@ -208542,6 +208542,61 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_method_6_run_cap",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_run_cap_4356x1.png",
+          "source_sha256": "038d4a47bb2b7f22b62eaac823a897c74607b20ee0ab6999e30b5dc84f6a1a93",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_run_cap.bin",
+          "encoded_ref_bytes": 616,
+          "encoded_ref_sha256": "8abd0df9e4f0d5292902f75bc9e0be22261b7045b2266ebf895d0c17a46e00d4",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_run_cap.bin",
+          "ref_sha256": "3206f3f36cf23cf01f6a3f2b696cb407eee7c80c81c05a0373154b4a165a6016",
+          "ref_bytes": 13068,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4356,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_method_0_palette",
           "type": "encode",
           "format": "webp",
@@ -213164,9 +213219,9 @@
     }
   },
   "summary": {
-    "total_rows": 2525,
+    "total_rows": 2526,
     "decode_rows": 2009,
-    "encode_rows": 516,
+    "encode_rows": 517,
     "formats": 8,
     "assets_available": 2005,
     "decode_active": 2009,

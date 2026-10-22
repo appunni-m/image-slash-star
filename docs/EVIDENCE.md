@@ -137,8 +137,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,525 total rows: 2,009 decode / inspect /
-verify rows and 516 encode rows. Of those, 2,009 decode rows and 485 encode
+The current fixture matrix contains 2,526 total rows: 2,009 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,009 decode rows and 486 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 82 rows.
 
@@ -945,6 +945,30 @@ are local path observations, not an aggregate coverage gain claim.
 This input reaches the behavior through normal public encoding, so it remains
 Pillow parity. The 72 typed target-only fault-contract rows remain in their
 separate lane with oracle status `not_applicable`.
+
+## WebP method-six hash-chain run-cap parity — 2026-10-22
+
+Added active Pillow parity row `encode:webp:enc_lossless_method_6_run_cap`.
+It reuses the 4,356×1 RGB run-cap source with lossless quality 80 and method 6,
+which selects `fill_hash_chain_impl::<false>`. The selected all-feature
+coverage run passed 1/1 and re-decoded to exact 4,356×1 RGB pixels. Pillow's
+616-byte WebP reference has SHA-256
+`8abd0df9e4f0d5292902f75bc9e0be22261b7045b2266ebf895d0c17a46e00d4`; its pixel
+reference is the existing 13,068-byte source result with SHA-256
+`3206f3f36cf23cf01f6a3f2b696cb407eee7c80c81c05a0373154b4a165a6016`.
+
+The selected report is retained at
+`.coverage-mcp/local-evidence/20261022/webp-method-6-run-cap/coverage.json`
+(SHA-256
+`8264ac4c3cbfdd41fb53820c6c4221533a7bd1f877ef493a77cf9fc47e4f6ad9`). In the
+executed false specialization, the periodic-run check recorded 57 true and
+15,453 false outcomes; the `run > MAX_LENGTH` check recorded 3 true and 12
+false outcomes. The source file hash at measurement was
+`b9cb0e990625fe385ce49f4d96e84acc609242353e949d89be17093939e787cc`. The
+runner log records the selected test passing. Coverage MCP marks the report's
+source/build identity unverified and test attribution unknown; comparison
+with the older selected report is limited. These observations do not establish
+an aggregate coverage gain.
 
 The x86 benchmark workflow's pull-request path filter now includes
 `src/cancel.rs`, which the benchmark uses for cancellation-aware encodes. Its
@@ -8243,7 +8267,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9cc11e98c391fcff91b3c1d4eb2edcd0b5b73a4c6bf301561c4025087e0de0d5`; matrix `d8b48a3990ae695803e4f9451b1746372249b61a2112a859d890c6dc3af085d9`.
+- Current fixture integrity only: manifest `3d7d4b234931a567b3c71bbdaa1f830619b8e650d0e68231c720f6972f6a3558`; matrix `5b0fb26f300de4d26d1d20700012a4b4de6a897a07454bbed6a9ff0ee6745d39`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

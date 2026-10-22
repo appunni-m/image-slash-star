@@ -5376,6 +5376,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_run_cap_4356x1.png
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_6_run_cap
+      description: VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization
+      source_format: png
+      source_asset: webp_lossless_run_cap_4356x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
     - id: enc_lossless_method_0_palette
       description: VP8L method zero retains the sorted palette path for a 16-color input
       source_format: webp
