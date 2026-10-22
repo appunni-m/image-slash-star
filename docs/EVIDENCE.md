@@ -1,5 +1,32 @@
 # Versioned compatibility evidence
 
+## AVIF 12-bit 4:2:0 alpha odd-edge parity — 2026-10-22
+
+Added public decode parity row
+`decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9` for a
+17×9, full-range, 12-bit AV1 profile-2 all-lossless 4:2:0 image with 12-bit
+auxiliary alpha. The fixture exercises odd right/bottom edges and distinct
+low-nibble chroma. Its deterministic generator, pinned provenance, and exact
+pixel digest are recorded in the AVIF fixture README.
+
+The selected native coverage run passed all five decode rows and the allocation
+fault contract. That fault contract now uses this fixture, so the injected
+reservation failure traverses the new 12-bit route; the public result and
+retry contract pass. The selected LLVM report is
+`target/release-evidence/selected/avif-12bit420-alpha-odd-edge-20261022-final-r4/coverage.json`.
+Coverage MCP reports 2,974/32,174 branch observations for this selected
+workload and six unobserved true arms in the helper's defensive plane-shape
+guards at `src/codecs/avif/decode.rs:939`. The report has no verified source or
+build identity and no test attribution. Its baseline comparison is
+incomparable because the saved baseline's branch detail does not reconcile
+with its totals. These selected observations do not establish marginal,
+aggregate, or full-suite coverage gains.
+
+The public fixture matrix now contains 2,531 total rows: 2,014 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,014 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF subsampled RGB output reservation fault contract — 2026-10-22
 
 Added target-only case
@@ -8287,7 +8314,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1d3eeb64959cf8fbff4186bef2a63895a58a61d3edf0f554195eeda27cc27537`; matrix `8a1d497f2c084abd1abfd962b9cb74289905f333a9c6f2c4332d3f126e74d7f1`.
+- Current fixture integrity only: manifest `baea1916830a54b80e03c07e723fcaeed9ce688acf2e99e5a4c0e837954e2d3f`; matrix `064d656e9cd85688b7e40e715837ebefb518130e1158e786c0d9ae44c3423837`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
