@@ -56,6 +56,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "bmp_rle_entry_work_budget_exceeded",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:bmp:bmp_rle_entry_work_budget_exceeded",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "bmp_rle_command_work_budget_exceeded",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:bmp:bmp_rle_command_work_budget_exceeded",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_strip_assembly_reservation_failure",
