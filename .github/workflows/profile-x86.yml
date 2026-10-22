@@ -69,23 +69,20 @@ jobs:
           command -v objdump | tee -a "$output/perf-package.txt"
           perf --version | tee "$output/perf-version.txt"
           perf -vv > "$output/perf-capabilities.txt" 2>&1
-      - name: Check user perf events and DWARF call graphs
+      - name: Check whether hardware sampling is available
         run: |
           set -euo pipefail
           output=target/benchmarks/jpeg/simd-x86_64/profile
-          if ! perf stat -e cycles:u -- sleep 1 > "$output/perf-stat-preflight.txt" 2>&1; then
-            cat "$output/perf-stat-preflight.txt" >&2
-            echo "The hosted runner does not permit user-space performance events" >&2
-            exit 1
-          fi
-          perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
-            -o "$output/perf-preflight.data" -- \
-            python3 -c 'from timeit import timeit; timeit("sum(range(1000))", number=200_000)' \
-            > "$output/perf-record-preflight.stdout.txt" \
-            2> "$output/perf-record-preflight.stderr.txt"
-          perf report --stdio --header -i "$output/perf-preflight.data" \
-            > "$output/perf-record-preflight.report.txt"
-          python3 - "$output/perf-record-preflight.report.txt" <<'PY'
+          perf_mode=timed-benchmark
+          if perf stat -e cycles:u -- sleep 1 > "$output/perf-stat-preflight.txt" 2>&1; then
+            if perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+              -o "$output/perf-preflight.data" -- \
+              python3 -c 'from timeit import timeit; timeit("sum(range(1000))", number=200_000)' \
+              > "$output/perf-record-preflight.stdout.txt" \
+              2> "$output/perf-record-preflight.stderr.txt"; then
+              if perf report --stdio --header -i "$output/perf-preflight.data" \
+                > "$output/perf-record-preflight.report.txt"; then
+                if samples=$(python3 - "$output/perf-record-preflight.report.txt" <<'PY'
           from pathlib import Path
           import re
           import sys
@@ -95,16 +92,43 @@ jobs:
           if match is None:
               raise SystemExit("perf DWARF preflight produced no sample count")
           multiplier = {"": 1, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[match.group(2)]
-          samples = int(float(match.group(1).replace(",", "")) * multiplier)
-          if samples < 250:
-              raise SystemExit(f"perf DWARF preflight collected only {samples} samples")
-          print(f"perf DWARF preflight collected {samples} samples")
+          print(int(float(match.group(1).replace(",", "")) * multiplier))
           PY
+                ); then
+                  if (( samples >= 250 )); then
+                    perf_mode=cycles-dwarf
+                    printf 'preflight_sample_count=%s\n' "$samples" >> "$output/perf-mode.txt"
+                  else
+                    printf 'perf_preflight=insufficient_samples:%s\n' "$samples" >> "$output/perf-mode.txt"
+                  fi
+                else
+                  printf 'perf_preflight=report_missing_samples\n' >> "$output/perf-mode.txt"
+                fi
+              else
+                printf 'perf_preflight=report_failed\n' >> "$output/perf-mode.txt"
+              fi
+            else
+              printf 'perf_preflight=record_failed\n' >> "$output/perf-mode.txt"
+            fi
+          else
+            cat "$output/perf-stat-preflight.txt" >&2
+            printf 'perf_preflight=event_access_denied\n' >> "$output/perf-mode.txt"
+          fi
+          printf 'profiling_mode=%s\n' "$perf_mode" | tee -a "$output/perf-mode.txt"
+          printf 'PERF_MODE=%s\n' "$perf_mode" >> "$GITHUB_ENV"
+          if [[ "$perf_mode" == "timed-benchmark" ]]; then
+            echo "Hardware sampling is unavailable; public-API timing and linked assembly will still be collected."
+          else
+            echo "Hardware cycle sampling with DWARF call graphs is available."
+            printf 'profile_event=cycles:u frequency_hz=997 call_graph=dwarf,8192\n' >> "$output/perf-mode.txt"
+          fi
       - name: Build and profile exact public RGB 4:2:0 encodes
         run: |
           set -euo pipefail
           output=target/benchmarks/jpeg/simd-x86_64/profile
           minimum_samples=1000
+          perf_mode=${PERF_MODE:-timed-benchmark}
+          timed_fallback_required=0
 
           sample_count() {
             python3 - "$1" <<'PY'
@@ -191,28 +215,60 @@ jobs:
 
               local profile="$output/${variant}-${size}.perf.data"
               local report="$output/${variant}-${size}.report.txt"
-              printf 'profile=%s size=%s iterations=%s event=cycles:u frequency_hz=997 call_graph=dwarf,8192\n' \
-                "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
-              perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
-                -o "$profile" -- "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
+              local samples
+              printf 'variant=%s size=%s iterations=%s\n' "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
+              if [[ "$perf_mode" == "cycles-dwarf" ]]; then
+                if perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+                  -o "$profile" -- "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
+                  > "$output/${variant}-${size}.stdout.txt" \
+                  2> "$output/${variant}-${size}.stderr.txt" \
+                  && test -s "$profile" \
+                  && perf report --stdio --header --inline -i "$profile" > "$report"; then
+                  if samples=$(sample_count "$report") && (( samples >= minimum_samples )); then
+                    printf 'measurement_mode=cycles-dwarf event=cycles:u frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s size=%s\n' "$samples" "$variant" "$size" >> "$output/run-metadata.txt"
+                    if perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
+                      > "$output/${variant}-${size}.annotate.txt"; then
+                      continue
+                    fi
+                    printf 'perf_fallback=annotation_failed variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
+                  else
+                    printf 'perf_fallback=insufficient_samples variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
+                  fi
+                else
+                  printf 'perf_fallback=record_or_report_failed variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
+                fi
+                perf_mode=timed-benchmark
+                timed_fallback_required=1
+                printf 'PERF_MODE=timed-benchmark\n' >> "$GITHUB_ENV"
+              fi
+              printf 'measurement_mode=timed-benchmark variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
+              "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
                 > "$output/${variant}-${size}.stdout.txt" \
                 2> "$output/${variant}-${size}.stderr.txt"
-              test -s "$profile"
-              perf report --stdio --header --inline -i "$profile" > "$report"
-              local samples
-              samples=$(sample_count "$report")
-              if (( samples < minimum_samples )); then
-                echo "${variant} ${size} profile collected only ${samples} samples; expected at least ${minimum_samples}" >&2
-                exit 1
-              fi
-              printf 'sample_count=%s\n' "$samples" >> "$output/run-metadata.txt"
-              perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
-                > "$output/${variant}-${size}.annotate.txt"
             done
           }
 
           profile_variant sse2 '-C target-cpu=x86-64 -C debuginfo=2'
           profile_variant avx2 '-C target-cpu=x86-64 -C target-feature=+avx2 -C debuginfo=2'
+
+          if (( timed_fallback_required )); then
+            printf 'timed_fallback=uniform_matrix_after_profile_failure\n' >> "$output/run-metadata.txt"
+            for variant in sse2 avx2; do
+              binary="target/jpeg-profile-${variant}/release/jpeg-production-matrix-rust"
+              for size in 512 1024; do
+                if [[ "$size" == 512 ]]; then
+                  iterations=2000
+                else
+                  iterations=512
+                fi
+                printf 'final_measurement_mode=timed-benchmark variant=%s size=%s iterations=%s\n' \
+                  "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
+                "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
+                  > "$output/${variant}-${size}.stdout.txt" \
+                  2> "$output/${variant}-${size}.stderr.txt"
+              done
+            done
+          fi
       - name: Confirm profiled SSE2 and AVX2 outputs match
         run: |
           python3 - <<'PY'
