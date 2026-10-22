@@ -51,6 +51,8 @@ generation provenance follow.
 | `portable_lossless_monochrome_limited_16x16.avif` | Deterministic 16x16 8-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `e14c3cce9943b6f4f12ad3f0a93624c702678a73fa55101ba61e61aabe3168be` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_10bit_16x16.avif` | Deterministic 16x16 10-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `514a2b65aa84f2bd647a8c041cf20c7b59c8fb7e71f8303bc1a4a408defccd66` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_12bit_16x16.avif` | Deterministic 16x16 12-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `3abcfd332dff4d6ccfc801b75430c1997e1738b1546006ab5590a6e1fcfd549e` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_fullrange_12bit_17x9.avif` | Deterministic 17x9 full-range 12-bit lossless 4:0:0 luma still; all 153 varied 12-bit codes round-trip exactly, including low nibbles 0–15 | `scripts/generate_avif_monochrome_12bit_scalar_tail.py`; clean libavif 1.4.1 / `6543b22`, libaom 3.13.2 / `ad44980`; quality 100, speed 0, one thread; Pillow 12.2.0 exact RGB reference | `07793973838382f7de986377c7ed2ea139144b1a4413092e65bb6713db10ae57` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif` | Deterministic 17x9 full-range 12-bit lossless monochrome still with a varied 12-bit auxiliary alpha plane; color and alpha both include endpoints and low nibbles 0–15 | `scripts/generate_avif_monochrome_12bit_scalar_tail.py`; clean libavif 1.4.1 / `6543b22`, libaom 3.13.2 / `ad44980`; quality 100, speed 0, one thread; Pillow 12.2.0 exact RGBA reference | `3acad68f56c9eced8f975303cce603d3404fd00d10bb2f92b24573395b34c25b` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_bt2020_pq_16x16.avif` | Deterministic 16x16 8-bit lossless limited-range 4:0:0 still with BT.2020/PQ CICP 9/16/9 | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread | `ad3ce0e1171561690b156149fa8761fcc8adf26670507b0d64cc4294994d344b` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_alpha_16x16.avif` | Deterministic 16x16 8-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `b95edc757441fad6b2c051e1df78c888fab81aeab5c81e366d8fd4b5941a58fa` | MIT/Apache-2.0 (repository-generated) |
 | `portable_lossless_monochrome_limited_alpha_10bit_16x16.avif` | Deterministic 16x16 10-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `2497017931a998c26e7328b0e940b736ccbaaab5f3dfc4d3e6637ebb7e7168f2` | MIT/Apache-2.0 (repository-generated) |
@@ -653,6 +655,26 @@ pure-Rust monochrome reconstruction crops the coded lossless block to this
 nonzero sub-4-pixel canvas; Pillow's exact RGB output is `7f7f7f` (SHA-256
 `4977021028c4a74c2bca8061786cd88afc96837ef6007265acc4f8cda2d945e0`). The
 generator double-encodes the input and checks its listed hash.
+
+The `portable_lossless_monochrome_fullrange_12bit_17x9.avif` and
+`portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif` fixtures use
+17x9 full-range 12-bit lossless monochrome items. Their color planes include
+both endpoints and low-nibble values 0–15; the alpha fixture has a separate
+varied full-range alpha item with the same sample coverage. The generator
+checks repeatable encodes, AV1 profile/depth/range/lossless declarations, the
+no-alpha fixture's exact 153-sample Y4M round-trip, and pinned Pillow RGB8 and
+RGBA pixel hashes. It uses clean libavif `6543b22` and libaom `ad44980` builds,
+without the fixture-only super-resolution patch. After preparing those pinned
+builds, regenerate or verify both assets with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_monochrome_12bit_scalar_tail.py \
+  --avifenc target/oracle-staging/libavif-kpzg-clean-build/avifenc \
+  --avifdec target/oracle-staging/libavif-kpzg-clean-build/avifdec
+.oracle-venv/bin/python scripts/generate_avif_monochrome_12bit_scalar_tail.py \
+  --avifenc target/oracle-staging/libavif-kpzg-clean-build/avifenc \
+  --avifdec target/oracle-staging/libavif-kpzg-clean-build/avifdec --check
+```
 
 `portable_lossless_monochrome_limited_16x16.avif` uses the
 `mono_limited_lossless_16x16` case in `scripts/generate_av1_encoder_refs.py`.

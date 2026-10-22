@@ -8099,6 +8099,18 @@ formats:
       - portable_lossless_monochrome_limited_12bit_16x16.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_fullrange_12bit_17x9
+      description: 17x9 full-range 12-bit lossless monochrome key frame with varied low sample bits and an irregular sample count
+      test_assets:
+      - portable_lossless_monochrome_fullrange_12bit_17x9.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_fullrange_alpha_12bit_17x9
+      description: 17x9 full-range 12-bit lossless monochrome key frame with varied 12-bit auxiliary alpha samples and an irregular sample count
+      test_assets:
+      - portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_monochrome_limited_bt2020_pq_16x16
       description: 16x16 8-bit lossless limited-range monochrome BT.2020/PQ still covering CICP-independent luma output
       test_assets:
