@@ -9582,6 +9582,54 @@
         "verify_status": "error"
       },
       {
+        "asset": "png_invalid_signature.ico",
+        "class": "error_malformed_png_entry_signature",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "ICO",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "ICO",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "ICO",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "ICO",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "ICO PNG dispatch keeps its four-byte prefix but rejects a corrupted remaining signature byte",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Truncated File Read",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "png_short_header.ico",
         "class": "error_malformed_png_short_header",
         "contracts": {
@@ -28142,24 +28190,24 @@
       "avif": 61,
       "bmp": 84,
       "gif": 49,
-      "ico": 30,
+      "ico": 31,
       "jpeg": 103,
       "png": 65,
       "tiff": 135,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 668,
+      "pillow_fixture": 669,
       "specification_reference": 61
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 396,
+      "spec_violation": 397,
       "tolerated": 0,
       "truncated": 197
     },
-    "classes": 668,
+    "classes": 669,
     "formats": 8
   }
 }

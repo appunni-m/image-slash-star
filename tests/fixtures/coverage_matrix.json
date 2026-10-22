@@ -84503,6 +84503,99 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_malformed_png_entry_signature",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "ICO PNG dispatch keeps its four-byte prefix but rejects a corrupted remaining signature byte",
+          "asset": "png_invalid_signature.ico",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "69864fbd1392610d04953ca7ff3de0b0e9643a24f3edeabee748e06fe251549e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Truncated File Read",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Truncated File Read",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "asset": "bmp_entry.ico",
           "category": "bmp",
           "description": "ICO with embedded BMP data (classic)",
@@ -213071,12 +213164,12 @@
     }
   },
   "summary": {
-    "total_rows": 2524,
-    "decode_rows": 2008,
+    "total_rows": 2525,
+    "decode_rows": 2009,
     "encode_rows": 516,
     "formats": 8,
-    "assets_available": 2004,
-    "decode_active": 2008,
+    "assets_available": 2005,
+    "decode_active": 2009,
     "decode_planned": 0,
     "encode_not_wired": 31
   },

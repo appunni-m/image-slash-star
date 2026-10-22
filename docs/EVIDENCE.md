@@ -1,5 +1,24 @@
 # Versioned compatibility evidence
 
+## ICO embedded PNG partial-signature parity — 2026-10-22
+
+Added active parity row `decode:ico:error_malformed_png_entry_signature`.
+Its complete 2,690-byte ICO preserves the embedded PNG's four-byte dispatch
+prefix and flips only the fifth signature byte; input SHA-256 is
+`69864fbd1392610d04953ca7ff3de0b0e9643a24f3edeabee748e06fe251549e`.
+Pinned Pillow 12.2.0 reports `OSError("Truncated File Read")` for inspection,
+verification, decode, and sequence decode. The exact selected Rust parity run
+on the current main base passed 1/1.
+
+Coverage MCP's selected-test coordinate comparison against the prior PNG
+selection found the false arm of the full PNG signature check at
+`src/codecs/png/decode.rs:2036` as newly observed. The one-row report leaves the
+true arm unobserved, as expected for this malformed input. Both reports have
+unverified source/build identity and unknown MCP test attribution, so this is
+coordinate evidence only; no verified marginal gain or full-coverage result is
+claimed. The current-base local report is
+`.coverage-mcp/local-evidence/20261022/ico-png-partial-signature-main/coverage.json`.
+
 ## GIF NETSCAPE loop-payload parity — 2026-10-21
 
 Added active input-only parity rows `decode:gif:netscape_loop_split_subblocks`
@@ -118,8 +137,8 @@ The saved full BMP report still lists a missing false arm at
 rejected by Pillow as truncated, so the branch remains a reachability question
 rather than a justified new parity case.
 
-The current fixture matrix contains 2,524 total rows: 2,008 decode / inspect /
-verify rows and 516 encode rows. Of those, 2,008 decode rows and 485 encode
+The current fixture matrix contains 2,525 total rows: 2,009 decode / inspect /
+verify rows and 516 encode rows. Of those, 2,009 decode rows and 485 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 82 rows.
 
@@ -8224,7 +8243,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5e20d26b89fabc8ee91442e101ace5d9b605f20afd2568bdc8eec92b3e262dfd`; matrix `787082afd2ac32faed6e8d3a7a01a0e444654c6a3636845e3174aa891484cd99`.
+- Current fixture integrity only: manifest `9cc11e98c391fcff91b3c1d4eb2edcd0b5b73a4c6bf301561c4025087e0de0d5`; matrix `d8b48a3990ae695803e4f9451b1746372249b61a2112a859d890c6dc3af085d9`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

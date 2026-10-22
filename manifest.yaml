@@ -7509,6 +7509,11 @@ formats:
       description: ICO with embedded PNG data
       test_assets:
       - png_entry.ico
+    - id: error_malformed_png_entry_signature
+      description: ICO PNG dispatch keeps its four-byte prefix but rejects a corrupted remaining signature byte
+      test_assets:
+      - png_invalid_signature.ico
+      expect_error: true
     - id: bmp_entry
       description: ICO with embedded BMP data (classic)
       test_assets:
