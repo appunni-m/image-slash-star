@@ -21031,6 +21031,67 @@
       ]
     },
     {
+      "id": "sequence_alpha_sample_count_mismatch",
+      "asset": "sequence_alpha_sample_count_mismatch.avif",
+      "asset_sha256": "89a13baeb503ace10bea0f07d9c2aa296235d2ca8ed0471f3ee99751deccafcf",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode frame 4: No images remaining",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": true,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/sequence_alpha_sample_count_mismatch.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "high_bitdepth_still_10bit_444_lossless",
       "asset": "high_bitdepth_still_10bit_444_lossless.avif",
       "asset_sha256": "c49589983c8492a12c3920123f9535c887b8715bf5cbdb25b57dfdad0d8c3c7e",

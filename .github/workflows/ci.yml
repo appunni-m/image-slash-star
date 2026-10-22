@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Keep the required status on the exact Codex commit so validated changes
+    # can be fast-forwarded to main without opening a pull request.
+    branches: [main, "codex/**"]
   pull_request:
   schedule:
     - cron: "17 3 * * 1"

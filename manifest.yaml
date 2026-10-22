@@ -9638,6 +9638,13 @@ formats:
       - sequence_alpha_duration_mismatch.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: sequence_alpha_sample_count_mismatch
+      description: Animated AVIF whose auxiliary alpha sample-to-chunk table declares four of five samples; Pillow decodes four frames then errors on the fifth
+      test_assets:
+      - sequence_alpha_sample_count_mismatch.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: true
     - id: high_bitdepth_still_10bit_444_lossless
       description: Single-frame 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
       test_assets:

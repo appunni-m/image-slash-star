@@ -1,5 +1,35 @@
 # Versioned compatibility evidence
 
+## AVIF auxiliary alpha sample-count parity — 2026-10-22
+
+Added `decode:avif:sequence_alpha_sample_count_mismatch` for the pinned
+`10bit.avif` sequence with only the alpha track's `stsc.samples_per_chunk`
+field changed from five to four (input SHA-256
+`89a13baeb503ace10bea0f07d9c2aa296235d2ca8ed0471f3ee99751deccafcf`). Pillow
+12.2.0 verifies the file and decodes its first four 64×64 RGBA frames; loading
+frame four raises `RuntimeError: Failed to decode frame 4: No images remaining`.
+The first-frame reference is 16,384 bytes with SHA-256
+`cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57`.
+
+The selected public matrix case passed 1/1. It exposed and fixed an early Rust
+sample-count rejection that made inspection fail before Pillow's late sequence
+error: inspection and first-frame decoding now retain the mapped samples, and
+full-sequence decoding reports the malformed color/alpha count before building
+frames. Coverage MCP identified the gap in sequence sample-count validation at
+`src/codecs/avif/samples.rs:2671`. The selected LLVM report is
+`target/release-evidence/selected/avif-alpha-sample-count-mismatch-v2-20261022.json`.
+Its comparison with the saved full report is incomparable because baseline
+branch detail does not reconcile with reported totals and neither report has a
+verified source/build receipt. The selected gaps query shows the expected
+unvisited time-scale and equal-count arms in
+`src/codecs/avif/decode.rs:307,312-313`; no marginal or aggregate coverage gain
+is claimed. No full coverage campaign was run.
+
+The public fixture matrix now contains 2,532 total rows: 2,015 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,015 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF 12-bit 4:2:0 alpha odd-edge parity — 2026-10-22
 
 Added public decode parity row
@@ -22,10 +52,10 @@ incomparable because the saved baseline's branch detail does not reconcile
 with its totals. These selected observations do not establish marginal,
 aggregate, or full-suite coverage gains.
 
-The public fixture matrix now contains 2,531 total rows: 2,014 decode / inspect /
+The public fixture matrix then contained 2,531 total rows: 2,014 decode / inspect /
 verify rows and 517 encode rows. Of those, 2,014 decode rows and 486 encode
-rows are active; 31 encode rows remain planned. The separate target-only fault
-lane contains 85 cases.
+rows were active; 31 encode rows remained planned. The separate target-only fault
+lane contained 85 cases.
 
 ## AVIF subsampled RGB output reservation fault contract — 2026-10-22
 
@@ -8314,7 +8344,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `baea1916830a54b80e03c07e723fcaeed9ce688acf2e99e5a4c0e837954e2d3f`; matrix `064d656e9cd85688b7e40e715837ebefb518130e1158e786c0d9ae44c3423837`.
+- Current fixture integrity only: manifest `56920e44d257748c122d5ff9d9e1bce61446f44001c2b015a29aa37c79c1fb9d`; matrix `1ba540faeda4cad718c33b9218d2c8287eb6d2f3c109f37bd68ec789aa7f4e01`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

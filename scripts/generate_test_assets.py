@@ -12402,10 +12402,24 @@ def generate_avif_sequence_alpha_duration_mismatch_fixture():
     return fixture
 
 
+def generate_avif_sequence_alpha_sample_count_mismatch_fixture():
+    """Declare four auxiliary alpha samples while retaining five table entries."""
+    source_path = OUT / "avif" / "10bit.avif"
+    source = source_path.read_bytes()
+    from avif_sample_table_fixtures import alpha_track_sample_count_mismatch
+
+    candidate = alpha_track_sample_count_mismatch(source)
+
+    fixture = OUT / "avif" / "sequence_alpha_sample_count_mismatch.avif"
+    fixture.write_bytes(candidate)
+    return fixture
+
+
 def gen_avif():
     d = OUT / "avif"
     d.mkdir(parents=True, exist_ok=True)
     generate_avif_sequence_alpha_duration_mismatch_fixture()
+    generate_avif_sequence_alpha_sample_count_mismatch_fixture()
     write_avif_frame_id_width_error_fixture(d)
     write_avif_identity_color_matrix_error_fixture(d)
     from PIL import _avif, features
@@ -19706,6 +19720,11 @@ def main():
         help="generate only the AVIF alpha-track duration parity fixture",
     )
     parser.add_argument(
+        "--avif-sequence-alpha-sample-count-mismatch",
+        action="store_true",
+        help="generate only the AVIF alpha-track sample-count parity fixture",
+    )
+    parser.add_argument(
         "--tiff-lzw-midstream-clear-width-reset",
         action="store_true",
         help="generate only the TIFF LZW mid-stream CLEAR parity fixture",
@@ -19725,6 +19744,7 @@ def main():
         args.avif_iinf_entry_count_zero,
         args.avif_h16x8_following_chroma,
         args.avif_sequence_alpha_duration_mismatch,
+        args.avif_sequence_alpha_sample_count_mismatch,
     )
     selected_avif_fixture = any(selected_avif_fixtures)
     selected_tiff_fixture = (
@@ -19779,6 +19799,9 @@ def main():
         elif args.avif_h16x8_following_chroma:
             fixture = generate_avif_h16x8_following_chroma_fixture()
             print(f"Generated AVIF H16x8 following-chroma fixture: {fixture}")
+        elif args.avif_sequence_alpha_sample_count_mismatch:
+            fixture = generate_avif_sequence_alpha_sample_count_mismatch_fixture()
+            print(f"Generated AVIF alpha sample-count fixture: {fixture}")
         else:
             fixture = generate_avif_sequence_alpha_duration_mismatch_fixture()
             print(f"Generated AVIF alpha timing fixture: {fixture}")
