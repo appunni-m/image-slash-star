@@ -27,14 +27,14 @@
     }
   ],
   "summary": {
-    "observations": 59,
-    "new_full_files": 57,
+    "observations": 62,
+    "new_full_files": 60,
     "existing_controls": 2,
     "new_successful_controls": 7,
-    "classification_and_control_rows": 50,
-    "unresolved_precedence_rows": 4,
+    "classification_and_control_rows": 53,
+    "zero_dimension_parity_rows": 6,
     "pillow_successes": 9,
-    "pillow_errors": 50
+    "pillow_errors": 53
   },
   "pillow_cases": [
     {
@@ -1682,6 +1682,46 @@
       }
     },
     {
+      "id": "info_negative_width",
+      "description": "Signed negative INFO-header width is rejected as an invalid dimension before allocation",
+      "asset": "info_negative_width.bmp",
+      "asset_sha256": "3a9dea90c60b64702d59e861780d804430d7447185f98ed296730fe01f341676",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 4294967295
+        }
+      ],
+      "header_size": 40,
+      "compression": 0,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.Image.DecompressionBombError",
+        "message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.Image.DecompressionBombError",
+        "message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.Image.DecompressionBombError",
+        "message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack."
+      }
+    },
+    {
       "id": "control_os2_compatible_bitfields32",
       "description": "Pillow accepts Windows-compatible RGBA32 bitfields in OS/2 DIB 64",
       "asset": "control_os2_compatible_bitfields32.bmp",
@@ -2262,6 +2302,96 @@
       }
     },
     {
+      "id": "info_zero_width_compression0",
+      "description": "INFO zero width with Windows compression 0 precedence",
+      "asset": "info_zero_width_compression0.bmp",
+      "asset_sha256": "19490993977668cc74389eb5fef048cfeaa896720e5fc25ea70ff25a74ca12e3",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 0
+        }
+      ],
+      "header_size": 40,
+      "compression": 0,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      }
+    },
+    {
+      "id": "info_zero_height_compression0",
+      "description": "INFO zero height with Windows compression 0 precedence",
+      "asset": "info_zero_height_compression0.bmp",
+      "asset_sha256": "0bb4aa6f189dc5408a055e7fbc762f7f0a06236c585350e7afa9c889906a58b0",
+      "bytes": 58,
+      "source": "tests/fixtures/input/images/bmp/1x1.bmp",
+      "source_sha256": "c7cbff4b5d8c5a89ff13a80681e0fcb8a66b998b321f7007269384906cb0cc30",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 22,
+          "value": 0
+        }
+      ],
+      "header_size": 40,
+      "compression": 0,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      }
+    },
+    {
       "id": "info_palette_claim_compression4",
       "description": "Windows compression 4 rejects before an oversized palette claim",
       "asset": "info_palette_claim_compression4.bmp",
@@ -2308,7 +2438,7 @@
     },
     {
       "id": "info_zero_width_compression4",
-      "description": "Unresolved zero width versus compression 4 error precedence",
+      "description": "INFO zero width with Windows compression 4 precedence",
       "asset": "info_zero_width_compression4.bmp",
       "asset_sha256": "82b395309dacd1e26dc8cdd67ca3cbce0694145729665a7230c30619ced7853c",
       "bytes": 58,
@@ -2353,7 +2483,7 @@
     },
     {
       "id": "info_zero_height_compression4",
-      "description": "Unresolved zero height versus compression 4 error precedence",
+      "description": "INFO zero height with Windows compression 4 precedence",
       "asset": "info_zero_height_compression4.bmp",
       "asset_sha256": "c9571322590c59017b6cd5a10aacba446b4b52d9bc6043932208158e1b88de84",
       "bytes": 58,
@@ -2443,7 +2573,7 @@
     },
     {
       "id": "info_zero_width_compression5",
-      "description": "Unresolved zero width versus compression 5 error precedence",
+      "description": "INFO zero width with Windows compression 5 precedence",
       "asset": "info_zero_width_compression5.bmp",
       "asset_sha256": "7d7932bb90d3f0be4ce2df3585cf5aafc1b98e40412610d96af62ecc61db9cd9",
       "bytes": 58,
@@ -2488,7 +2618,7 @@
     },
     {
       "id": "info_zero_height_compression5",
-      "description": "Unresolved zero height versus compression 5 error precedence",
+      "description": "INFO zero height with Windows compression 5 precedence",
       "asset": "info_zero_height_compression5.bmp",
       "asset_sha256": "ee8a3ac199ecd4cddcbc4b2703064fd56e3dc5283b18d606001562adf5a3919f",
       "bytes": 58,
@@ -3386,6 +3516,21 @@
       "authority": "Repository structured-error design; Pillow supplies class/message only."
     },
     {
+      "id": "info_negative_width",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "dimensions",
+      "expected_identity": "bmp_dib_header",
+      "expected_offset": 18,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
       "id": "info_depth0_compression4",
       "origin": "defensive_model",
       "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
@@ -3566,66 +3711,102 @@
       "authority": "Repository structured-error design; Pillow supplies class/message only."
     }
   ],
-  "unresolved_precedence": [
+  "zero_dimension_parity_cases": [
+    {
+      "id": "info_zero_width_compression0",
+      "asset": "info_zero_width_compression0.bmp",
+      "asset_sha256": "19490993977668cc74389eb5fef048cfeaa896720e5fc25ea70ff25a74ca12e3",
+      "status": "tracked_by_active_parity_rows",
+      "pillow_error": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "manifest_row": "decode:bmp:error_zero_width_compression0",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
+      "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
+    },
+    {
+      "id": "info_zero_height_compression0",
+      "asset": "info_zero_height_compression0.bmp",
+      "asset_sha256": "0bb4aa6f189dc5408a055e7fbc762f7f0a06236c585350e7afa9c889906a58b0",
+      "status": "tracked_by_active_parity_rows",
+      "pillow_error": {
+        "status": "error",
+        "stage": "open",
+        "class": "PIL.UnidentifiedImageError",
+        "message": "cannot identify image file <bytes>"
+      },
+      "manifest_row": "decode:bmp:error_zero_height_compression0",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
+      "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
+    },
     {
       "id": "info_zero_width_compression4",
       "asset": "info_zero_width_compression4.bmp",
       "asset_sha256": "82b395309dacd1e26dc8cdd67ca3cbce0694145729665a7230c30619ced7853c",
-      "status": "pending",
+      "status": "tracked_by_active_parity_rows",
       "pillow_error": {
         "status": "error",
         "stage": "open",
         "class": "builtins.OSError",
         "message": "Unsupported BMP compression (4)"
       },
-      "source_review": "Rust currently checks malformed dimensions before compression.",
+      "manifest_row": "decode:bmp:error_zero_width_compression4",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
       "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
-      "required_followup": "Resolve the dimension/compression precedence differential before parity acceptance."
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
     },
     {
       "id": "info_zero_height_compression4",
       "asset": "info_zero_height_compression4.bmp",
       "asset_sha256": "c9571322590c59017b6cd5a10aacba446b4b52d9bc6043932208158e1b88de84",
-      "status": "pending",
+      "status": "tracked_by_active_parity_rows",
       "pillow_error": {
         "status": "error",
         "stage": "open",
         "class": "builtins.OSError",
         "message": "Unsupported BMP compression (4)"
       },
-      "source_review": "Rust currently checks malformed dimensions before compression.",
+      "manifest_row": "decode:bmp:error_zero_height_compression4",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
       "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
-      "required_followup": "Resolve the dimension/compression precedence differential before parity acceptance."
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
     },
     {
       "id": "info_zero_width_compression5",
       "asset": "info_zero_width_compression5.bmp",
       "asset_sha256": "7d7932bb90d3f0be4ce2df3585cf5aafc1b98e40412610d96af62ecc61db9cd9",
-      "status": "pending",
+      "status": "tracked_by_active_parity_rows",
       "pillow_error": {
         "status": "error",
         "stage": "open",
         "class": "builtins.OSError",
         "message": "Unsupported BMP compression (5)"
       },
-      "source_review": "Rust currently checks malformed dimensions before compression.",
+      "manifest_row": "decode:bmp:error_zero_width_compression5",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
       "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
-      "required_followup": "Resolve the dimension/compression precedence differential before parity acceptance."
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
     },
     {
       "id": "info_zero_height_compression5",
       "asset": "info_zero_height_compression5.bmp",
       "asset_sha256": "ee8a3ac199ecd4cddcbc4b2703064fd56e3dc5283b18d606001562adf5a3919f",
-      "status": "pending",
+      "status": "tracked_by_active_parity_rows",
       "pillow_error": {
         "status": "error",
         "stage": "open",
         "class": "builtins.OSError",
         "message": "Unsupported BMP compression (5)"
       },
-      "source_review": "Rust currently checks malformed dimensions before compression.",
+      "manifest_row": "decode:bmp:error_zero_height_compression5",
+      "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
       "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
-      "required_followup": "Resolve the dimension/compression precedence differential before parity acceptance."
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
     }
   ]
 }

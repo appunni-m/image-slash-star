@@ -5544,6 +5544,11 @@ def gen_bmp():
         b"\0" * 4,
     )
     write_bmp(
+        d / "core_zero_height.bmp",
+        struct.pack("<IHHHH", 12, 1, 0, 1, 24),
+        b"\0" * 4,
+    )
+    write_bmp(
         d / "core_header_invalid_depth.bmp",
         struct.pack("<IHHHH", 12, 1, 1, 1, 2),
         b"\0" * 4,

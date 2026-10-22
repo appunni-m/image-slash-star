@@ -4388,6 +4388,7 @@ formats:
       test_assets:
       - invalid_header_size.bmp
       - core_zero_width.bmp
+      - core_zero_height.bmp
       - 4bit_gray.bmp
       - invalid_width.bmp
       - invalid_height.bmp
@@ -4440,10 +4441,45 @@ formats:
       - bitfields_zero_red_mask.bmp
       - bitfields_zero_blue_mask.bmp
       expect_error: true
+    - id: error_negative_width
+      description: Pillow rejects a signed negative INFO-header width as an invalid dimension
+      test_assets:
+      - info_negative_width.bmp
+      expect_error: true
     - id: error_unsupported_windows_embedded_jpeg
       description: Pillow rejects Windows BMP compression code 4 in a complete INFO header
       test_assets:
       - header40_compression4.bmp
+      expect_error: true
+    - id: error_zero_width_compression0
+      description: Pillow rejects a zero-width INFO BMP with valid uncompressed pixels
+      test_assets:
+      - info_zero_width_compression0.bmp
+      expect_error: true
+    - id: error_zero_height_compression0
+      description: Pillow rejects a zero-height INFO BMP with valid uncompressed pixels
+      test_assets:
+      - info_zero_height_compression0.bmp
+      expect_error: true
+    - id: error_zero_width_compression4
+      description: Pillow rejects Windows BMP compression 4 before zero-width dimensions
+      test_assets:
+      - info_zero_width_compression4.bmp
+      expect_error: true
+    - id: error_zero_width_compression5
+      description: Pillow rejects Windows BMP compression 5 before zero-width dimensions
+      test_assets:
+      - info_zero_width_compression5.bmp
+      expect_error: true
+    - id: error_zero_height_compression4
+      description: Pillow rejects Windows BMP compression 4 before zero-height dimensions
+      test_assets:
+      - info_zero_height_compression4.bmp
+      expect_error: true
+    - id: error_zero_height_compression5
+      description: Pillow rejects Windows BMP compression 5 before zero-height dimensions
+      test_assets:
+      - info_zero_height_compression5.bmp
       expect_error: true
     - id: error_unsupported_windows_embedded_png
       description: Pillow rejects Windows BMP compression code 5 in a complete INFO header
