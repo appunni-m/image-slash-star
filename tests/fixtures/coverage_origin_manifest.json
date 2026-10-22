@@ -300,7 +300,7 @@
       "path": "src/codecs/avif/av1/tile_state.rs"
     },
     {
-      "guard_count": 14,
+      "guard_count": 15,
       "origin": "defensive_model",
       "path": "src/codecs/avif/decode.rs"
     },

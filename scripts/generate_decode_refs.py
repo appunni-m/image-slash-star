@@ -3229,6 +3229,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.i444_generic_rgb.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "avif.subsampled_rgb.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.superres.position_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },

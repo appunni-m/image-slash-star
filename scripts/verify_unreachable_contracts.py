@@ -105,6 +105,14 @@ FAULT_CONTRACTS = {
         "point": "avif.i444_generic_rgb.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_subsampled_rgb_output_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_subsampled_rgb_output_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "avif.subsampled_rgb.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_10bit_i444_alpha_invalid_sample": {
         "format": "avif",
         "category": "structured-diagnostics",

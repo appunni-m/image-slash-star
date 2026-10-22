@@ -213344,6 +213344,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_subsampled_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:baseline"
+      },
+      "fault": {
+        "point": "avif.subsampled_rgb.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_12bit_i444_generic_u_plane_length_mismatch",
       "type": "fault-contract",
       "operation": "decode",

@@ -72,6 +72,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444AlphaOutputReservation,
     /// Force generic AVIF I444 RGB output reservation to fail.
     AvifI444RgbOutputReservation,
+    /// Force subsampled AVIF RGB output reservation to fail.
+    AvifSubsampledRgbOutputReservation,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.

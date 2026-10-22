@@ -1225,6 +1225,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.subsampled_rgb.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifSubsampledRgbOutputReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -1667,6 +1673,9 @@ fn execute_fault_contract(
         "avif.i444_generic_rgb.output_reservation" => {
             Some("decode: unable to allocate AVIF I444 RGB output")
         }
+        "avif.subsampled_rgb.output_reservation" => {
+            Some("decode: unable to allocate AVIF subsampled RGB output")
+        }
         "av1.frame.color_tile_state_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",
         ),
@@ -1891,8 +1900,10 @@ fn execute_fault_contract(
             identity,
         }) if actual_format == expected_format
             && stage == expected_stage
-            && (row.fault.point != "av1.segment_map.reservation"
-                || (offset.is_none() && identity.is_none()))
+            && (!matches!(
+                row.fault.point.as_str(),
+                "av1.segment_map.reservation" | "avif.subsampled_rgb.output_reservation"
+            ) || (offset.is_none() && identity.is_none()))
             && expected_message.is_none_or(|expected| message == expected) => {}
         Err(img::ImageError::Unsupported {
             format: Some(actual_format),
