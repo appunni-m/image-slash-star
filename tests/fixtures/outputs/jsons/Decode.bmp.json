@@ -12665,6 +12665,214 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "error_zero_width_compression3_invalid_masks",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP bitfields layout",
+      "error_kind": "unsupported",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.OSError",
+      "inspect_error_message": "Unsupported BMP bitfields layout",
+      "inspect_error_kind": "unsupported",
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "Unsupported BMP bitfields layout",
+      "verify_error_kind": "unsupported",
+      "verification_scope": "header_only",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "04da12e1c77018ee82d8dc6b6042aa335770fe8026c4101b949102800fe2db4f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_zero_height_compression3_invalid_masks",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "Unsupported BMP bitfields layout",
+      "error_kind": "unsupported",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.OSError",
+      "inspect_error_message": "Unsupported BMP bitfields layout",
+      "inspect_error_kind": "unsupported",
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "Unsupported BMP bitfields layout",
+      "verify_error_kind": "unsupported",
+      "verification_scope": "header_only",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "31f502fbd6b9ab6eda020ed1b5eb95906da7d762ec53c86cd961bf445b8eccb4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Unsupported BMP bitfields layout",
+          "rust_kind": "unsupported",
+          "rust_format": "BMP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "error_zero_width_compression4",
       "status": "error",
       "error_type": "builtins.OSError",

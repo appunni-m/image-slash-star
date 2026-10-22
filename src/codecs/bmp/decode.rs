@@ -435,6 +435,56 @@ pub fn decode(
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
         .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
     super::validate_compression(data, header_size, bit_depth_raw, compression)?;
+    // Pillow reads and validates BI_BITFIELDS masks before checking INFO
+    // dimensions. Preserve that error precedence without allocating pixels.
+    let (rm, gm, bm, am): (u32, u32, u32, u32) = if compression == 3 {
+        match header_size {
+            40 => {
+                // BITMAPINFOHEADER BI_BITFIELDS defines three color masks.
+                // Pillow does not promote an optional fourth DWORD in this
+                // legacy layout to an alpha channel; alpha is authoritative
+                // only in V4/V5 headers.
+                r.set_position(pos_after_standard);
+                let r0 = read_u32_le(&mut r)?;
+                let g0 = read_u32_le(&mut r)?;
+                let b0 = read_u32_le(&mut r)?;
+                (r0, g0, b0, 0)
+            }
+            _ => {
+                // For V4/V5 headers the masks are embedded at known offsets.
+                // V4 offsets (from DIB start): red=40, green=44, blue=48, alpha=52
+                r.set_position(14 + 40);
+                let r0 = read_u32_le(&mut r)?;
+                let g0 = read_u32_le(&mut r)?;
+                let b0 = read_u32_le(&mut r)?;
+                let a0 = if bit_depth == BmpBitDepth::ThirtyTwo && header_size >= 56 {
+                    read_u32_le(&mut r)?
+                } else {
+                    0
+                };
+                (r0, g0, b0, a0)
+            }
+        }
+    } else if bit_depth == BmpBitDepth::Sixteen {
+        // Default RGB555 masks for 16-bit BI_RGB.
+        (0x7C00, 0x03E0, 0x001F, 0)
+    } else {
+        (0, 0, 0, 0)
+    };
+    let (rm, gm, bm, am) = if compression == 3 {
+        let masks = super::normalize_bitfield_masks(
+            bit_depth_raw,
+            super::BitfieldMasks {
+                red: rm,
+                green: gm,
+                blue: bm,
+                alpha: am,
+            },
+        )?;
+        (masks.red, masks.green, masks.blue, masks.alpha)
+    } else {
+        (rm, gm, bm, am)
+    };
     // INFO headers let unsupported compression outrank invalid dimensions, as
     // Pillow does. Keep every dimension check before allocation.
     if !is_core_header && width < 0 {
@@ -466,58 +516,6 @@ pub fn decode(
         )
         .at(30, "bmp_dib_header"));
     }
-
-    // --- BI_BITFIELDS masks ---
-    let (rm, gm, bm, am): (u32, u32, u32, u32) = if compression == 3 {
-        match header_size {
-            40 => {
-                // BITMAPINFOHEADER BI_BITFIELDS defines three color masks.
-                // Pillow does not promote an optional fourth DWORD in this
-                // legacy layout to an alpha channel; alpha is authoritative
-                // only in V4/V5 headers.
-                r.set_position(pos_after_standard);
-                let r0 = read_u32_le(&mut r)?;
-                let g0 = read_u32_le(&mut r)?;
-                let b0 = read_u32_le(&mut r)?;
-                (r0, g0, b0, 0)
-            }
-            _ => {
-                // For V4/V5 headers the masks are embedded at known offsets.
-                // V4 offsets (from DIB start): red=40, green=44, blue=48, alpha=52
-                r.set_position(14 + 40);
-                let r0 = read_u32_le(&mut r)?;
-                let g0 = read_u32_le(&mut r)?;
-                let b0 = read_u32_le(&mut r)?;
-                let a0 = if bit_depth == BmpBitDepth::ThirtyTwo && header_size >= 56 {
-                    read_u32_le(&mut r)?
-                } else {
-                    0
-                };
-                (r0, g0, b0, a0)
-            }
-        }
-    } else {
-        // Default RGB555 masks for 16-bit BI_RGB.
-        if bit_depth == BmpBitDepth::Sixteen {
-            (0x7C00, 0x03E0, 0x001F, 0)
-        } else {
-            (0, 0, 0, 0)
-        }
-    };
-    let (rm, gm, bm, am) = if compression == 3 {
-        let masks = super::normalize_bitfield_masks(
-            bit_depth_raw,
-            super::BitfieldMasks {
-                red: rm,
-                green: gm,
-                blue: bm,
-                alpha: am,
-            },
-        )?;
-        (masks.red, masks.green, masks.blue, masks.alpha)
-    } else {
-        (rm, gm, bm, am)
-    };
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
     let dib_end = 14u64.saturating_add(u64::from(header_size));

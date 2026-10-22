@@ -65,6 +65,9 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         );
     }
     super::validate_compression(data, header_size, bit_depth, compression)?;
+    // Pillow reads and validates BI_BITFIELDS masks before checking INFO
+    // dimensions. Inspect the masks here, before returning dimension errors.
+    let masks = bitfield_masks(data, header_size, bit_depth, compression)?;
     // INFO headers check zero dimensions after the depth and compression contract.
     if negative_width {
         return Err(
@@ -79,7 +82,6 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         );
     }
 
-    let masks = bitfield_masks(data, header_size, bit_depth, compression)?;
     let alpha_mask = masks.map_or(0, |masks| masks.alpha);
     let palette_start = if header_size == INFO_HEADER_SIZE && compression == BI_BITFIELDS {
         header_end.saturating_add(12)

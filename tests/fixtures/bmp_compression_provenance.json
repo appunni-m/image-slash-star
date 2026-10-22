@@ -27,14 +27,14 @@
     }
   ],
   "summary": {
-    "observations": 68,
-    "new_full_files": 66,
+    "observations": 70,
+    "new_full_files": 68,
     "existing_controls": 2,
     "new_successful_controls": 7,
-    "classification_and_control_rows": 59,
-    "zero_dimension_parity_rows": 6,
+    "classification_and_control_rows": 61,
+    "zero_dimension_parity_rows": 8,
     "pillow_successes": 9,
-    "pillow_errors": 59
+    "pillow_errors": 61
   },
   "pillow_cases": [
     {
@@ -2932,6 +2932,170 @@
       }
     },
     {
+      "id": "info_zero_width_compression3_invalid_masks",
+      "description": "INFO zero width with invalid BI_BITFIELDS masks precedence",
+      "asset": "info_zero_width_compression3_invalid_masks.bmp",
+      "asset_sha256": "04da12e1c77018ee82d8dc6b6042aa335770fe8026c4101b949102800fe2db4f",
+      "bytes": 66,
+      "source": "tests/fixtures/input/images/bmp/16bit.bmp",
+      "source_sha256": "291e550a35a111edec21233115d238e8386358f02da5c4850bec6dc0807ddcde",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 3
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 18,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 2,
+          "value": 66
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 10,
+          "value": 66
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 34,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 54,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 58,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 62,
+          "value": 0
+        },
+        {
+          "operation": "truncate_full_mutated_file",
+          "length": 66,
+          "complete_file_bytes": 32822,
+          "complete_file_sha256": "fd7fc560bbd7964efa6ca135f615498a88bcadf120efb5c8971b1528abf3b145",
+          "preserve": "declared full header and file ranges"
+        }
+      ],
+      "header_size": 40,
+      "compression": 3,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      }
+    },
+    {
+      "id": "info_zero_height_compression3_invalid_masks",
+      "description": "INFO zero height with invalid BI_BITFIELDS masks precedence",
+      "asset": "info_zero_height_compression3_invalid_masks.bmp",
+      "asset_sha256": "31f502fbd6b9ab6eda020ed1b5eb95906da7d762ec53c86cd961bf445b8eccb4",
+      "bytes": 66,
+      "source": "tests/fixtures/input/images/bmp/16bit.bmp",
+      "source_sha256": "291e550a35a111edec21233115d238e8386358f02da5c4850bec6dc0807ddcde",
+      "mutations": [
+        {
+          "operation": "write_u32_le",
+          "offset": 30,
+          "value": 3
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 22,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 2,
+          "value": 66
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 10,
+          "value": 66
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 34,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 54,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 58,
+          "value": 0
+        },
+        {
+          "operation": "write_u32_le",
+          "offset": 62,
+          "value": 0
+        },
+        {
+          "operation": "truncate_full_mutated_file",
+          "length": 66,
+          "complete_file_bytes": 32822,
+          "complete_file_sha256": "9866cce0919a8abe8b817946ba1f904fb6eba5222394eaf478cb7f1ffb82c78f",
+          "preserve": "declared full header and file ranges"
+        }
+      ],
+      "header_size": 40,
+      "compression": 3,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "pillow_decode": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "pillow_verify": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      }
+    },
+    {
       "id": "os2_depth1_huffman_nonzero_tail",
       "description": "OS/2 depth 1 Huffman rejects despite nonzero tail words",
       "asset": "os2_depth1_huffman_nonzero_tail.bmp",
@@ -3981,6 +4145,36 @@
       "authority": "Repository structured-error design; Pillow supplies class/message only."
     },
     {
+      "id": "info_zero_width_compression3_invalid_masks",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_bitfields",
+      "expected_offset": 54,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
+      "id": "info_zero_height_compression3_invalid_masks",
+      "origin": "defensive_model",
+      "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "expected_kind": "unsupported",
+      "expected_identity": "bmp_bitfields",
+      "expected_offset": 54,
+      "operations": [
+        "inspect",
+        "verify",
+        "decode",
+        "decode_sequence"
+      ],
+      "authority": "Repository structured-error design; Pillow supplies class/message only."
+    },
+    {
       "id": "os2_depth1_huffman_nonzero_tail",
       "origin": "defensive_model",
       "verification": "Not executed by this native recipe; requires final Rust fixture verification.",
@@ -4165,6 +4359,38 @@
       },
       "manifest_row": "decode:bmp:error_zero_height_compression5",
       "source_review": "INFO inspection and decode validate unsupported compression before zero dimensions; supported compression retains the zero-dimension error.",
+      "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
+    },
+    {
+      "id": "info_zero_width_compression3_invalid_masks",
+      "asset": "info_zero_width_compression3_invalid_masks.bmp",
+      "asset_sha256": "04da12e1c77018ee82d8dc6b6042aa335770fe8026c4101b949102800fe2db4f",
+      "status": "tracked_by_active_parity_rows",
+      "pillow_error": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "manifest_row": "decode:bmp:error_zero_width_compression3_invalid_masks",
+      "source_review": "INFO inspection and decode read and validate BI_BITFIELDS masks before zero dimensions; unsupported masks take precedence.",
+      "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
+      "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
+    },
+    {
+      "id": "info_zero_height_compression3_invalid_masks",
+      "asset": "info_zero_height_compression3_invalid_masks.bmp",
+      "asset_sha256": "31f502fbd6b9ab6eda020ed1b5eb95906da7d762ec53c86cd961bf445b8eccb4",
+      "status": "tracked_by_active_parity_rows",
+      "pillow_error": {
+        "status": "error",
+        "stage": "open",
+        "class": "builtins.OSError",
+        "message": "Unsupported BMP bitfields layout"
+      },
+      "manifest_row": "decode:bmp:error_zero_height_compression3_invalid_masks",
+      "source_review": "INFO inspection and decode read and validate BI_BITFIELDS masks before zero dimensions; unsupported masks take precedence.",
       "rust_verification": "Not executed by this native recipe; requires final Rust fixture verification.",
       "required_followup": "Keep this case active in the Rust parity matrix and run the selected coverage harness; this native recipe does not execute Rust."
     }

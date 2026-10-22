@@ -4507,6 +4507,16 @@ formats:
       test_assets:
       - info_zero_height_compression0.bmp
       expect_error: true
+    - id: error_zero_width_compression3_invalid_masks
+      description: Pillow rejects invalid BI_BITFIELDS masks before zero-width INFO dimensions
+      test_assets:
+      - info_zero_width_compression3_invalid_masks.bmp
+      expect_error: true
+    - id: error_zero_height_compression3_invalid_masks
+      description: Pillow rejects invalid BI_BITFIELDS masks before zero-height INFO dimensions
+      test_assets:
+      - info_zero_height_compression3_invalid_masks.bmp
+      expect_error: true
     - id: error_zero_width_compression4
       description: Pillow rejects Windows BMP compression 4 before zero-width dimensions
       test_assets:
