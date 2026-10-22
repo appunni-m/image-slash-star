@@ -120,6 +120,7 @@ jobs:
             echo "Hardware sampling is unavailable; public-API timing and linked assembly will still be collected."
           else
             echo "Hardware cycle sampling with DWARF call graphs is available."
+            printf 'profile_event=cycles:u frequency_hz=997 call_graph=dwarf,8192\n' >> "$output/perf-mode.txt"
           fi
       - name: Build and profile exact public RGB 4:2:0 encodes
         run: |
@@ -127,6 +128,7 @@ jobs:
           output=target/benchmarks/jpeg/simd-x86_64/profile
           minimum_samples=1000
           perf_mode=${PERF_MODE:-timed-benchmark}
+          timed_fallback_required=0
 
           sample_count() {
             python3 - "$1" <<'PY'
@@ -223,7 +225,7 @@ jobs:
                   && test -s "$profile" \
                   && perf report --stdio --header --inline -i "$profile" > "$report"; then
                   if samples=$(sample_count "$report") && (( samples >= minimum_samples )); then
-                    printf 'measurement_mode=cycles-dwarf sample_count=%s\n' "$samples" >> "$output/run-metadata.txt"
+                    printf 'measurement_mode=cycles-dwarf event=cycles:u frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s size=%s\n' "$samples" "$variant" "$size" >> "$output/run-metadata.txt"
                     if perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
                       > "$output/${variant}-${size}.annotate.txt"; then
                       continue
@@ -236,6 +238,7 @@ jobs:
                   printf 'perf_fallback=record_or_report_failed variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
                 fi
                 perf_mode=timed-benchmark
+                timed_fallback_required=1
                 printf 'PERF_MODE=timed-benchmark\n' >> "$GITHUB_ENV"
               fi
               printf 'measurement_mode=timed-benchmark variant=%s size=%s\n' "$variant" "$size" >> "$output/run-metadata.txt"
@@ -247,6 +250,25 @@ jobs:
 
           profile_variant sse2 '-C target-cpu=x86-64 -C debuginfo=2'
           profile_variant avx2 '-C target-cpu=x86-64 -C target-feature=+avx2 -C debuginfo=2'
+
+          if (( timed_fallback_required )); then
+            printf 'timed_fallback=uniform_matrix_after_profile_failure\n' >> "$output/run-metadata.txt"
+            for variant in sse2 avx2; do
+              binary="target/jpeg-profile-${variant}/release/jpeg-production-matrix-rust"
+              for size in 512 1024; do
+                if [[ "$size" == 512 ]]; then
+                  iterations=2000
+                else
+                  iterations=512
+                fi
+                printf 'final_measurement_mode=timed-benchmark variant=%s size=%s iterations=%s\n' \
+                  "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
+                "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
+                  > "$output/${variant}-${size}.stdout.txt" \
+                  2> "$output/${variant}-${size}.stderr.txt"
+              done
+            done
+          fi
       - name: Confirm profiled SSE2 and AVX2 outputs match
         run: |
           python3 - <<'PY'
