@@ -542,7 +542,22 @@ fn decode_portable_inner(
         };
         let shift = sample_depth.bits().checked_sub(8)?;
         let mut pixels = Vec::new();
-        pixels.try_reserve_exact(pixel_capacity).ok()?;
+        #[cfg(coverage)]
+        let reservation_length = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifSubsampledRgbOutputReservation,
+        ) {
+            usize::MAX
+        } else {
+            pixel_capacity
+        };
+        #[cfg(not(coverage))]
+        let reservation_length = pixel_capacity;
+        if pixels.try_reserve_exact(reservation_length).is_err() {
+            *portable_error = Some(CodecError::Dimensions(
+                "unable to allocate AVIF subsampled RGB output".to_owned(),
+            ));
+            return None;
+        }
         for (index, &y_sample) in y_plane.samples.iter().enumerate() {
             let (u_sample, v_sample) = if subsampled {
                 #[allow(
