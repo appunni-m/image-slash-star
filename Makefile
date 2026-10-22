@@ -88,6 +88,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_apng_gray16_partial_fixture.py --check
 	$(PYTHON) scripts/generate_ico_equal_area_tiebreak_fixture.py --check
 	$(PYTHON) scripts/generate_ico_equal_area_same_depth_fixture.py --check
+	$(PYTHON) scripts/generate_ico_png_invalid_signature_fixture.py --check
 	$(PYTHON) scripts/generate_cur_equal_size_y_hotspots_fixture.py --check
 	$(PYTHON) scripts/generate_cur_larger_dimensions_fixture.py --check
 	$(PYTHON) scripts/generate_ico_zero_bpp_depth_fallbacks_fixture.py --check
