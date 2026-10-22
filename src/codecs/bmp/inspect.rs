@@ -22,24 +22,20 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let _data_offset = le_u32(data, 10)?;
     let header_size = le_u32(data, FILE_HEADER_SIZE)?;
     let header_end = FILE_HEADER_SIZE.saturating_add(header_size as usize);
-    let (width, height, bit_depth, compression, colors_used, palette_entry_size) =
+    let (width, height, bit_depth, compression, colors_used, palette_entry_size, negative_width) =
         if header_size == CORE_HEADER_SIZE {
-            (
-                u32::from(le_u16(data, 18)?),
-                u32::from(le_u16(data, 20)?),
-                le_u16(data, 24)?,
-                0,
-                0,
-                3usize,
-            )
-        } else if super::is_supported_info_dib_header_size(header_size) {
-            let width = le_i32(data, 18)?;
-            if width <= 0 {
+            let width = u32::from(le_u16(data, 18)?);
+            let height = u32::from(le_u16(data, 20)?);
+            // CORE headers have no compression selector that can outrank dimensions.
+            if width == 0 || height == 0 {
                 return Err(
-                    CodecError::Malformed("BMP width must be positive".to_owned())
+                    CodecError::Malformed("BMP dimensions must be nonzero".to_owned())
                         .at(18, "bmp_dib_header"),
                 );
             }
+            (width, height, le_u16(data, 24)?, 0, 0, 3usize, false)
+        } else if super::is_supported_info_dib_header_size(header_size) {
+            let width = le_i32(data, 18)?;
             (
                 width.cast_unsigned(),
                 le_i32(data, 22)?.unsigned_abs(),
@@ -47,6 +43,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                 le_u32(data, 30)?,
                 le_u32(data, 46)?,
                 4usize,
+                width < 0,
             )
         } else {
             return Err(CodecError::Unsupported(format!(
@@ -55,12 +52,6 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
             .at(FILE_HEADER_SIZE as u64, "bmp_dib_header"));
         };
 
-    if width == 0 || height == 0 {
-        return Err(
-            CodecError::Malformed("BMP dimensions must be nonzero".to_owned())
-                .at(18, "bmp_dib_header"),
-        );
-    }
     let indexed = matches!(bit_depth, 1 | 4 | 8);
     if !matches!(bit_depth, 1 | 4 | 8 | 16 | 24 | 32) {
         let bit_depth_offset = if header_size == CORE_HEADER_SIZE {
@@ -74,8 +65,23 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         );
     }
     super::validate_compression(data, header_size, bit_depth, compression)?;
-
+    // Pillow reads and validates BI_BITFIELDS masks before checking INFO
+    // dimensions. Inspect the masks here, before returning dimension errors.
     let masks = bitfield_masks(data, header_size, bit_depth, compression)?;
+    // INFO headers check zero dimensions after the depth and compression contract.
+    if negative_width {
+        return Err(
+            CodecError::Dimensions("BMP width must be positive".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
+    if width == 0 || height == 0 {
+        return Err(
+            CodecError::Malformed("BMP dimensions must be nonzero".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
+
     let alpha_mask = masks.map_or(0, |masks| masks.alpha);
     let palette_start = if header_size == INFO_HEADER_SIZE && compression == BI_BITFIELDS {
         header_end.saturating_add(12)

@@ -10568,6 +10568,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_multitile_loop_filter_reconstruction_context(context);
     let monochrome_multitile_loop_cdef =
         complete_monochrome_multitile_loop_cdef_reconstruction_context(context);
+    let monochrome_multitile_superres =
+        complete_monochrome_multitile_superres_reconstruction_context(context);
     let monochrome_single_tile_loop_filter =
         complete_monochrome_single_tile_loop_filter_reconstruction_context(context);
     let monochrome_single_tile_loop_cdef =
@@ -11078,6 +11080,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (context.intra_frame && monochrome_multitile_cdef)
         || (context.intra_frame && monochrome_multitile_loop_filter)
         || (context.intra_frame && monochrome_multitile_loop_cdef)
+        || (context.intra_frame && monochrome_multitile_superres)
         || (context.intra_frame && monochrome_single_tile_loop_filter)
         || (context.intra_frame && monochrome_single_tile_loop_cdef)
         || (context.intra_frame && monochrome_single_tile_loop_restoration)
@@ -17626,6 +17629,57 @@ fn complete_monochrome_single_tile_loop_restoration_reconstruction_context(
         && context.restoration_types[1].is_none()
         && context.restoration_types[2].is_none()
         && complete_monochrome_restoration_supported(context)
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && dimensions_are_supported
+}
+
+/// Admit full-width tiles in a two-column, one-row monochrome superres frame.
+///
+/// This keeps edge-cropped tiles and frame post-filters outside the profile;
+/// frame.rs assembles both coded tile planes before applying the shared
+/// frame-wide upscaler.
+fn complete_monochrome_multitile_superres_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    if !context.monochrome || context.single_tile || !context.superres_enabled {
+        return false;
+    }
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let tile_pixel_width = context.block_width.checked_mul(4);
+    let tile_pixel_height = context.block_height.checked_mul(4);
+    let full_frame_pixel_width = context.frame_block_width.checked_mul(4);
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 128
+        && context.frame_height <= 128
+        && tile_pixel_width == Some(context.frame_width)
+        && tile_pixel_height == Some(context.frame_height)
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.block_width.checked_mul(2) == Some(context.frame_block_width)
+        && context.block_height == context.frame_block_height
+        && full_frame_pixel_width.is_some_and(|width| context.upscaled_width > width);
+    matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.frame_tools.segment_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_tools.quantization.is_some()
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0

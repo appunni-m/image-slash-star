@@ -4095,6 +4095,162 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "portable_lossless_monochrome_fullrange_12bit_17x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "17x9 full-range 12-bit lossless monochrome key frame with varied low sample bits and an irregular sample count",
+          "asset": "portable_lossless_monochrome_fullrange_12bit_17x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "07793973838382f7de986377c7ed2ea139144b1a4413092e65bb6713db10ae57",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_monochrome_fullrange_12bit_17x9_avif.bin",
+          "ref_sha256": "02e8eedf632446b91a506c81aafd795b434a14723394faeb249b74a3cfb2e908",
+          "ref_bytes": 459,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "portable_lossless_monochrome_fullrange_alpha_12bit_17x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "17x9 full-range 12-bit lossless monochrome key frame with varied 12-bit auxiliary alpha samples and an irregular sample count",
+          "asset": "portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "3acad68f56c9eced8f975303cce603d3404fd00d10bb2f92b24573395b34c25b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_monochrome_fullrange_alpha_12bit_17x9_avif.bin",
+          "ref_sha256": "2a39c5bb870685946e9b0906f6a860916225086d138851b8e324af5bb93a678f",
+          "ref_bytes": 612,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "portable_lossless_monochrome_limited_bt2020_pq_16x16",
           "type": "decode",
           "format": "avif",
@@ -31523,6 +31679,97 @@
           "error_contracts": {}
         },
         {
+          "id": "sequence_alpha_sample_count_mismatch",
+          "type": "decode",
+          "format": "avif",
+          "category": "sequence",
+          "description": "Animated AVIF whose auxiliary alpha sample-to-chunk table declares four of five samples; Pillow decodes four frames then errors on the fifth",
+          "asset": "sequence_alpha_sample_count_mismatch.avif",
+          "expect_error": false,
+          "expect_sequence_error": true,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "89a13baeb503ace10bea0f07d9c2aa296235d2ca8ed0471f3ee99751deccafcf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_sequence_alpha_sample_count_mismatch_avif.bin",
+          "ref_sha256": "cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 5,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence_status": "error",
+          "sequence_error_type": "builtins.RuntimeError",
+          "sequence_error_message": "Failed to decode frame 4: No images remaining",
+          "sequence_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 4: No images remaining",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "high_bitdepth_still_10bit_444_lossless",
           "type": "decode",
           "format": "avif",
@@ -32037,6 +32284,84 @@
           "ref_mode": "Rgba8",
           "ref_size": [
             9,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "high_bitdepth_still_12bit_420_alpha_odd_edge_17x9",
+          "type": "decode",
+          "format": "avif",
+          "category": "high",
+          "description": "Single-frame full-range 12-bit AV1 profile-2 all-lossless 4:2:0 AVIF with 12-bit auxiliary alpha and varied low-nibble chroma at the odd right and bottom edges",
+          "asset": "high_bitdepth_still_12bit_420_alpha_odd_edge_17x9.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ce408e4a66fe57b734544c2f30f17e90f725e2f2bae75d748f9eda75bdf23761",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_high_bitdepth_still_12bit_420_alpha_odd_edge_17x9_avif.bin",
+          "ref_sha256": "fdbe40dcc0814533e88fd4be8ae8a953973a7d9f4c635c21400b952396f0053c",
+          "ref_bytes": 612,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            17,
             9
           ],
           "ref_frame_count": 1,
@@ -48101,6 +48426,84 @@
           "error_contracts": {}
         },
         {
+          "id": "multitile_monochrome_superres_288x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "multitile",
+          "description": "288x64 lossy monochrome AVIF still uses denominator 9 to resize a 256-pixel coded plane across two full-width tile columns",
+          "asset": "multitile_monochrome_superres_288x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "cc88ed36062a37989bef826649d01c2fa872f41c3668c59509f310ff081a93d4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_multitile_monochrome_superres_288x64_avif.bin",
+          "ref_sha256": "30ba32d9eda130257562b74f7fa6a49025176071264bfca20a3d87cae6951479",
+          "ref_bytes": 55296,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            288,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "superres_actual_upscaled_i422_33x17",
           "type": "decode",
           "format": "avif",
@@ -62531,6 +62934,253 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_malformed_core_zero_height",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_zero_height.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a9fbe5d7350d108d0a90fd071025535414c45f3b11629bbef007cf273165566a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_core_oversized_width",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_oversized_width.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "98c756244f01a652ea8589d9135f8ed4c62fe302739d15f524450ca6821698f1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (4 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (4 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (4 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_malformed_core_oversized_height",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Malformed BMP headers, palettes, and pixel payloads",
+          "asset": "core_oversized_height.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ee23fb4e9066735d79fbb935c14b35e5e18d394f2324947fd470937aab0881b0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 24,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_malformed_4bit_gray",
           "type": "decode",
           "format": "bmp",
@@ -67010,6 +67660,657 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_negative_width",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects a signed negative INFO-header width as an invalid dimension",
+          "asset": "info_negative_width.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "3a9dea90c60b64702d59e861780d804430d7447185f98ed296730fe01f341676",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.Image.DecompressionBombError",
+          "inspect_error_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+          "inspect_error_kind": "dimensions",
+          "verify_status": "error",
+          "verify_error_type": "PIL.Image.DecompressionBombError",
+          "verify_error_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+          "verify_error_kind": "dimensions",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.Image.DecompressionBombError",
+          "oracle_error_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+          "oracle_error_kind": "dimensions",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.Image.DecompressionBombError",
+              "pillow_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+              "rust_kind": "dimensions",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.Image.DecompressionBombError",
+              "pillow_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+              "rust_kind": "dimensions",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.Image.DecompressionBombError",
+              "pillow_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+              "rust_kind": "dimensions",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.Image.DecompressionBombError",
+              "pillow_message": "Image size (4294967295 pixels) exceeds limit of 178956970 pixels, could be decompression bomb DOS attack.",
+              "rust_kind": "dimensions",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_negative_width_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before a negative INFO-header width",
+          "asset": "info_negative_width_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a37b4e868dd235e60d5486726fe02fa697eba5a795879b2d2e8d5fc98410e2ab",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_negative_width_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before a negative INFO-header width",
+          "asset": "info_negative_width_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "22ce1102e139582203627564d7d9c67e769386f025d897f5647e5e08851b965f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_width_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before an oversized INFO-header width",
+          "asset": "info_oversized_width_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5a8696ef576f2771c45834de8d4235938b42c213545a39d506024ae2de72264c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_width_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before an oversized INFO-header width",
+          "asset": "info_oversized_width_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b81d5d9478ecc0f314616f00b66a4f65ff5003b96e604552cb1f2c25033e4de1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_height_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 4 before an oversized INFO-header height",
+          "asset": "info_oversized_height_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b06eeef01256a68500cebf0d51186f50b1e3bcd8928ce2f938384f20518edf8c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_oversized_height_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows compression 5 before an oversized INFO-header height",
+          "asset": "info_oversized_height_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "253357f9077175dbf2829f2078f34f43d388bfbec092e53ae78192b1c53fc6a4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_unsupported_windows_embedded_jpeg",
           "type": "decode",
           "format": "bmp",
@@ -67101,6 +68402,750 @@
           },
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "error_zero_width_compression0",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects a zero-width INFO BMP with valid uncompressed pixels",
+          "asset": "info_zero_width_compression0.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "19490993977668cc74389eb5fef048cfeaa896720e5fc25ea70ff25a74ca12e3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_height_compression0",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects a zero-height INFO BMP with valid uncompressed pixels",
+          "asset": "info_zero_height_compression0.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "0bb4aa6f189dc5408a055e7fbc762f7f0a06236c585350e7afa9c889906a58b0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_width_compression3_invalid_masks",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects invalid BI_BITFIELDS masks before zero-width INFO dimensions",
+          "asset": "info_zero_width_compression3_invalid_masks.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "04da12e1c77018ee82d8dc6b6042aa335770fe8026c4101b949102800fe2db4f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP bitfields layout",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP bitfields layout",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP bitfields layout",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_height_compression3_invalid_masks",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects invalid BI_BITFIELDS masks before zero-height INFO dimensions",
+          "asset": "info_zero_height_compression3_invalid_masks.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "31f502fbd6b9ab6eda020ed1b5eb95906da7d762ec53c86cd961bf445b8eccb4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP bitfields layout",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP bitfields layout",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP bitfields layout",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP bitfields layout",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_width_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows BMP compression 4 before zero-width dimensions",
+          "asset": "info_zero_width_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "82b395309dacd1e26dc8cdd67ca3cbce0694145729665a7230c30619ced7853c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_width_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows BMP compression 5 before zero-width dimensions",
+          "asset": "info_zero_width_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "7d7932bb90d3f0be4ce2df3585cf5aafc1b98e40412610d96af62ecc61db9cd9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_height_compression4",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows BMP compression 4 before zero-height dimensions",
+          "asset": "info_zero_height_compression4.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "c9571322590c59017b6cd5a10aacba446b4b52d9bc6043932208158e1b88de84",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (4)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (4)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (4)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (4)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "error_zero_height_compression5",
+          "type": "decode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow rejects Windows BMP compression 5 before zero-height dimensions",
+          "asset": "info_zero_height_compression5.bmp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ee8a3ac199ecd4cddcbc4b2703064fd56e3dc5283b18d606001562adf5a3919f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Unsupported BMP compression (5)",
+          "inspect_error_kind": "unsupported",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Unsupported BMP compression (5)",
+          "verify_error_kind": "unsupported",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Unsupported BMP compression (5)",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Unsupported BMP compression (5)",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "id": "error_unsupported_windows_embedded_png",
@@ -82969,6 +85014,99 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_malformed_png_entry_signature",
+          "type": "decode",
+          "format": "ico",
+          "category": "error",
+          "description": "ICO PNG dispatch keeps its four-byte prefix but rejects a corrupted remaining signature byte",
+          "asset": "png_invalid_signature.ico",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "69864fbd1392610d04953ca7ff3de0b0e9643a24f3edeabee748e06fe251549e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "Truncated File Read",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "Truncated File Read",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "Truncated File Read",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "Truncated File Read",
+              "rust_kind": "malformed",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "asset": "bmp_entry.ico",
           "category": "bmp",
           "description": "ICO with embedded BMP data (classic)",
@@ -89613,6 +91751,84 @@
           "error_contracts": {}
         },
         {
+          "id": "baseline_444_single_scan_com_tail_junk_then_com",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:4:4 JPEG has trailing junk followed by another post-scan COM segment",
+          "asset": "baseline_444_single_scan_com_tail_junk_then_com.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "1cc70897b39aad9b13eade241695dd0628c4aade3f660ab4d8557d013ea7952c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_single_scan_com_tail_junk_then_com_jpg.bin",
+          "ref_sha256": "7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "baseline_444_single_scan_com_eoi_marker_fill",
           "type": "decode",
           "format": "jpeg",
@@ -93689,6 +95905,92 @@
           "ref_size": [
             2,
             2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycck_h2v1_single_sample_1x1",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "ycck",
+          "description": "A 1x1 YCCK image reaches the singleton destination path in h2v1 row upsampling",
+          "asset": "baseline_ycck_h2v1_single_sample_1x1.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_1x1.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "6ef8f392eb8f93b3afccc85b36981cbad1c080d92c81ce99a9bce32c80f5ca40",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_ycck_h2v1_single_sample_1x1_jpg.bin",
+          "ref_sha256": "fe4cfd863d3977883fd52b5794e14c8ea1cadd264db6925f83b128d1df2ce3e3",
+          "ref_bytes": 4,
+          "ref_mode": "CMYK",
+          "ref_size": [
+            1,
+            1
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -113585,6 +115887,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_sub_422_repeated_full_batches",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 32x16 RGB PNG exercises two full eight-pixel 4:2:2 chroma downsampling batches without a scalar tail",
+          "params": {
+            "subsampling": "422",
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_422_batch_source_32x16.png",
+          "source_sha256": "3f6c806893929219184e17b205945f3fe5c7b642bd47e855e001eb746537b7a1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_repeated_full_batches.bin",
+          "encoded_ref_bytes": 1085,
+          "encoded_ref_sha256": "265a9ad873e8561a91c44e8d4ab234ea19f7337019818d97f75479cec59db8a5",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_repeated_full_batches.bin",
+          "ref_sha256": "fb570711fd0dba8e5ee7bfcb114770764990b2a3b3763e66e538c78bd6d02bf2",
+          "ref_bytes": 1536,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_sub_422_aligned_width_partial_height",
           "type": "encode",
           "format": "jpeg",
@@ -123104,6 +125462,90 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "pillow_tolerated_chunk_type_digit_underscore",
+          "type": "decode",
+          "format": "png",
+          "category": "pillow",
+          "description": "Pillow accepts digit and underscore bytes in unknown chunk types",
+          "asset": "chunk_type_digit_underscore.png",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "92f4b333a2dc484ceae684e89dac4cac8d3c11c96c03e287b0e2a0e4a71785de",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "PNG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.png_chunk_type_digit_underscore_png.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": {
+            "srgb": null,
+            "gamma": null,
+            "chromaticities": null,
+            "icc_profile_present": false
+          },
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "decoded_source_color": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "pillow_tolerated_post_idat_ancillary_bad_crc",
           "type": "decode",
           "format": "png",
@@ -127888,6 +130330,99 @@
           "inspect_source_byte_order_origin": null,
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "error_malformed_structure_invalid_chunk_type_non_letter",
+          "type": "decode",
+          "format": "png",
+          "category": "error",
+          "description": "Invalid PNG headers, chunks, and scanline filters",
+          "asset": "invalid_chunk_type_non_letter.png",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "edac414911843c23dac2cba7f194ed34fc43addfd40877440e29b676dce55ae8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "id": "error_token_aware_reserved_deflate_distance",
@@ -146401,6 +148936,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "grayscale_unknown_signed_private_tags",
+          "type": "decode",
+          "format": "tiff",
+          "category": "grayscale",
+          "description": "Unknown private SBYTE, SSHORT, and SLONG tags preserve grayscale pixels",
+          "asset": "gray_signed_private_tags.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray_tiff.bin",
+          "ref_bytes": 16384,
+          "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "5e7b1dfc00abf38207e020dc3b39d6fe37fb32e77c7b5382227590057bc63c38",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "grayscale_alpha",
           "type": "decode",
           "format": "tiff",
@@ -147122,6 +149735,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "rgb_unknown_signed_extension_types",
+          "type": "decode",
+          "format": "tiff",
+          "category": "rgb",
+          "description": "Unknown TIFF extension tags preserve RGB output with signed BYTE, SHORT, and LONG values",
+          "asset": "rgb_unknown_signed_extension_types.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d24739cc3d03006d0b73940326b4dd0794c0bfdc10e69cab07866b858fce558e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_rgb_unknown_signed_extension_types_tiff.bin",
+          "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "rgba.tiff",
           "asset_path": "tests/fixtures/input/images/tiff/rgba.tiff",
           "category": "rgba",
@@ -147560,6 +150251,162 @@
           "ref_size": [
             4,
             4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_2x2_odd_width_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 decodes a padded right-edge clump in a 5-by-4 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_2x2_odd_width_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "3aba39db3897b58eebb6a54769267ca7c0c46c3111fd06748a08c258d862b86c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_odd_width_predictor_2_tiff.bin",
+          "ref_sha256": "6d8e08b0b2dd2e2620535846b713064c48abca47c6d57ad654433136c0735e70",
+          "ref_bytes": 60,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            5,
+            4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_2x2_odd_height_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 decodes the padded final clump row of a 4-by-5 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "363e81d857d75ba4b3ecf5a7da2db8cb8e35ff825abcd2856f292eb1c902ddef",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_2x2_odd_height_predictor_2_tiff.bin",
+          "ref_sha256": "a8f4c5318a22ef4da79c4febbf6d8d838ba9415afacc1fe55a568a4c93fcdc30",
+          "ref_bytes": 60,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            5
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -149115,6 +151962,162 @@
           "ref_size": [
             4,
             4
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 decodes the padded final 1-by-2 clump row of a 4-by-3 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f6e68880226a3e0d995cc73a931cd5b2905709d0bea15299aa572b0c62eef046",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_odd_height_predictor_2_tiff.bin",
+          "ref_sha256": "7e55ac763e029f17ce869538b69db5f9a3c61078802c4a0ce8a254c992cd11e3",
+          "ref_bytes": 36,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2",
+          "type": "decode",
+          "format": "tiff",
+          "category": "ycbcr",
+          "description": "Horizontal Predictor=2 reverses the padded final 1-by-2 clump row of a 3-by-3 YCbCr TIFF",
+          "asset": "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "4dca2e6335e895e6b88a6f8caa8b5c6aece3c1dac43b568044f283f74afd6967",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2_tiff.bin",
+          "ref_sha256": "c52188185662eb2a565288b837ba81c29535ca8ddfa9a1fdfd3eecd7b077dfd9",
+          "ref_bytes": 27,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            3,
+            3
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -187075,6 +190078,167 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "animated_trailing_anmf_outside_riff_ignored",
+          "type": "decode",
+          "format": "webp",
+          "category": "animated",
+          "description": "Ignore a complete duplicate ANMF chunk after the declared RIFF extent",
+          "asset": "animated_anmf_beyond_riff_extent.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "0a546dd8355a3ee46365c871f929b269951750e2bea7cc157e6b84cb6a039a00",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp.bin",
+          "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              128,
+              128
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 0,
+            "loop_origin": "pillow_fixture",
+            "background": {
+              "rgba": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "origin": "specification_reference"
+            },
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "pillow_fixture",
+                "disposal": "keep",
+                "blend": "source",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "ref_sha256": "6b192910254e2cdbf11c388bb17644586e1d91dd48b33f6fe12340296c968891",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "pillow_fixture",
+                "disposal": "keep",
+                "blend": "over",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "specification_reference",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.webp_animated_anmf_beyond_riff_extent_webp_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "ref_sha256": "c4a6560cd1ec3e18b14eeb26fcb69281337963eda725d641c3c647e1cc18e987",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ]
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "specification_reference",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "16x16.webp",
           "asset_path": "tests/fixtures/input/images/webp/16x16.webp",
           "category": "size",
@@ -205889,6 +209053,61 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_method_6_run_cap",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_run_cap_4356x1.png",
+          "source_sha256": "038d4a47bb2b7f22b62eaac823a897c74607b20ee0ab6999e30b5dc84f6a1a93",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_run_cap.bin",
+          "encoded_ref_bytes": 616,
+          "encoded_ref_sha256": "8abd0df9e4f0d5292902f75bc9e0be22261b7045b2266ebf895d0c17a46e00d4",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_run_cap.bin",
+          "ref_sha256": "3206f3f36cf23cf01f6a3f2b696cb407eee7c80c81c05a0373154b4a165a6016",
+          "ref_bytes": 13068,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4356,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_method_0_palette",
           "type": "encode",
           "format": "webp",
@@ -210511,12 +213730,12 @@
     }
   },
   "summary": {
-    "total_rows": 2495,
-    "decode_rows": 1980,
-    "encode_rows": 515,
+    "total_rows": 2532,
+    "decode_rows": 2015,
+    "encode_rows": 517,
     "formats": 8,
-    "assets_available": 1976,
-    "decode_active": 1980,
+    "assets_available": 2011,
+    "decode_active": 2015,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
@@ -210631,6 +213850,25 @@
       },
       "fault": {
         "point": "avif.i444_generic_rgb.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_subsampled_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9"
+      },
+      "fault": {
+        "point": "avif.subsampled_rgb.output_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
@@ -210765,6 +214003,44 @@
       "fault": {
         "point": "bmp.decoded_pixels.output_reservation",
         "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "bmp_rle_entry_work_budget_exceeded",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "bmp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:bmp:compression_rle8"
+      },
+      "fault": {
+        "point": "bmp.rle.entry_work_budget",
+        "contract": "decode_work_budget_exceeded_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "bmp_rle_command_work_budget_exceeded",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "bmp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:bmp:compression_rle8"
+      },
+      "fault": {
+        "point": "bmp.rle.command_work_budget",
+        "contract": "decode_work_budget_exceeded_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
     },
@@ -210913,6 +214189,44 @@
       "verification": "fault-contract",
       "input": {
         "source_case": "decode:tiff:ycbcr_subsampled_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.rgb_output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_table_clump_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_table_rgb_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2"
       },
       "fault": {
         "point": "tiff.ycbcr.rgb_output_reservation",
@@ -211733,6 +215047,25 @@
       },
       "fault": {
         "point": "jpeg.upsample.row_short_stride",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_row_upsample_source_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2"
+      },
+      "fault": {
+        "point": "jpeg.upsample.row_source_length_mismatch",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

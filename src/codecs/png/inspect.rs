@@ -216,6 +216,7 @@ fn read_chunk(data: &[u8], position: usize) -> CodecResult<([u8; 4], &[u8], usiz
     let length = u32::from_be_bytes([prefix[0], prefix[1], prefix[2], prefix[3]]) as usize;
     let mut kind = [0; 4];
     kind.copy_from_slice(&prefix[4..8]);
+    super::decode::validate_chunk_type(&kind)?;
     #[cfg(target_pointer_width = "64")]
     let payload_end = prefix_end.wrapping_add(length).wrapping_add(4);
     #[cfg(not(target_pointer_width = "64"))]

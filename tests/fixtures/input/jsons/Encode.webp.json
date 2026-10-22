@@ -5245,6 +5245,57 @@
       }
     },
     {
+      "id": "enc_lossless_method_6_run_cap",
+      "source_asset": "webp_lossless_run_cap_4356x1.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "038d4a47bb2b7f22b62eaac823a897c74607b20ee0ab6999e30b5dc84f6a1a93",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 6
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossless_run_cap_4356x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless_method_0_palette",
       "source_asset": "lossless_palette16.webp",
       "source_format": "webp",

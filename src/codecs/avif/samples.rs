@@ -1843,12 +1843,10 @@ impl ExtractedAvif<'_> {
             let _ = sequence.timescale;
             validate_plane::<READ_PAYLOAD>(self.input, &sequence.color)?;
             if let Some(alpha) = &sequence.alpha {
+                // A short auxiliary track does not invalidate inspection or
+                // first-frame decoding; the full sequence decoder checks that
+                // both sample counts agree before publishing any frames.
                 validate_plane::<READ_PAYLOAD>(self.input, alpha)?;
-                if alpha.samples.len() != sequence.color.samples.len() {
-                    return Err(CodecError::Malformed(
-                        "AVIF sequence color and alpha sample counts differ".to_owned(),
-                    ));
-                }
             }
         }
         Ok(())
@@ -2667,11 +2665,9 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
         if track.timescale != Some(timescale) {
             return Err(parse_failure!());
         }
-        let plane = track_plane(input, track)?;
-        if plane.samples.len() != color.samples.len() {
-            return Err(parse_failure!());
-        }
-        Some(plane)
+        // Keep all mapped alpha samples for inspection and the independent
+        // first-frame path. Full-sequence decoding owns track-count parity.
+        Some(track_plane(input, track)?)
     } else {
         None
     };

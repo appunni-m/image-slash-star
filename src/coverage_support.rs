@@ -72,6 +72,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444AlphaOutputReservation,
     /// Force generic AVIF I444 RGB output reservation to fail.
     AvifI444RgbOutputReservation,
+    /// Force subsampled AVIF RGB output reservation to fail.
+    AvifSubsampledRgbOutputReservation,
     /// Force AVIF item-information table reservation to fail during parsing.
     AvifItemTableReservation,
     /// Force AVIF item-location table reservation to fail during parsing.
@@ -104,6 +106,8 @@ pub enum CoverageFaultPoint {
     JpegFancyUpsampleRowInvalidGeometry,
     /// Force the row-wise JPEG upsampler to reject a component stride shorter than its width.
     JpegFancyUpsampleRowShortStride,
+    /// Force the row-wise JPEG upsampler to reject a component sample buffer that is too short.
+    JpegFancyUpsampleRowSourceLengthMismatch,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
     /// Force reservation of a BMP palette to fail before reading its entries.

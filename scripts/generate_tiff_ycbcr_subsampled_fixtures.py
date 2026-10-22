@@ -775,6 +775,24 @@ def fixtures() -> dict[
         positioning=1,
         predictor=2,
     )
+    one_by_two_odd_height_predictor_2 = build_tiff(
+        4,
+        3,
+        4,
+        deterministic_factor_clumps(4, 4, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        predictor=2,
+    )
+    one_by_two_odd_width_odd_height_predictor_2 = build_tiff(
+        3,
+        3,
+        3,
+        deterministic_factor_clumps(3, 4, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        predictor=2,
+    )
     one_by_two_odd_height = build_tiff(
         4,
         3,
@@ -815,6 +833,24 @@ def fixtures() -> dict[
         TWO_STRIP_CLUMPS,
         subsampling=(2, 2),
         positioning=2,
+        predictor=2,
+    )
+    odd_width_predictor_2 = build_tiff(
+        5,
+        4,
+        4,
+        deterministic_factor_clumps(5, 4, (2, 2)),
+        subsampling=(2, 2),
+        positioning=1,
+        predictor=2,
+    )
+    odd_height_predictor_2 = build_tiff(
+        4,
+        5,
+        4,
+        deterministic_factor_clumps(4, 5, (2, 2)),
+        subsampling=(2, 2),
+        positioning=1,
         predictor=2,
     )
     unaligned_rows_per_strip = build_tiff(
@@ -1513,6 +1549,23 @@ def fixtures() -> dict[
             {317: 2, 530: (1, 2), 531: 1},
             None,
         ),
+        "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2.tiff": (
+            one_by_two_odd_height_predictor_2,
+            (4, 3),
+            "7e55ac763e029f17ce869538b69db5f9a3c61078802c4a0ce8a254c992cd11e3",
+            {317: 2, 530: (1, 2), 531: 1},
+            bytes.fromhex(
+                "430a00140039214f00000f72501700f6d7ff2e5c02c1ffff28410000096b0586"
+                "330023a4"
+            ),
+        ),
+        "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2.tiff": (
+            one_by_two_odd_width_odd_height_predictor_2,
+            (3, 3),
+            "c52188185662eb2a565288b837ba81c29535ca8ddfa9a1fdfd3eecd7b077dfd9",
+            {317: 2, 530: (1, 2), 531: 1},
+            bytes.fromhex("5b00006413006e2800680b007120007b35026b1f007434107d4933"),
+        ),
         "ycbcr_subsampled_lzw_1x2_odd_height.tiff": (
             one_by_two_odd_height,
             (4, 3),
@@ -1556,6 +1609,20 @@ def fixtures() -> dict[
             (4, 4),
             "7a2b02a725a8988a4e716873f80fe8290c26e274536c6716b4474c31b8379df4",
             {317: 2, 530: (2, 2), 531: 2},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_odd_width_predictor_2.tiff": (
+            odd_width_predictor_2,
+            (5, 4),
+            "6d8e08b0b2dd2e2620535846b713064c48abca47c6d57ad654433136c0735e70",
+            {317: 2, 530: (2, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff": (
+            odd_height_predictor_2,
+            (4, 5),
+            "a8f4c5318a22ef4da79c4febbf6d8d838ba9415afacc1fe55a568a4c93fcdc30",
+            {317: 2, 530: (2, 2), 531: 1},
             None,
         ),
         "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": (
@@ -2298,11 +2365,15 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampled_lzw_1x2_predictor_2.tiff": "e5dd405646c7e6f44ea0c82e5f01cd770cd395ad38b93bb1011ccc176c17a095",
             "ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2.tiff": "047e56f7916f1dca93eb034f622171ec39da0881f4679dc7f1681b075f0d243f",
             "ycbcr_subsampled_lzw_1x2_predictor_2_aligned.tiff": "b1ebb064f9f7f330ce1a1e0b7e8abdab9919791f6c364067542dc656e09e6681",
+            "ycbcr_subsampled_lzw_1x2_odd_height_predictor_2.tiff": "f6e68880226a3e0d995cc73a931cd5b2905709d0bea15299aa572b0c62eef046",
+            "ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2.tiff": "4dca2e6335e895e6b88a6f8caa8b5c6aece3c1dac43b568044f283f74afd6967",
             "ycbcr_subsampled_lzw_1x2_odd_height.tiff": "00013d30c2155603f592722acf82b52154eb031774453023612d93a8983e2185",
             "ycbcr_custom_coefficients_lzw_1x2_odd_height.tiff": "2555bdcefad89e0c7de7c7259f3f815a69981fbb21cc0457386bb4d2be05ca35",
             "ycbcr_subsampled_lzw_2x2_odd_edge.tiff": "67df0dce7b4cab6af8d43f258f7eb1b77ba119e096ad242083baec83ebd585e9",
             "ycbcr_subsampled_lzw_2x2_two_strips.tiff": "1dd542a0a6e22d922f66e0f19e92421dd15fd1108f726af38810a11a6bf13487",
             "ycbcr_subsampled_lzw_2x2_two_strips_predictor_2.tiff": "bf76628b4a022f6c6891f65fc572d3af75760777dab85e70ef1e0e933072c6c1",
+            "ycbcr_subsampled_lzw_2x2_odd_width_predictor_2.tiff": "3aba39db3897b58eebb6a54769267ca7c0c46c3111fd06748a08c258d862b86c",
+            "ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff": "363e81d857d75ba4b3ecf5a7da2db8cb8e35ff825abcd2856f292eb1c902ddef",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff": "45aef5c7eea83c4600240c0d4836d826b910723dc205b8f224187edcb40f63c0",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",

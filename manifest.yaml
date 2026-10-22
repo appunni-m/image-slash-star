@@ -138,6 +138,20 @@ fault_contracts:
       point: avif.i444_generic_rgb.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_subsampled_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9
+    fault:
+      point: avif.subsampled_rgb.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_12bit_i444_generic_u_plane_length_mismatch
     type: fault-contract
     operation: decode
@@ -235,6 +249,34 @@ fault_contracts:
     fault:
       point: bmp.decoded_pixels.output_reservation
       contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: bmp_rle_entry_work_budget_exceeded
+    type: fault-contract
+    operation: decode
+    format: bmp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:bmp:compression_rle8
+    fault:
+      point: bmp.rle.entry_work_budget
+      contract: decode_work_budget_exceeded_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: bmp_rle_command_work_budget_exceeded
+    type: fault-contract
+    operation: decode
+    format: bmp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:bmp:compression_rle8
+    fault:
+      point: bmp.rle.command_work_budget
+      contract: decode_work_budget_exceeded_then_retry_succeeds
     oracle_status: not_applicable
   - id: tiff_strip_assembly_reservation_failure
     type: fault-contract
@@ -344,6 +386,34 @@ fault_contracts:
     verification: fault-contract
     input:
       source_case: decode:tiff:ycbcr_subsampled_lzw_2x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_table_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_table_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_reference_black_white_lzw_2x2
     fault:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
@@ -950,6 +1020,20 @@ fault_contracts:
       point: jpeg.upsample.row_short_stride
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_row_upsample_source_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_source_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -1213,6 +1297,10 @@ formats:
       description: Baseline 4:4:4 JPEG has one trailing junk byte between its post-scan COM segment and EOI
       test_assets:
       - baseline_444_single_scan_com_tail_junk.jpg
+    - id: baseline_444_single_scan_com_tail_junk_then_com
+      description: Baseline 4:4:4 JPEG has trailing junk followed by another post-scan COM segment
+      test_assets:
+      - baseline_444_single_scan_com_tail_junk_then_com.jpg
     - id: baseline_444_single_scan_com_eoi_marker_fill
       description: Baseline 4:4:4 JPEG has a marker-fill byte between its trailing COM segment and EOI
       test_assets:
@@ -1500,6 +1588,16 @@ formats:
       - baseline_ycck_h2v1_single_sample_2x2.jpg
       pillow_call:
         open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_2x2.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v1_single_sample_1x1
+      description: A 1x1 YCCK image reaches the singleton destination path in h2v1 row upsampling
+      test_assets:
+      - baseline_ycck_h2v1_single_sample_1x1.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_single_sample_1x1.jpg
         operations:
         - PIL.Image.open
         - load
@@ -2324,6 +2422,11 @@ formats:
       description: A small odd-width 4:2:2 source exercises the generic RGB conversion batch and scalar tail
       params: {'subsampling': '422', 'quality': 85}
       source_asset: 17x17.jpg
+    - id: enc_sub_422_repeated_full_batches
+      description: A 32x16 RGB PNG exercises two full eight-pixel 4:2:2 chroma downsampling batches without a scalar tail
+      params: {'subsampling': '422', 'quality': 85, 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_422_batch_source_32x16.png
     - id: enc_sub_422_aligned_width_partial_height
       description: A 64x1 source exercises the aligned-width 4:2:2 height false arm below the size threshold
       params: {'subsampling': '422', 'quality': 85}
@@ -2953,6 +3056,10 @@ formats:
       description: Unknown ancillary chunk after image data preserves decoded pixels
       test_assets:
       - unknown_ancillary_after_idat.png
+    - id: pillow_tolerated_chunk_type_digit_underscore
+      description: Pillow accepts digit and underscore bytes in unknown chunk types
+      test_assets:
+      - chunk_type_digit_underscore.png
     - id: pillow_tolerated_post_idat_ancillary_bad_crc
       description: Invalid CRC on an unknown post-IDAT ancillary chunk preserves Pillow pixels but fails verification
       test_assets:
@@ -3057,6 +3164,7 @@ formats:
       - actl_short.png
       - actl_after_idat_short.png
       - iend_without_idat.png
+      - invalid_chunk_type_non_letter.png
       expect_error: true
     - id: error_token_aware_reserved_deflate_distance
       description: Token-aware PNG decode rejects a reserved DEFLATE distance symbol
@@ -4322,6 +4430,9 @@ formats:
       test_assets:
       - invalid_header_size.bmp
       - core_zero_width.bmp
+      - core_zero_height.bmp
+      - core_oversized_width.bmp
+      - core_oversized_height.bmp
       - 4bit_gray.bmp
       - invalid_width.bmp
       - invalid_height.bmp
@@ -4374,10 +4485,85 @@ formats:
       - bitfields_zero_red_mask.bmp
       - bitfields_zero_blue_mask.bmp
       expect_error: true
+    - id: error_negative_width
+      description: Pillow rejects a signed negative INFO-header width as an invalid dimension
+      test_assets:
+      - info_negative_width.bmp
+      expect_error: true
+    - id: error_negative_width_compression4
+      description: Pillow rejects Windows compression 4 before a negative INFO-header width
+      test_assets:
+      - info_negative_width_compression4.bmp
+      expect_error: true
+    - id: error_negative_width_compression5
+      description: Pillow rejects Windows compression 5 before a negative INFO-header width
+      test_assets:
+      - info_negative_width_compression5.bmp
+      expect_error: true
+    - id: error_oversized_width_compression4
+      description: Pillow rejects Windows compression 4 before an oversized INFO-header width
+      test_assets:
+      - info_oversized_width_compression4.bmp
+      expect_error: true
+    - id: error_oversized_width_compression5
+      description: Pillow rejects Windows compression 5 before an oversized INFO-header width
+      test_assets:
+      - info_oversized_width_compression5.bmp
+      expect_error: true
+    - id: error_oversized_height_compression4
+      description: Pillow rejects Windows compression 4 before an oversized INFO-header height
+      test_assets:
+      - info_oversized_height_compression4.bmp
+      expect_error: true
+    - id: error_oversized_height_compression5
+      description: Pillow rejects Windows compression 5 before an oversized INFO-header height
+      test_assets:
+      - info_oversized_height_compression5.bmp
+      expect_error: true
     - id: error_unsupported_windows_embedded_jpeg
       description: Pillow rejects Windows BMP compression code 4 in a complete INFO header
       test_assets:
       - header40_compression4.bmp
+      expect_error: true
+    - id: error_zero_width_compression0
+      description: Pillow rejects a zero-width INFO BMP with valid uncompressed pixels
+      test_assets:
+      - info_zero_width_compression0.bmp
+      expect_error: true
+    - id: error_zero_height_compression0
+      description: Pillow rejects a zero-height INFO BMP with valid uncompressed pixels
+      test_assets:
+      - info_zero_height_compression0.bmp
+      expect_error: true
+    - id: error_zero_width_compression3_invalid_masks
+      description: Pillow rejects invalid BI_BITFIELDS masks before zero-width INFO dimensions
+      test_assets:
+      - info_zero_width_compression3_invalid_masks.bmp
+      expect_error: true
+    - id: error_zero_height_compression3_invalid_masks
+      description: Pillow rejects invalid BI_BITFIELDS masks before zero-height INFO dimensions
+      test_assets:
+      - info_zero_height_compression3_invalid_masks.bmp
+      expect_error: true
+    - id: error_zero_width_compression4
+      description: Pillow rejects Windows BMP compression 4 before zero-width dimensions
+      test_assets:
+      - info_zero_width_compression4.bmp
+      expect_error: true
+    - id: error_zero_width_compression5
+      description: Pillow rejects Windows BMP compression 5 before zero-width dimensions
+      test_assets:
+      - info_zero_width_compression5.bmp
+      expect_error: true
+    - id: error_zero_height_compression4
+      description: Pillow rejects Windows BMP compression 4 before zero-height dimensions
+      test_assets:
+      - info_zero_height_compression4.bmp
+      expect_error: true
+    - id: error_zero_height_compression5
+      description: Pillow rejects Windows BMP compression 5 before zero-height dimensions
+      test_assets:
+      - info_zero_height_compression5.bmp
       expect_error: true
     - id: error_unsupported_windows_embedded_png
       description: Pillow rejects Windows BMP compression code 5 in a complete INFO header
@@ -4714,6 +4900,10 @@ formats:
       - animated_dispose.webp
       - animated_rgb_full_dispose.webp
       - animated_rgb_partial_dispose.webp
+    - id: animated_trailing_anmf_outside_riff_ignored
+      description: Ignore a complete duplicate ANMF chunk after the declared RIFF extent
+      test_assets:
+      - animated_anmf_beyond_riff_extent.webp
     - id: size_small
       description: Small image (16x16)
       test_assets:
@@ -5238,6 +5428,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_run_cap_4356x1.png
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_6_run_cap
+      description: VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization
+      source_format: png
+      source_asset: webp_lossless_run_cap_4356x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
     - id: enc_lossless_method_0_palette
       description: VP8L method zero retains the sorted palette path for a 16-color input
       source_format: webp
@@ -5859,6 +6054,11 @@ formats:
       description: Grayscale
       test_assets:
       - gray.tiff
+    - id: grayscale_unknown_signed_private_tags
+      description: Unknown private SBYTE, SSHORT, and SLONG tags preserve grayscale pixels
+      test_assets:
+      - gray_signed_private_tags.tiff
+      pixel_reference_case: grayscale
     - id: grayscale_alpha
       description: Grayscale with alpha
       test_assets:
@@ -5883,6 +6083,10 @@ formats:
       - rgb_dpi.tiff
       - byte_strip_offset.tiff
       - unknown_field_type.tiff
+    - id: rgb_unknown_signed_extension_types
+      description: Unknown TIFF extension tags preserve RGB output with signed BYTE, SHORT, and LONG values
+      test_assets:
+      - rgb_unknown_signed_extension_types.tiff
     - id: rgba
       description: RGBA with extrasamples
       test_assets:
@@ -5904,6 +6108,14 @@ formats:
       description: Horizontal Predictor=2 on aligned 2-by-2 YCbCr clumps in one LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_odd_width_predictor_2
+      description: Horizontal Predictor=2 decodes a padded right-edge clump in a 5-by-4 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_odd_width_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_odd_height_predictor_2
+      description: Horizontal Predictor=2 decodes the padded final clump row of a 4-by-5 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff
     - id: ycbcr_subsampled_deflate_tiled_2x2
       description: Patterned contiguous 2-by-2 YCbCr clumps assemble four 16-by-16 Deflate tiles across both axes and clipped edges
       test_assets:
@@ -5989,6 +6201,14 @@ formats:
       description: Horizontal Predictor=2 on vertically subsampled 1-by-2 YCbCr LZW strips
       test_assets:
       - ycbcr_subsampled_lzw_1x2_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_odd_height_predictor_2
+      description: Horizontal Predictor=2 decodes the padded final 1-by-2 clump row of a 4-by-3 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_odd_height_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2
+      description: Horizontal Predictor=2 reverses the padded final 1-by-2 clump row of a 3-by-3 YCbCr TIFF
+      test_assets:
+      - ycbcr_subsampled_lzw_1x2_odd_width_odd_height_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_1x2_unaligned_rows_per_strip_3_predictor_2
       description: 1-by-2 YCbCr LZW Predictor=2 strips split at an unaligned row boundary
       test_assets:
@@ -7346,6 +7566,11 @@ formats:
       description: ICO with embedded PNG data
       test_assets:
       - png_entry.ico
+    - id: error_malformed_png_entry_signature
+      description: ICO PNG dispatch keeps its four-byte prefix but rejects a corrupted remaining signature byte
+      test_assets:
+      - png_invalid_signature.ico
+      expect_error: true
     - id: bmp_entry
       description: ICO with embedded BMP data (classic)
       test_assets:
@@ -7900,6 +8125,18 @@ formats:
       description: 16x16 12-bit lossless limited-range monochrome key frame covering 12-bit luma normalization
       test_assets:
       - portable_lossless_monochrome_limited_12bit_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_fullrange_12bit_17x9
+      description: 17x9 full-range 12-bit lossless monochrome key frame with varied low sample bits and an irregular sample count
+      test_assets:
+      - portable_lossless_monochrome_fullrange_12bit_17x9.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_fullrange_alpha_12bit_17x9
+      description: 17x9 full-range 12-bit lossless monochrome key frame with varied 12-bit auxiliary alpha samples and an irregular sample count
+      test_assets:
+      - portable_lossless_monochrome_fullrange_alpha_12bit_17x9.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_monochrome_limited_bt2020_pq_16x16
@@ -9401,6 +9638,13 @@ formats:
       - sequence_alpha_duration_mismatch.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: sequence_alpha_sample_count_mismatch
+      description: Animated AVIF whose auxiliary alpha sample-to-chunk table declares four of five samples; Pillow decodes four frames then errors on the fifth
+      test_assets:
+      - sequence_alpha_sample_count_mismatch.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: true
     - id: high_bitdepth_still_10bit_444_lossless
       description: Single-frame 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
       test_assets:
@@ -9441,6 +9685,12 @@ formats:
       description: Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF with an auxiliary 12-bit alpha plane, exercising a vector batch and scalar tail
       test_assets:
       - high_bitdepth_still_12bit_444_alpha_9x9.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_12bit_420_alpha_odd_edge_17x9
+      description: Single-frame full-range 12-bit AV1 profile-2 all-lossless 4:2:0 AVIF with 12-bit auxiliary alpha and varied low-nibble chroma at the odd right and bottom edges
+      test_assets:
+      - high_bitdepth_still_12bit_420_alpha_odd_edge_17x9.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
     - id: profile2_identity_12bit_444
@@ -9956,6 +10206,11 @@ formats:
       description: 17x16 lossy 4:0:0 AVIF still uses denominator 9 to resize its monochrome plane from coded width 16 to visible width 17
       test_assets:
       - superres_actual_upscaled_monochrome_17x16.avif
+      status: active
+    - id: multitile_monochrome_superres_288x64
+      description: 288x64 lossy monochrome AVIF still uses denominator 9 to resize a 256-pixel coded plane across two full-width tile columns
+      test_assets:
+      - multitile_monochrome_superres_288x64.avif
       status: active
     - id: superres_actual_upscaled_i422_33x17
       description: 33x17 lossy 4:2:2 AVIF still uses denominator 9 with coded width 29 and restoration disabled, exercising generic super-resolution across odd luma and chroma edges

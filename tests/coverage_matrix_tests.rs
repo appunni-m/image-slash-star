@@ -1055,6 +1055,115 @@ fn assert_coverage_matrix_summary(matrix: &CoverageMatrix) {
 }
 
 #[cfg(coverage)]
+fn execute_bmp_rle_work_budget_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    let (maximum, observed) = match row.fault.point.as_str() {
+        "bmp.rle.entry_work_budget" => (2, 3),
+        "bmp.rle.command_work_budget" => (3, 4),
+        _ => {
+            return Err(format!("{}: unsupported BMP RLE work-budget point", row.id));
+        }
+    };
+    if row.operation != "decode"
+        || row.format != "bmp"
+        || row.fault.contract != "decode_work_budget_exceeded_then_retry_succeeds"
+    {
+        return Err(format!("{}: invalid BMP RLE work-budget contract", row.id));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode || source_key.format != row.format {
+        return Err(format!(
+            "{}: source_case must identify a BMP decode row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active" || source.oracle_status.as_deref() != Some("ok") {
+        return Err(format!(
+            "{}: source_case must be an active Pillow parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(&source_key.format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "work-budget contract source asset",
+    )?;
+    let expected = load_pixel_reference(
+        manifest_dir,
+        &source.id,
+        source.ref_path.as_deref(),
+        "Decode",
+        &source_key.format,
+        asset,
+        (source.ref_size.as_deref(), source.ref_mode.as_deref()),
+    )
+    .ok_or_else(|| format!("{}: source Pillow reference is missing", row.id))?;
+    assert_sha256(
+        &expected.bytes,
+        source.ref_sha256.as_deref(),
+        "work-budget contract Pillow reference",
+    )?;
+
+    let policy = img::DecodePolicy::new().with_max_work_units(maximum);
+    match img::decode_with_policy(&bytes, &policy) {
+        Err(img::ImageError::LimitExceeded {
+            format: Some(img::ImageFormat::Bmp),
+            operation: img::CodecOperation::StillDecode,
+            resource: img::ResourceLimit::DecodeWorkUnits,
+            maximum: actual_maximum,
+            observed: actual_observed,
+        }) if actual_maximum == maximum && actual_observed == observed => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: bounded decode returned the wrong public result: {error:?}",
+                row.id
+            ));
+        }
+        Ok(_) => {
+            return Err(format!("{}: bounded decode unexpectedly succeeded", row.id));
+        }
+    }
+
+    let retry = img::decode(&bytes)
+        .map_err(|error| format!("{}: unbounded decode retry failed: {error:?}", row.id))?;
+    let fresh = img::decode(&bytes)
+        .map_err(|error| format!("{}: fresh decode failed: {error:?}", row.id))?;
+    if retry != fresh {
+        return Err(format!(
+            "{}: unbounded retry differs from a fresh decode",
+            row.id
+        ));
+    }
+    assert_pixel_parity(&expected, &retry.content)
+        .map_err(|error| format!("{}: unbounded retry differs from Pillow: {error}", row.id))?;
+    Ok(())
+}
+
+#[cfg(coverage)]
 fn execute_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
@@ -1075,6 +1184,9 @@ fn execute_fault_contract(
             "{}: row is not a valid target-only decode or inspect fault contract",
             row.id
         ));
+    }
+    if row.fault.contract == "decode_work_budget_exceeded_then_retry_succeeds" {
+        return execute_bmp_rle_work_budget_contract(manifest_dir, matrix, row);
     }
     let (fault_point, sequence_decode, expected_format, expected_stage) =
         match (row.fault.point.as_str(), row.fault.contract.as_str()) {
@@ -1221,6 +1333,12 @@ fn execute_fault_contract(
             ),
             ("avif.i444_generic_rgb.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::AvifI444RgbOutputReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.subsampled_rgb.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifSubsampledRgbOutputReservation,
                 false,
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
@@ -1524,6 +1642,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.upsample.row_source_length_mismatch", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowSourceLengthMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.upsample.h1v2_plane_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegH1v2UpsamplePlaneReservation,
                 false,
@@ -1661,6 +1785,9 @@ fn execute_fault_contract(
         "avif.i444_generic_rgb.output_reservation" => {
             Some("decode: unable to allocate AVIF I444 RGB output")
         }
+        "avif.subsampled_rgb.output_reservation" => {
+            Some("decode: unable to allocate AVIF subsampled RGB output")
+        }
         "av1.frame.color_tile_state_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",
         ),
@@ -1760,7 +1887,8 @@ fn execute_fault_contract(
         | "jpeg.upsample.h1v2_zero_width"
         | "jpeg.upsample.h1v2_source_length_mismatch"
         | "jpeg.upsample.row_invalid_geometry"
-        | "jpeg.upsample.row_short_stride" => {
+        | "jpeg.upsample.row_short_stride"
+        | "jpeg.upsample.row_source_length_mismatch" => {
             Some("decode: invalid JPEG component upsampling geometry")
         }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
@@ -1861,6 +1989,7 @@ fn execute_fault_contract(
                 | "jpeg.upsample.h1v2_source_length_mismatch"
                 | "jpeg.upsample.row_invalid_geometry"
                 | "jpeg.upsample.row_short_stride"
+                | "jpeg.upsample.row_source_length_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}
@@ -1883,8 +2012,10 @@ fn execute_fault_contract(
             identity,
         }) if actual_format == expected_format
             && stage == expected_stage
-            && (row.fault.point != "av1.segment_map.reservation"
-                || (offset.is_none() && identity.is_none()))
+            && (!matches!(
+                row.fault.point.as_str(),
+                "av1.segment_map.reservation" | "avif.subsampled_rgb.output_reservation"
+            ) || (offset.is_none() && identity.is_none()))
             && expected_message.is_none_or(|expected| message == expected) => {}
         Err(img::ImageError::Unsupported {
             format: Some(actual_format),

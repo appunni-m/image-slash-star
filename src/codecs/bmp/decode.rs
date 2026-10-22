@@ -415,16 +415,17 @@ pub fn decode(
     // After the standard 40-byte fields, the cursor is at position 14 + 40 = 54.
     let pos_after_standard = r.position();
 
+    let is_core_header = header_size == 12;
     // Top-down if height is negative.
     let top_down = height < 0;
     let h = height.unsigned_abs();
-    if width <= 0 {
+    if is_core_header && width <= 0 {
         return Err(
             CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
         );
     }
     let w = width.cast_unsigned();
-    if h == 0 || w > 16_384 || h > 16_384 {
+    if is_core_header && (h == 0 || w > 16_384 || h > 16_384) {
         return Err(CodecError::Malformed(
             "BMP dimensions are empty or exceed the supported bounds".to_owned(),
         )
@@ -434,14 +435,8 @@ pub fn decode(
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
         .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
     super::validate_compression(data, header_size, bit_depth_raw, compression)?;
-    if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
-        return Err(CodecError::Malformed(
-            "BMP RLE compression requires indexed pixels".to_owned(),
-        )
-        .at(30, "bmp_dib_header"));
-    }
-
-    // --- BI_BITFIELDS masks ---
+    // Pillow reads and validates BI_BITFIELDS masks before checking INFO
+    // dimensions. Preserve that error precedence without allocating pixels.
     let (rm, gm, bm, am): (u32, u32, u32, u32) = if compression == 3 {
         match header_size {
             40 => {
@@ -470,13 +465,11 @@ pub fn decode(
                 (r0, g0, b0, a0)
             }
         }
-    } else {
+    } else if bit_depth == BmpBitDepth::Sixteen {
         // Default RGB555 masks for 16-bit BI_RGB.
-        if bit_depth == BmpBitDepth::Sixteen {
-            (0x7C00, 0x03E0, 0x001F, 0)
-        } else {
-            (0, 0, 0, 0)
-        }
+        (0x7C00, 0x03E0, 0x001F, 0)
+    } else {
+        (0, 0, 0, 0)
     };
     let (rm, gm, bm, am) = if compression == 3 {
         let masks = super::normalize_bitfield_masks(
@@ -492,6 +485,37 @@ pub fn decode(
     } else {
         (rm, gm, bm, am)
     };
+    // INFO headers let unsupported compression outrank invalid dimensions, as
+    // Pillow does. Keep every dimension check before allocation.
+    if !is_core_header && width < 0 {
+        return Err(
+            CodecError::Dimensions("BMP width must be positive".to_owned())
+                .at(18, "bmp_dib_header"),
+        );
+    }
+    if !is_core_header && width == 0 {
+        return Err(
+            CodecError::Malformed("BMP width must be positive".to_owned()).at(18, "bmp_dib_header"),
+        );
+    }
+    if !is_core_header && h == 0 {
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        )
+        .at(18, "bmp_dib_header"));
+    }
+    if !is_core_header && (w > 16_384 || h > 16_384) {
+        return Err(CodecError::Malformed(
+            "BMP dimensions are empty or exceed the supported bounds".to_owned(),
+        )
+        .at(18, "bmp_dib_header"));
+    }
+    if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
+        return Err(CodecError::Malformed(
+            "BMP RLE compression requires indexed pixels".to_owned(),
+        )
+        .at(30, "bmp_dib_header"));
+    }
 
     // --- Skip any remaining DIB header bytes to reach palette area ---
     let dib_end = 14u64.saturating_add(u64::from(header_size));

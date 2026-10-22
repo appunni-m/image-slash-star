@@ -53,6 +53,25 @@ lanes. Those instrumented runs verify correctness and branch reachability; they
 are not performance measurements. AVIF has parity coverage there, but the
 paired timing comparison below measures JPEG only.
 
+## Optional native x86 profiling
+
+To inspect the RGB 4:2:0 encoder hot path, run the `Profile x86 JPEG` workflow
+manually from Actions. It builds optimized SSE2 and AVX2 binaries with debug
+line information, then samples the public `encode` call for the existing
+512×512 and 1024×1024 RGB Q85 4:2:0 workloads. The job installs the Linux
+`perf` tools matching its booted kernel and records the resolved package and
+tool versions. Its artifact includes host and build metadata, raw perf data,
+actual sample counts, inline-aware reports, annotated sampled assembly,
+source-mapped converter disassembly with ISA counts scoped to the aligned
+converter, and output hashes. The runner must expose user-space cycle events and support DWARF call graphs; the
+preflight fails with logs if it cannot collect those samples.
+
+Treat these profiles as hotspot attribution only. They include conversion data
+movement as well as arithmetic, and sampling overhead makes them unsuitable for
+comparing latency. Use the paired five-round matrix above for timing
+comparisons, and do not add a kernel candidate unless the profile shows
+conversion is a material cost.
+
 ## Timing boundary
 
 Each timed encode starts from the same deterministic RGB, grayscale, or CMYK

@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Keep the required status on the exact Codex commit so validated changes
+    # can be fast-forwarded to main without opening a pull request.
+    branches: [main, "codex/**"]
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
@@ -78,7 +80,7 @@ jobs:
       - name: Install pinned nightly Clippy for coverage-hook lint
         run: rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install pinned npm
@@ -86,7 +88,7 @@ jobs:
       - name: Verify quality, parity, feature lanes, and exact package
         run: make ci-quality
       - name: Retain verified candidate bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image-slash-star-candidate
           path: target/release-artifacts/
@@ -201,7 +203,7 @@ jobs:
               exit 1
             }
           done
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: x86-codec-simd-coverage
@@ -304,7 +306,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install pinned npm
@@ -367,7 +369,7 @@ jobs:
             echo "::error title=coverage failure::$summary"
             exit "$status"
           fi
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: llvm-coverage

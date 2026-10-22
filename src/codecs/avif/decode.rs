@@ -494,14 +494,31 @@ fn decode_portable_inner(
         return None;
     }
     let has_alpha = still.alpha_plane.is_some();
-    // The high-depth subsampled alpha kernel retains filtered 10-bit chroma
-    // until the matrix stage.  Select it explicitly so ordinary RGB and
-    // 12-bit fallback paths continue to downshift before interpolation.
+    // Pillow's pinned libavif route uses filtered 10-bit chroma for alpha,
+    // but 12-bit 4:2:0 alpha selects I012 with nearest chroma under automatic
+    // upsampling. Keep both cases explicit; generic color remains unchanged.
     let high_depth_10bit_subsampled_alpha =
         has_alpha && still.bit_depth == 10 && still.subsampling_x;
+    let high_depth_12bit_420_alpha = has_alpha
+        && still.bit_depth == 12
+        && still.subsampling_x
+        && still.subsampling_y
+        && matches!(
+            conversion,
+            PortableColorConversion::Yuv(PortableYuvMatrix::Bt601)
+        );
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
-    let pixels = if !still.subsampling_x && !still.subsampling_y {
+    let pixels = if high_depth_12bit_420_alpha {
+        convert_subsampled_420_12bit_alpha(
+            &y_plane.samples,
+            &u_plane.samples,
+            &v_plane.samples,
+            still.alpha_plane.as_ref()?.samples.as_slice(),
+            width,
+            portable_error,
+        )?
+    } else if !still.subsampling_x && !still.subsampling_y {
         match conversion {
             PortableColorConversion::IdentityRgb => convert_full_resolution_identity_rgb(
                 &y_plane.samples,
@@ -541,8 +558,13 @@ fn decode_portable_inner(
             return None;
         };
         let shift = sample_depth.bits().checked_sub(8)?;
-        let mut pixels = Vec::new();
-        pixels.try_reserve_exact(pixel_capacity).ok()?;
+        let mut pixels = match reserve_subsampled_rgb_output(pixel_capacity) {
+            Ok(pixels) => pixels,
+            Err(error) => {
+                *portable_error = Some(error);
+                return None;
+            }
+        };
         for (index, &y_sample) in y_plane.samples.iter().enumerate() {
             let (u_sample, v_sample) = if subsampled {
                 #[allow(
@@ -694,8 +716,8 @@ fn decode_monochrome_portable(
         .alpha_plane
         .as_ref()
         .map(|plane| plane.samples.as_slice());
-    // Preserve the scalar truncation boundary before shifting any SIMD lanes:
-    // a sample above the declared nominal depth must reject the whole image.
+    // Validate every sample before SIMD conversion so an out-of-depth value
+    // rejects the whole image instead of being masked by a shift or rescale.
     if still.planes[0]
         .samples
         .iter()
@@ -711,31 +733,45 @@ fn decode_monochrome_portable(
     let has_alpha = still.alpha_plane.is_some();
     let channels = if has_alpha { 4 } else { 3 };
     let pixel_capacity = sample_count.checked_mul(channels)?;
-    let shift = sample_depth.bits().checked_sub(8)?;
+    let bit_depth = sample_depth.bits();
+    let shift = bit_depth.checked_sub(8)?;
+    let full_range_rounding_bias = sample_depth.maximum() / 2;
     let mut pixels = Vec::new();
     pixels.try_reserve_exact(pixel_capacity).ok()?;
     if still.color_range {
-        let remainder = sample_count.checked_rem(8)?;
-        let vectorized = sample_count.checked_sub(remainder)?;
-        for offset in (0..vectorized).step_by(8) {
-            let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
-            let alpha = match alpha_plane {
-                Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
-                None => None,
-            };
-            for lane in 0..8 {
-                pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
-                if let Some(alpha) = alpha.as_ref() {
-                    pixels.push(alpha[lane]);
-                }
-            }
-        }
-        for index in vectorized..sample_count {
-            let gray = sample_depth.truncate_to_u8(still.planes[0].samples[index])?;
-            pixels.extend_from_slice(&[gray, gray, gray]);
-            if let Some(alpha_plane) = alpha_plane {
-                pixels.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
-            }
+        if shift == 0 {
+            append_full_range_monochrome::<false, false>(
+                &mut pixels,
+                &still.planes[0].samples,
+                alpha_plane,
+                sample_count,
+                bit_depth,
+                shift,
+                full_range_rounding_bias,
+            )?;
+        } else if has_alpha {
+            // The pinned RGBA path shifts high-depth monochrome color down
+            // before I400 conversion, while auxiliary alpha keeps full-range
+            // round-half-up scaling.
+            append_full_range_monochrome::<false, true>(
+                &mut pixels,
+                &still.planes[0].samples,
+                alpha_plane,
+                sample_count,
+                bit_depth,
+                shift,
+                full_range_rounding_bias,
+            )?;
+        } else {
+            append_full_range_monochrome::<true, false>(
+                &mut pixels,
+                &still.planes[0].samples,
+                alpha_plane,
+                sample_count,
+                bit_depth,
+                shift,
+                full_range_rounding_bias,
+            )?;
         }
     } else {
         for (index, &sample) in still.planes[0].samples.iter().enumerate() {
@@ -787,6 +823,60 @@ fn decode_monochrome_portable(
     })
 }
 
+/// Convert full-range monochrome color and alpha with independent sample rules.
+fn append_full_range_monochrome<const SCALE_LUMA: bool, const SCALE_ALPHA: bool>(
+    pixels: &mut Vec<u8>,
+    luma_plane: &[u16],
+    alpha_plane: Option<&[u16]>,
+    sample_count: usize,
+    bit_depth: u32,
+    shift: u32,
+    rounding_bias: u16,
+) -> Option<()> {
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
+    for offset in (0..vectorized).step_by(8) {
+        let gray = if SCALE_LUMA {
+            full_range_u16_to_u8_lanes(luma_plane, offset, bit_depth, rounding_bias)?
+        } else {
+            truncate_u16_lanes(luma_plane, offset, shift)?
+        };
+        let alpha = match alpha_plane {
+            Some(plane) if SCALE_ALPHA => Some(full_range_u16_to_u8_lanes(
+                plane,
+                offset,
+                bit_depth,
+                rounding_bias,
+            )?),
+            Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
+            None => None,
+        };
+        for lane in 0..8 {
+            pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
+            if let Some(alpha) = alpha.as_ref() {
+                pixels.push(alpha[lane]);
+            }
+        }
+    }
+    for index in vectorized..sample_count {
+        let gray = if SCALE_LUMA {
+            full_range_sample_to_u8(luma_plane[index], bit_depth)?
+        } else {
+            super::av1::sample_depth::truncate_to_u8(luma_plane[index], bit_depth)?
+        };
+        pixels.extend_from_slice(&[gray, gray, gray]);
+        if let Some(alpha_plane) = alpha_plane {
+            let alpha = if SCALE_ALPHA {
+                full_range_sample_to_u8(alpha_plane[index], bit_depth)?
+            } else {
+                super::av1::sample_depth::truncate_to_u8(alpha_plane[index], bit_depth)?
+            };
+            pixels.push(alpha);
+        }
+    }
+    Some(())
+}
+
 /// Match libavif's limited-range monochrome RGB path: normalize luma from
 /// studio range, clamp it, and round the 8-bit result half-up. The integer
 /// ratio is equivalent to the pinned float lookup path and avoids per-pixel
@@ -804,8 +894,8 @@ fn limited_luma_to_u8(sample: u16, bit_depth: u32) -> Option<u8> {
     u8::try_from(rounded).ok()
 }
 
-/// Scale a full-range auxiliary alpha sample to eight bits with libavif's
-/// round-half-up rule. Limited-range color does not change alpha range.
+/// Scale a full-range sample to eight bits with libavif's round-half-up rule.
+/// Limited-range color does not change an auxiliary alpha plane's full range.
 fn full_range_sample_to_u8(sample: u16, bit_depth: u32) -> Option<u8> {
     let max_sample = 1u32.checked_shl(bit_depth)?.checked_sub(1)?;
     let rounded = u32::from(sample)
@@ -813,6 +903,87 @@ fn full_range_sample_to_u8(sample: u16, bit_depth: u32) -> Option<u8> {
         .checked_add(max_sample / 2)?
         .checked_div(max_sample)?;
     u8::try_from(rounded).ok()
+}
+
+#[inline]
+fn reserve_subsampled_rgb_output(pixel_capacity: usize) -> Result<Vec<u8>, CodecError> {
+    let mut pixels = Vec::new();
+    #[cfg(coverage)]
+    let reservation_length = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifSubsampledRgbOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        pixel_capacity
+    };
+    #[cfg(not(coverage))]
+    let reservation_length = pixel_capacity;
+    pixels.try_reserve_exact(reservation_length).map_err(|_| {
+        CodecError::Dimensions("unable to allocate AVIF subsampled RGB output".to_owned())
+    })?;
+    Ok(pixels)
+}
+
+/// Match Pillow's 12-bit 4:2:0 alpha route: I012 uses nearest chroma samples,
+/// expands luma before the fixed-point BT.601 matrix, and libavif scales the
+/// auxiliary alpha plane independently with round-half-up.
+fn convert_subsampled_420_12bit_alpha(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    alpha_plane: &[u16],
+    width: usize,
+    portable_error: &mut Option<CodecError>,
+) -> Option<Vec<u8>> {
+    let plane_length = y_plane.len();
+    if width == 0 || plane_length != alpha_plane.len() || plane_length.checked_rem(width)? != 0 {
+        return None;
+    }
+    let height = plane_length.checked_div(width)?;
+    if height == 0 {
+        return None;
+    }
+    let chroma_width = width.div_ceil(2);
+    let chroma_height = height.div_ceil(2);
+    let chroma_length = chroma_width.checked_mul(chroma_height)?;
+    if u_plane.len() != chroma_length || v_plane.len() != chroma_length {
+        return None;
+    }
+    let pixel_capacity = plane_length.checked_mul(4)?;
+
+    let mut pixels = match reserve_subsampled_rgb_output(pixel_capacity) {
+        Ok(pixels) => pixels,
+        Err(error) => {
+            *portable_error = Some(error);
+            return None;
+        }
+    };
+
+    for (row, (y_samples, alpha_samples)) in y_plane
+        .chunks_exact(width)
+        .zip(alpha_plane.chunks_exact(width))
+        .enumerate()
+    {
+        let chroma_row_offset = row.checked_div(2)?.checked_mul(chroma_width)?;
+        for (column, (&y_sample, &alpha_sample)) in y_samples.iter().zip(alpha_samples).enumerate()
+        {
+            // Ceil-divided chroma dimensions above bound nearest-sample
+            // indexing at the odd right and bottom edges.
+            #[expect(
+                clippy::arithmetic_side_effects,
+                reason = "validated chroma extents bound this index, avoiding checked addition per pixel"
+            )]
+            let chroma_index = chroma_row_offset + column / 2;
+            let rgb = libyuv_bt601_full_range_rgb_12bit(
+                y_sample,
+                u_plane[chroma_index],
+                v_plane[chroma_index],
+            )?;
+            pixels.extend_from_slice(&rgb);
+            pixels.push(full_range_sample_to_u8(alpha_sample, 12)?);
+        }
+    }
+    (pixels.len() == pixel_capacity).then_some(pixels)
 }
 
 /// Materialize AV1 identity-CICP 12-bit I444 planes as RGB8 without applying a
@@ -1196,6 +1367,35 @@ fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8;
     Some(lanes)
 }
 
+// For a validated high-depth sample and `maximum = 2^bit_depth - 1`,
+// round-half-up scaling is `(sample * 255 + maximum / 2) / maximum`. The
+// identity `n / (2^b - 1) = (n + 1 + (n >> b)) >> b` is exact for these
+// bounded 8/10/12-bit numerators, so each SIMD lane stays division-free.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated samples and 8/10/12-bit depths bound products below 2^21; shifts are below the i32 lane width"
+)]
+#[inline(always)]
+fn full_range_u16_to_u8_lanes(
+    samples: &[u16],
+    offset: usize,
+    bit_depth: u32,
+    rounding_bias: u16,
+) -> Option<[u8; 8]> {
+    let values = samples
+        .get(offset..offset.checked_add(8)?)?
+        .try_into()
+        .ok()?;
+    let weighted = i32x8::from_u16x8(u16x8::new(values)) * i32x8::splat(255)
+        + i32x8::splat(i32::from(rounding_bias));
+    let normalized = (weighted + i32x8::splat(1) + (weighted >> bit_depth)) >> bit_depth;
+    let mut lanes = [0_u8; 8];
+    for (lane, value) in lanes.iter_mut().zip(normalized.to_array()) {
+        *lane = u8::try_from(value).ok()?;
+    }
+    Some(lanes)
+}
+
 // The conversion helper proves every lane lies in [-17_544, 34_092]. The
 // constant right shift is 6 (<32), then clamping to 0..=255 makes the final
 // checked narrowing total even if a future caller supplies an out-of-range
@@ -1496,6 +1696,25 @@ fn libyuv_bt601_full_range_rgb_10bit(y: u16, u: u16, v: u16) -> Option<[u8; 3]> 
     let red = ybase
         .checked_add(i32::from(v).checked_mul(90)?)?
         .checked_sub(11_488)?;
+    Some([libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)])
+}
+
+/// Match libyuv's `YuvPixel12` arithmetic for 12-bit BT.601 full-range input.
+/// Chroma is reduced to eight bits; luma expands to 16 bits before scaling.
+fn libyuv_bt601_full_range_rgb_12bit(y: u16, u: u16, v: u16) -> Option<[u8; 3]> {
+    let y = u32::from(y);
+    let y32 = y.checked_shl(4)? | (y >> 8);
+    let ybase = i32::try_from(y32.checked_mul(16_320)?.checked_shr(16)?).ok()?;
+    let u = i32::from(u.checked_shr(4)?);
+    let v = i32::from(v.checked_shr(4)?);
+    let blue = ybase
+        .checked_add(u.checked_mul(113)?)?
+        .checked_sub(14_432)?;
+    let green = ybase
+        .checked_add(8_736)?
+        .checked_sub(u.checked_mul(22)?.checked_add(v.checked_mul(46)?)?);
+    let green = green?;
+    let red = ybase.checked_add(v.checked_mul(90)?)?.checked_sub(11_488)?;
     Some([libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)])
 }
 

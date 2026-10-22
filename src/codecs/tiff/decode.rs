@@ -320,14 +320,12 @@ fn decode_ifd(
             "unsupported separate-planar TIFF YCbCr conversion".to_owned(),
         ));
     }
+    // Both supported layouts decode padded clump edges; pixel conversion
+    // clips the final clump row to the declared image height.
     let supported_subsampled_ycbcr_predictor = predictor == 2
         && compression == COMPRESSION_LZW
         && !tiled
-        && ycbcr_subsampling.is_some_and(|(horizontal, vertical)| {
-            matches!((horizontal, vertical), (1, 2) | (2, 2))
-                && width_usize.is_multiple_of(horizontal)
-                && height_usize.is_multiple_of(vertical)
-        });
+        && ycbcr_subsampling.is_some_and(|subsampling| matches!(subsampling, (1, 2) | (2, 2)));
     if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
         && predictor != 1
         && !supported_subsampled_ycbcr_predictor

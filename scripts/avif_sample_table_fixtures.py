@@ -16,6 +16,7 @@ SOURCE_SHA256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906
 OUTPUT_SHA256 = "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105"
 ALPHA_TIMING_SOURCE_SHA256 = "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
 ALPHA_TIMING_VARIANT_SHA256 = "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d"
+ALPHA_SAMPLE_COUNT_VARIANT_SHA256 = "89a13baeb503ace10bea0f07d9c2aa296235d2ca8ed0471f3ee99751deccafcf"
 STTS_BOX_OFFSET = 883
 STTS_ENTRY_COUNT_OFFSET = 895
 STTS_SAMPLE_COUNT_OFFSET = 899
@@ -150,6 +151,64 @@ def alpha_track_duration_mismatch(source: bytes) -> bytes:
     ]
     if changed != [alpha_stts.payload_start + 15]:
         raise ValueError("AVIF alpha timing mutation changed unexpected bytes")
+    return result
+
+
+def alpha_track_sample_count_mismatch(source: bytes) -> bytes:
+    """Declare four auxiliary alpha samples while retaining five table entries."""
+    if hashlib.sha256(source).hexdigest() != ALPHA_TIMING_SOURCE_SHA256:
+        raise ValueError("AVIF high-bit-depth sequence source differs from its pin")
+
+    movie = unique_box(parse_boxes(source, 0, len(source)), b"moov")
+    tracks = [
+        (track, parse_track(source, track))
+        for track in children(source, movie)
+        if track.kind == b"trak"
+    ]
+    color_tracks = [
+        (track, track_info)
+        for track, track_info in tracks
+        if track_info["handler"] in ("pict", "vide")
+    ]
+    if len(color_tracks) != 1:
+        raise ValueError(f"expected one color track, found {len(color_tracks)}")
+    color_track_id = color_tracks[0][1]["track_id"]
+    alpha_tracks = [
+        (track, track_info)
+        for track, track_info in tracks
+        if track_info["handler"] == "auxv"
+        and track_info["aux_for_track_id"] == color_track_id
+    ]
+    if len(alpha_tracks) != 1:
+        raise ValueError(
+            f"expected one auxiliary alpha track, found {len(alpha_tracks)}"
+        )
+
+    alpha_track, alpha_info = alpha_tracks[0]
+    if alpha_info["timescale"] != 1 or len(alpha_info["samples"]) != 5:
+        raise ValueError("AVIF alpha track no longer contains five unit-time samples")
+    alpha_mdia = unique_box(children(source, alpha_track), b"mdia")
+    alpha_minf = unique_box(children(source, alpha_mdia), b"minf")
+    alpha_stbl = unique_box(children(source, alpha_minf), b"stbl")
+    alpha_stsc = unique_box(children(source, alpha_stbl), b"stsc")
+    expected_stsc = bytes.fromhex("0000000000000001000000010000000500000001")
+    if source[alpha_stsc.payload_start : alpha_stsc.end] != expected_stsc:
+        raise ValueError("AVIF alpha sample-to-chunk table differs from its pin")
+
+    output = bytearray(source)
+    struct.pack_into(">I", output, alpha_stsc.payload_start + 12, 4)
+    result = bytes(output)
+    if len(result) != len(source) or hashlib.sha256(result).hexdigest() != (
+        ALPHA_SAMPLE_COUNT_VARIANT_SHA256
+    ):
+        raise ValueError("AVIF alpha sample-count variant differs from its pinned output")
+    changed = [
+        index
+        for index, (before, after) in enumerate(zip(source, result))
+        if before != after
+    ]
+    if changed != [alpha_stsc.payload_start + 15]:
+        raise ValueError("AVIF alpha sample-count mutation changed unexpected bytes")
     return result
 
 

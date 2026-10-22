@@ -105,10 +105,10 @@ impl SampleDepth {
 
     /// Truncate one validated sample to the crate's 8-bit transfer boundary.
     ///
-    /// High-bit-depth AVIF conversion for the target Pillow-compatible path is
-    /// a bit truncation, not a rounded full-range rescale. Keeping that
-    /// distinction explicit prevents a later decoder stage from accidentally
-    /// changing the requested conversion semantics.
+    /// Callers use this operation for AVIF paths that discard low sample bits,
+    /// such as identity-coded channels and monochrome RGBA luma. Opaque
+    /// full-range monochrome uses a separate rounded rescale; auxiliary alpha
+    /// is rescaled independently according to the pinned libavif path.
     pub(crate) fn truncate_to_u8(self, value: u16) -> Option<u8> {
         let value = u32::from(self.validate(value)?);
         let shift = self.bits().checked_sub(8)?;
