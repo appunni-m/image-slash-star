@@ -88,7 +88,7 @@ jobs:
       - name: Verify quality, parity, feature lanes, and exact package
         run: make ci-quality
       - name: Retain verified candidate bundle
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: image-slash-star-candidate
           path: target/release-artifacts/
@@ -203,7 +203,7 @@ jobs:
               exit 1
             }
           done
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: x86-codec-simd-coverage
@@ -369,7 +369,7 @@ jobs:
             echo "::error title=coverage failure::$summary"
             exit "$status"
           fi
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: llvm-coverage
