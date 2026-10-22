@@ -164,10 +164,12 @@ jobs:
               raise SystemExit("linked binary is missing convert_rgb_420_mcu_row_aligned disassembly")
           converter = "\n".join(converter_lines) + "\n"
           Path(sys.argv[2]).write_text(converter, encoding="utf-8")
+          kernel_source_line_mentions = len(re.findall(r"(?m)^.*src/codecs/jpeg/kernels\.rs:\d+.*$", converter))
           summary = {
               "converter_symbol": "convert_rgb_420_mcu_row_aligned",
               "assembly_instruction_count": len(re.findall(r"(?m)^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+[a-z][a-z0-9_.]*\s", converter)),
-              "kernel_source_line_mentions": len(re.findall(r"(?m)^.*src/codecs/jpeg/kernels\.rs:\d+.*$", converter)),
+              "kernel_source_line_mentions": kernel_source_line_mentions,
+              "kernel_source_mapping": "available" if kernel_source_line_mentions else "unavailable",
               "xmm_register_mentions": len(re.findall(r"\bxmm[0-9]+\b", converter)),
               "ymm_register_mentions": len(re.findall(r"\bymm[0-9]+\b", converter)),
               "zmm_register_mentions": len(re.findall(r"\bzmm[0-9]+\b", converter)),
