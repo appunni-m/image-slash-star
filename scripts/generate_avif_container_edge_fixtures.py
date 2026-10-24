@@ -30,7 +30,9 @@ DEFAULT_OUTPUT_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 FILE_SOURCE = DEFAULT_OUTPUT_DIR / "baseline.avif"
 IDAT_SOURCE = DEFAULT_OUTPUT_DIR / "iloc_idat_indexed_extent.avif"
 SEQUENCE_SOURCE = DEFAULT_OUTPUT_DIR / "animated.avif"
+ALPHA_SOURCE = DEFAULT_OUTPUT_DIR / "alpha.avif"
 SOURCE_SHA256 = {
+    "alpha": "b19f57d9421bbd3d0b0706c8fe79cef802aebf106afefa6bddde9de1a07509c9",
     "file": "d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2",
     "idat": "d90e970b5b9570c5091df64871d58a8f500c72df294c456037fad90cc1d92aac",
     "sequence": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
@@ -56,6 +58,7 @@ FIXTURE_SHA256 = {
     "error_meta_duplicate_idat.avif": "466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b",
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
+    "error_auxc_nonzero_version.avif": "2357cdc2bc511390a97c6f84cdf1bbf03b0debe3b7bda4090b397d7bd20c3822",
     "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
     "error_pixi_nonzero_version.avif": "a50bd4126788de5efdeefa05ec6583267311fe021af9168928850589d9fd5689",
     "error_pixi_zero_planes.avif": "b29a15defd39037aebaa7dffdd878c828201d1d9adc852302e8c76b123036431",
@@ -66,6 +69,7 @@ FIXTURE_SHA256 = {
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
 }
 BASELINE_PIXI_PAYLOAD = bytes.fromhex("0000000003080808")
+BASELINE_ALPHA_AUXC_PAYLOAD = bytes(4) + b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha\0"
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
 
@@ -114,12 +118,20 @@ def append_property_index(source: bytes, association: int) -> bytes:
     return candidate
 
 
-def set_pixi_byte(source: bytes, offset: int, value: int, field: str) -> bytes:
-    """Set one byte in the pinned baseline pixi property."""
+def set_ipco_property_byte(
+    source: bytes,
+    property_kind: bytes,
+    baseline_payload: bytes,
+    offset: int,
+    value: int,
+    field: str,
+) -> bytes:
+    """Set one byte in a pinned property under the baseline ipco box."""
+    property_name = property_kind.decode("ascii")
     if not 0 <= value <= 255:
-        raise ValueError(f"pixi {field} must fit in one byte")
-    if not 0 <= offset < len(BASELINE_PIXI_PAYLOAD):
-        raise ValueError("pixi mutation offset must address the baseline property")
+        raise ValueError(f"{property_name} {field} must fit in one byte")
+    if not 0 <= offset < len(baseline_payload):
+        raise ValueError(f"{property_name} mutation offset must address the baseline property")
     changed = 0
 
     def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
@@ -129,10 +141,10 @@ def set_pixi_byte(source: bytes, offset: int, value: int, field: str) -> bytes:
         children = read_boxes(payload, 0, len(payload))
         rebuilt = []
         for kind, _, child in children:
-            if kind == b"pixi":
-                if child != BASELINE_PIXI_PAYLOAD:
+            if kind == property_kind:
+                if child != baseline_payload:
                     raise RuntimeError(
-                        "file source pixi no longer has its pinned RGB depth layout"
+                        f"file source {property_name} no longer has its pinned property payload"
                     )
                 changed += 1
                 child = child[:offset] + bytes((value,)) + child[offset + 1 :]
@@ -141,8 +153,15 @@ def set_pixi_byte(source: bytes, offset: int, value: int, field: str) -> bytes:
 
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
-        raise RuntimeError(f"pixi {field} mutation must preserve the file size")
+        raise RuntimeError(f"{property_name} {field} mutation must preserve the file size")
     return candidate
+
+
+def set_pixi_byte(source: bytes, offset: int, value: int, field: str) -> bytes:
+    """Set one byte in the pinned baseline pixi property."""
+    return set_ipco_property_byte(
+        source, b"pixi", BASELINE_PIXI_PAYLOAD, offset, value, field
+    )
 
 
 def set_pixi_first_channel_depth(source: bytes, depth: int) -> bytes:
@@ -163,6 +182,18 @@ def set_pixi_plane_count(source: bytes, planes: int) -> bytes:
 def set_pixi_full_box_version(source: bytes, version: int) -> bytes:
     """Set the baseline pixi property's FullBox version byte."""
     return set_pixi_byte(source, 0, version, "FullBox version")
+
+
+def set_auxc_full_box_version(source: bytes, version: int) -> bytes:
+    """Set the pinned alpha source auxC property's FullBox version byte."""
+    return set_ipco_property_byte(
+        source,
+        b"auxC",
+        BASELINE_ALPHA_AUXC_PAYLOAD,
+        0,
+        version,
+        "FullBox version",
+    )
 
 
 def mismatch_pixi_second_channel_depth(source: bytes) -> bytes:
@@ -534,7 +565,7 @@ def set_data_reference(source: bytes, idat: bool, value: int) -> bytes:
 
 
 def verify_open_failure(source: bytes, filename: str) -> None:
-    """Require the exact pinned public open rejection for invalid associations."""
+    """Require the exact pinned public open rejection for malformed metadata."""
     try:
         image = Image.open(BytesIO(source))
     except UnidentifiedImageError as error:
@@ -589,6 +620,7 @@ def generate(
     file_source: Path = FILE_SOURCE,
     idat_source: Path = IDAT_SOURCE,
     sequence_source: Path = SEQUENCE_SOURCE,
+    alpha_source: Path = ALPHA_SOURCE,
     check: bool = False,
 ) -> tuple[Path, ...]:
     """Generate or verify inputs against live pinned Pillow observations."""
@@ -598,6 +630,7 @@ def generate(
         "file": file_source.read_bytes(),
         "idat": idat_source.read_bytes(),
         "sequence": sequence_source.read_bytes(),
+        "alpha": alpha_source.read_bytes(),
         "grid": (DEFAULT_OUTPUT_DIR / "grid.avif").read_bytes(),
     }
     for name, data in sources.items():
@@ -645,6 +678,12 @@ def generate(
             "error_meta_hdlr_nonzero_predefined.avif",
             "file",
             set_handler_nonzero_predefined(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_auxc_nonzero_version.avif",
+            "alpha",
+            set_auxc_full_box_version(sources["alpha"], 1),
             "open_error",
         ),
         (
@@ -792,9 +831,17 @@ def main() -> None:
     parser.add_argument("--file-source", type=Path, default=FILE_SOURCE)
     parser.add_argument("--idat-source", type=Path, default=IDAT_SOURCE)
     parser.add_argument("--sequence-source", type=Path, default=SEQUENCE_SOURCE)
+    parser.add_argument("--alpha-source", type=Path, default=ALPHA_SOURCE)
     parser.add_argument("--check", action="store_true", help="verify fixtures without writing them")
     args = parser.parse_args()
-    generate(args.output_dir, args.file_source, args.idat_source, args.sequence_source, args.check)
+    generate(
+        output_dir=args.output_dir,
+        file_source=args.file_source,
+        idat_source=args.idat_source,
+        sequence_source=args.sequence_source,
+        alpha_source=args.alpha_source,
+        check=args.check,
+    )
 
 
 if __name__ == "__main__":
