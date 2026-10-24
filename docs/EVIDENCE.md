@@ -1,5 +1,31 @@
 # Versioned compatibility evidence
 
+## AVIF reserved iloc construction-method bit parity — 2026-10-24
+
+Added active parity row
+`decode:avif:error_iloc_reserved_construction_method_bits`. The deterministic
+generator sets one reserved bit in the `iloc` construction method of the pinned
+indexed-`idat` still. The 5,906-byte file size and complete encoded media payload
+are preserved; the fixture SHA-256 is
+`14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f`. Pinned
+Pillow 12.2.0 rejects inspection, verification, and decode with
+`UnidentifiedImageError("cannot identify image file <bytes>")`.
+
+The selected parity row passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-iloc-reserved-construction-method-bits-20261024/coverage.json`.
+Raw LLVM records at `src/codecs/avif/samples.rs:1124` show four and two visits
+to the reserved-bit rejection arm across the two parser instantiations. The
+full parity-only report at
+`.coverage-mcp/local-evidence/parity-full-20261024/coverage.json` had this arm
+uncovered before the case. Coverage MCP marks local report source/build
+identity unverified and test attribution unknown; no aggregate coverage gain
+is claimed.
+
+The public fixture matrix now contains 2,543 total rows: 2,026 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,026 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF duplicate item identifier parity — 2026-10-24
 
 Added active parity row `decode:avif:error_iloc_duplicate_item_id`. The
@@ -8562,7 +8588,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `bfa64caf0368665861ab17e413a7535f1792b1f7b7c227ca5a26cc451ac9b970`; matrix `8c5b9ad04cf8971a668e4c9611bb175d8660e459d047e7b30bcbd31e23fd80ad`.
+- Current fixture integrity only: manifest `6eb368a154b6f4ec7c2fc13e2e0ee9048148c75597205acc7adfc4112efdb3f0`; matrix `dc4a2f36727abd75904054515f0ca6e1713ec0f395e1163e6183440c1c67d254`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
