@@ -10603,6 +10603,13 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-STILL-001
+    - id: error_pixi_nonzero_version
+      description: AVIF pixi property uses a nonzero FullBox version; Pillow rejects it at open
+      test_assets:
+      - error_pixi_nonzero_version.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: error_pixi_zero_planes
       description: AVIF pixi property declares zero color planes; Pillow reports that decoding is not implemented
       test_assets:
