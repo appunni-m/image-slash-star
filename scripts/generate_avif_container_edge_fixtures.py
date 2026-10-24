@@ -57,6 +57,7 @@ FIXTURE_SHA256 = {
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
     "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
+    "error_pixi_channel_depth_mismatch.avif": "420568bd6387e4262a2b3076a466b0d39efe35f9c01c99a66364352389b92242",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
@@ -133,6 +134,33 @@ def zero_pixi_first_channel_depth(source: bytes) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
         raise RuntimeError("zero pixi channel-depth mutation must preserve the file size")
+    return candidate
+
+
+def mismatch_pixi_second_channel_depth(source: bytes) -> bytes:
+    """Set only the baseline pixi property's second channel depth to seven."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"iprp", b"ipco"):
+            return payload
+        children = read_boxes(payload, 0, len(payload))
+        rebuilt = []
+        for kind, _, child in children:
+            if kind == b"pixi":
+                if child != bytes.fromhex("0000000003080808"):
+                    raise RuntimeError(
+                        "file source pixi no longer has its pinned RGB depth layout"
+                    )
+                changed += 1
+                child = child[:6] + bytes((7,)) + child[7:]
+            rebuilt.append(pack_box(kind, child))
+        return b"".join(rebuilt)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("pixi channel-depth mismatch must preserve the file size")
     return candidate
 
 
@@ -525,6 +553,18 @@ def verify_invalid_grid_rejection(source: bytes, filename: str) -> None:
     raise RuntimeError(f"{filename}: Pillow unexpectedly decoded a grid without dimg references")
 
 
+def verify_pixi_channel_depth_mismatch(source: bytes, filename: str) -> None:
+    """Require the pinned Pillow decode failure for unequal pixi channel depths."""
+    try:
+        with Image.open(BytesIO(source)) as image:
+            image.load()
+    except RuntimeError as error:
+        if stable_error_message(error) != "Failed to decode image: Not implemented":
+            raise RuntimeError(f"{filename}: Pillow pixi diagnostic changed") from error
+        return
+    raise RuntimeError(f"{filename}: Pillow unexpectedly decoded unequal pixi channel depths")
+
+
 def encoded_media_payloads(source: bytes) -> tuple[tuple[bytes, bytes], ...]:
     """Retain complete mdat and idat bytes, including the active idat item."""
     boxes = read_boxes(source, 0, len(source))
@@ -606,6 +646,12 @@ def generate(
             "file",
             zero_pixi_first_channel_depth(sources["file"]),
             "open_error",
+        ),
+        (
+            "error_pixi_channel_depth_mismatch.avif",
+            "file",
+            mismatch_pixi_second_channel_depth(sources["file"]),
+            "pixi_channel_depth_mismatch",
         ),
         (
             "error_iloc_duplicate_item_id.avif",
@@ -690,6 +736,8 @@ def generate(
             verify_open_failure(data, filename)
         elif oracle_error == "decode_error":
             verify_invalid_grid_rejection(data, filename)
+        elif oracle_error == "pixi_channel_depth_mismatch":
+            verify_pixi_channel_depth_mismatch(data, filename)
         elif oracle_error is None and pillow_snapshot(data) != references[source_name]:
             raise RuntimeError(f"{filename}: Pillow image/frame/metadata bytes changed")
         elif oracle_error is not None:
