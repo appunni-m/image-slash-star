@@ -681,6 +681,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_grid_descriptor_short_extent.avif",
+        "class": "error_grid_descriptor_short_extent",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Grid AVIF declares only three bytes for its eight-byte primary descriptor; Pillow rejects the truncated grid",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "truncated",
+        "verify_status": "error"
+      },
+      {
         "asset": "error_grid_without_dimg_references.avif",
         "class": "error_grid_without_dimg_references",
         "contracts": {
@@ -28477,7 +28526,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 63,
+      "avif": 64,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -28487,17 +28536,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 676,
-      "specification_reference": 63
+      "pillow_fixture": 677,
+      "specification_reference": 64
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
       "spec_violation": 403,
       "tolerated": 0,
-      "truncated": 198
+      "truncated": 199
     },
-    "classes": 676,
+    "classes": 677,
     "formats": 8
   }
 }

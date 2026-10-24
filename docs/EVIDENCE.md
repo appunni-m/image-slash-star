@@ -1,5 +1,30 @@
 # Versioned compatibility evidence
 
+## AVIF short grid descriptor extent parity — 2026-10-24
+
+Added active parity row `decode:avif:error_grid_descriptor_short_extent`. Its
+deterministic generator changes the primary grid item's declared descriptor
+extent from eight bytes to three while preserving the file length and media
+payload. The fixture SHA-256 is
+`95670f2861407e944391adfdd75bbc97e6ebd010aedda7850dd65a7286cb49e5`.
+Pinned Pillow 12.2.0 rejects inspection, verification, and decode with
+`UnidentifiedImageError("cannot identify image file <bytes>")`.
+
+The exact selected parity run passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-grid-short-descriptor-20261024/coverage.json`;
+its local receipt records the selected, executed, and passed row IDs. The raw
+LLVM branch record for `src/codecs/avif/samples.rs:1712` has outcome counters
+6/0, exercising the short-extent error path. Coverage MCP returned measured
+selected-run coordinates but marks source/build identity unverified and test
+attribution unknown. Incremental comparison with the saved full report is
+incomparable because that baseline's branch detail is incomplete; no aggregate
+coverage gain is claimed.
+
+The public fixture matrix now contains 2,539 total rows: 2,022 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,022 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF grid without dimg references — 2026-10-24
 
 Added active parity row `decode:avif:error_grid_without_dimg_references`. The
@@ -8466,7 +8491,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3d860ac67ebb2387888f1baaaf116194e9f09386f69776955d56616b9af2edc2`; matrix `5f27ee631198acfeb122959251b3cbca6391c60871c3f1969fe666c6e4bd1d59`.
+- Current fixture integrity only: manifest `a5b20d077f90bdd6be43b7ab3bdd9b50985c1244f46b0b634c7a689bedf8e947`; matrix `6736a4bd60db03cd1e97b9e58cd1154af35e21943ab75858c1ab3ecb2f76ec1e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
