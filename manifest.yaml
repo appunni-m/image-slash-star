@@ -10596,6 +10596,13 @@ formats:
       test_assets:
       - nested_size_zero_ipma.avif
       expect_error: true
+    - id: error_pixi_zero_depth
+      description: AVIF pixi property declares zero depth for its first channel; Pillow rejects the complete input at open
+      test_assets:
+      - error_pixi_zero_depth.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: error_ispe_nonzero_version
       description: AVIF ispe property uses an unsupported nonzero FullBox version
       test_assets:

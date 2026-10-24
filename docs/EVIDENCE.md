@@ -1,5 +1,29 @@
 # Versioned compatibility evidence
 
+## AVIF zero-depth pixi parity — 2026-10-24
+
+Added active parity row `decode:avif:error_pixi_zero_depth`. The deterministic
+fixture sets only the first channel depth in the baseline still's `pixi`
+property to zero, preserving the complete AV1 payload and 3,077-byte file size.
+Pillow 12.2.0 rejects the full input at open with
+`PIL.UnidentifiedImageError: cannot identify image file <bytes>`. Its fixture
+SHA-256 is
+`7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f`.
+
+The focused parity and coverage run passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-pixi-zero-depth-20261024/coverage.json`.
+Raw LLVM records six visits to the invalid-depth outcome in
+`src/codecs/avif/samples.rs::parse_property` at line 707. The saved full report
+recorded zero visits to that outcome and 3,511 visits to the valid-depth
+outcome; its source/build receipt is unverified. Coverage MCP therefore
+returned `incomparable` for the incremental comparison because the baseline's
+exact branch detail is incomplete. No aggregate coverage gain is claimed.
+
+The public fixture matrix now contains 2,549 total rows: 2,032 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,032 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF handler rejection parity — 2026-10-24
 
 Added active parity rows `decode:avif:error_meta_hdlr_nonzero_version` and
@@ -8684,7 +8708,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2cf5507b18e369079dba2010fd0b2f44efe3f39a9e4e7b001818a727ea9b6856`; matrix `a989577b8533821e705b716b2c0ed0b28d544a51a2fb0c9185289de360104a54`.
+- Current fixture integrity only: manifest `9eedf9dababafa1dd2bf930491fb85022cec945c0d7aa4ef65f642110a146ada`; matrix `7cf4d37964151457611e8fab5bc0bdd3810f2824360925536066a64de8b27ada`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
