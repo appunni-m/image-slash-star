@@ -510,11 +510,22 @@ fn decode_portable_inner(
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if high_depth_12bit_420_alpha {
+        let alpha_plane = still.alpha_plane.as_ref()?.samples.as_slice();
+        // The validated 12-bit I420 path normally supplies one alpha sample
+        // per luma sample. Keep the mismatch injection out of release builds.
+        #[cfg(coverage)]
+        let alpha_plane = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Avif12BitI420AlphaSampleCountMismatch,
+        ) {
+            &alpha_plane[..alpha_plane.len().saturating_sub(1)]
+        } else {
+            alpha_plane
+        };
         convert_subsampled_420_12bit_alpha(
             &y_plane.samples,
             &u_plane.samples,
             &v_plane.samples,
-            still.alpha_plane.as_ref()?.samples.as_slice(),
+            alpha_plane,
             width,
             portable_error,
         )?

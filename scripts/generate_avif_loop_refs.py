@@ -35,6 +35,10 @@ FIXTURES = {
         "animated_lossless_inter_420_derived_skip_refs_b32x32_64x64.avif",
         "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
     ),
+    "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64": (
+        "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
+        "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5",
+    ),
     "lossless_inter_i422_derived_skip_refs_b32x32_64x64": (
         "animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif",
         "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",

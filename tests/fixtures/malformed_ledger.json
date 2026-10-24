@@ -11217,6 +11217,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "baseline_444_single_scan_reserved_jpg0.jpg",
+        "class": "baseline_444_single_scan_reserved_jpg0",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:4:4 JPEG has a reserved JPG0 segment after a trailing DQT; Pillow verifies the structure but rejects pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "baseline_444_single_scan_trailing_dht_truncated_counts.jpg",
         "class": "baseline_444_single_scan_trailing_dht_truncated_counts",
         "contracts": {
@@ -21525,6 +21557,198 @@
         "verify_status": "ok"
       },
       {
+        "asset": "rgb16_deflate_fill_order_2_unsupported.tiff",
+        "class": "error_rgb16_deflate_fill_order_2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a complete 16-bit RGB Deflate TIFF with FillOrder 2 during opening",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "rgb16_extra_sample_unsupported.tiff",
+        "class": "error_rgb16_extra_sample_without_fourth_channel",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a complete 16-bit RGB TIFF that declares an extra sample without a fourth sample per pixel",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "rgb16_mixed_sample_format_unsupported.tiff",
+        "class": "error_rgb16_mixed_sample_format",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a complete 16-bit RGB TIFF with mixed unsigned and signed SampleFormat values during opening",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "rgb16_signed_sample_format_unsupported.tiff",
+        "class": "error_rgb16_signed_sample_format",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a complete 16-bit RGB TIFF with signed SampleFormat during opening",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "invalid_unregistered_magic.tiff",
         "class": "error_unregistered_magic",
         "contracts": {
@@ -23005,6 +23229,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "rgb16_contiguous_tiled_deflate_without_byte_counts.tiff",
+        "class": "tiled_deflate_without_byte_counts",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow opens and verifies Deflate tiles without TileByteCounts but rejects decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "tiled_gray2_deflate_short_tile.tiff",
         "class": "tiled_gray2_deflate_short_tile",
         "contracts": {
@@ -23495,6 +23751,134 @@
           "pillow_fixture"
         ],
         "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset.tiff",
+        "class": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow verifies unaligned 2-by-2 YCbCr LZW metadata but rejects a first strip offset beyond the input",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count.tiff",
+        "class": "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow verifies unaligned 2-by-2 YCbCr LZW metadata but rejects a zero byte count for the first strip",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_subsampled_predictor_2_jpeg_compression_error.tiff",
+        "class": "ycbcr_subsampled_predictor_2_jpeg_compression_error",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "decoder error -2",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a TIFF YCbCr Predictor=2 strip tagged with JPEG compression when its payload is not JPEG data",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "decoder error -2",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3.tiff",
+        "class": "ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (4 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (4 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow verifies odd-height uncompressed 2-by-2 YCbCr metadata but rejects unaligned strip loading",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (4 bytes not processed)",
         "pillow_status": "error",
         "pillow_type": "builtins.OSError",
         "spec_status": "spec_violation",
@@ -29216,23 +29600,23 @@
       "bmp": 86,
       "gif": 49,
       "ico": 31,
-      "jpeg": 106,
+      "jpeg": 107,
       "png": 65,
-      "tiff": 135,
+      "tiff": 144,
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 691,
+      "pillow_fixture": 701,
       "specification_reference": 78
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 417,
+      "spec_violation": 427,
       "tolerated": 0,
       "truncated": 199
     },
-    "classes": 691,
+    "classes": 701,
     "formats": 8
   }
 }

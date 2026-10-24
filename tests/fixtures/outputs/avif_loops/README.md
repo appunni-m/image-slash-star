@@ -146,6 +146,9 @@ report infinite repetition. The two complete track-header version-zero variants
 of `animated.avif`, including its unknown-duration sentinel, retain all five
 Pillow frames and native repetition zero (one total play). Their separately
 collected observer build identities remain in `additional_collections`.
+The five-frame 56x64 derived-skip sequence retains all Pillow frames and an
+independent native repetition observation; its separately compiled observer
+identity is recorded in `additional_collections`.
 The `stts_zero_delta` mutation changes only the animated track's `stts`
 `sample_delta` from one to zero without changing file length or media payload.
 Pillow reports five zero-millisecond frames with unchanged pixels, and pinned

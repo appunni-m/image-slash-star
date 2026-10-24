@@ -519,13 +519,39 @@
       "collection_index_sha256": "3288138c28cb76de19e2bf132c26bcffb2372ba75ff61cd6d7ea5e13c8bbe3a7",
       "generator_sha256": "02f1bc3fe77463708bd6c53820a97b0ce296c3c8ddbff93d7c94d51390516fb9",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "a57cdf38f4f62a00a10ebaa91030df1e633b8deb0e2fab941132694a04854c05",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64"
+      ],
+      "collection_index_sha256": "219e2c277bd3d003044753d04288caebbfd86bdaf2ae229bc9ee190cf6f1abac",
+      "generator_sha256": "61946f93e2d5d4af4274663c4fc3a949bb3d4dd4838209e993ff60b55a7b01d9",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 14544,
+      "bytes": 14746,
       "path": "README.md",
-      "sha256": "1fde00945f8a00f17850e6feb9154b15e10357c1f064aee2fe3072775b0d8381"
+      "sha256": "444263147b244af07b0d59f997a3ded22ba1d81abdd6bbed55a20b95f701f111"
     },
     {
       "bytes": 2267,
@@ -551,6 +577,11 @@
       "bytes": 1263,
       "path": "inputs/animated_duplicate_stsc_override_four.avif",
       "sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589"
+    },
+    {
+      "bytes": 6111,
+      "path": "inputs/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
+      "sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5"
     },
     {
       "bytes": 1245,
@@ -1171,6 +1202,31 @@
       "bytes": 67500,
       "path": "pixels/animated_duplicate_stsc_override_four/frame_3.bin",
       "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_0.bin",
+      "sha256": "9b5bdae17f5841abf88090cbfd3373dfaea5e168863b5a7344c9a8c7c61ccfe7"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_1.bin",
+      "sha256": "2b260968eef0dd34ae44ef5299694cb144f552e628833a024c341e2ab07310d3"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_2.bin",
+      "sha256": "d4e5949e44698372ec05f1406cfd0188aa6e762cd9b06e5fb54fd7a78e1fdbea"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_3.bin",
+      "sha256": "ca313fb5d68bf80f5b7d2ce284ce9595204257c963f91acc84fd68f76be827ff"
+    },
+    {
+      "bytes": 10752,
+      "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_4.bin",
+      "sha256": "2b260968eef0dd34ae44ef5299694cb144f552e628833a024c341e2ab07310d3"
     },
     {
       "bytes": 67500,
@@ -7811,6 +7867,87 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
       "source_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15"
+    },
+    {
+      "input_bytes": 6111,
+      "input_path": "inputs/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
+      "input_sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "9b5bdae17f5841abf88090cbfd3373dfaea5e168863b5a7344c9a8c7c61ccfe7",
+            "size": [
+              56,
+              64
+            ]
+          },
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "2b260968eef0dd34ae44ef5299694cb144f552e628833a024c341e2ab07310d3",
+            "size": [
+              56,
+              64
+            ]
+          },
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "d4e5949e44698372ec05f1406cfd0188aa6e762cd9b06e5fb54fd7a78e1fdbea",
+            "size": [
+              56,
+              64
+            ]
+          },
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "ca313fb5d68bf80f5b7d2ce284ce9595204257c963f91acc84fd68f76be827ff",
+            "size": [
+              56,
+              64
+            ]
+          },
+          {
+            "bytes": 10752,
+            "duration_ms": 100,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "2b260968eef0dd34ae44ef5299694cb144f552e628833a024c341e2ab07310d3",
+            "size": [
+              56,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64",
+      "source_sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5"
     },
     {
       "input_bytes": 7530,

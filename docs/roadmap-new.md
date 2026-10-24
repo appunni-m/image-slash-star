@@ -9,14 +9,14 @@ is not evidence that a later fix failed. No entry is silently removed here.
 ## Current pure-Rust AVIF cutover
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
-The latest complete local all-feature run passed 57/57 matrix tests and 68/68
+The latest complete local all-feature run passed 57/57 matrix tests and 69/69
 feature-gate tests on source commit
 `34c3930f2e7f6fdad102a421e15170fc2e202688`. Its report, exact totals, test
 counts, and Coverage MCP attribution limits are recorded in
 [Evidence](EVIDENCE.md). The LLVM percentages below remain the historical
 managed baseline; they use a separate report and denominator.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 199 exact `cfg(coverage)` guards across 28 files.
+The origin verifier passes for 203 exact `cfg(coverage)` guards across 28 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -32,9 +32,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 590 rows total, 590 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 591 rows total, 591 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, 1 active parity case and 31 explicit planned gaps.
-- Whole matrix: 2,554 rows total, 2,037 active decode rows, 486 active encode rows, 0 planned decode rows, and 31 planned encode rows. TIFF has 399 decode rows. Typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,587 rows total, 2,070 active decode rows, 486 active encode rows, 0 planned decode rows, and 31 planned encode rows. TIFF has 428 decode rows. Typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

@@ -4,6 +4,9 @@ use super::decode::{Directory, Endian};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescriptor};
 
+const COMPRESSION_NONE: usize = 1;
+const COMPRESSION_JPEG: usize = 7;
+
 /// Inspect the first TIFF page and count the complete IFD chain.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     inspect_inner(data, false)
@@ -33,13 +36,13 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         ));
     }
     let bit_depth = bits[0];
-    let compression = directory.one_or(259, 1);
+    let compression = directory.one_or(259, COMPRESSION_NONE);
     let photometric = directory.one_or(262, 1);
     let sample_formats = directory.values_or(339, &[1]);
     let sample_format = sample_formats.first().copied().unwrap_or(1);
     let color_map = directory.values(320);
     let extra_samples = directory.values(338);
-    let ycbcr_parameters = if photometric == 6 && compression != 1 {
+    let ycbcr_parameters = if photometric == 6 && compression != COMPRESSION_NONE {
         Some(ycbcr_parameters(&directory)?)
     } else {
         None
@@ -181,7 +184,7 @@ pub(super) fn verify_ignored_raw_band_count(
 
 pub(super) fn verify_directory(directory: &Directory<'_>) -> CodecResult<()> {
     let compression = directory.one_or(259, 1);
-    if !matches!(compression, 1 | 5 | 8 | 32_773 | 32_946) {
+    if !matches!(compression, 1 | 5 | COMPRESSION_JPEG | 8 | 32_773 | 32_946) {
         return Err(CodecError::Malformed(
             "unsupported TIFF compression tag".to_owned(),
         ));
@@ -197,10 +200,8 @@ pub(super) fn verify_directory(directory: &Directory<'_>) -> CodecResult<()> {
     }
     let tile_offsets_present = directory.field_type(324).is_some();
     let tile_byte_counts_present = directory.field_type(325).is_some();
-    // Raw tile lengths follow from the tile geometry; compressed lengths do not.
-    if (tile_byte_counts_present && !tile_offsets_present)
-        || (tile_offsets_present && !tile_byte_counts_present && compression != 1)
-    {
+    // Inspection reads metadata only. Decode validates any compressed tile lengths.
+    if tile_byte_counts_present && !tile_offsets_present {
         return Err(CodecError::Malformed(
             "TIFF tile offsets and byte counts must be present together".to_owned(),
         ));
@@ -389,13 +390,15 @@ pub(super) fn layout_and_palette(
         (2, 3, 16)
             if sample_format == 1
                 && fill_order == 1
-                && predictor == 1
+                && (compression == COMPRESSION_NONE || matches!(predictor, 1 | 2))
                 // Pillow treats a zero-count SampleFormat tag like an absent tag.
                 && (sample_formats.is_empty()
                     || sample_formats.iter().all(|&format| format == 1))
                 && extra_samples.is_empty()
-                && ((matches!(compression, 1 | 8) && planar == 1 && !tiled)
-                    || (compression == 8 && planar == 2 && tiled)) =>
+                && matches!(
+                    (compression, planar, tiled),
+                    (COMPRESSION_NONE | 8, 1, false) | (8, 1, true) | (8, 2, true)
+                ) =>
         {
             TiffLayout::Rgb16
         }
@@ -405,7 +408,7 @@ pub(super) fn layout_and_palette(
             bits: bits.to_le_bytes()[0],
         },
         (5, 4, 8) => TiffLayout::Cmyk8,
-        (6, 3, 8) if compression == 1 => TiffLayout::Ycbcr8,
+        (6, 3, 8) if compression == COMPRESSION_NONE => TiffLayout::Ycbcr8,
         (6, 3, 8) => {
             let conversion = ycbcr_conversion.malformed("TIFF YCbCr conversion is missing")?;
             let subsampling = ycbcr_subsampling.unwrap_or((2, 2));

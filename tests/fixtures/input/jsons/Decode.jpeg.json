@@ -897,6 +897,75 @@
       ]
     },
     {
+      "id": "baseline_444_single_scan_reserved_jpg0",
+      "asset": "baseline_444_single_scan_reserved_jpg0.jpg",
+      "asset_sha256": "8cac78f1ec5ba03d629ac828e27d12eb579084476639c90155069457d2728c55",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444_single_scan_reserved_jpg0.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "baseline_444_single_scan_trailing_dht_truncated_counts",
       "asset": "baseline_444_single_scan_trailing_dht_truncated_counts.jpg",
       "asset_sha256": "eb9cc39fb74763240136310a0fed1af15cc133377f83257772ae204c57f3a028",
@@ -2644,6 +2713,38 @@
       ]
     },
     {
+      "id": "ycck_h2v2_even_upsample_edges_18x10",
+      "asset": "baseline_ycck_subsampled_even_edges_18x10.jpg",
+      "asset_sha256": "ad0e70ac2a81695d5a41379d8b9931d1333330514b0a1a930c0e835b9aa5a8c8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_subsampled_even_edges_18x10.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "post_scan_conflicting_adobe_app14",
       "asset": "post_scan_conflicting_adobe_app14.jpg",
       "asset_sha256": "8e64e01abd202d4a5196ab021f44f0f7b45d22f650a2ed871a698b5a4a2e0520",
@@ -2716,6 +2817,38 @@
       "verification_scope": "structure",
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "ycck_h2v1_even_width_18x9",
+      "asset": "baseline_ycck_h2v1_even_width_18x9.jpg",
+      "asset_sha256": "3aa91b3831f8b82d66d978cc217ac4a00953c5b40e9c51d46eb93fdad9feb922",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_even_width_18x9.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -8832,213 +8965,6 @@
       ]
     },
     {
-      "id": "malformed_markers_progressive_dht_oversubscribed",
-      "asset": "progressive_oversubscribed_dc_huffman.jpg",
-      "asset_sha256": "883582bb9b9d43c06f950dca99782441350fa25262ad30247a0d87d2d7bff1b3",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "expect_error": true,
-      "expect_sequence_error": false,
-      "verification_scope": "structure",
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "pillow_call": {
-        "open": "tests/fixtures/input/images/jpeg/progressive_oversubscribed_dc_huffman.jpg",
-        "operations": [
-          "PIL.Image.open",
-          "load",
-          "tobytes"
-        ]
-      },
-      "pillow_verify_call": [
-        "PIL.Image.open",
-        "verify"
-      ]
-    },
-    {
-      "id": "malformed_markers_dht_oversubscribed_retained_tables",
-      "asset": "dht_oversubscribed_retained_tables.jpg",
-      "asset_sha256": "d308eee3946fdfa39f65045ee77d49ba407868dbea4a8a421fde3179b45bc457",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "expect_error": true,
-      "expect_sequence_error": false,
-      "verification_scope": "structure",
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "pillow_call": {
-        "open": "tests/fixtures/input/images/jpeg/dht_oversubscribed_retained_tables.jpg",
-        "operations": [
-          "PIL.Image.open",
-          "load",
-          "tobytes"
-        ]
-      },
-      "pillow_verify_call": [
-        "PIL.Image.open",
-        "verify"
-      ]
-    },
-    {
-      "id": "malformed_markers_dht_oversubscribed_scalar_fallback",
-      "asset": "sampling_3x1_oversubscribed_dc0.jpg",
-      "asset_sha256": "7e895799133d2308b6e0eef0795c67da67675771693cde3aad1f49dc81bd6625",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "broken data stream when reading image file",
-          "rust_kind": "malformed",
-          "rust_format": "JPEG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "expect_error": true,
-      "expect_sequence_error": false,
-      "verification_scope": "structure",
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "pillow_call": {
-        "open": "tests/fixtures/input/images/jpeg/sampling_3x1_oversubscribed_dc0.jpg",
-        "operations": [
-          "PIL.Image.open",
-          "load",
-          "tobytes"
-        ]
-      },
-      "pillow_verify_call": [
-        "PIL.Image.open",
-        "verify"
-      ]
-    },
-    {
       "id": "malformed_markers_sos_no_length",
       "asset": "sos_no_length.jpg",
       "asset_sha256": "766badabecaea49b7ab95b2250f48968ef3e6e25a77f7564dbb7b52074796cc3",
@@ -12182,6 +12108,213 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/entropy_unexpected_marker.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "malformed_markers_progressive_dht_oversubscribed",
+      "asset": "progressive_oversubscribed_dc_huffman.jpg",
+      "asset_sha256": "883582bb9b9d43c06f950dca99782441350fa25262ad30247a0d87d2d7bff1b3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/progressive_oversubscribed_dc_huffman.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "malformed_markers_dht_oversubscribed_retained_tables",
+      "asset": "dht_oversubscribed_retained_tables.jpg",
+      "asset_sha256": "d308eee3946fdfa39f65045ee77d49ba407868dbea4a8a421fde3179b45bc457",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/dht_oversubscribed_retained_tables.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "malformed_markers_dht_oversubscribed_scalar_fallback",
+      "asset": "sampling_3x1_oversubscribed_dc0.jpg",
+      "asset_sha256": "7e895799133d2308b6e0eef0795c67da67675771693cde3aad1f49dc81bd6625",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/sampling_3x1_oversubscribed_dc0.jpg",
         "operations": [
           "PIL.Image.open",
           "load",
