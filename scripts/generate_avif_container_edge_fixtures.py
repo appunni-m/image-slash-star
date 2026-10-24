@@ -56,6 +56,7 @@ FIXTURE_SHA256 = {
     "error_meta_duplicate_idat.avif": "466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b",
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
+    "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
@@ -105,6 +106,33 @@ def append_property_index(source: bytes, association: int) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source) + 1:
         raise RuntimeError("property mutation must change exactly one association box")
+    return candidate
+
+
+def zero_pixi_first_channel_depth(source: bytes) -> bytes:
+    """Set the baseline pixi property's first channel depth to zero."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"iprp", b"ipco"):
+            return payload
+        children = read_boxes(payload, 0, len(payload))
+        rebuilt = []
+        for kind, _, child in children:
+            if kind == b"pixi":
+                if child != bytes.fromhex("0000000003080808"):
+                    raise RuntimeError(
+                        "file source pixi no longer has its pinned RGB depth layout"
+                    )
+                changed += 1
+                child = child[:5] + bytes(1) + child[6:]
+            rebuilt.append(pack_box(kind, child))
+        return b"".join(rebuilt)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("zero pixi channel-depth mutation must preserve the file size")
     return candidate
 
 
@@ -571,6 +599,12 @@ def generate(
             "error_meta_hdlr_nonzero_predefined.avif",
             "file",
             set_handler_nonzero_predefined(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_pixi_zero_depth.avif",
+            "file",
+            zero_pixi_first_channel_depth(sources["file"]),
             "open_error",
         ),
         (
