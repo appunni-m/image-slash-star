@@ -22,8 +22,8 @@ unobserved. The report has no verified source/build identity or test
 attribution, so these are coordinate observations, not a verified coverage
 gain. No full coverage campaign was run.
 
-The public fixture matrix now contains 2,535 total rows: 2,018 decode / inspect /
-verify rows and 517 encode rows. Of those, 2,018 decode rows and 486 encode
+The public fixture matrix now contains 2,536 total rows: 2,019 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,019 decode rows and 486 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 85 cases.
 
@@ -8443,7 +8443,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `56920e44d257748c122d5ff9d9e1bce61446f44001c2b015a29aa37c79c1fb9d`; matrix `3e747592a631a8d9d165b5bf818652acf2971806861e950ba822f3968c0d5833`.
+- Current fixture integrity only: manifest `5921c94d5f8bd5b8e54a18a61db66bfb6b4cecf96d8bd00438dad23c3303d22b`; matrix `3155b27adf8eb8d4ab2026a2cccb4122bad62c5cfc4aa60b36df9c968ca3715f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

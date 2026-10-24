@@ -8197,6 +8197,13 @@ formats:
       test_assets:
       - unknown_extended_size_uuid_box.avif
       status: active
+    - id: trailing_boxes_over_budget
+      description: Valid still AVIF followed by 4,094 empty top-level free boxes; Pillow and the decoder preserve the baseline image after the inspection box budget is reached
+      test_assets:
+      - trailing_boxes_over_budget.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_filmgrain_i444_64x64
       description: 64x64 8-bit all-lossless 4:4:4 key frame exercising bounded full-resolution AV1 film grain
       test_assets:
