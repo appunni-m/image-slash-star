@@ -8225,6 +8225,13 @@ formats:
       expect_error: true
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: error_grid_descriptor_overlong_extent
+      description: Grid AVIF declares nine bytes for its eight-byte primary descriptor; Pillow rejects the overlong grid descriptor at open
+      test_assets:
+      - error_grid_descriptor_overlong_extent.avif
+      expect_error: true
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_filmgrain_i444_64x64
       description: 64x64 8-bit all-lossless 4:4:4 key frame exercising bounded full-resolution AV1 film grain
       test_assets:
