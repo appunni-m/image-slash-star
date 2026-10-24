@@ -1821,6 +1821,30 @@ pub(super) struct ExtractedAvif<'input> {
     pub(super) transform: Option<AvifTransformProperties>,
 }
 
+/// Sample-parser output that passed inspection-time validation.
+///
+/// Container projection accepts this wrapper instead of arbitrary bytes, so
+/// it can rely on semantic property checks already performed by the sample
+/// parser.
+pub(super) struct InspectedAvif<'input>(ExtractedAvif<'input>);
+
+impl InspectedAvif<'_> {
+    pub(super) fn input(&self) -> &[u8] {
+        self.0.input
+    }
+
+    pub(super) const fn grid_properties(&self) -> Option<AvifGridProperties> {
+        self.0.grid_properties
+    }
+
+    pub(super) fn sequence_sample_count(&self) -> Option<usize> {
+        self.0
+            .sequence
+            .as_ref()
+            .map(|sequence| sequence.color.samples.len())
+    }
+}
+
 impl ExtractedAvif<'_> {
     fn validate<const READ_PAYLOAD: bool>(&self) -> CodecResult<()> {
         if self.still.is_none() && self.sequence.is_none() {
@@ -2883,10 +2907,10 @@ pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
 }
 
 /// Validate inspection metadata without materializing encoded image payloads.
-pub(super) fn inspected(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
+pub(super) fn inspected(input: &[u8]) -> CodecResult<InspectedAvif<'_>> {
     let extracted = extract_inner_with_metadata::<false>(input, true)?;
     extracted.validate::<false>()?;
-    Ok(extracted)
+    Ok(InspectedAvif(extracted))
 }
 
 fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> u64 {
