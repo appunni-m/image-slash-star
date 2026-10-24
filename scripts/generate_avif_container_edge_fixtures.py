@@ -52,6 +52,7 @@ FIXTURE_SHA256 = {
     "error_grid_descriptor_overlong_extent.avif": "e0ef3f8597d7ae703cd5ccf7ee8eb24293a857ea4c1e86c8828a899508e54e4f",
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
     "error_infe_zero_item_id.avif": "9cd1623b8c3cf615b708968e90f6b9bb0fb081dbda2185348ebf087db82e7e7f",
+    "error_meta_duplicate_idat.avif": "466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
@@ -271,6 +272,29 @@ def zero_infe_first_item_id(source: bytes) -> bytes:
     return candidate
 
 
+def append_empty_duplicate_idat(source: bytes) -> bytes:
+    """Append an empty second idat box without changing the active AV1 item."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta",):
+            return payload
+        if payload[:4] != bytes(4):
+            raise RuntimeError("indexed-idat source meta must use a version-zero FullBox")
+        children = read_boxes(payload, 4, len(payload))
+        if sum(kind == b"idat" for kind, _, _ in children) != 1:
+            raise RuntimeError("indexed-idat source must contain one idat box")
+        changed += 1
+        child_boxes = b"".join(pack_box(kind, child) for kind, _, child in children)
+        return payload[:4] + child_boxes + pack_box(b"idat", b"")
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 8:
+        raise RuntimeError("duplicate idat mutation must append exactly one empty box")
+    return candidate
+
+
 def duplicate_iloc_first_item_id(source: bytes) -> bytes:
     """Declare the pinned file-backed iloc item record twice with the same ID."""
     changed = 0
@@ -440,8 +464,8 @@ def encoded_media_payloads(source: bytes) -> tuple[tuple[bytes, bytes], ...]:
     if len(mdat) != 1 or len(meta) != 1 or meta[0][:4] != bytes(4):
         raise RuntimeError("container-edge source must have one mdat and version-zero meta")
     idat = [payload for kind, _, payload in read_boxes(meta[0], 4, len(meta[0])) if kind == b"idat"]
-    if len(idat) > 1:
-        raise RuntimeError("container-edge source must not have duplicate idat boxes")
+    if len(idat) > 1 and any(idat[1:]):
+        raise RuntimeError("additional idat boxes must be empty mutation witnesses")
     return ((b"mdat", mdat[0]),) + tuple((b"idat", payload) for payload in idat)
 
 
@@ -488,6 +512,12 @@ def generate(
             "error_infe_zero_item_id.avif",
             "file",
             zero_infe_first_item_id(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_meta_duplicate_idat.avif",
+            "idat",
+            append_empty_duplicate_idat(sources["idat"]),
             "open_error",
         ),
         (
@@ -564,7 +594,10 @@ def generate(
     for filename, source_name, data, oracle_error in variants:
         if hashlib.sha256(data).hexdigest() != FIXTURE_SHA256[filename]:
             raise RuntimeError(f"{filename}: deterministic mutation differs from its pinned hash")
-        if encoded_media_payloads(data) != encoded_media_payloads(sources[source_name]):
+        expected_media = encoded_media_payloads(sources[source_name])
+        if filename == "error_meta_duplicate_idat.avif":
+            expected_media += ((b"idat", b""),)
+        if encoded_media_payloads(data) != expected_media:
             raise RuntimeError(f"{filename}: mutation changed encoded AV1 media bytes")
         if oracle_error == "open_error":
             verify_open_failure(data, filename)

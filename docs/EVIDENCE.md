@@ -1,5 +1,28 @@
 # Versioned compatibility evidence
 
+## AVIF duplicate idat parity — 2026-10-24
+
+Added active parity row `decode:avif:error_meta_duplicate_idat`. The
+deterministic generator appends an empty second `idat` box to the pinned
+indexed-`idat` still, growing the complete file from 5,906 to 5,914 bytes while
+preserving the original AV1 payload. The fixture SHA-256 is
+`466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b`. Pillow
+12.2.0 rejects the complete input at open with
+`PIL.UnidentifiedImageError: cannot identify image file <bytes>`.
+
+The selected parity coverage command passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-duplicate-idat-20261024/coverage.json`.
+Raw LLVM records four and two visits to the `idat.is_some()` true arm at
+`src/codecs/avif/samples.rs:522` across `parse_meta::<false>` and
+`parse_meta::<true>`. Coverage MCP's incremental comparison is incomparable
+because the full baseline's exact branch detail is incomplete; no aggregate
+coverage gain is claimed.
+
+The public fixture matrix now contains 2,546 total rows: 2,029 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,029 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF version-two infe zero item identifier parity — 2026-10-24
 
 Added active parity row `decode:avif:error_infe_zero_item_id`. The deterministic
@@ -19,8 +42,8 @@ for `samples.rs` and recorded zero hits to that arm. Coverage MCP's incremental
 comparison is incomparable because exact branch detail is incomplete, so no
 aggregate coverage gain is claimed.
 
-The public fixture matrix now contains 2,545 total rows: 2,028 decode / inspect /
-verify rows and 517 encode rows. Of those, 2,028 decode rows and 486 encode
+The public fixture matrix now contains 2,546 total rows: 2,029 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,029 decode rows and 486 encode
 rows are active; 31 encode rows remain planned. The separate target-only fault
 lane contains 85 cases.
 
@@ -8636,7 +8659,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9d5bb3ae4aa19106212a89a2c3bf17849fb0f657d236275b1e9c4214c3a4473e`; matrix `a1690d0b5faac50d58779ea568defe31c98ea8c16f20044331598983c38146cc`.
+- Current fixture integrity only: manifest `2becbab218513418a80e71e12b8e433e3fddb4b2f4deb904ad7eb6717d2018e4`; matrix `9376cdd005123a3b47f0487e6dac57f3c425fd0e8ce365b1933617fb505d1ceb`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
