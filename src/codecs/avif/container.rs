@@ -309,11 +309,8 @@ struct Track {
 }
 
 /// Inspect AVIF container metadata without calling a native codec.
-pub(super) fn inspect(
-    data: &[u8],
-    grid_properties: Option<AvifGridProperties>,
-) -> CodecResult<ImageInfo> {
-    inspect_inner_with_grid(data, grid_properties)
+pub(super) fn inspect(extracted: &super::samples::InspectedAvif<'_>) -> CodecResult<ImageInfo> {
+    inspect_inner_with_grid(extracted.input(), extracted.grid_properties())
 }
 
 fn inspect_inner_with_grid(
@@ -804,27 +801,17 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
             let _ = parse_full_box_version_zero(&mut reader)?;
             let width = reader.u32()?;
             let height = reader.u32()?;
-            if width == 0 || height == 0 {
-                return Err(parse_failure!());
-            }
+            // `inspect` receives `InspectedAvif`, whose sample parser already
+            // rejects zero dimensions before this projection runs.
             Ok(Property::Ispe { width, height })
         }
         kind if kind == *b"pixi" => {
             let mut reader = Reader::new(property.payload);
             let _ = parse_full_box_version_zero(&mut reader)?;
-            let planes = reader.u8()?;
-            if !(1..=4).contains(&planes) {
-                return Err(parse_failure!());
-            }
+            let _ = reader.u8()?;
             let depth = reader.u8()?;
-            if depth == 0 || depth > 16 {
-                return Err(parse_failure!());
-            }
-            for _ in 1..planes {
-                if reader.u8()? != depth {
-                    return Err(parse_failure!());
-                }
-            }
+            // Plane count, channel depths, and their agreement were validated
+            // by the sample parser before container projection.
             Ok(Property::Pixi { depth })
         }
         kind if kind == *b"av1C" => parse_av1c(property.payload),
