@@ -269,24 +269,17 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
     Ok(())
 }
 
-fn smooth_pred(num: i64, quant: i64, al: i32) -> i32 {
+fn smooth_pred(num: i64, quant: i64) -> i32 {
     if quant == 0 {
         return 0;
     }
     let denom = quant.saturating_mul(256);
     let round = quant.saturating_mul(128);
-    let mut pred = if num >= 0 {
+    if num >= 0 {
         low_i32(round.saturating_add(num).div_euclid(denom))
     } else {
         low_i32(round.saturating_sub(num).div_euclid(denom)).saturating_neg()
-    };
-    if al > 0 {
-        let limit = 1i32.wrapping_shl(al.cast_unsigned());
-        if pred >= limit {
-            pred = limit.saturating_sub(1);
-        }
     }
-    pred
 }
 
 fn low_i32(value: i64) -> i32 {
@@ -494,7 +487,6 @@ fn smooth_dc_only_block(
             (1, dc25),
         ])),
         q01,
-        -1,
     );
     workspace[8] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -520,7 +512,6 @@ fn smooth_dc_only_block(
             (1, dc25),
         ])),
         q10,
-        -1,
     );
     workspace[16] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -537,7 +528,6 @@ fn smooth_dc_only_block(
             (1, dc23),
         ])),
         q20,
-        -1,
     );
     workspace[9] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -551,7 +541,6 @@ fn smooth_dc_only_block(
             (-1, dc25),
         ])),
         q11,
-        -1,
     );
     workspace[2] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -568,7 +557,6 @@ fn smooth_dc_only_block(
             (2, dc19),
         ])),
         q02,
-        -1,
     );
     workspace[3] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -580,7 +568,6 @@ fn smooth_dc_only_block(
             (-1, dc19),
         ])),
         q03,
-        -1,
     );
     workspace[10] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -592,7 +579,6 @@ fn smooth_dc_only_block(
             (-1, dc19),
         ])),
         q12,
-        -1,
     );
     workspace[17] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -604,7 +590,6 @@ fn smooth_dc_only_block(
             (-1, dc19),
         ])),
         q21,
-        -1,
     );
     workspace[24] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -616,7 +601,6 @@ fn smooth_dc_only_block(
             (-1, dc19),
         ])),
         q30,
-        -1,
     );
     workspace[0] = smooth_pred(
         q00.saturating_mul(weighted_dc(&[
@@ -647,7 +631,6 @@ fn smooth_dc_only_block(
             (-2, dc25),
         ])),
         q00,
-        0,
     );
 }
 
