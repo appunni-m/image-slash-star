@@ -49,6 +49,7 @@ FIXTURE_SHA256 = {
     "error_iref_records_over_budget_trailing_byte.avif": "a160f1c9ddc2dd178b79ba152ac834d8887c6ec1921b4d5e904ec9df37c2c11c",
     "error_grid_without_dimg_references.avif": "a283fb5590e31db1f491fe1e010a22fec3f55da99080dd4dcc61b95e89d6316a",
     "error_grid_descriptor_short_extent.avif": "95670f2861407e944391adfdd75bbc97e6ebd010aedda7850dd65a7286cb49e5",
+    "error_grid_descriptor_overlong_extent.avif": "e0ef3f8597d7ae703cd5ccf7ee8eb24293a857ea4c1e86c8828a899508e54e4f",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -196,6 +197,26 @@ def shorten_grid_descriptor_extent(source: bytes) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
         raise RuntimeError("short grid descriptor mutation must preserve the file size")
+    return candidate
+
+
+def lengthen_grid_descriptor_extent(source: bytes) -> bytes:
+    """Declare one extra byte for the primary grid's eight-byte descriptor."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iloc":
+            return payload
+        expected_prefix = bytes.fromhex("00000000440000050001000000010000027300000008")
+        if payload[: len(expected_prefix)] != expected_prefix:
+            raise RuntimeError("grid source iloc no longer has its pinned primary extent")
+        changed += 1
+        return payload[:18] + struct.pack(">I", 9) + payload[22:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("overlong grid descriptor mutation must preserve the file size")
     return candidate
 
 
@@ -353,6 +374,12 @@ def generate(
             "error_grid_descriptor_short_extent.avif",
             "grid",
             shorten_grid_descriptor_extent(sources["grid"]),
+            "open_error",
+        ),
+        (
+            "error_grid_descriptor_overlong_extent.avif",
+            "grid",
+            lengthen_grid_descriptor_extent(sources["grid"]),
             "open_error",
         ),
         (
