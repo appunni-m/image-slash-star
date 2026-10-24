@@ -33,6 +33,7 @@ SOURCE_SHA256 = {
     "file": "d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2",
     "idat": "d90e970b5b9570c5091df64871d58a8f500c72df294c456037fad90cc1d92aac",
     "sequence": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
+    "grid": "bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d",
 }
 FIXTURE_SHA256 = {
     "animated_tkhd_version_zero.avif": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
@@ -46,6 +47,7 @@ FIXTURE_SHA256 = {
     "iloc_idat_data_reference_65535.avif": "756ea5b7a21c472cee85913fbb64260fccd5267f98900dd2b815760738f07eb4",
     "trailing_boxes_over_budget.avif": "0a92d1c734bb48ab51ffe4aef1f0c5f5693ca06790058cb9a0c74c4c9eb73971",
     "error_iref_records_over_budget_trailing_byte.avif": "a160f1c9ddc2dd178b79ba152ac834d8887c6ec1921b4d5e904ec9df37c2c11c",
+    "error_grid_without_dimg_references.avif": "a283fb5590e31db1f491fe1e010a22fec3f55da99080dd4dcc61b95e89d6316a",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -152,6 +154,30 @@ def append_reference_records_over_budget(source: bytes) -> bytes:
     return candidate
 
 
+def replace_grid_dimg_reference_kind(source: bytes) -> bytes:
+    """Replace the grid's dimg reference type while preserving box sizes."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iref":
+            return payload
+        if payload[:4] != bytes(4):
+            raise RuntimeError("grid-reference source iref must be version zero")
+        rewritten = []
+        for kind, _, child_payload in read_boxes(payload, 4, len(payload)):
+            if kind == b"dimg":
+                changed += 1
+                kind = b"zzzz"
+            rewritten.append(pack_box(kind, child_payload))
+        return payload[:4] + b"".join(rewritten)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("grid-reference mutation must replace one same-size dimg box")
+    return candidate
+
+
 def use_version_zero_track_header(source: bytes, unknown_duration: bool) -> bytes:
     """Narrow tkhd fields and rebase the unchanged mdat's file references."""
     changed = {b"tkhd": 0, b"stco": 0, b"iloc": 0}
@@ -236,6 +262,20 @@ def verify_open_failure(source: bytes, filename: str) -> None:
     raise RuntimeError(f"{filename}: Pillow unexpectedly opened an invalid association")
 
 
+def verify_invalid_grid_rejection(source: bytes, filename: str) -> None:
+    """Require Pillow's public rejection for a grid with no dimg reference."""
+    stream = BytesIO(source)
+    stream.name = f"tests/fixtures/input/images/avif/{filename}"
+    try:
+        with Image.open(stream) as image:
+            image.load()
+    except RuntimeError as error:
+        if stable_error_message(str(error)) != "Failed to decode image: Invalid image grid":
+            raise RuntimeError(f"{filename}: Pillow grid diagnostic changed") from error
+        return
+    raise RuntimeError(f"{filename}: Pillow unexpectedly decoded a grid without dimg references")
+
+
 def encoded_media_payloads(source: bytes) -> tuple[tuple[bytes, bytes], ...]:
     """Retain complete mdat and idat bytes, including the active idat item."""
     boxes = read_boxes(source, 0, len(source))
@@ -262,6 +302,7 @@ def generate(
         "file": file_source.read_bytes(),
         "idat": idat_source.read_bytes(),
         "sequence": sequence_source.read_bytes(),
+        "grid": (DEFAULT_OUTPUT_DIR / "grid.avif").read_bytes(),
     }
     for name, data in sources.items():
         if hashlib.sha256(data).hexdigest() != SOURCE_SHA256[name]:
@@ -272,33 +313,68 @@ def generate(
             "trailing_boxes_over_budget.avif",
             "file",
             append_trailing_boxes_over_budget(sources["file"]),
-            False,
+            None,
         ),
         (
             "error_iref_records_over_budget_trailing_byte.avif",
             "file",
             append_reference_records_over_budget(sources["file"]),
-            True,
+            "open_error",
         ),
-        ("animated_tkhd_version_zero.avif", "sequence", use_version_zero_track_header(sources["sequence"], False), False),
-        ("animated_tkhd_version_zero_unknown_duration.avif", "sequence", use_version_zero_track_header(sources["sequence"], True), False),
-        ("ipma_optional_zero_index.avif", "idat", append_property_index(sources["idat"], 0), False),
-        ("ipma_essential_zero_index.avif", "idat", append_property_index(sources["idat"], 0x80), True),
-        ("error_ipma_property_index_out_of_bounds.avif", "idat", append_property_index(sources["idat"], 0x7F), True),
+        (
+            "error_grid_without_dimg_references.avif",
+            "grid",
+            replace_grid_dimg_reference_kind(sources["grid"]),
+            "decode_error",
+        ),
+        (
+            "animated_tkhd_version_zero.avif",
+            "sequence",
+            use_version_zero_track_header(sources["sequence"], False),
+            None,
+        ),
+        (
+            "animated_tkhd_version_zero_unknown_duration.avif",
+            "sequence",
+            use_version_zero_track_header(sources["sequence"], True),
+            None,
+        ),
+        (
+            "ipma_optional_zero_index.avif",
+            "idat",
+            append_property_index(sources["idat"], 0),
+            None,
+        ),
+        (
+            "ipma_essential_zero_index.avif",
+            "idat",
+            append_property_index(sources["idat"], 0x80),
+            "open_error",
+        ),
+        (
+            "error_ipma_property_index_out_of_bounds.avif",
+            "idat",
+            append_property_index(sources["idat"], 0x7F),
+            "open_error",
+        ),
     ]
     for name, idat in (("file", False), ("idat", True)):
         for value in (1, 0xFFFF):
             filename = f"iloc_{name}_data_reference_{value}.avif"
-            variants.append((filename, name, set_data_reference(sources[name], idat, value), False))
-    for filename, source_name, data, open_rejected in variants:
+            variants.append((filename, name, set_data_reference(sources[name], idat, value), None))
+    for filename, source_name, data, oracle_error in variants:
         if hashlib.sha256(data).hexdigest() != FIXTURE_SHA256[filename]:
             raise RuntimeError(f"{filename}: deterministic mutation differs from its pinned hash")
         if encoded_media_payloads(data) != encoded_media_payloads(sources[source_name]):
             raise RuntimeError(f"{filename}: mutation changed encoded AV1 media bytes")
-        if open_rejected:
+        if oracle_error == "open_error":
             verify_open_failure(data, filename)
-        elif pillow_snapshot(data) != references[source_name]:
+        elif oracle_error == "decode_error":
+            verify_invalid_grid_rejection(data, filename)
+        elif oracle_error is None and pillow_snapshot(data) != references[source_name]:
             raise RuntimeError(f"{filename}: Pillow image/frame/metadata bytes changed")
+        elif oracle_error is not None:
+            raise RuntimeError(f"{filename}: unsupported oracle outcome {oracle_error!r}")
         path = output_dir / filename
         if path.exists() and path.read_bytes() != data:
             raise RuntimeError(f"refusing to replace a different fixture at {path}")

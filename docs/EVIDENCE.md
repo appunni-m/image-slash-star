@@ -1,5 +1,28 @@
 # Versioned compatibility evidence
 
+## AVIF grid without dimg references — 2026-10-24
+
+Added active parity row `decode:avif:error_grid_without_dimg_references`. The
+fixture renames the source grid's only `dimg` reference box to `zzzz` without
+changing box sizes or encoded media payloads. Pillow 12.2.0 rejects it with
+`RuntimeError("Failed to decode image: Invalid image grid")`. The fixture SHA-256
+is `a283fb5590e31db1f491fe1e010a22fec3f55da99080dd4dcc61b95e89d6316a`.
+
+The selected parity run passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-grid-no-dimg-current-20261024/coverage.json`.
+The local LLVM report records the missing-child error arm in
+`src/codecs/avif/samples.rs:1908`; Coverage MCP lists only the opposite arm as
+unobserved in this selected run. It does not reach the similar container check
+at `src/codecs/avif/container.rs:1590`, because sample extraction rejects the
+input first. Coverage MCP marks source identity unverified and test attribution
+unknown for the report, and its query against the saved full report timed out;
+no full-suite coverage delta is claimed.
+
+The public fixture matrix now contains 2,538 total rows: 2,021 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,021 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## JPEG oversubscribed Huffman fallback parity — 2026-10-24
 
 Added active row
@@ -8443,7 +8466,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1fcfff22634b8330e5c73bc2be230b0500c696828ff279d82e0615222bc91651`; matrix `c145bf7502a267e09b1e0c8f83ed9ccb3477e60567223a53a49083362bceb25a`.
+- Current fixture integrity only: manifest `3d860ac67ebb2387888f1baaaf116194e9f09386f69776955d56616b9af2edc2`; matrix `5f27ee631198acfeb122959251b3cbca6391c60871c3f1969fe666c6e4bd1d59`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
