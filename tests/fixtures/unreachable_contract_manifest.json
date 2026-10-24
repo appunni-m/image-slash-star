@@ -86,6 +86,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "tiff_ignored_sample_row_bytes_zero",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ignored_sample_row_bytes_zero",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ignored_sample_assembly_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_ycbcr_clump_length_mismatch",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_ycbcr_clump_length_mismatch",
@@ -101,6 +113,30 @@
       "id": "tiff_ycbcr_custom_general_clump_length_mismatch",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_horizontal_subsampling_zero",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_vertical_subsampling_zero",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_custom_horizontal_subsampling_zero",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_ycbcr_custom_vertical_subsampling_zero",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero",
       "test": "test_fault_contract_matrix"
     },
     {
@@ -563,6 +599,60 @@
       "id": "avif_monochrome_alpha_plane_length_mismatch",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_subsampling_x_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_subsampling_y_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_u_plane_nonempty_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_v_plane_nonempty_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_y_plane_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_alpha_plane_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_y_sample_out_of_depth",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_alpha_sample_out_of_depth",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_portable_output_length_mismatch",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_portable_output_length_mismatch",
       "test": "test_fault_contract_matrix"
     }
   ],

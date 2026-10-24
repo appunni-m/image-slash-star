@@ -5705,7 +5705,7 @@
       },
       "coverage_origin_inventory": {
         "files": 28,
-        "guards": 203
+        "guards": 211
       },
       "function": {
         "covered": 5125,
@@ -6740,10 +6740,10 @@
       "decode_active": 2070,
       "decode_planned": 0,
       "decode_rows": 2070,
-      "encode_active": 486,
+      "encode_active": 487,
       "encode_planned": 31,
-      "encode_rows": 517,
-      "total_rows": 2587
+      "encode_rows": 518,
+      "total_rows": 2588
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

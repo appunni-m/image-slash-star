@@ -3220,6 +3220,33 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.monochrome_alpha.plane_length_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },
+        "avif.monochrome_portable.subsampling_x_false": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.subsampling_y_false": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.u_plane_nonempty": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.v_plane_nonempty": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.y_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.alpha_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.y_sample_out_of_depth": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.alpha_sample_out_of_depth": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.monochrome_portable.output_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
         "avif.i444_generic_rgb.u_plane_length_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },
@@ -3337,7 +3364,19 @@ def sync_fault_contract_rows(manifest, matrix):
         "tiff.rgb16.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "tiff.ignored_samples.row_bytes_zero": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ignored_samples.assembly_length_mismatch": {
+            "decode_error_then_retry_succeeds"
+        },
         "tiff.ycbcr.clump_length_mismatch": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.horizontal_subsampling_zero": {
+            "decode_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.vertical_subsampling_zero": {
             "decode_error_then_retry_succeeds"
         },
         "tiff.ycbcr.rgb_output_reservation": {

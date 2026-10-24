@@ -300,7 +300,7 @@
       "path": "src/codecs/avif/av1/tile_state.rs"
     },
     {
-      "guard_count": 16,
+      "guard_count": 20,
       "origin": "defensive_model",
       "path": "src/codecs/avif/decode.rs"
     },
@@ -382,7 +382,7 @@
       "path": "src/codecs/png/inspect.rs"
     },
     {
-      "guard_count": 12,
+      "guard_count": 16,
       "guards": [
         {
           "index": 1,
@@ -430,6 +430,22 @@
         },
         {
           "index": 12,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 13,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 14,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 15,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 16,
           "origin": "defensive_model"
         }
       ],

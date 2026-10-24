@@ -1278,6 +1278,87 @@ fn execute_fault_contract(
                 img::ImageErrorStage::StillDecode,
             ),
             (
+                "avif.monochrome_portable.subsampling_x_false",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableSubsamplingXFalse,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.subsampling_y_false",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableSubsamplingYFalse,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.u_plane_nonempty",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableUPlaneNonEmpty,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.v_plane_nonempty",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableVPlaneNonEmpty,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.y_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableYPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.alpha_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableAlphaPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.y_sample_out_of_depth",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableYSampleOutOfDepth,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.alpha_sample_out_of_depth",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableAlphaSampleOutOfDepth,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.monochrome_portable.output_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifMonochromePortableOutputLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
                 "avif.i444_generic_rgb.u_plane_length_mismatch",
                 "decode_unsupported_then_retry_succeeds",
             ) => (
@@ -1732,8 +1813,35 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.ignored_samples.row_bytes_zero", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffIgnoredSampleRowBytesZero,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "tiff.ignored_samples.assembly_length_mismatch",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::TiffIgnoredSampleAssemblyLengthMismatch,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.ycbcr.clump_length_mismatch", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffYcbcrClumpLengthMismatch,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.ycbcr.horizontal_subsampling_zero", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrHorizontalSubsamplingZero,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.ycbcr.vertical_subsampling_zero", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrVerticalSubsamplingZero,
                 false,
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
@@ -1804,6 +1912,15 @@ fn execute_fault_contract(
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
         | "avif.i444_10bit_alpha.invalid_sample"
         | "avif.monochrome_alpha.plane_length_mismatch"
+        | "avif.monochrome_portable.subsampling_x_false"
+        | "avif.monochrome_portable.subsampling_y_false"
+        | "avif.monochrome_portable.u_plane_nonempty"
+        | "avif.monochrome_portable.v_plane_nonempty"
+        | "avif.monochrome_portable.y_plane_length_mismatch"
+        | "avif.monochrome_portable.alpha_plane_length_mismatch"
+        | "avif.monochrome_portable.y_sample_out_of_depth"
+        | "avif.monochrome_portable.alpha_sample_out_of_depth"
+        | "avif.monochrome_portable.output_length_mismatch"
         | "avif.i420_12bit_alpha.sample_count_mismatch" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
         }
@@ -1938,6 +2055,12 @@ fn execute_fault_contract(
         "tiff.ycbcr.clump_length_mismatch" => {
             Some("decode: TIFF YCbCr clump buffer has an invalid length")
         }
+        "tiff.ignored_samples.row_bytes_zero" | "tiff.ignored_samples.assembly_length_mismatch" => {
+            Some("decode: TIFF ignored sample assembly size is invalid")
+        }
+        "tiff.ycbcr.horizontal_subsampling_zero" | "tiff.ycbcr.vertical_subsampling_zero" => {
+            Some("decode: unsupported TIFF YCbCr subsampling")
+        }
         "tiff.ycbcr.rgb_output_reservation" => {
             Some("decode: unable to allocate TIFF YCbCr RGB buffer")
         }
@@ -2034,7 +2157,12 @@ fn execute_fault_contract(
             ..
         }) if matches!(
             row.fault.point.as_str(),
-            "tiff.ycbcr.clump_length_mismatch" | "tiff.ycbcr.full_resolution_length_mismatch"
+            "tiff.ycbcr.clump_length_mismatch"
+                | "tiff.ycbcr.full_resolution_length_mismatch"
+                | "tiff.ignored_samples.row_bytes_zero"
+                | "tiff.ignored_samples.assembly_length_mismatch"
+                | "tiff.ycbcr.horizontal_subsampling_zero"
+                | "tiff.ycbcr.vertical_subsampling_zero"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}
@@ -2069,6 +2197,15 @@ fn execute_fault_contract(
                 | "avif.i444_10bit_alpha.v_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.invalid_sample"
                 | "avif.monochrome_alpha.plane_length_mismatch"
+                | "avif.monochrome_portable.subsampling_x_false"
+                | "avif.monochrome_portable.subsampling_y_false"
+                | "avif.monochrome_portable.u_plane_nonempty"
+                | "avif.monochrome_portable.v_plane_nonempty"
+                | "avif.monochrome_portable.y_plane_length_mismatch"
+                | "avif.monochrome_portable.alpha_plane_length_mismatch"
+                | "avif.monochrome_portable.y_sample_out_of_depth"
+                | "avif.monochrome_portable.alpha_sample_out_of_depth"
+                | "avif.monochrome_portable.output_length_mismatch"
                 | "avif.i420_12bit_alpha.sample_count_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage

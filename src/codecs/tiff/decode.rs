@@ -2149,6 +2149,20 @@ fn compact_extra_samples(
     let row_bytes = width
         .checked_mul(stored_samples)
         .dimensions("TIFF ignored sample row size overflows")?;
+    #[cfg(coverage)]
+    let row_bytes = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffIgnoredSampleRowBytesZero,
+    ) {
+        0
+    } else {
+        row_bytes
+    };
+    #[cfg(coverage)]
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffIgnoredSampleAssemblyLengthMismatch,
+    ) {
+        let _ = pixels.pop();
+    }
     if row_bytes == 0 || !pixels.len().is_multiple_of(row_bytes) {
         return Err(CodecError::Malformed(
             "TIFF ignored sample assembly size is invalid".to_owned(),
@@ -2431,6 +2445,22 @@ fn convert_ycbcr_subsampled_general_with(
     let width = width as usize;
     let height = height as usize;
     let (horizontal, vertical) = subsampling;
+    #[cfg(coverage)]
+    let horizontal = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrHorizontalSubsamplingZero,
+    ) {
+        0
+    } else {
+        horizontal
+    };
+    #[cfg(coverage)]
+    let vertical = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffYcbcrVerticalSubsamplingZero,
+    ) {
+        0
+    } else {
+        vertical
+    };
     if horizontal == 0 || vertical == 0 {
         return Err(CodecError::Malformed(
             "unsupported TIFF YCbCr subsampling".to_owned(),

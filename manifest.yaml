@@ -334,6 +334,34 @@ fault_contracts:
       point: tiff.rgb16.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ignored_sample_row_bytes_zero
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw
+    fault:
+      point: tiff.ignored_samples.row_bytes_zero
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ignored_sample_assembly_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw
+    fault:
+      point: tiff.ignored_samples.assembly_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_clump_length_mismatch
     type: fault-contract
     operation: decode
@@ -374,6 +402,62 @@ fault_contracts:
       source_case: decode:tiff:ycbcr_custom_coefficients_lzw_4x2
     fault:
       point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_horizontal_subsampling_zero
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_4x2
+    fault:
+      point: tiff.ycbcr.horizontal_subsampling_zero
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_vertical_subsampling_zero
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_subsampled_lzw_4x2
+    fault:
+      point: tiff.ycbcr.vertical_subsampling_zero
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_horizontal_subsampling_zero
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_4x2
+    fault:
+      point: tiff.ycbcr.horizontal_subsampling_zero
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_vertical_subsampling_zero
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_4x2
+    fault:
+      point: tiff.ycbcr.vertical_subsampling_zero
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
   - id: tiff_ycbcr_full_resolution_length_mismatch
@@ -1354,6 +1438,132 @@ fault_contracts:
       source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
     fault:
       point: avif.monochrome_alpha.plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_subsampling_x_rejected
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.subsampling_x_false
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_subsampling_y_rejected
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.subsampling_y_false
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_u_plane_nonempty_rejected
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.u_plane_nonempty
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_v_plane_nonempty_rejected
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.v_plane_nonempty
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_y_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.y_plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_alpha_plane_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.alpha_plane_length_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_y_sample_out_of_depth
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.y_sample_out_of_depth
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_alpha_sample_out_of_depth
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.alpha_sample_out_of_depth
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_portable_output_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:portable_lossless_monochrome_limited_alpha_16x16
+    fault:
+      point: avif.monochrome_portable.output_length_mismatch
       contract: decode_unsupported_then_retry_succeeds
     oracle_status: not_applicable
 
@@ -5589,7 +5799,7 @@ formats:
       description: VP8L method zero retains the sorted palette path for a 16-color input
       source_format: webp
       source_asset: lossless_palette16.webp
-      params: {'lossless': True, 'quality': 80, 'method': 0}
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
     - id: enc_lossless_method_0_partial_alpha
       description: VP8L method zero uses its fixed predictor path with partial-alpha RGBA input
       source_format: png
@@ -5610,6 +5820,11 @@ formats:
       description: Method-five predictor sampling coalesces grayscale-alpha modes to the VP8L field limit
       source_format: png
       source_asset: webp_lossless_gray_alpha_predictor.png
+      params: {'lossless': True, 'quality': 80, 'method': 5, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_5_transparent_alpha
+      description: Method-five predictor preserves Pillow parity for fully transparent pixels with hidden RGB
+      source_format: png
+      source_asset: alpha_partial.png
       params: {'lossless': True, 'quality': 80, 'method': 5, 'rust_encode_with_token': true}
     - id: enc_lossless_method_6
       description: VP8L method six increases lossless transform search effort
@@ -5889,15 +6104,15 @@ formats:
       source_asset: lossless_solid.webp
       params: {'lossless': True}
     - id: enc_lossless_palette16
-      description: Re-encode a 16-color lossless image using two packed palette indices per byte
+      description: Re-encode a 16-color lossless image with two packed indices through token and no-token paths
       source_format: webp
       source_asset: lossless_palette16.webp
-      params: {'lossless': True}
+      params: {'lossless': True, 'rust_encode_with_token': true}
     - id: enc_lossless_palette256
-      description: Re-encode a full-palette lossless image
+      description: Re-encode a full-palette lossless image through token and no-token paths
       source_format: webp
       source_asset: lossless_palette256.webp
-      params: {'lossless': True}
+      params: {'lossless': True, 'rust_encode_with_token': true}
     - id: enc_lossless_palette4_box_chain
       description: A 4x4100 four-color source crosses the packed lossless box-chain match-length boundary
       source_format: webp
