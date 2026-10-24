@@ -52,6 +52,7 @@ FIXTURE_SHA256 = {
     "error_grid_descriptor_overlong_extent.avif": "e0ef3f8597d7ae703cd5ccf7ee8eb24293a857ea4c1e86c8828a899508e54e4f",
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
+    "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -263,6 +264,29 @@ def duplicate_iloc_first_item_id(source: bytes) -> bytes:
     return candidate
 
 
+def set_iloc_reserved_construction_method_bit(source: bytes) -> bytes:
+    """Set one reserved iloc construction-method bit without changing media."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iloc":
+            return payload
+        expected_payload = bytes.fromhex(
+            "0100000044440001000100010000000000080001000000000000000800000aeb"
+        )
+        if payload != expected_payload:
+            raise RuntimeError("indexed-idat iloc no longer has its pinned one-item layout")
+        changed += 1
+        construction = int.from_bytes(payload[10:12], "big")
+        return payload[:10] + struct.pack(">H", construction | 0x0010) + payload[12:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("reserved iloc construction mutation changed an unexpected file extent")
+    return candidate
+
+
 def use_version_zero_track_header(source: bytes, unknown_duration: bool) -> bytes:
     """Narrow tkhd fields and rebase the unchanged mdat's file references."""
     changed = {b"tkhd": 0, b"stco": 0, b"iloc": 0}
@@ -417,6 +441,12 @@ def generate(
             "error_iloc_duplicate_item_id.avif",
             "file",
             duplicate_iloc_first_item_id(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_iloc_reserved_construction_method_bits.avif",
+            "idat",
+            set_iloc_reserved_construction_method_bit(sources["idat"]),
             "open_error",
         ),
         (

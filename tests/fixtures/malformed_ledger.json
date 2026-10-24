@@ -1139,6 +1139,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_iloc_reserved_construction_method_bits.avif",
+        "class": "error_iloc_reserved_construction_method_bits",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete AVIF sets a reserved iloc construction-method bit; Pillow rejects the invalid item location at open",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "error_iloc_truncated_extent_index.avif",
         "class": "error_iloc_truncated_extent_index",
         "contracts": {
@@ -28673,7 +28722,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 67,
+      "avif": 68,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -28683,17 +28732,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 680,
-      "specification_reference": 67
+      "pillow_fixture": 681,
+      "specification_reference": 68
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 406,
+      "spec_violation": 407,
       "tolerated": 0,
       "truncated": 199
     },
-    "classes": 680,
+    "classes": 681,
     "formats": 8
   }
 }
