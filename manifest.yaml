@@ -7933,6 +7933,13 @@ formats:
       - iinf_version_1_entry_count.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: error_infe_zero_item_id
+      description: A complete AVIF declares item identifier zero in its version-two infe entry; Pillow rejects the malformed metadata at open
+      test_assets:
+      - error_infe_zero_item_id.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: pitm_version_1_wide_item_id
       description: Still AVIF encodes its primary item identifier in the version-one 32-bit pitm field with unchanged Pillow pixels
       test_assets:
