@@ -1271,6 +1271,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_iref_records_over_budget_trailing_byte.avif",
+        "class": "error_iref_records_over_budget_trailing_byte",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Still AVIF has 4,088 ignored item references and a truncated reference child; Pillow rejects the malformed metadata and the sample parser enforces its record budget",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "truncated",
+        "verify_status": "error"
+      },
+      {
         "asset": "ispe_nonzero_version.avif",
         "class": "error_ispe_nonzero_version",
         "contracts": {
@@ -28379,7 +28428,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 61,
+      "avif": 62,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -28389,17 +28438,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 674,
-      "specification_reference": 61
+      "pillow_fixture": 675,
+      "specification_reference": 62
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
       "spec_violation": 402,
       "tolerated": 0,
-      "truncated": 197
+      "truncated": 198
     },
-    "classes": 674,
+    "classes": 675,
     "formats": 8
   }
 }
