@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Pillow-parity fixtures for subsampled TIFF YCbCr LZW strips."""
+"""Generate Pillow-parity fixtures for compressed subsampled TIFF YCbCr strips."""
 
 from __future__ import annotations
 
@@ -19,6 +19,11 @@ from generate_decode_refs import verify_primary_oracle
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIRECTORY = ROOT / "tests" / "fixtures" / "input" / "images" / "tiff"
 PINNED_PILLOW = "12.2.0"
+TIFF_COMPRESSION_NONE = 1
+TIFF_COMPRESSION_LZW = 5
+TIFF_COMPRESSION_JPEG = 7
+TIFF_COMPRESSION_DEFLATE = 8
+TIFF_COMPRESSION_ADOBE_DEFLATE = 32_946
 REFERENCE_PIXELS = bytes.fromhex(
     "004000004000002f000b61003da4000b72003d93000b6100001e003d8232000c276fa2bd3d82320b50003d708b0b3e59"
 )
@@ -70,7 +75,7 @@ BASE_CLUMPS = (
 )
 
 
-def lzw_blocks(
+def _ycbcr_strip_samples(
     width: int,
     height: int,
     rows_per_strip: int,
@@ -79,7 +84,7 @@ def lzw_blocks(
     subsampling: tuple[int, int] = (2, 2),
     predictor: int = 1,
 ) -> list[bytes]:
-    """Encode TIFF LZW strips with each strip rounded to complete clump rows."""
+    """Build predictor-processed strips rounded to complete YCbCr clump rows."""
     if width <= 0 or height <= 0:
         raise ValueError("YCbCr image dimensions must be positive")
     horizontal, vertical = subsampling
@@ -125,9 +130,55 @@ def lzw_blocks(
                 row_end = row_start + predictor_row_bytes
                 for index in range(row_end - 1, row_start + 2, -1):
                     samples[index] = (samples[index] - samples[index - 3]) & 0xFF
-        blocks.append(pack_lzw_codes_with_growth([256, *samples, 257]))
+        blocks.append(bytes(samples))
         first_clump_row += clump_rows
     return blocks
+
+
+def lzw_blocks(
+    width: int,
+    height: int,
+    rows_per_strip: int,
+    clumps: tuple[tuple[int, ...], ...],
+    *,
+    subsampling: tuple[int, int] = (2, 2),
+    predictor: int = 1,
+) -> list[bytes]:
+    """Encode TIFF LZW strips with each strip rounded to complete clump rows."""
+    return [
+        pack_lzw_codes_with_growth([256, *samples, 257])
+        for samples in _ycbcr_strip_samples(
+            width,
+            height,
+            rows_per_strip,
+            clumps,
+            subsampling=subsampling,
+            predictor=predictor,
+        )
+    ]
+
+
+def deflate_blocks(
+    width: int,
+    height: int,
+    rows_per_strip: int,
+    clumps: tuple[tuple[int, ...], ...],
+    *,
+    subsampling: tuple[int, int] = (2, 2),
+    predictor: int = 1,
+) -> list[bytes]:
+    """Encode predictor-processed TIFF strips with zlib Deflate."""
+    return [
+        zlib.compress(samples)
+        for samples in _ycbcr_strip_samples(
+            width,
+            height,
+            rows_per_strip,
+            clumps,
+            subsampling=subsampling,
+            predictor=predictor,
+        )
+    ]
 
 
 def deterministic_factor_clumps(
@@ -188,12 +239,21 @@ def build_tiff(
     subsampling: tuple[int, int] | None,
     positioning: int | None,
     predictor: int = 1,
+    compression: int = TIFF_COMPRESSION_LZW,
     coefficients: tuple[tuple[int, int], ...] | None = None,
     reference_black_white: tuple[tuple[int, int], ...] | None = None,
 ) -> bytes:
-    """Write a compact contiguous YCbCr TIFF with independent LZW strips."""
+    """Write a compact contiguous YCbCr TIFF with independent strips."""
     storage_subsampling = (2, 2) if subsampling is None else subsampling
-    blocks = lzw_blocks(
+    encode_blocks = {
+        TIFF_COMPRESSION_NONE: _ycbcr_strip_samples,
+        TIFF_COMPRESSION_LZW: lzw_blocks,
+        TIFF_COMPRESSION_DEFLATE: deflate_blocks,
+        TIFF_COMPRESSION_ADOBE_DEFLATE: deflate_blocks,
+    }.get(compression)
+    if encode_blocks is None:
+        raise ValueError(f"unsupported TIFF fixture compression: {compression}")
+    blocks = encode_blocks(
         width,
         height,
         rows_per_strip,
@@ -205,7 +265,7 @@ def build_tiff(
         (256, 4, [width]),
         (257, 4, [height]),
         (258, 3, [8, 8, 8]),
-        (259, 3, [5]),
+        (259, 3, [compression]),
         (262, 3, [6]),
         (273, 4, [0] * len(blocks)),
         (277, 3, [3]),
@@ -276,6 +336,60 @@ def build_tiff(
         if len(output) % 2:
             output.append(0)
         output.extend(block)
+    return bytes(output)
+
+
+def build_uncompressed_ycbcr_tiff(
+    width: int,
+    height: int,
+    clumps: tuple[tuple[int, ...], ...],
+    *,
+    subsampling: tuple[int, int],
+    positioning: int,
+    predictor: int,
+) -> bytes:
+    """Build one raw YCbCr strip before its IFD, as accepted by Pillow."""
+    (strip,) = _ycbcr_strip_samples(
+        width,
+        height,
+        height,
+        clumps,
+        subsampling=subsampling,
+        predictor=1,
+    )
+    entries = [
+        (256, 4, 1, [width]),
+        (257, 4, 1, [height]),
+        (258, 3, 3, [8, 8, 8]),
+        (259, 3, 1, [TIFF_COMPRESSION_NONE]),
+        (262, 3, 1, [6]),
+        (273, 4, 1, [8]),
+        (277, 3, 1, [3]),
+        (278, 4, 1, [height]),
+        (279, 4, 1, [len(strip)]),
+        (284, 3, 1, [1]),
+        (317, 3, 1, [predictor]),
+        (530, 3, 2, list(subsampling)),
+        (531, 3, 1, [positioning]),
+    ]
+    entries.sort()
+    ifd_offset = 8 + len(strip)
+    if ifd_offset % 2:
+        ifd_offset += 1
+    bits_offset = ifd_offset + 2 + 12 * len(entries) + 4
+    output = bytearray(b"II*\0" + struct.pack("<I", ifd_offset) + strip)
+    output.extend(bytes(ifd_offset - len(output)))
+    output.extend(struct.pack("<H", len(entries)))
+    for tag, field_type, count, values in entries:
+        if tag == 258:
+            value = struct.pack("<I", bits_offset)
+        elif field_type == 3:
+            value = struct.pack("<" + "H" * len(values), *values).ljust(4, b"\0")
+        else:
+            value = struct.pack("<" + "I" * len(values), *values).ljust(4, b"\0")
+        output.extend(struct.pack("<HHI", tag, field_type, count) + value)
+    output.extend(bytes(4))
+    output.extend(struct.pack("<HHH", 8, 8, 8))
     return bytes(output)
 
 
@@ -437,6 +551,56 @@ def set_ifd_long_value(data: bytes, tag: int, index: int, value: int) -> bytes:
         struct.pack_into("<I", output, value_offset + 4 * index, value)
         return bytes(output)
     raise ValueError(f"generated TIFF does not contain tag {tag}")
+
+
+def append_duplicate_lzw_strip(data: bytes) -> bytes:
+    """Append one valid but out-of-geometry strip to a two-strip TIFF."""
+    output = bytearray(data)
+    if output[:4] != b"II*\0":
+        raise ValueError("generated TIFF must use classic little-endian byte order")
+
+    ifd_offset = struct.unpack_from("<I", output, 4)[0]
+    entry_count = struct.unpack_from("<H", output, ifd_offset)[0]
+    strip_entries = {}
+    for index in range(entry_count):
+        entry_offset = ifd_offset + 2 + 12 * index
+        tag, field_type, value_count, value_offset = struct.unpack_from(
+            "<HHII", output, entry_offset
+        )
+        if tag in (273, 279):
+            if field_type != 4 or value_count != 2:
+                raise ValueError(f"TIFF tag {tag} must contain two LONG values")
+            values = struct.unpack_from("<2I", output, value_offset)
+            strip_entries[tag] = (entry_offset, values)
+    if set(strip_entries) != {273, 279}:
+        raise ValueError("generated TIFF must contain strip offsets and byte counts")
+
+    strip_offsets = strip_entries[273][1]
+    strip_byte_counts = strip_entries[279][1]
+    strip_start = strip_offsets[-1]
+    strip_end = strip_start + strip_byte_counts[-1]
+    if strip_end > len(output):
+        raise ValueError("generated TIFF's final strip is out of bounds")
+    strip = bytes(output[strip_start:strip_end])
+
+    output.extend(b"\0" * (-len(output) % 4))
+    offsets_array = len(output)
+    output.extend(b"\0" * 12)
+    byte_counts_array = len(output)
+    output.extend(b"\0" * 12)
+    duplicate_strip = len(output)
+    output.extend(strip)
+    struct.pack_into(
+        "<3I", output, offsets_array, *strip_offsets, duplicate_strip
+    )
+    struct.pack_into(
+        "<3I", output, byte_counts_array, *strip_byte_counts, len(strip)
+    )
+    for tag, array_offset in ((273, offsets_array), (279, byte_counts_array)):
+        entry_offset = strip_entries[tag][0]
+        struct.pack_into("<I", output, entry_offset + 4, 3)
+        struct.pack_into("<I", output, entry_offset + 8, array_offset)
+    return bytes(output)
 
 
 def build_full_resolution_lzw_tiff(
@@ -757,6 +921,26 @@ def fixtures() -> dict[
         positioning=1,
         predictor=2,
     )
+    two_by_two_lzw_predictor_2 = build_tiff(
+        4,
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        predictor=2,
+    )
+    ycbcr_predictor_2_jpeg_compression = set_ifd_short_value(
+        two_by_two_lzw_predictor_2, 259, TIFF_COMPRESSION_JPEG
+    )
+    uncompressed_predictor_3 = build_uncompressed_ycbcr_tiff(
+        4,
+        4,
+        BASE_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        predictor=3,
+    )
     one_by_two_unaligned_predictor_2 = build_tiff(
         4,
         4,
@@ -869,6 +1053,24 @@ def fixtures() -> dict[
         subsampling=(2, 2),
         positioning=1,
         predictor=2,
+    )
+    unaligned_rows_per_strip_uncompressed = build_tiff(
+        4,
+        5,
+        3,
+        UNALIGNED_STRIP_CLUMPS,
+        subsampling=(2, 2),
+        positioning=1,
+        compression=TIFF_COMPRESSION_NONE,
+    )
+    unaligned_rows_per_strip_predictor_2_zero_first_count = set_ifd_long_value(
+        unaligned_rows_per_strip_predictor_2, 279, 0, 0
+    )
+    unaligned_rows_per_strip_predictor_2_oob_first_offset = set_ifd_long_value(
+        unaligned_rows_per_strip_predictor_2, 273, 0, 0x7FFFFFFF
+    )
+    unaligned_rows_per_strip_predictor_2_extra_strip = append_duplicate_lzw_strip(
+        unaligned_rows_per_strip_predictor_2
     )
     custom_coefficients = build_tiff(
         4,
@@ -1162,6 +1364,12 @@ def fixtures() -> dict[
         positioning=1,
     )
     factor_fixtures = {}
+    predictor_2_pixel_hashes = {
+        (2, 1): "adab9b63037c77289305f843e47d8df8cf6d32a3153ebccca5787dc2e3a16316",
+        (4, 1): "61d626f6056a0386c908194af851d84da9c56cbf55d22428d42fabf014df2787",
+        (4, 2): "ce5d59708368ed33a3381c8229bb1d34503040230fe46c446fed99e51c398eb8",
+        (4, 4): "73a2e7a7ea192ec490b4cedc7690286af5182a8fc141752db6b75303ee8174c3",
+    }
     for horizontal, vertical in ((2, 1), (4, 1), (4, 2), (4, 4)):
         subsampling = (horizontal, vertical)
         width = 8
@@ -1185,6 +1393,45 @@ def fixtures() -> dict[
             {530: subsampling, 531: 1},
             None,
         )
+        factor_fixtures[
+            f"ycbcr_subsampled_lzw_{horizontal}x{vertical}_predictor_2.tiff"
+        ] = (
+            build_tiff(
+                width,
+                height,
+                height,
+                deterministic_factor_clumps(width, height, subsampling),
+                subsampling=subsampling,
+                positioning=1,
+                predictor=2,
+            ),
+            (width, height),
+            predictor_2_pixel_hashes[subsampling],
+            {317: 2, 530: subsampling, 531: 1},
+            None,
+        )
+        for compression_name, compression in (
+            ("deflate", TIFF_COMPRESSION_DEFLATE),
+            ("adobe_deflate", TIFF_COMPRESSION_ADOBE_DEFLATE),
+        ):
+            factor_fixtures[
+                f"ycbcr_subsampled_{compression_name}_{horizontal}x{vertical}_predictor_2.tiff"
+            ] = (
+                build_tiff(
+                    width,
+                    height,
+                    height,
+                    deterministic_factor_clumps(width, height, subsampling),
+                    subsampling=subsampling,
+                    positioning=1,
+                    predictor=2,
+                    compression=compression,
+                ),
+                (width, height),
+                predictor_2_pixel_hashes[subsampling],
+                {259: compression, 317: 2, 530: subsampling, 531: 1},
+                None,
+            )
 
     custom_4x2 = build_tiff(
         8,
@@ -1257,6 +1504,25 @@ def fixtures() -> dict[
         None,
     )
 
+    custom_1x2_checkpoint_odd_edges = build_tiff(
+        33,
+        33,
+        32,
+        deterministic_factor_clumps(33, 33, (1, 2)),
+        subsampling=(1, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    checkpoint_factor_fixtures[
+        "ycbcr_custom_coefficients_lzw_1x2_checkpoint_33x33_odd_edges.tiff"
+    ] = (
+        custom_1x2_checkpoint_odd_edges,
+        (33, 33),
+        "4dbccd036ff2c6e28e6986c751ea075a6ba4d29345109390a131cbf325730100",
+        {529: (0.2126, 0.7152, 0.0722), 530: (1, 2), 531: 1},
+        None,
+    )
+
     edge_checkpoint_4x2 = build_tiff(
         33,
         33,
@@ -1291,6 +1557,25 @@ def fixtures() -> dict[
         (33, 33),
         "c7df3d80e3f1bdbb722264aa45357619e926d4d50bcc99d12ba2d07676278dbc",
         {529: (0.2126, 0.7152, 0.0722), 530: (4, 2), 531: 1},
+        None,
+    )
+
+    custom_edge_checkpoint_2x2 = build_tiff(
+        33,
+        33,
+        32,
+        deterministic_factor_clumps(33, 33, (2, 2)),
+        subsampling=(2, 2),
+        positioning=1,
+        coefficients=((2126, 10000), (7152, 10000), (722, 10000)),
+    )
+    checkpoint_factor_fixtures[
+        "ycbcr_custom_coefficients_lzw_2x2_checkpoint_33x33_odd_edges.tiff"
+    ] = (
+        custom_edge_checkpoint_2x2,
+        (33, 33),
+        "d6f82880d7c317dc0dab9a3a5c76fa388ac55fddafaabcf57e7a16419567902e",
+        {529: (0.2126, 0.7152, 0.0722), 530: (2, 2), 531: 1},
         None,
     )
 
@@ -1349,19 +1634,25 @@ def fixtures() -> dict[
             REFERENCE_PIXELS,
         ),
         "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": (
-            build_tiff(
-                4,
-                4,
-                4,
-                BASE_CLUMPS,
-                subsampling=(2, 2),
-                positioning=1,
-                predictor=2,
-            ),
+            two_by_two_lzw_predictor_2,
             (4, 4),
             REFERENCE_PIXEL_SHA256,
             {317: 2, 530: (2, 2), 531: 1},
             REFERENCE_PIXELS,
+        ),
+        "ycbcr_subsampled_predictor_2_jpeg_compression_error.tiff": (
+            ycbcr_predictor_2_jpeg_compression,
+            (4, 4),
+            None,
+            {259: TIFF_COMPRESSION_JPEG, 317: 2, 530: (2, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampled_uncompressed_predictor_3.tiff": (
+            uncompressed_predictor_3,
+            (4, 4),
+            "b122cbf873524577a50522805777fb18d2fa2434b53a8bb6c0c0236ec118e80f",
+            {259: TIFF_COMPRESSION_NONE, 317: 3, 530: (2, 2), 531: 1},
+            None,
         ),
         "ycbcr_subsampled_deflate_tiled_2x2.tiff": (
             tiled_deflate,
@@ -1644,6 +1935,37 @@ def fixtures() -> dict[
                 "4111005525000098c000acd46939007d4d0003c0e817d4fcff7c82ff9096001f"
                 "950033a9001ec6002ed60066ff0076ff"
             ),
+        ),
+        "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_extra_strip.tiff": (
+            unaligned_rows_per_strip_predictor_2_extra_strip,
+            (4, 4),
+            "ee406bf055bf628b9b0a3b6d3ea29a5f32d97e963d3eb4964d5942c37f04881a",
+            {317: 2, 530: (2, 2), 531: 1},
+            bytes.fromhex(
+                "4111005525000098c000acd46939007d4d0003c0e817d4fcff7c82ff9096001f"
+                "950033a9001ec6002ed60066ff0076ff"
+            ),
+        ),
+        "ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3.tiff": (
+            unaligned_rows_per_strip_uncompressed,
+            (4, 5),
+            None,
+            {259: TIFF_COMPRESSION_NONE, 530: (2, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count.tiff": (
+            unaligned_rows_per_strip_predictor_2_zero_first_count,
+            (4, 4),
+            None,
+            {317: 2, 530: (2, 2), 531: 1},
+            None,
+        ),
+        "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset.tiff": (
+            unaligned_rows_per_strip_predictor_2_oob_first_offset,
+            (4, 4),
+            None,
+            {317: 2, 530: (2, 2), 531: 1},
+            None,
         ),
         "ycbcr_custom_coefficients_lzw_2x2.tiff": (
             custom_coefficients,
@@ -2257,6 +2579,12 @@ def verify_pillow_reference(
     """Check the fixture's declared YCbCr storage and exact Pillow pixels."""
     from PIL import Image, __version__ as pillow_version
 
+    expected_load_errors = {
+        "ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3.tiff": (
+            "image file is truncated (4 bytes not processed)"
+        ),
+    }
+
     if pillow_version != PINNED_PILLOW:
         raise RuntimeError(f"Pillow {PINNED_PILLOW} is required, found {pillow_version}")
     with Image.open(BytesIO(data)) as verification_image:
@@ -2309,10 +2637,11 @@ def verify_pillow_reference(
         ):
             raise RuntimeError(f"{name}: TIFF tags differ: {actual_tags!r}")
         if expected_pixel_sha256 is None:
+            expected_error = expected_load_errors.get(name, "decoder error -2")
             try:
                 image.load()
             except OSError as error:
-                if type(error) is not OSError or str(error) != "decoder error -2":
+                if type(error) is not OSError or str(error) != expected_error:
                     raise RuntimeError(
                         f"{name}: unexpected Pillow load error "
                         f"({type(error).__name__}: {error})"
@@ -2342,6 +2671,8 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     inputs = fixtures()
     for name, (data, size, pixel_hash, tags, expected_pixels) in inputs.items():
         expected_input_hash = {
+            "ycbcr_subsampled_uncompressed_predictor_3.tiff": "601a3c6a6ce74cbfdd92c442efc0901f8d77f6a13f2a926e3aa261a53621d6a6",
+            "ycbcr_subsampled_predictor_2_jpeg_compression_error.tiff": "c692b5925e26200fe58d9679b6b176313560f602939c749d9ad10ec790c4499c",
             "ycbcr_subsampled_lzw_2x2.tiff": "d9c3e4b7111658f3b86fdb1f94bf04e03aebe7cb4fbd01a98708ebfd27e65a6c",
             "ycbcr_subsampled_lzw_2x2_predictor_2.tiff": "14358eaf415ce0d216c3fa3a416a87888c66f694c35ee59e67ca23fb475b1087",
             "ycbcr_subsampled_deflate_tiled_2x2.tiff": "0177d3f7f9e9ef9a6aacef38269246f36dea324f9a956473e9b9207b2121ae3f",
@@ -2376,6 +2707,10 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampled_lzw_2x2_odd_height_predictor_2.tiff": "363e81d857d75ba4b3ecf5a7da2db8cb8e35ff825abcd2856f292eb1c902ddef",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3.tiff": "fec83d5c16fb6b391c5bb7bf3273a3f9e009dcd6937ba4ce795f1ad086f84a4d",
             "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff": "45aef5c7eea83c4600240c0d4836d826b910723dc205b8f224187edcb40f63c0",
+            "ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3.tiff": "862309cbb089778e36a052da1c0445abead85bd94ad8e96cc170d3cc769fc3b4",
+            "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count.tiff": "6660625ca2369dec354e33b81cfc957066e32c91b039de70342466e0988fe705",
+            "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset.tiff": "f8c4e09b7507608a9dfc0cba1cc6fda7a744eaf7feb6db749b37c06f06e91b47",
+            "ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_extra_strip.tiff": "48f7c208a63ee103e093a83886078b9b2b4803806ed05e9de8a06dc90702b47d",
             "ycbcr_custom_coefficients_lzw_2x2.tiff": "543fce746df657636828a74104092da002d1f3907d325b487945623d061f44b7",
             "ycbcr_zero_green_coefficient_lzw_2x2.tiff": "ff382d3f6afa3fb5f14fba10bb2df80d1aaa820e68f75883de097387bfa047d4",
             "ycbcr_zero_red_coefficient_denominator_lzw_2x2.tiff": "046eff0e1e9ededa25698a2e7e8b27f92685ff9b5daa474a1b20ef23d0466ea8",
@@ -2424,10 +2759,24 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_custom_coefficients_lzw_4x2_checkpoint_32x32.tiff": "67848935b58248ac7a90cdea456de78662ef65d68424d792ceab5d026011d744",
             "ycbcr_subsampled_lzw_4x2_checkpoint_33x33_odd_edges.tiff": "7386abb5268ad529c1ef12dec0840e5dae327eeb567c97cee5d0cd3fde38e6bc",
             "ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges.tiff": "795a203175c9809e8f5a97b9409dba292aa34a36b99dbb135dfe1c0b88a95bc5",
+            "ycbcr_custom_coefficients_lzw_2x2_checkpoint_33x33_odd_edges.tiff": "9bf19211ac287e1d586cc0e2d037caff2dacfbfa6076bbe4e867bb64eda437f8",
+            "ycbcr_custom_coefficients_lzw_1x2_checkpoint_33x33_odd_edges.tiff": "fa1f4ca256be97295b75647cd992f879778b41b30651203518ad5d093812a872",
             "ycbcr_subsampled_lzw_2x1.tiff": "abc595f9245db5d77d61f3ca19894bcba716db5e9841a258f08afcebec29fc35",
             "ycbcr_subsampled_lzw_4x1.tiff": "dda6b978a0f36882c6f380bb505f89d4801cacea4f298f23a3b27f570d06f657",
             "ycbcr_subsampled_lzw_4x2.tiff": "61de5caf036d78fdc559e1607b60590f1b2be45e7d887794768b1d45b6c8977f",
             "ycbcr_subsampled_lzw_4x4.tiff": "d9e6f0dc5d95750791aca652af5669e5c1f74bd597c778e791cd0fad5ceb8f13",
+            "ycbcr_subsampled_lzw_2x1_predictor_2.tiff": "74e10139df8378ca3463803dac9c823da2c56fb753fcf0ec78072336521d1efb",
+            "ycbcr_subsampled_lzw_4x1_predictor_2.tiff": "3abff8e4b4692a2b16b3db27302f3ff5dbc3e454039170bce82c6a319200d2ab",
+            "ycbcr_subsampled_lzw_4x2_predictor_2.tiff": "7dbe5d19cc69c994b681726cf5ddc3aff8687bf2f20971abd1deb25c90a0635f",
+            "ycbcr_subsampled_lzw_4x4_predictor_2.tiff": "83f16ea85c27dabd16e979d3bce7da47212c1b0e560d8f4996509866017d6c40",
+            "ycbcr_subsampled_deflate_2x1_predictor_2.tiff": "c93fac0626cc9125ce7f6ece529d092da1cc22a3e76e2712656ad6b112cbff7d",
+            "ycbcr_subsampled_adobe_deflate_2x1_predictor_2.tiff": "4301ef911ccf23a4f3f6d1289729d4ac197784dcbf9192aa0539753f11c34134",
+            "ycbcr_subsampled_deflate_4x1_predictor_2.tiff": "fcc3f82d71b640153d0ff46ee1bd5a8ca92b45fd25def4ae97c17282adcc4be4",
+            "ycbcr_subsampled_adobe_deflate_4x1_predictor_2.tiff": "20e23c0891078a0735525e0fe8f178878af0614b6ea2ba323a2f35da4c6a9d52",
+            "ycbcr_subsampled_deflate_4x2_predictor_2.tiff": "61d12692e3ac182a3274826d0283b7c3521f0bf18cdf74c9de4bbc887a0bfdeb",
+            "ycbcr_subsampled_adobe_deflate_4x2_predictor_2.tiff": "9078d051b6be221b5ca762d8339786705a77462984239daaef21ac18b95f5cb1",
+            "ycbcr_subsampled_deflate_4x4_predictor_2.tiff": "8e00ce778827b6254d3be82b75773c116fd55fc9def881ca9b9e3018c8404a03",
+            "ycbcr_subsampled_adobe_deflate_4x4_predictor_2.tiff": "f4a493adfc25d5344dffe1cb96562e3ef402f05384869f365f2c7db38d379deb",
             "ycbcr_subsampled_lzw_4x4_odd_edge.tiff": "d77892013772aa86644a89d45471d05efab08b997517c93c575fdbb266dbe5b3",
             "ycbcr_custom_coefficients_lzw_4x2.tiff": "54fe5be273b743f33a510d177f3eade1d075281dd4d67714a0a2fd993aa024c6",
             "ycbcr_custom_coefficients_lzw_4x4_odd_edge.tiff": "425396287e96b1c7a710934e58a5cf1e9b5ac1530d3532ec56a84bbc13f42867",

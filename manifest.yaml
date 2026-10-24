@@ -152,6 +152,20 @@ fault_contracts:
       point: avif.subsampled_rgb.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_12bit_i420_alpha_sample_count_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9
+    fault:
+      point: avif.i420_12bit_alpha.sample_count_mismatch
+      contract: decode_unsupported_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_12bit_i444_generic_u_plane_length_mismatch
     type: fault-contract
     operation: decode
@@ -348,6 +362,20 @@ fault_contracts:
       point: tiff.ycbcr.clump_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_general_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_4x2
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_full_resolution_length_mismatch
     type: fault-contract
     operation: decode
@@ -418,6 +446,20 @@ fault_contracts:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_general_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_4x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_ycbcr_tile_assembly_reservation_failure
     type: fault-contract
     operation: decode
@@ -484,6 +526,34 @@ fault_contracts:
     verification: fault-contract
     input:
       source_case: decode:tiff:ycbcr_subsampled_lzw_1x2
+    fault:
+      point: tiff.ycbcr.rgb_output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_1x2_clump_length_mismatch
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_1x2_odd_height
+    fault:
+      point: tiff.ycbcr.clump_length_mismatch
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_ycbcr_custom_1x2_rgb_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:ycbcr_custom_coefficients_lzw_1x2_odd_height
     fault:
       point: tiff.ycbcr.rgb_output_reservation
       contract: decode_error_then_retry_succeeds
@@ -1006,6 +1076,48 @@ fault_contracts:
       point: jpeg.upsample.row_invalid_geometry
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_zero_height_rejection
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_zero_height
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_zero_horizontal_ratio
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_zero_vertical_ratio_rejection
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_zero_vertical_ratio
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: jpeg_fancy_upsample_row_short_stride
     type: fault-contract
     operation: decode
@@ -1352,6 +1464,11 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid DHT segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_dht.jpg
+    - id: baseline_444_single_scan_reserved_jpg0
+      description: Baseline 4:4:4 JPEG has a reserved JPG0 segment after a trailing DQT; Pillow verifies the structure but rejects pixel decoding
+      test_assets:
+      - baseline_444_single_scan_reserved_jpg0.jpg
+      expect_error: true
     - id: baseline_444_single_scan_trailing_dht_truncated_counts
       description: Baseline 4:4:4 JPEG has truncated Huffman symbol counts in its trailing DHT segment
       test_assets:
@@ -1493,6 +1610,16 @@ formats:
         - PIL.Image.open
         - load
         - tobytes
+    - id: ycck_h2v2_even_upsample_edges_18x10
+      description: Even-sized YCCK exposes both final interpolated samples on 4:2:0 upsampling edges
+      test_assets:
+      - baseline_ycck_subsampled_even_edges_18x10.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_subsampled_even_edges_18x10.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
     - id: post_scan_conflicting_adobe_app14
       description: YCCK keeps its header APP14 transform when a conflicting Adobe APP14 follows the entropy scan
       test_assets:
@@ -1508,6 +1635,16 @@ formats:
       - baseline_ycck_h2v1_17x9.jpg
       pillow_call:
         open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_17x9.jpg
+        operations:
+        - PIL.Image.open
+        - load
+        - tobytes
+    - id: ycck_h2v1_even_width_18x9
+      description: Even-width YCCK exposes the final interpolated sample on a 4:2:2 row edge
+      test_assets:
+      - baseline_ycck_h2v1_even_width_18x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/baseline_ycck_h2v1_even_width_18x9.jpg
         operations:
         - PIL.Image.open
         - load
@@ -1897,6 +2034,21 @@ formats:
       - sof_zero_height.jpg
       - restart_before_scan.jpg
       - entropy_unexpected_marker.jpg
+      expect_error: true
+    - id: malformed_markers_progressive_dht_oversubscribed
+      description: Progressive JPEG with oversubscribed DC0 and the other baseline Huffman tables retained
+      test_assets:
+      - progressive_oversubscribed_dc_huffman.jpg
+      expect_error: true
+    - id: malformed_markers_dht_oversubscribed_retained_tables
+      description: Full baseline JPEG with oversubscribed DC0 and all other baseline Huffman tables retained
+      test_assets:
+      - dht_oversubscribed_retained_tables.jpg
+      expect_error: true
+    - id: malformed_markers_dht_oversubscribed_scalar_fallback
+      description: Unusual 3:1 baseline JPEG with an oversubscribed DC0 table and retained sibling tables
+      test_assets:
+      - sampling_3x1_oversubscribed_dc0.jpg
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed optional JPEG marker ignored by Pillow
@@ -5875,11 +6027,26 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - rgb16_le_uncompressed_strips.tiff
+    - id: rgb16_le_uncompressed_predictor2_strips
+      description: Little-endian 16-bit RGB samples in two uncompressed strips with Predictor 2 declared; Pillow preserves the samples and exports their high bytes
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_le_uncompressed_predictor2_strips.tiff
+    - id: rgb16_le_uncompressed_predictor3_strips
+      description: Little-endian 16-bit RGB samples in two uncompressed strips with Predictor 3 declared; Pillow ignores the predictor and exports the samples' high bytes
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_le_uncompressed_predictor3_strips.tiff
     - id: rgb16_le_deflate_contiguous_strips
       description: Little-endian 16-bit RGB samples in two Deflate-compressed contiguous strips; Pillow exports the high byte of each sample
       rust_decode_with_token: true
       test_assets:
       - rgb16_le_deflate_contiguous_strips.tiff
+    - id: rgb16_le_deflate_predictor2_contiguous_strips
+      description: Little-endian 16-bit RGB samples in two Deflate-compressed contiguous strips with horizontal differencing; Pillow exports the high byte of each sample
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_le_deflate_predictor2_contiguous_strips.tiff
     - id: rgb16_be_uncompressed_strips
       description: Big-endian 16-bit RGB samples with explicit unsigned SampleFormat tags in two uncompressed strips; Pillow exports the high byte of each sample
       rust_decode_with_token: true
@@ -5890,11 +6057,36 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - rgb16_be_zero_count_sample_format.tiff
+    - id: error_rgb16_signed_sample_format
+      description: Pillow rejects a complete 16-bit RGB TIFF with signed SampleFormat during opening
+      test_assets:
+      - rgb16_signed_sample_format_unsupported.tiff
+      expect_error: true
+    - id: error_rgb16_mixed_sample_format
+      description: Pillow rejects a complete 16-bit RGB TIFF with mixed unsigned and signed SampleFormat values during opening
+      test_assets:
+      - rgb16_mixed_sample_format_unsupported.tiff
+      expect_error: true
+    - id: error_rgb16_extra_sample_without_fourth_channel
+      description: Pillow rejects a complete 16-bit RGB TIFF that declares an extra sample without a fourth sample per pixel
+      test_assets:
+      - rgb16_extra_sample_unsupported.tiff
+      expect_error: true
+    - id: error_rgb16_deflate_fill_order_2
+      description: Pillow rejects a complete 16-bit RGB Deflate TIFF with FillOrder 2 during opening
+      test_assets:
+      - rgb16_deflate_fill_order_2_unsupported.tiff
+      expect_error: true
     - id: rgb16_separate_planar_tiled_deflate_edges
       description: Little-endian unsigned 16-bit RGB in separate Deflate-compressed 16x16 tiles with clipped right and bottom edges; Pillow exports each sample's high byte
       rust_decode_with_token: true
       test_assets:
       - rgb16_separate_planar_tiled_deflate.tiff
+    - id: rgb16_contiguous_tiled_deflate_edges
+      description: Little-endian unsigned 16-bit RGB in contiguous Deflate-compressed 16x16 tiles with clipped right and bottom edges; Pillow exports each sample's high byte
+      rust_decode_with_token: true
+      test_assets:
+      - rgb16_contiguous_tiled_deflate_edges.tiff
     - id: registered_header_variants_over_classic_ifd
       description: Pillow accepts legacy swapped-magic and BigTIFF signatures over these classic IFD payloads
       test_assets:
@@ -5907,6 +6099,7 @@ formats:
       - uncompressed.tiff
     - id: compression_lzw
       description: LZW compression
+      rust_decode_with_token: true
       test_assets:
       - lzw.tiff
       - gray_lzw.tiff
@@ -6108,6 +6301,15 @@ formats:
       description: Horizontal Predictor=2 on aligned 2-by-2 YCbCr clumps in one LZW strip
       test_assets:
       - ycbcr_subsampled_lzw_2x2_predictor_2.tiff
+    - id: ycbcr_subsampled_uncompressed_predictor_3
+      description: Pillow ignores Predictor=3 for uncompressed subsampled YCbCr strips
+      test_assets:
+      - ycbcr_subsampled_uncompressed_predictor_3.tiff
+    - id: ycbcr_subsampled_predictor_2_jpeg_compression_error
+      description: Pillow rejects a TIFF YCbCr Predictor=2 strip tagged with JPEG compression when its payload is not JPEG data
+      test_assets:
+      - ycbcr_subsampled_predictor_2_jpeg_compression_error.tiff
+      expect_error: true
     - id: ycbcr_subsampled_lzw_2x2_odd_width_predictor_2
       description: Horizontal Predictor=2 decodes a padded right-edge clump in a 5-by-4 YCbCr TIFF
       test_assets:
@@ -6221,14 +6423,26 @@ formats:
       description: Two-by-one YCbCr LZW clumps with horizontal subsampling
       test_assets:
       - ycbcr_subsampled_lzw_2x1.tiff
+    - id: ycbcr_subsampled_lzw_2x1_predictor_2
+      description: Pillow-compatible LZW Predictor=2 on two-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_lzw_2x1_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_4x1
       description: Four-by-one YCbCr LZW clumps with horizontal subsampling
       test_assets:
       - ycbcr_subsampled_lzw_4x1.tiff
+    - id: ycbcr_subsampled_lzw_4x1_predictor_2
+      description: Pillow-compatible LZW Predictor=2 on four-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_lzw_4x1_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_4x2
       description: Four-by-two YCbCr LZW clumps with horizontal and vertical subsampling
       test_assets:
       - ycbcr_subsampled_lzw_4x2.tiff
+    - id: ycbcr_subsampled_lzw_4x2_predictor_2
+      description: Pillow-compatible LZW Predictor=2 on four-by-two YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_lzw_4x2_predictor_2.tiff
     - id: ycbcr_custom_coefficients_lzw_4x2
       description: Rec. 709 YCbCr coefficients on four-by-two LZW clumps
       test_assets:
@@ -6237,6 +6451,42 @@ formats:
       description: Four-by-four YCbCr LZW clumps with horizontal and vertical subsampling
       test_assets:
       - ycbcr_subsampled_lzw_4x4.tiff
+    - id: ycbcr_subsampled_lzw_4x4_predictor_2
+      description: Pillow-compatible LZW Predictor=2 on four-by-four YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_lzw_4x4_predictor_2.tiff
+    - id: ycbcr_subsampled_deflate_2x1_predictor_2
+      description: Pillow-compatible Deflate Predictor=2 on two-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_2x1_predictor_2.tiff
+    - id: ycbcr_subsampled_adobe_deflate_2x1_predictor_2
+      description: Pillow-compatible Adobe Deflate Predictor=2 on two-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_adobe_deflate_2x1_predictor_2.tiff
+    - id: ycbcr_subsampled_deflate_4x1_predictor_2
+      description: Pillow-compatible Deflate Predictor=2 on four-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_4x1_predictor_2.tiff
+    - id: ycbcr_subsampled_adobe_deflate_4x1_predictor_2
+      description: Pillow-compatible Adobe Deflate Predictor=2 on four-by-one YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_adobe_deflate_4x1_predictor_2.tiff
+    - id: ycbcr_subsampled_deflate_4x2_predictor_2
+      description: Pillow-compatible Deflate Predictor=2 on four-by-two YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_4x2_predictor_2.tiff
+    - id: ycbcr_subsampled_adobe_deflate_4x2_predictor_2
+      description: Pillow-compatible Adobe Deflate Predictor=2 on four-by-two YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_adobe_deflate_4x2_predictor_2.tiff
+    - id: ycbcr_subsampled_deflate_4x4_predictor_2
+      description: Pillow-compatible Deflate Predictor=2 on four-by-four YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_deflate_4x4_predictor_2.tiff
+    - id: ycbcr_subsampled_adobe_deflate_4x4_predictor_2
+      description: Pillow-compatible Adobe Deflate Predictor=2 on four-by-four YCbCr clumps
+      test_assets:
+      - ycbcr_subsampled_adobe_deflate_4x4_predictor_2.tiff
     - id: ycbcr_subsampled_lzw_4x4_odd_edge
       description: Four-by-four YCbCr LZW clumps clipped at odd image edges and split across strips
       test_assets:
@@ -6273,6 +6523,25 @@ formats:
       description: Horizontal Predictor=2 on 2-by-2 YCbCr LZW strips split at an unaligned row boundary
       test_assets:
       - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2.tiff
+    - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_extra_strip
+      description: Horizontal Predictor=2 on 2-by-2 YCbCr LZW strips with a valid unused strip beyond image geometry
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_extra_strip.tiff
+    - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count
+      description: Pillow verifies unaligned 2-by-2 YCbCr LZW metadata but rejects a zero byte count for the first strip
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_zero_first_byte_count.tiff
+      expect_error: true
+    - id: ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset
+      description: Pillow verifies unaligned 2-by-2 YCbCr LZW metadata but rejects a first strip offset beyond the input
+      test_assets:
+      - ycbcr_subsampled_lzw_2x2_unaligned_rows_per_strip_3_predictor_2_oob_first_offset.tiff
+      expect_error: true
+    - id: ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3
+      description: Pillow verifies odd-height uncompressed 2-by-2 YCbCr metadata but rejects unaligned strip loading
+      test_assets:
+      - ycbcr_subsampled_uncompressed_2x2_unaligned_rows_per_strip_3.tiff
+      expect_error: true
     - id: ycbcr_custom_coefficients_lzw_2x2
       description: Rec. 709 YCbCr coefficients in a compressed 2-by-2 TIFF
       test_assets:
@@ -6483,6 +6752,14 @@ formats:
       description: Odd-edge custom-coefficient four-by-two YCbCr pixels clip the final clump and reach the conversion checkpoint
       test_assets:
       - ycbcr_custom_coefficients_lzw_4x2_checkpoint_33x33_odd_edges.tiff
+    - id: ycbcr_custom_coefficients_lzw_2x2_checkpoint_33x33_odd_edges
+      description: Odd-edge custom-coefficient two-by-two YCbCr pixels clip the final clump and reach the conversion checkpoint
+      test_assets:
+      - ycbcr_custom_coefficients_lzw_2x2_checkpoint_33x33_odd_edges.tiff
+    - id: ycbcr_custom_coefficients_lzw_1x2_checkpoint_33x33_odd_edges
+      description: Odd-height custom-coefficient one-by-two YCbCr pixels clip the final clump and reach the conversion checkpoint
+      test_assets:
+      - ycbcr_custom_coefficients_lzw_1x2_checkpoint_33x33_odd_edges.tiff
     - id: depth_1
       description: 1-bit
       test_assets:
@@ -7120,6 +7397,11 @@ formats:
       test_assets:
       - tiled_deflate_predictor.tiff
       - tiled_adobe_deflate_predictor.tiff
+    - id: tiled_deflate_without_byte_counts
+      description: Pillow opens and verifies Deflate tiles without TileByteCounts but rejects decoding
+      test_assets:
+      - rgb16_contiguous_tiled_deflate_without_byte_counts.tiff
+      expect_error: true
     - id: tiled_lzw_predictor
       description: LZW-compressed tiles with horizontal prediction
       test_assets:
@@ -10203,6 +10485,11 @@ formats:
       description: Five-frame lossless 64x64 4:2:0 AVIF sequence encoded with fixed B32 controls retains derived skip references while the frame skip-mode flag is disabled
       test_assets:
       - animated_lossless_inter_420_derived_skip_refs_b32x32_64x64.avif
+      status: active
+    - id: animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64
+      description: Five-frame lossless 56x64 4:2:0 AVIF sequence with a clipped right-edge B32 grid retains derived skip references while the frame skip-mode flag is disabled
+      test_assets:
+      - animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif
       status: active
     - id: animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64
       description: Five-frame lossless 64x64 4:2:2 AVIF sequence encoded with fixed B32 controls retains derived skip references while the frame skip-mode flag is disabled

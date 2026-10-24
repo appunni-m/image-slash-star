@@ -61,6 +61,8 @@ class Recipe:
     subsampling: str
     chroma: tuple[int, int]
     sha256: str
+    size: tuple[int, int] = SIZE
+    source_frame_sha256: tuple[str, ...] = SOURCE_FRAME_SHA256
 
 
 RECIPES = (
@@ -79,6 +81,19 @@ RECIPES = (
         "4:4:4", (0, 0),
         "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
     ),
+    Recipe(
+        "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
+        "4:2:0", (1, 1),
+        "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5",
+        size=(56, 64),
+        source_frame_sha256=(
+            "cf19fdeaed46afaf3f7947fafff90635c4e1b457d46e760f516a5914c296f8f5",
+            "b2d2684af4267f71fce3e25ff20d45305e73f3315e3fcbe55d3628b9360b472b",
+            "a2c1f95336bd043ff82aeec43135dccf09d45a614d78fca47bda6f44bc1ffb8c",
+            "461d1082ce734299f1a4af3002b2aa2caf5ab3f37c60a74284545e44db03e539",
+            "b2d2684af4267f71fce3e25ff20d45305e73f3315e3fcbe55d3628b9360b472b",
+        ),
+    ),
 )
 
 
@@ -86,12 +101,15 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def source_frames() -> list[Image.Image]:
+def source_frames(
+    size: tuple[int, int] = SIZE,
+    expected_sha256: tuple[str, ...] = SOURCE_FRAME_SHA256,
+) -> list[Image.Image]:
     frames = []
     for state in range(3):
         pixels = bytearray()
-        for y in range(SIZE[1]):
-            for x in range(SIZE[0]):
+        for y in range(size[1]):
+            for x in range(size[0]):
                 color = (32 + x // 8, 64 + y // 8, 96 + (x + y) // 16)
                 if 8 <= x < 40 and 8 <= y < 40:
                     dx, dy, phase = x - 8, y - 8, state * 3
@@ -101,16 +119,16 @@ def source_frames() -> list[Image.Image]:
                         40 + (dx * 13 + dy * 7 + phase * 17) % 160,
                     )
                 pixels.extend(color)
-        frames.append(Image.frombytes("RGB", SIZE, bytes(pixels)))
+        frames.append(Image.frombytes("RGB", size, bytes(pixels)))
     frames.append(Image.blend(frames[1], frames[2], 0.5))
     frames.append(frames[1].copy())
-    if tuple(digest(frame.tobytes()) for frame in frames) != SOURCE_FRAME_SHA256:
+    if tuple(digest(frame.tobytes()) for frame in frames) != expected_sha256:
         raise RuntimeError("lossless derived-skip source frame hashes differ")
     return frames
 
 
 def encode_fixture(recipe: Recipe) -> bytes:
-    frames = source_frames()
+    frames = source_frames(recipe.size, recipe.source_frame_sha256)
     output = BytesIO()
     frames[0].save(
         output,
@@ -130,11 +148,17 @@ def encode_fixture(recipe: Recipe) -> bytes:
     return normalize_timestamps(output.getvalue())
 
 
-def pillow_observations(encoded: bytes) -> tuple[tuple, ...]:
+def pillow_observations(
+    encoded: bytes, expected_size: tuple[int, int] = SIZE
+) -> tuple[tuple, ...]:
     # Opening/verifying and decoding use fresh public source objects. Unexpected
     # source failures propagate; file-system failures are never codec outcomes.
     with Image.open(BytesIO(encoded)) as image:
-        if image.format != "AVIF" or image.mode != "RGB" or image.size != SIZE:
+        if (
+            image.format != "AVIF"
+            or image.mode != "RGB"
+            or image.size != expected_size
+        ):
             raise RuntimeError("derived-skip Pillow image metadata differs")
         if image.n_frames != FRAME_COUNT or not image.is_animated:
             raise RuntimeError("derived-skip Pillow display frame count differs")
@@ -145,7 +169,7 @@ def pillow_observations(encoded: bytes) -> tuple[tuple, ...]:
         for index in range(image.n_frames):
             image.seek(index)
             image.load()
-            if image.mode != "RGB" or image.size != SIZE:
+            if image.mode != "RGB" or image.size != expected_size:
                 raise RuntimeError("derived-skip Pillow frame metadata differs")
             if image.info.get("duration") != DURATION_MS:
                 raise RuntimeError("derived-skip Pillow frame duration differs")
@@ -236,8 +260,8 @@ def generate_fixtures(
                 raise RuntimeError(f"{recipe.filename} encoding is not deterministic")
             if digest(encoded) != recipe.sha256:
                 raise RuntimeError(f"{recipe.filename} differs from its pinned complete-input hash")
-            observations = pillow_observations(encoded)
-            if observations != pillow_observations(encoded):
+            observations = pillow_observations(encoded, recipe.size)
+            if observations != pillow_observations(encoded, recipe.size):
                 raise RuntimeError(f"{recipe.filename} Pillow observations are not repeatable")
             path = work / recipe.filename
             path.write_bytes(encoded)

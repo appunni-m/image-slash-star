@@ -1343,6 +1343,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "avif.i420_12bit_alpha.sample_count_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaSampleCountMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -1636,6 +1645,24 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.upsample.row_zero_height", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowZeroHeight,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.row_zero_horizontal_ratio", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowZeroHorizontalRatio,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.row_zero_vertical_ratio", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowZeroVerticalRatio,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.upsample.row_short_stride", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegFancyUpsampleRowShortStride,
                 false,
@@ -1776,7 +1803,8 @@ fn execute_fault_contract(
         | "avif.i444_10bit_alpha.u_plane_length_mismatch"
         | "avif.i444_10bit_alpha.v_plane_length_mismatch"
         | "avif.i444_10bit_alpha.invalid_sample"
-        | "avif.monochrome_alpha.plane_length_mismatch" => {
+        | "avif.monochrome_alpha.plane_length_mismatch"
+        | "avif.i420_12bit_alpha.sample_count_mismatch" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
         }
         "avif.i444_10bit_alpha.output_reservation" => {
@@ -1887,6 +1915,9 @@ fn execute_fault_contract(
         | "jpeg.upsample.h1v2_zero_width"
         | "jpeg.upsample.h1v2_source_length_mismatch"
         | "jpeg.upsample.row_invalid_geometry"
+        | "jpeg.upsample.row_zero_height"
+        | "jpeg.upsample.row_zero_horizontal_ratio"
+        | "jpeg.upsample.row_zero_vertical_ratio"
         | "jpeg.upsample.row_short_stride"
         | "jpeg.upsample.row_source_length_mismatch" => {
             Some("decode: invalid JPEG component upsampling geometry")
@@ -1988,6 +2019,9 @@ fn execute_fault_contract(
                 | "jpeg.upsample.h1v2_zero_width"
                 | "jpeg.upsample.h1v2_source_length_mismatch"
                 | "jpeg.upsample.row_invalid_geometry"
+                | "jpeg.upsample.row_zero_height"
+                | "jpeg.upsample.row_zero_horizontal_ratio"
+                | "jpeg.upsample.row_zero_vertical_ratio"
                 | "jpeg.upsample.row_short_stride"
                 | "jpeg.upsample.row_source_length_mismatch"
         ) && actual_format == expected_format
@@ -2035,6 +2069,7 @@ fn execute_fault_contract(
                 | "avif.i444_10bit_alpha.v_plane_length_mismatch"
                 | "avif.i444_10bit_alpha.invalid_sample"
                 | "avif.monochrome_alpha.plane_length_mismatch"
+                | "avif.i420_12bit_alpha.sample_count_mismatch"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}

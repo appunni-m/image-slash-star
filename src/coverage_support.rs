@@ -54,6 +54,8 @@ pub enum CoverageFaultPoint {
     Avif10BitI444AlphaPlaneLengthMismatch,
     /// Shorten a valid AVIF full-resolution alpha plane to test its generic length guard.
     AvifI444AlphaPlaneLengthMismatch,
+    /// Shorten a valid AVIF 12-bit I420 alpha plane before color conversion.
+    Avif12BitI420AlphaSampleCountMismatch,
     /// Shorten a valid AVIF monochrome alpha plane to test its dimension guard.
     AvifMonochromeAlphaPlaneLengthMismatch,
     /// Shorten a valid generic AVIF I444 U plane to test its length guard.
@@ -104,6 +106,12 @@ pub enum CoverageFaultPoint {
     JpegH1v2UpsamplePlaneReservation,
     /// Force the row-wise JPEG upsampler to reject invalid component geometry.
     JpegFancyUpsampleRowInvalidGeometry,
+    /// Force the row-wise JPEG upsampler to reject a zero component height.
+    JpegFancyUpsampleRowZeroHeight,
+    /// Force the row-wise JPEG upsampler to reject a zero horizontal ratio.
+    JpegFancyUpsampleRowZeroHorizontalRatio,
+    /// Force the row-wise JPEG upsampler to reject a zero vertical ratio.
+    JpegFancyUpsampleRowZeroVerticalRatio,
     /// Force the row-wise JPEG upsampler to reject a component stride shorter than its width.
     JpegFancyUpsampleRowShortStride,
     /// Force the row-wise JPEG upsampler to reject a component sample buffer that is too short.

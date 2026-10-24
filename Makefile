@@ -116,6 +116,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_ycck_subsampled_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_ycck_h2v2_singleton_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_ycck_h2v1_singleton_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_ycck_even_upsample_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_rgb16_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_palette4_fillorder2_fixtures.py --check

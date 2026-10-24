@@ -1521,6 +1521,19 @@ def validate_tiff_claim(case_id, asset_name, data):
             image.tag_v2.get(tag) is not None for tag in (322, 323, 324, 325)
         ):
             raise RuntimeError("TIFF has no tile organization tags")
+        if case_id == "rgb16_contiguous_tiled_deflate_edges" and (
+            image.tag_v2.get(259) != 8
+            or image.tag_v2.get(277) != 3
+            or image.tag_v2.get(284) != 1
+            or image.tag_v2.get(317) != 1
+            or image.tag_v2.get(322) != 16
+            or image.tag_v2.get(323) != 16
+            or tuple(image.tag_v2.get(258, ())) != (16, 16, 16)
+            or tuple(image.tag_v2.get(339, ())) != (1, 1, 1)
+            or len(tuple(image.tag_v2.get(324, ()))) != 4
+            or len(tuple(image.tag_v2.get(325, ()))) != 4
+        ):
+            raise RuntimeError("TIFF is not contiguous RGB16 with four Deflate edge tiles")
         if case_id == "tiled_missing_byte_counts" and (
             not all(image.tag_v2.get(tag) is not None for tag in (322, 323, 324))
             or image.tag_v2.get(325) is not None
@@ -1554,8 +1567,10 @@ def validate_tiff_claim(case_id, asset_name, data):
             raise RuntimeError("TIFF is not LZW-tiled with horizontal prediction")
         if case_id == "stripped" and len(image.tag_v2.get(273, ())) < 2:
             raise RuntimeError("TIFF does not contain multiple strips")
-        if "predictor" in asset_name and image.tag_v2.get(317) != 2:
+        if "predictor2" in asset_name and image.tag_v2.get(317) != 2:
             raise RuntimeError("TIFF does not declare horizontal predictor 2")
+        if "predictor3" in asset_name and image.tag_v2.get(317) != 3:
+            raise RuntimeError("TIFF does not declare predictor 3")
         if case_id == "single_page" and image.n_frames != 1:
             raise RuntimeError(f"TIFF has {image.n_frames} pages, expected one")
         if case_id == "multi_page" and image.n_frames < 2:
@@ -3232,6 +3247,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.subsampled_rgb.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "avif.i420_12bit_alpha.sample_count_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
         "av1.superres.position_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
@@ -3281,6 +3299,15 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "jpeg.upsample.row_invalid_geometry": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.row_zero_height": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.row_zero_horizontal_ratio": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.upsample.row_zero_vertical_ratio": {
             "decode_error_then_retry_succeeds"
         },
         "jpeg.upsample.row_short_stride": {

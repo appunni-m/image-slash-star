@@ -745,8 +745,6 @@ fn reconstruct_baseline_grayscale_direct_safe(
     if info.num_components != 1
         || info.restart_interval != 0
         || info.scan_components.len() != 1
-        || info.components[0].h_samp != 1
-        || info.components[0].v_samp != 1
         || entropy_segments.segments.len() != 1
     {
         return Ok(None);
@@ -2338,6 +2336,11 @@ fn reconstruct_baseline_multi_scan(
 ) -> CodecResult<DecodedImage> {
     crate::codecs::error::check_cancelled(token)?;
 
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    if let Some(image) = reconstruct_single_scan_grayscale_direct_safe(info, data, token)? {
+        return Ok(image);
+    }
+
     let component_count = info.components.len();
 
     let num_mcus_x = u32::from(info.width).div_ceil(u32::from(info.max_h_samp).saturating_mul(8));
@@ -2643,6 +2646,98 @@ fn reconstruct_baseline_multi_scan(
         &comp_buf_height,
         YccColorConverter::shared(),
     )
+}
+
+/// Use the direct grayscale path for a complete singleton baseline scan whose
+/// component sampling factors make it enter the general scan decoder.
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+fn reconstruct_single_scan_grayscale_direct_safe(
+    info: &JpegInfo,
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Option<DecodedImage>> {
+    let [component] = info.components.as_slice() else {
+        return Ok(None);
+    };
+    let [scan] = info.scans.as_slice() else {
+        return Ok(None);
+    };
+    let [scan_component] = scan.components.as_slice() else {
+        return Ok(None);
+    };
+
+    if info.progressive
+        || (component.h_samp == 1 && component.v_samp == 1)
+        || info.restart_interval != 0
+        || scan.restart_interval != 0
+        || scan.huff_tables_snapshotted
+        || scan_component.comp_index != 0
+        || info.scan_components.len() != 1
+        || scan.ss != 0
+        || scan.se != 63
+        || scan.ah != 0
+        || scan.al != 0
+        || info.entropy_has_restart_markers
+        || scan.entropy_start == scan.entropy_end
+    {
+        return Ok(None);
+    }
+
+    let Some(quant_table) = (if scan.component_quant_tables.is_empty() {
+        info.quant_tables
+            .get(usize::from(component.quant_tbl))
+            .and_then(Option::as_ref)
+    } else {
+        scan.component_quant_tables
+            .get(scan_component.comp_index)
+            .and_then(Option::as_ref)
+    }) else {
+        return Ok(None);
+    };
+    if info
+        .dc_huff_tables
+        .get(usize::from(scan_component.dc_tbl))
+        .and_then(Option::as_ref)
+        .is_none()
+        || info
+            .ac_huff_tables
+            .get(usize::from(scan_component.ac_tbl))
+            .and_then(Option::as_ref)
+            .is_none()
+    {
+        return Ok(None);
+    }
+
+    let mut quant_natural = [0i32; 64];
+    for zigzag in 0usize..64 {
+        quant_natural[idct::JPEG_NATURAL_ORDER[zigzag]] = i32::from(quant_table[zigzag]);
+    }
+
+    let entropy_segments = extract_entropy_segments(data, scan.entropy_start, scan.entropy_end);
+    if entropy_segments.segments.len() != 1 {
+        return Ok(None);
+    }
+
+    let scan_mcus_x = u32::from(info.width)
+        .saturating_mul(u32::from(component.h_samp))
+        .div_ceil(u32::from(info.max_h_samp).saturating_mul(8));
+    let scan_mcus_y = u32::from(info.height)
+        .saturating_mul(u32::from(component.v_samp))
+        .div_ceil(u32::from(info.max_v_samp).saturating_mul(8));
+
+    match reconstruct_baseline_grayscale_direct_safe(
+        info,
+        &entropy_segments,
+        data,
+        token,
+        scan_mcus_x,
+        scan_mcus_y,
+        &[quant_natural],
+    ) {
+        Ok(image) => Ok(image),
+        Err(CodecError::Malformed(_) | CodecError::NeedMore { .. }) => Ok(None),
+        Err(error) => Err(error),
+    }
 }
 
 fn bounded_usize(value: u32) -> usize {

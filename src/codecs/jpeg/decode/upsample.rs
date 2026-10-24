@@ -321,6 +321,30 @@ pub(super) fn fancy_upsample_row(
         src_w
     };
     #[cfg(coverage)]
+    let src_h = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowZeroHeight,
+    ) {
+        0
+    } else {
+        src_h
+    };
+    #[cfg(coverage)]
+    let h_ratio = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowZeroHorizontalRatio,
+    ) {
+        0
+    } else {
+        h_ratio
+    };
+    #[cfg(coverage)]
+    let v_ratio = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowZeroVerticalRatio,
+    ) {
+        0
+    } else {
+        v_ratio
+    };
+    #[cfg(coverage)]
     let src_stride = if crate::coverage_support::take_fault_point(
         crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowShortStride,
     ) {

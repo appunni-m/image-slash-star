@@ -225,7 +225,8 @@ fn decode_ifd(
             "TIFF rows per strip must be nonzero".to_owned(),
         ));
     }
-    if samples_per_pixel == 0 || !matches!(planar, 1 | 2) || !matches!(predictor, 1 | 2) {
+    let predictor_supported = compression == COMPRESSION_NONE || matches!(predictor, 1 | 2);
+    if samples_per_pixel == 0 || !matches!(planar, 1 | 2) || !predictor_supported {
         return Err(CodecError::Malformed(
             "TIFF sample, strip, planar, or predictor fields are invalid".to_owned(),
         ));
@@ -322,10 +323,15 @@ fn decode_ifd(
     }
     // Both supported layouts decode padded clump edges; pixel conversion
     // clips the final clump row to the declared image height.
-    let supported_subsampled_ycbcr_predictor = predictor == 2
-        && compression == COMPRESSION_LZW
-        && !tiled
-        && ycbcr_subsampling.is_some_and(|subsampling| matches!(subsampling, (1, 2) | (2, 2)));
+    let supported_subsampled_ycbcr_predictor =
+        uses_horizontal_predictor(predictor, compression, bits_per_sample)
+            && !tiled
+            && ycbcr_subsampling.is_some_and(|subsampling| {
+                matches!(
+                    subsampling,
+                    (1, 2) | (2, 1) | (2, 2) | (4, 1) | (4, 2) | (4, 4)
+                )
+            });
     if matches!(layout, TiffLayout::YcbcrSubsampled8 { .. })
         && predictor != 1
         && !supported_subsampled_ycbcr_predictor
@@ -588,9 +594,19 @@ fn decode_ifd(
                     bits_per_sample,
                 };
                 if reverse_packed_fill_order {
-                    copy_packed_tile_into::<true>(&mut pixels, tile_data, placement, token)
+                    copy_packed_tile_into::<LeastSignificantFirst>(
+                        &mut pixels,
+                        tile_data,
+                        placement,
+                        token,
+                    )
                 } else {
-                    copy_packed_tile_into::<false>(&mut pixels, tile_data, placement, token)
+                    copy_packed_tile_into::<MostSignificantFirst>(
+                        &mut pixels,
+                        tile_data,
+                        placement,
+                        token,
+                    )
                 }
                 .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
                 continue;
@@ -779,13 +795,28 @@ fn decode_ifd(
         rgb_pixels.try_reserve_exact(reservation).map_err(|_| {
             CodecError::Dimensions("unable to allocate TIFF strip buffer".to_owned())
         })?;
+        let predictor_row_bytes =
+            if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
+                let row_stride = row_bytes
+                    .checked_div(subsampling.1)
+                    .dimensions("TIFF YCbCr predictor row stride is invalid")?;
+                row_stride
+                    .is_multiple_of(samples_per_pixel)
+                    .then_some(row_stride)
+            } else {
+                None
+            };
 
         for (strip_index, (&offset, &declared_byte_count)) in
             offsets.iter().zip(&byte_counts).enumerate()
         {
             crate::codecs::error::check_cancelled(token)?;
-            let byte_count = if compression != COMPRESSION_NONE && declared_byte_count == 0 {
-                derive_compressed_byte_count(strip_index, offset)?
+            // Raw YCbCr uses `Ycbcr8`; only compressed input reaches this
+            // subsampled-strip assembler.
+            let byte_count = if declared_byte_count == 0 {
+                return Err(CodecError::Malformed(
+                    "TIFF compressed strip has a zero byte count".to_owned(),
+                ));
             } else {
                 declared_byte_count
             };
@@ -812,53 +843,35 @@ fn decode_ifd(
             let expected = row_bytes
                 .checked_mul(stored_rows)
                 .dimensions("TIFF strip buffer size overflows")?;
-            let mut decoded;
-            let samples = if compression == COMPRESSION_NONE {
-                encoded
-            } else {
-                decoded = decode_block(compression, encoded, expected, token)
+            let mut decoded = decode_block(compression, encoded, expected, token)
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+            if let Some(predictor_row_bytes) = predictor_row_bytes {
+                if let Some(token) = token {
+                    reverse_horizontal_predictor_with_token(
+                        &mut decoded,
+                        predictor_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                        token,
+                    )
                     .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
-                if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
-                    // Subsampled YCbCr's horizontal-predictor row spans one
-                    // vertical subsample row, including inside an unaligned
-                    // strip that is assembled independently below.
-                    let predictor_row_bytes = row_bytes
-                        .checked_div(subsampling.1)
-                        .dimensions("TIFF YCbCr predictor row stride is invalid")?;
-                    // libtiff leaves 1-by-2 YCbCr residuals untouched when the
-                    // predictor row is not divisible by three samples.
-                    let libtiff_reverses_subsampled_predictor = subsampling != (1, 2)
-                        || predictor_row_bytes.is_multiple_of(samples_per_pixel);
-                    if libtiff_reverses_subsampled_predictor {
-                        if let Some(token) = token {
-                            reverse_horizontal_predictor_with_token(
-                                &mut decoded,
-                                predictor_row_bytes,
-                                samples_per_pixel,
-                                bits_per_sample,
-                                endian,
-                                token,
-                            )
-                            .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
-                        } else {
-                            reverse_horizontal_predictor(
-                                &mut decoded,
-                                predictor_row_bytes,
-                                samples_per_pixel,
-                                bits_per_sample,
-                                endian,
-                            );
-                        }
-                    }
+                } else {
+                    reverse_horizontal_predictor(
+                        &mut decoded,
+                        predictor_row_bytes,
+                        samples_per_pixel,
+                        bits_per_sample,
+                        endian,
+                    );
                 }
-                &decoded
-            };
+            }
             let strip_height = u32::try_from(strip_rows).map_err(|_| {
                 CodecError::Dimensions("TIFF strip height exceeds image dimensions".to_owned())
             })?;
             let strip_rgb = convert_ycbcr_subsampled(
                 (width, strip_height),
-                samples,
+                &decoded,
                 subsampling,
                 conversion,
                 token,
@@ -897,6 +910,20 @@ fn decode_ifd(
     pixels
         .try_reserve_exact(reservation)
         .map_err(|_| CodecError::Dimensions("unable to allocate TIFF strip buffer".to_owned()))?;
+    let predictor_row_bytes = if uses_horizontal_predictor(predictor, compression, bits_per_sample)
+    {
+        let row_stride = match ycbcr_subsampling {
+            Some((_, vertical)) => row_bytes
+                .checked_div(vertical)
+                .dimensions("TIFF YCbCr predictor row stride is invalid")?,
+            None => row_bytes,
+        };
+        let complete_ycbcr_sample_group =
+            ycbcr_subsampling.is_none() || row_stride.is_multiple_of(samples_per_pixel);
+        complete_ycbcr_sample_group.then_some(row_stride)
+    } else {
+        None
+    };
 
     for (strip_index, (&offset, &declared_byte_count)) in
         offsets.iter().zip(&byte_counts).enumerate()
@@ -938,42 +965,25 @@ fn decode_ifd(
         }
         let mut decoded = decode_block(compression, encoded, expected, token)
             .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
-        if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
-            // Subsampled YCbCr's compressed scanline covers one vertical
-            // subsample row, so divide the clump-row byte count by V.
-            let predictor_row_bytes = if let Some((_, vertical)) = ycbcr_subsampling {
-                row_bytes
-                    .checked_div(vertical)
-                    .dimensions("TIFF YCbCr predictor row stride is invalid")?
+        if let Some(predictor_row_bytes) = predictor_row_bytes {
+            if let Some(token) = token {
+                reverse_horizontal_predictor_with_token(
+                    &mut decoded,
+                    predictor_row_bytes,
+                    samples_per_pixel,
+                    bits_per_sample,
+                    endian,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
             } else {
-                row_bytes
-            };
-            // libtiff's 8-bit horizontal accumulator returns without
-            // reversing a 1-by-2 YCbCr clump row when its scanline byte count
-            // is not divisible by the three samples per pixel. Preserve those
-            // predictor residuals for Pillow parity.
-            let libtiff_reverses_subsampled_predictor = ycbcr_subsampling != Some((1, 2))
-                || predictor_row_bytes.is_multiple_of(samples_per_pixel);
-            if libtiff_reverses_subsampled_predictor {
-                if let Some(token) = token {
-                    reverse_horizontal_predictor_with_token(
-                        &mut decoded,
-                        predictor_row_bytes,
-                        samples_per_pixel,
-                        bits_per_sample,
-                        endian,
-                        token,
-                    )
-                    .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
-                } else {
-                    reverse_horizontal_predictor(
-                        &mut decoded,
-                        predictor_row_bytes,
-                        samples_per_pixel,
-                        bits_per_sample,
-                        endian,
-                    );
-                }
+                reverse_horizontal_predictor(
+                    &mut decoded,
+                    predictor_row_bytes,
+                    samples_per_pixel,
+                    bits_per_sample,
+                    endian,
+                );
             }
         }
         pixels.extend_from_slice(&decoded);
@@ -1669,6 +1679,74 @@ fn copy_raw_tile_into(
     Ok(())
 }
 
+trait PackedTileBitOrder {
+    fn copy_full_bytes(source: &[u8], destination: &mut [u8]);
+    fn normalize_byte(byte: u8) -> u8;
+    fn source_sample_shift(source_bit: usize, bits: usize) -> CodecResult<u32>;
+    fn normalize_sample(value: u8, sample_shift: u32) -> u8;
+}
+
+struct MostSignificantFirst;
+
+impl PackedTileBitOrder for MostSignificantFirst {
+    #[inline(always)]
+    fn copy_full_bytes(source: &[u8], destination: &mut [u8]) {
+        destination.copy_from_slice(source);
+    }
+
+    #[inline(always)]
+    fn normalize_byte(byte: u8) -> u8 {
+        byte
+    }
+
+    #[inline(always)]
+    fn source_sample_shift(source_bit: usize, bits: usize) -> CodecResult<u32> {
+        8usize
+            .checked_sub(bits)
+            .and_then(|shift| shift.checked_sub(source_bit % 8))
+            .and_then(|shift| u32::try_from(shift).ok())
+            .malformed("TIFF packed source sample shift is invalid")
+    }
+
+    #[inline(always)]
+    fn normalize_sample(value: u8, _sample_shift: u32) -> u8 {
+        value
+    }
+}
+
+struct LeastSignificantFirst;
+
+impl PackedTileBitOrder for LeastSignificantFirst {
+    #[inline(always)]
+    fn copy_full_bytes(source: &[u8], destination: &mut [u8]) {
+        for (source_byte, destination_byte) in source.iter().zip(destination) {
+            *destination_byte = source_byte.reverse_bits();
+        }
+    }
+
+    #[inline(always)]
+    fn normalize_byte(byte: u8) -> u8 {
+        byte.reverse_bits()
+    }
+
+    #[inline(always)]
+    fn source_sample_shift(source_bit: usize, _bits: usize) -> CodecResult<u32> {
+        u32::try_from(source_bit % 8).map_err(|_| {
+            CodecError::Malformed("TIFF packed source sample shift is invalid".to_owned())
+        })
+    }
+
+    #[inline(always)]
+    fn normalize_sample(value: u8, sample_shift: u32) -> u8 {
+        // FillOrder=2 stores each packed sample's bits in reverse order.
+        // Reverse the sample value when copying into a non-byte-aligned
+        // destination; the byte-aligned path reverses complete bytes.
+        value
+            .reverse_bits()
+            .wrapping_shr(8_u32.wrapping_sub(sample_shift))
+    }
+}
+
 struct PackedTilePlacement {
     tile_row_bytes: usize,
     row_bytes: usize,
@@ -1679,7 +1757,7 @@ struct PackedTilePlacement {
     bits_per_sample: u8,
 }
 
-fn copy_packed_tile_into<const LSB_FIRST: bool>(
+fn copy_packed_tile_into<ORDER: PackedTileBitOrder>(
     output: &mut [u8],
     data: &[u8],
     placement: PackedTilePlacement,
@@ -1720,7 +1798,7 @@ fn copy_packed_tile_into<const LSB_FIRST: bool>(
             .ok_or_else(|| {
                 CodecError::Malformed("TIFF packed tile destination row is invalid".to_owned())
             })?;
-        copy_packed_tile_row::<LSB_FIRST>(
+        copy_packed_tile_row::<ORDER>(
             destination_row,
             source_row,
             placement.tile_x,
@@ -1732,7 +1810,7 @@ fn copy_packed_tile_into<const LSB_FIRST: bool>(
     Ok(())
 }
 
-fn copy_packed_tile_row<const LSB_FIRST: bool>(
+fn copy_packed_tile_row<ORDER: PackedTileBitOrder>(
     destination: &mut [u8],
     source: &[u8],
     tile_x: usize,
@@ -1764,26 +1842,13 @@ fn copy_packed_tile_row<const LSB_FIRST: bool>(
                 .zip(destination[destination_start..destination_full_end].chunks_mut(1_024))
             {
                 crate::codecs::error::check_cancelled(Some(token))?;
-                if LSB_FIRST {
-                    for (source_byte, destination_byte) in
-                        source_chunk.iter().zip(destination_chunk)
-                    {
-                        *destination_byte = source_byte.reverse_bits();
-                    }
-                } else {
-                    destination_chunk.copy_from_slice(source_chunk);
-                }
-            }
-        } else if LSB_FIRST {
-            for (source_byte, destination_byte) in source[..whole_bytes]
-                .iter()
-                .zip(&mut destination[destination_start..destination_full_end])
-            {
-                *destination_byte = source_byte.reverse_bits();
+                ORDER::copy_full_bytes(source_chunk, destination_chunk);
             }
         } else {
-            destination[destination_start..destination_full_end]
-                .copy_from_slice(&source[..whole_bytes]);
+            ORDER::copy_full_bytes(
+                &source[..whole_bytes],
+                &mut destination[destination_start..destination_full_end],
+            );
         }
 
         let tail_bits = copied_bits % 8;
@@ -1793,11 +1858,7 @@ fn copy_packed_tile_row<const LSB_FIRST: bool>(
                 .and_then(|shift| u32::try_from(shift).ok())
                 .malformed("TIFF packed tile tail shift is invalid")?;
             let tail_mask = u8::MAX.wrapping_shl(tail_shift);
-            let source_tail = if LSB_FIRST {
-                source[whole_bytes].reverse_bits()
-            } else {
-                source[whole_bytes]
-            };
+            let source_tail = ORDER::normalize_byte(source[whole_bytes]);
             let destination_tail = &mut destination[destination_full_end];
             *destination_tail = (*destination_tail & !tail_mask) | (source_tail & tail_mask);
         }
@@ -1814,28 +1875,9 @@ fn copy_packed_tile_row<const LSB_FIRST: bool>(
         let source_bit = sample_index
             .checked_mul(bits)
             .dimensions("TIFF packed tile source bit offset overflows")?;
-        let source_shift = if LSB_FIRST {
-            u32::try_from(source_bit % 8).map_err(|_| {
-                CodecError::Malformed("TIFF packed source sample shift is invalid".to_owned())
-            })?
-        } else {
-            8usize
-                .checked_sub(bits)
-                .and_then(|shift| shift.checked_sub(source_bit % 8))
-                .and_then(|shift| u32::try_from(shift).ok())
-                .malformed("TIFF packed source sample shift is invalid")?
-        };
+        let source_shift = ORDER::source_sample_shift(source_bit, bits)?;
         let value = source[source_bit / 8].wrapping_shr(source_shift) & sample_mask;
-        let value = if LSB_FIRST {
-            // FillOrder=2 stores each packed sample's bits in reverse order.
-            // Reverse the sample value when copying into a non-byte-aligned
-            // destination; the byte-aligned path reverses complete bytes.
-            value
-                .reverse_bits()
-                .wrapping_shr(8_u32.wrapping_sub(sample_shift))
-        } else {
-            value
-        };
+        let value = ORDER::normalize_sample(value, sample_shift);
         let destination_bit = destination_start_bit
             .checked_add(source_bit)
             .dimensions("TIFF packed tile destination bit offset overflows")?;
@@ -2990,26 +3032,16 @@ fn ycbcr_reference_exceeds_conversion_limit(rational: (i64, i64)) -> bool {
     // Pillow's libtiff path rejects ratios at 2^31 - 64 during pixel loading.
     const REFERENCE_LIMIT: i128 = 2_147_483_584;
     let (numerator, denominator) = rational;
-    if numerator == 0 || denominator == 0 {
+    // TIFF denominators are unsigned, including libtiff's SRATIONAL interpretation.
+    if numerator <= 0 || denominator <= 0 {
         return false;
     }
-    let mut numerator = i128::from(numerator);
-    let mut denominator = i128::from(denominator);
-    if numerator < 0 && denominator < 0 {
-        let Some(positive_numerator) = numerator.checked_neg() else {
-            return false;
-        };
-        let Some(positive_denominator) = denominator.checked_neg() else {
-            return false;
-        };
-        numerator = positive_numerator;
-        denominator = positive_denominator;
-    } else if numerator <= 0 || denominator <= 0 {
-        return false;
-    }
-    REFERENCE_LIMIT
-        .checked_mul(denominator)
-        .is_some_and(|limit| numerator >= limit)
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "TIFF rational denominators widen from u32, so this product is below 2^63 and fits i128."
+    )]
+    let limit = REFERENCE_LIMIT * i128::from(denominator);
+    i128::from(numerator) >= limit
 }
 
 #[allow(
