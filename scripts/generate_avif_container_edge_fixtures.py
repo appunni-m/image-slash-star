@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generate AVIF container, track, data-reference and parser-budget edge inputs.
+"""Generate AVIF container, handler, track, data-reference and parser-budget
+edge inputs.
 
 Pinned Pillow accepts version-zero track headers, optional zero property
 indices and ignored nonzero data-reference fields without changing its public
@@ -53,6 +54,8 @@ FIXTURE_SHA256 = {
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
     "error_infe_zero_item_id.avif": "9cd1623b8c3cf615b708968e90f6b9bb0fb081dbda2185348ebf087db82e7e7f",
     "error_meta_duplicate_idat.avif": "466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b",
+    "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
+    "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
@@ -295,6 +298,44 @@ def append_empty_duplicate_idat(source: bytes) -> bytes:
     return candidate
 
 
+def set_handler_nonzero_version(source: bytes) -> bytes:
+    """Set the baseline meta handler's FullBox version to one."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"hdlr"):
+            return payload
+        if len(payload) < 24 or payload[:4] != bytes(4):
+            raise RuntimeError("file source hdlr no longer has its pinned version-zero layout")
+        changed += 1
+        return b"\x01" + payload[1:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("nonzero hdlr version mutation must preserve the file size")
+    return candidate
+
+
+def set_handler_nonzero_predefined(source: bytes) -> bytes:
+    """Set the baseline meta handler's reserved pre_defined field to one."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"hdlr"):
+            return payload
+        if len(payload) < 24 or payload[:8] != bytes(8):
+            raise RuntimeError("file source hdlr no longer has its pinned zero-value fields")
+        changed += 1
+        return payload[:4] + struct.pack(">I", 1) + payload[8:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("nonzero hdlr pre_defined mutation must preserve the file size")
+    return candidate
+
+
 def duplicate_iloc_first_item_id(source: bytes) -> bytes:
     """Declare the pinned file-backed iloc item record twice with the same ID."""
     changed = 0
@@ -518,6 +559,18 @@ def generate(
             "error_meta_duplicate_idat.avif",
             "idat",
             append_empty_duplicate_idat(sources["idat"]),
+            "open_error",
+        ),
+        (
+            "error_meta_hdlr_nonzero_version.avif",
+            "file",
+            set_handler_nonzero_version(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_meta_hdlr_nonzero_predefined.avif",
+            "file",
+            set_handler_nonzero_predefined(sources["file"]),
             "open_error",
         ),
         (

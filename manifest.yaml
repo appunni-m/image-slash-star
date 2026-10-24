@@ -10508,6 +10508,20 @@ formats:
       test_assets:
       - meta_hdlr_non_pict.avif
       expect_error: true
+    - id: error_meta_hdlr_nonzero_version
+      description: AVIF meta handler uses an unsupported nonzero FullBox version; Pillow rejects the complete input at open
+      test_assets:
+      - error_meta_hdlr_nonzero_version.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_meta_hdlr_nonzero_predefined
+      description: AVIF meta handler declares a nonzero reserved pre_defined field; Pillow rejects the complete input at open
+      test_assets:
+      - error_meta_hdlr_nonzero_predefined.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: error_meta_duplicate_handler
       description: AVIF meta contains a second handler box where a primary-item declaration belongs
       test_assets:

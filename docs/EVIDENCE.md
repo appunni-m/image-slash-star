@@ -1,5 +1,30 @@
 # Versioned compatibility evidence
 
+## AVIF handler rejection parity — 2026-10-24
+
+Added active parity rows `decode:avif:error_meta_hdlr_nonzero_version` and
+`decode:avif:error_meta_hdlr_nonzero_predefined`. Each fixture mutates only one
+field in the baseline `meta/hdlr` box and preserves the complete AV1 payload and
+3,077-byte file size. Pillow 12.2.0 rejects both complete inputs at open with
+`PIL.UnidentifiedImageError: cannot identify image file <bytes>`. Their fixture
+SHA-256 values are `e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62`
+and `b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d`.
+
+The focused parity and coverage run passed 2/2 rows at
+`.coverage-mcp/local-evidence/selected/avif-handler-errors-20261024/coverage.json`.
+Its raw LLVM records six visits to each rejection outcome in
+`src/codecs/avif/samples.rs::parse_handler` at line 542. The saved full report
+`.coverage-mcp/local-evidence/parity-full-20261024-after-iloc-reserved/coverage.json`
+records 4,051 visits to each corresponding normal outcome, but its source/build
+receipt is unverified. Coverage MCP therefore returned `incomparable` for the
+incremental comparison because the baseline's exact branch detail is
+incomplete. No aggregate coverage gain is claimed.
+
+The public fixture matrix now contains 2,548 total rows: 2,031 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,031 decode rows and 486 encode rows
+are active; 31 encode rows remain planned. The separate target-only fault lane
+contains 85 cases.
+
 ## AVIF duplicate idat parity — 2026-10-24
 
 Added active parity row `decode:avif:error_meta_duplicate_idat`. The
@@ -8659,7 +8684,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2becbab218513418a80e71e12b8e433e3fddb4b2f4deb904ad7eb6717d2018e4`; matrix `9376cdd005123a3b47f0487e6dac57f3c425fd0e8ce365b1933617fb505d1ceb`.
+- Current fixture integrity only: manifest `2cf5507b18e369079dba2010fd0b2f44efe3f39a9e4e7b001818a727ea9b6856`; matrix `a989577b8533821e705b716b2c0ed0b28d544a51a2fb0c9185289de360104a54`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
