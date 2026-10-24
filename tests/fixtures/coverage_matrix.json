@@ -213916,7 +213916,8 @@
           "params": {
             "lossless": true,
             "quality": 80,
-            "method": 0
+            "method": 0,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "webp",
@@ -214239,6 +214240,62 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_method_5_transparent_alpha",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-five predictor preserves Pillow parity for fully transparent pixels with hidden RGB",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 5,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "alpha_partial.png",
+          "source_sha256": "8ff61af3131813de7522fe0b4fc3897b796573ff1d68dead92840e28f26ba77d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_5_transparent_alpha.bin",
+          "encoded_ref_bytes": 2282,
+          "encoded_ref_sha256": "ca8ab2284119d8344436a178d0fe8b4b3937fc91f54e643e1dcdedda35f8fbb2",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_5_transparent_alpha.bin",
+          "ref_sha256": "a6e158dcb17fcb77bcba88889d3ee59e4ebd462b9ff4e4d56154bc3afa103808",
+          "ref_bytes": 65536,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "enc_lossless_method_6",
@@ -217610,9 +217667,10 @@
           "type": "encode",
           "format": "webp",
           "category": "lossless",
-          "description": "Re-encode a 16-color lossless image using two packed palette indices per byte",
+          "description": "Re-encode a 16-color lossless image with two packed indices through token and no-token paths",
           "params": {
-            "lossless": true
+            "lossless": true,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "webp",
@@ -217663,9 +217721,10 @@
           "type": "encode",
           "format": "webp",
           "category": "lossless",
-          "description": "Re-encode a full-palette lossless image",
+          "description": "Re-encode a full-palette lossless image through token and no-token paths",
           "params": {
-            "lossless": true
+            "lossless": true,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "webp",
@@ -218530,9 +218589,9 @@
     }
   },
   "summary": {
-    "total_rows": 2587,
+    "total_rows": 2588,
     "decode_rows": 2070,
-    "encode_rows": 517,
+    "encode_rows": 518,
     "formats": 8,
     "assets_available": 2066,
     "decode_active": 2070,
@@ -218921,6 +218980,44 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "tiff_ignored_sample_row_bytes_zero",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw"
+      },
+      "fault": {
+        "point": "tiff.ignored_samples.row_bytes_zero",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ignored_sample_assembly_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw"
+      },
+      "fault": {
+        "point": "tiff.ignored_samples.assembly_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "tiff_ycbcr_clump_length_mismatch",
       "type": "fault-contract",
       "operation": "decode",
@@ -218973,6 +219070,82 @@
       },
       "fault": {
         "point": "tiff.ycbcr.clump_length_mismatch",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_horizontal_subsampling_zero",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_4x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.horizontal_subsampling_zero",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_vertical_subsampling_zero",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_subsampled_lzw_4x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.vertical_subsampling_zero",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_horizontal_subsampling_zero",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_lzw_4x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.horizontal_subsampling_zero",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_ycbcr_custom_vertical_subsampling_zero",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:ycbcr_custom_coefficients_lzw_4x2"
+      },
+      "fault": {
+        "point": "tiff.ycbcr.vertical_subsampling_zero",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
@@ -220303,6 +220476,177 @@
       },
       "fault": {
         "point": "avif.monochrome_alpha.plane_length_mismatch",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_subsampling_x_rejected",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.subsampling_x_false",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_subsampling_y_rejected",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.subsampling_y_false",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_u_plane_nonempty_rejected",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.u_plane_nonempty",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_v_plane_nonempty_rejected",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.v_plane_nonempty",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_y_plane_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.y_plane_length_mismatch",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_alpha_plane_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.alpha_plane_length_mismatch",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_y_sample_out_of_depth",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.y_sample_out_of_depth",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_alpha_sample_out_of_depth",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.alpha_sample_out_of_depth",
+        "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_monochrome_portable_output_length_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:portable_lossless_monochrome_limited_alpha_16x16"
+      },
+      "fault": {
+        "point": "avif.monochrome_portable.output_length_mismatch",
         "contract": "decode_unsupported_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

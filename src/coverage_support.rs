@@ -58,6 +58,24 @@ pub enum CoverageFaultPoint {
     Avif12BitI420AlphaSampleCountMismatch,
     /// Shorten a valid AVIF monochrome alpha plane to test its dimension guard.
     AvifMonochromeAlphaPlaneLengthMismatch,
+    /// Clear AVIF monochrome horizontal subsampling after validation.
+    AvifMonochromePortableSubsamplingXFalse,
+    /// Clear AVIF monochrome vertical subsampling after validation.
+    AvifMonochromePortableSubsamplingYFalse,
+    /// Populate the AVIF monochrome U plane after validation.
+    AvifMonochromePortableUPlaneNonEmpty,
+    /// Populate the AVIF monochrome V plane after validation.
+    AvifMonochromePortableVPlaneNonEmpty,
+    /// Shorten the AVIF monochrome luma plane after validation.
+    AvifMonochromePortableYPlaneLengthMismatch,
+    /// Shorten the AVIF monochrome alpha plane after validation.
+    AvifMonochromePortableAlphaPlaneLengthMismatch,
+    /// Inject an out-of-depth sample into AVIF monochrome luma after validation.
+    AvifMonochromePortableYSampleOutOfDepth,
+    /// Inject an out-of-depth sample into AVIF monochrome alpha after validation.
+    AvifMonochromePortableAlphaSampleOutOfDepth,
+    /// Shorten decoded AVIF monochrome pixels before the output-length guard.
+    AvifMonochromePortableOutputLengthMismatch,
     /// Shorten a valid generic AVIF I444 U plane to test its length guard.
     AvifGenericI444UPlaneLengthMismatch,
     /// Shorten a valid generic AVIF I444 V plane to test its length guard.
@@ -140,6 +158,14 @@ pub enum CoverageFaultPoint {
     TiffYcbcrTilePrefixLimit,
     /// Report a TIFF full-resolution YCbCr sample-buffer length mismatch.
     TiffYcbcrFullResolutionLengthMismatch,
+    /// Report zero subsampling after TIFF YCbCr layout validation.
+    TiffYcbcrHorizontalSubsamplingZero,
+    /// Report zero vertical subsampling after TIFF YCbCr layout validation.
+    TiffYcbcrVerticalSubsamplingZero,
+    /// Report zero row bytes while compacting TIFF ignored samples.
+    TiffIgnoredSampleRowBytesZero,
+    /// Shorten TIFF ignored-sample pixels to test the assembly-length guard.
+    TiffIgnoredSampleAssemblyLengthMismatch,
     /// Force AV1 partial monochrome tile-state retention to fail.
     Av1MonochromeTileReservation,
     /// Force AV1 complete monochrome tile buffering to fail.

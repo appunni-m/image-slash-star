@@ -393,12 +393,113 @@ fn decode_portable_with_error(
     validated: &super::av1::ValidatedAv1,
 ) -> CodecResult<Option<DecodedImage>> {
     let mut portable_error = None;
+    #[cfg(coverage)]
+    let image = if let Some(point) = take_monochrome_portable_fault() {
+        let Some(mut still) = validated.portable_still.clone() else {
+            return Err(CodecError::Malformed(
+                "coverage fault requires a validated AVIF monochrome still".to_owned(),
+            ));
+        };
+        inject_monochrome_portable_fault(&mut still, point)?;
+        let faulted = super::av1::ValidatedAv1 {
+            portable_still: Some(still),
+        };
+        decode_portable_inner(&faulted, &mut portable_error)
+    } else {
+        decode_portable_inner(validated, &mut portable_error)
+    };
+    #[cfg(not(coverage))]
     let image = decode_portable_inner(validated, &mut portable_error);
     match (image, portable_error) {
         (Some(image), _) => Ok(Some(image)),
         (None, Some(error)) => Err(error),
         (None, None) => Ok(None),
     }
+}
+
+#[cfg(coverage)]
+fn take_monochrome_portable_fault() -> Option<crate::coverage_support::CoverageFaultPoint> {
+    use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+    [
+        CoverageFaultPoint::AvifMonochromePortableSubsamplingXFalse,
+        CoverageFaultPoint::AvifMonochromePortableSubsamplingYFalse,
+        CoverageFaultPoint::AvifMonochromePortableUPlaneNonEmpty,
+        CoverageFaultPoint::AvifMonochromePortableVPlaneNonEmpty,
+        CoverageFaultPoint::AvifMonochromePortableYPlaneLengthMismatch,
+        CoverageFaultPoint::AvifMonochromePortableAlphaPlaneLengthMismatch,
+        CoverageFaultPoint::AvifMonochromePortableYSampleOutOfDepth,
+        CoverageFaultPoint::AvifMonochromePortableAlphaSampleOutOfDepth,
+    ]
+    .into_iter()
+    .find(|&point| take_fault_point(point))
+}
+
+#[cfg(coverage)]
+fn inject_monochrome_portable_fault(
+    still: &mut super::av1::PortableStill,
+    point: crate::coverage_support::CoverageFaultPoint,
+) -> CodecResult<()> {
+    use crate::coverage_support::CoverageFaultPoint;
+
+    if !still.monochrome {
+        return Err(CodecError::Malformed(
+            "coverage fault requires a validated AVIF monochrome still".to_owned(),
+        ));
+    }
+    let missing_plane = || {
+        CodecError::Malformed(format!(
+            "coverage fault {point:?} requires a validated AVIF plane"
+        ))
+    };
+
+    match point {
+        CoverageFaultPoint::AvifMonochromePortableSubsamplingXFalse => {
+            still.subsampling_x = false;
+        }
+        CoverageFaultPoint::AvifMonochromePortableSubsamplingYFalse => {
+            still.subsampling_y = false;
+        }
+        CoverageFaultPoint::AvifMonochromePortableUPlaneNonEmpty => {
+            still.planes[1].samples.push(0);
+        }
+        CoverageFaultPoint::AvifMonochromePortableVPlaneNonEmpty => {
+            still.planes[2].samples.push(0);
+        }
+        CoverageFaultPoint::AvifMonochromePortableYPlaneLengthMismatch => {
+            still.planes[0].samples.pop().ok_or_else(missing_plane)?;
+        }
+        CoverageFaultPoint::AvifMonochromePortableAlphaPlaneLengthMismatch => {
+            still
+                .alpha_plane
+                .as_mut()
+                .ok_or_else(missing_plane)?
+                .samples
+                .pop()
+                .ok_or_else(missing_plane)?;
+        }
+        CoverageFaultPoint::AvifMonochromePortableYSampleOutOfDepth => {
+            *still.planes[0]
+                .samples
+                .first_mut()
+                .ok_or_else(missing_plane)? = u16::MAX;
+        }
+        CoverageFaultPoint::AvifMonochromePortableAlphaSampleOutOfDepth => {
+            *still
+                .alpha_plane
+                .as_mut()
+                .ok_or_else(missing_plane)?
+                .samples
+                .first_mut()
+                .ok_or_else(missing_plane)? = u16::MAX;
+        }
+        _ => {
+            return Err(CodecError::Malformed(
+                "coverage fault is not an AVIF monochrome portable fault".to_owned(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(any(test, coverage))]
@@ -803,6 +904,12 @@ fn decode_monochrome_portable(
                 )?);
             }
         }
+    }
+    #[cfg(coverage)]
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifMonochromePortableOutputLengthMismatch,
+    ) {
+        pixels.pop()?;
     }
     if pixels.len() != pixel_capacity {
         return None;
