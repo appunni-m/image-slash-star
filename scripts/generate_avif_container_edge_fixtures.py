@@ -57,6 +57,7 @@ FIXTURE_SHA256 = {
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
     "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
+    "error_pixi_zero_planes.avif": "b29a15defd39037aebaa7dffdd878c828201d1d9adc852302e8c76b123036431",
     "error_pixi_depth_above_16.avif": "bdf5ecf32956f1c05ed93c9b3e5a9fb2381f5429c1996ccb6b5701201fdbd34d",
     "error_pixi_channel_depth_mismatch.avif": "420568bd6387e4262a2b3076a466b0d39efe35f9c01c99a66364352389b92242",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
@@ -143,6 +144,35 @@ def set_pixi_first_channel_depth(source: bytes, depth: int) -> bytes:
 def zero_pixi_first_channel_depth(source: bytes) -> bytes:
     """Set the baseline pixi property's first channel depth to zero."""
     return set_pixi_first_channel_depth(source, 0)
+
+
+def set_pixi_plane_count(source: bytes, planes: int) -> bytes:
+    """Set the baseline pixi property's plane count."""
+    if not 0 <= planes <= 255:
+        raise ValueError("pixi plane count must fit in one byte")
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"iprp", b"ipco"):
+            return payload
+        children = read_boxes(payload, 0, len(payload))
+        rebuilt = []
+        for kind, _, child in children:
+            if kind == b"pixi":
+                if child != bytes.fromhex("0000000003080808"):
+                    raise RuntimeError(
+                        "file source pixi no longer has its pinned RGB depth layout"
+                    )
+                changed += 1
+                child = child[:4] + bytes((planes,)) + child[5:]
+            rebuilt.append(pack_box(kind, child))
+        return b"".join(rebuilt)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("pixi plane-count mutation must preserve the file size")
+    return candidate
 
 
 def mismatch_pixi_second_channel_depth(source: bytes) -> bytes:
@@ -561,8 +591,8 @@ def verify_invalid_grid_rejection(source: bytes, filename: str) -> None:
     raise RuntimeError(f"{filename}: Pillow unexpectedly decoded a grid without dimg references")
 
 
-def verify_pixi_depth_rejection(source: bytes, filename: str, reason: str) -> None:
-    """Require Pillow's pinned decode failure for malformed pixi channel depths."""
+def verify_pixi_rejection(source: bytes, filename: str, reason: str) -> None:
+    """Require Pillow's pinned decode failure for a malformed pixi property."""
     try:
         with Image.open(BytesIO(source)) as image:
             image.load()
@@ -654,6 +684,12 @@ def generate(
             "file",
             zero_pixi_first_channel_depth(sources["file"]),
             "open_error",
+        ),
+        (
+            "error_pixi_zero_planes.avif",
+            "file",
+            set_pixi_plane_count(sources["file"], 0),
+            "pixi_zero_planes",
         ),
         (
             "error_pixi_depth_above_16.avif",
@@ -751,9 +787,11 @@ def generate(
         elif oracle_error == "decode_error":
             verify_invalid_grid_rejection(data, filename)
         elif oracle_error == "pixi_depth_above_16":
-            verify_pixi_depth_rejection(data, filename, "a pixi channel depth above 16")
+            verify_pixi_rejection(data, filename, "a pixi channel depth above 16")
         elif oracle_error == "pixi_channel_depth_mismatch":
-            verify_pixi_depth_rejection(data, filename, "unequal pixi channel depths")
+            verify_pixi_rejection(data, filename, "unequal pixi channel depths")
+        elif oracle_error == "pixi_zero_planes":
+            verify_pixi_rejection(data, filename, "a pixi property with zero planes")
         elif oracle_error is None and pillow_snapshot(data) != references[source_name]:
             raise RuntimeError(f"{filename}: Pillow image/frame/metadata bytes changed")
         elif oracle_error is not None:
