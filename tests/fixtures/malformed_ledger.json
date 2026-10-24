@@ -2855,6 +2855,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_pixi_depth_above_16.avif",
+        "class": "error_pixi_depth_above_16",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Not implemented",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Not implemented",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Not implemented",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Not implemented",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "AVIF pixi property declares a 17-bit first channel; Pillow reports that decoding is not implemented",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode image: Not implemented",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "error_pixi_zero_depth.avif",
         "class": "error_pixi_zero_depth",
         "contracts": {
@@ -29016,7 +29065,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 74,
+      "avif": 75,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -29026,17 +29075,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 687,
-      "specification_reference": 74
+      "pillow_fixture": 688,
+      "specification_reference": 75
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 413,
+      "spec_violation": 414,
       "tolerated": 0,
       "truncated": 199
     },
-    "classes": 687,
+    "classes": 688,
     "formats": 8
   }
 }

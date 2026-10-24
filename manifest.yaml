@@ -10603,6 +10603,13 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-STILL-001
+    - id: error_pixi_depth_above_16
+      description: AVIF pixi property declares a 17-bit first channel; Pillow reports that decoding is not implemented
+      test_assets:
+      - error_pixi_depth_above_16.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: error_pixi_channel_depth_mismatch
       description: AVIF pixi property declares unequal depths for its color channels; Pillow reports that decoding is not implemented
       test_assets:
