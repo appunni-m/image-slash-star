@@ -1,5 +1,67 @@
 # Versioned compatibility evidence
 
+## JPEG oversubscribed Huffman fallback parity — 2026-10-24
+
+Added active row
+`decode:jpeg:malformed_markers_dht_oversubscribed_retained_tables`. The
+full-file fixture keeps the baseline AC and chroma Huffman tables while
+replacing DC0 with three one-bit codes, an oversubscribed table. Its generator
+is `scripts/generate_jpeg_oversubscribed_dht_fallback_fixture.py`; input
+SHA-256 is
+`d308eee3946fdfa39f65045ee77d49ba407868dbea4a8a421fde3179b45bc457`.
+Pinned Pillow 12.2.0 verifies the JPEG and reports
+`OSError("broken data stream when reading image file")` on decode. The exact
+selected public parity row passed 1/1 with the same malformed result.
+
+The three new JPEG parity rows passed together (3/3) in
+`.coverage-mcp/local-evidence/selected/jpeg-oversubscribed-dht-parity-main-20261024/coverage.json`.
+Coverage MCP's `decode_slow_fast` query observes the length-greater-than-16
+path and the false arm of the invalid-table sentinel check at
+`src/codecs/jpeg/decode/huffman.rs:389-390`; the opposite arms remain
+unobserved. The report has no verified source/build identity or test
+attribution, so these are coordinate observations, not a verified coverage
+gain. No full coverage campaign was run.
+
+The public fixture matrix now contains 2,535 total rows: 2,018 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,018 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
+## JPEG progressive oversubscribed Huffman parity — 2026-10-24
+
+Added active row
+`decode:jpeg:malformed_markers_progressive_dht_oversubscribed`. It mutates
+`progressive_gray.jpg` by replacing only its DC0 DHT with three one-bit codes,
+preserving the other tables. Input SHA-256 is
+`883582bb9b9d43c06f950dca99782441350fa25262ad30247a0d87d2d7bff1b3`. Pinned
+Pillow 12.2.0 verifies the file and reports
+`OSError("broken data stream when reading image file")` on decode. The selected
+public parity row passed 1/1.
+
+Coverage MCP's gap query for the three-row report lists 38 unobserved branch
+coordinates in `progressive_reconstruct`. The report has no verified
+source/build identity or test attribution, so the row-level observations do
+not establish marginal or aggregate coverage gain. No full coverage campaign
+was run.
+
+## JPEG scalar Huffman sentinel parity — 2026-10-24
+
+Added active row
+`decode:jpeg:malformed_markers_dht_oversubscribed_scalar_fallback`. The fixture
+starts from `sampling_3x1.jpg`, retains its sibling Huffman tables, and
+oversubscribes DC0. Its generator is
+`scripts/generate_jpeg_oversubscribed_dht_fallback_fixture.py`; input SHA-256
+is `7e895799133d2308b6e0eef0795c67da67675771693cde3aad1f49dc81bd6625`.
+Pillow 12.2.0 verifies the input and returns the same malformed-stream decode
+error; the selected public parity row passed 1/1.
+
+Coverage MCP's selected query for `HuffTable::decode_slow` at
+`src/codecs/jpeg/decode/huffman.rs:349` lists only the true outcome, showing
+the false outcome in the invalid-table sentinel predicate was observed. Both
+arms at line 360 remain missing in the three-row report. Source/build identity
+and test attribution are unverified, so no marginal or aggregate coverage gain
+is claimed. No full coverage campaign was run.
+
 ## AVIF auxiliary alpha sample-count parity — 2026-10-22
 
 Added `decode:avif:sequence_alpha_sample_count_mismatch` for the pinned
@@ -8381,7 +8443,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `56920e44d257748c122d5ff9d9e1bce61446f44001c2b015a29aa37c79c1fb9d`; matrix `1ba540faeda4cad718c33b9218d2c8287eb6d2f3c109f37bd68ec789aa7f4e01`.
+- Current fixture integrity only: manifest `56920e44d257748c122d5ff9d9e1bce61446f44001c2b015a29aa37c79c1fb9d`; matrix `3e747592a631a8d9d165b5bf818652acf2971806861e950ba822f3968c0d5833`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

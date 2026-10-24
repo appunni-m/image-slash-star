@@ -104,6 +104,8 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app0_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_post_scan_app14_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_trailing_dht_malformed_fixtures.py --check
+	$(PYTHON) scripts/generate_jpeg_oversubscribed_dht_fallback_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_progressive_oversubscribed_dht_fixture.py --check
 	$(PYTHON) scripts/generate_bmp_gif_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_gif_finite_loop_fixture.py --check
 	$(PYTHON) scripts/generate_gif_split_loop_subblocks_fixture.py --check
