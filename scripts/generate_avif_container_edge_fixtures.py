@@ -51,6 +51,7 @@ FIXTURE_SHA256 = {
     "error_grid_descriptor_short_extent.avif": "95670f2861407e944391adfdd75bbc97e6ebd010aedda7850dd65a7286cb49e5",
     "error_grid_descriptor_overlong_extent.avif": "e0ef3f8597d7ae703cd5ccf7ee8eb24293a857ea4c1e86c8828a899508e54e4f",
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
+    "error_infe_zero_item_id.avif": "9cd1623b8c3cf615b708968e90f6b9bb0fb081dbda2185348ebf087db82e7e7f",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
@@ -241,6 +242,32 @@ def zero_iloc_first_item_id(source: bytes) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
         raise RuntimeError("zero iloc item-ID mutation must preserve the file size")
+    return candidate
+
+
+def zero_infe_first_item_id(source: bytes) -> bytes:
+    """Set the baseline's version-two item-info identifier to zero."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iinf":
+            return payload
+        if payload[:6] != bytes.fromhex("000000000001"):
+            raise RuntimeError("file source iinf no longer has its pinned single-entry layout")
+        children = read_boxes(payload, 6, len(payload))
+        if len(children) != 1 or children[0][0] != b"infe":
+            raise RuntimeError("file source iinf no longer contains one infe entry")
+        kind, _, item_info = children[0]
+        if item_info[:6] != bytes.fromhex("020000000001"):
+            raise RuntimeError("file source infe no longer has its pinned version-two item ID")
+        changed += 1
+        item_info = item_info[:4] + bytes(2) + item_info[6:]
+        return payload[:6] + pack_box(kind, item_info)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("zero infe item-ID mutation must preserve the file size")
     return candidate
 
 
@@ -455,6 +482,12 @@ def generate(
             "error_iloc_zero_item_id.avif",
             "file",
             zero_iloc_first_item_id(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_infe_zero_item_id.avif",
+            "file",
+            zero_infe_first_item_id(sources["file"]),
             "open_error",
         ),
         (

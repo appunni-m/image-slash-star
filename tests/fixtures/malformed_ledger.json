@@ -1401,6 +1401,55 @@
         "verify_status": "ok"
       },
       {
+        "asset": "error_infe_zero_item_id.avif",
+        "class": "error_infe_zero_item_id",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete AVIF declares item identifier zero in its version-two infe entry; Pillow rejects the malformed metadata at open",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "invalid_sequence_profile.avif",
         "class": "error_invalid_sequence_profile",
         "contracts": {
@@ -28722,7 +28771,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 68,
+      "avif": 69,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -28732,17 +28781,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 681,
-      "specification_reference": 68
+      "pillow_fixture": 682,
+      "specification_reference": 69
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 407,
+      "spec_violation": 408,
       "tolerated": 0,
       "truncated": 199
     },
-    "classes": 681,
+    "classes": 682,
     "formats": 8
   }
 }
