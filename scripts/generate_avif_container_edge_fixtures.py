@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate complete AVIF track, association and data-reference edge inputs.
+"""Generate AVIF container, track, data-reference and parser-budget edge inputs.
 
 Pinned Pillow accepts version-zero track headers, optional zero property
 indices and ignored nonzero data-reference fields without changing its public
@@ -44,6 +44,7 @@ FIXTURE_SHA256 = {
     "iloc_file_data_reference_65535.avif": "a9d263c7af3c3d1219cf2187bef5916ace90bf1018dfb6fa58650f99f51be0f7",
     "iloc_idat_data_reference_1.avif": "b0689513b0693085ef11397fa967bcc56741ae79b80d8a81d4ef424ce561bea2",
     "iloc_idat_data_reference_65535.avif": "756ea5b7a21c472cee85913fbb64260fccd5267f98900dd2b815760738f07eb4",
+    "trailing_boxes_over_budget.avif": "0a92d1c734bb48ab51ffe4aef1f0c5f5693ca06790058cb9a0c74c4c9eb73971",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -90,6 +91,22 @@ def append_property_index(source: bytes, association: int) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source) + 1:
         raise RuntimeError("property mutation must change exactly one association box")
+    return candidate
+
+
+def append_trailing_boxes_over_budget(source: bytes) -> bytes:
+    """Append valid empty boxes beyond the decoder's 4,096-box budget."""
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError("box-budget source must have the baseline still's three root boxes")
+
+    # Keep this at one beyond container.rs::MAX_BOXES so inspect reaches the
+    # budget guard only after it has parsed the complete still metadata.
+    total_box_count = 4_097
+    additional_count = total_box_count - len(root_boxes)
+    candidate = source + b"".join(pack_box(b"free", b"") for _ in range(additional_count))
+    if len(read_boxes(candidate, 0, len(candidate))) != total_box_count:
+        raise RuntimeError("box-budget fixture must contain exactly 4,097 root boxes")
     return candidate
 
 
@@ -196,7 +213,7 @@ def generate(
     idat_source: Path = IDAT_SOURCE,
     sequence_source: Path = SEQUENCE_SOURCE,
 ) -> tuple[Path, ...]:
-    """Generate or verify nine inputs against live pinned Pillow observations."""
+    """Generate or verify ten inputs against live pinned Pillow observations."""
     manifest = yaml.safe_load((ROOT / "manifest.yaml").read_bytes())
     verify_primary_oracle(manifest)
     sources = {
@@ -209,6 +226,12 @@ def generate(
             raise RuntimeError(f"{name} container-edge source differs from its pinned hash")
     references = {name: pillow_snapshot(data) for name, data in sources.items()}
     variants = [
+        (
+            "trailing_boxes_over_budget.avif",
+            "file",
+            append_trailing_boxes_over_budget(sources["file"]),
+            False,
+        ),
         ("animated_tkhd_version_zero.avif", "sequence", use_version_zero_track_header(sources["sequence"], False), False),
         ("animated_tkhd_version_zero_unknown_duration.avif", "sequence", use_version_zero_track_header(sources["sequence"], True), False),
         ("ipma_optional_zero_index.avif", "idat", append_property_index(sources["idat"], 0), False),
