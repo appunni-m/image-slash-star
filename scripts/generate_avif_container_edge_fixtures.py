@@ -53,6 +53,7 @@ FIXTURE_SHA256 = {
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
     "error_iloc_duplicate_item_id.avif": "37b723c1e183488bbf0ddf7c0cad7ae271f54dfe912b040c4721e0af7e1d48fd",
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
+    "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -287,6 +288,25 @@ def set_iloc_reserved_construction_method_bit(source: bytes) -> bytes:
     return candidate
 
 
+def use_version_one_pitm_wide_item_id(source: bytes) -> bytes:
+    """Encode the pinned primary item ID in pitm's version-one 32-bit field."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"pitm":
+            return payload
+        if payload != bytes.fromhex("000000000001"):
+            raise RuntimeError("indexed-idat pitm no longer has its pinned v0 item ID")
+        changed += 1
+        return bytes.fromhex("0100000000000001")
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 2:
+        raise RuntimeError("version-one pitm mutation changed an unexpected file extent")
+    return candidate
+
+
 def use_version_zero_track_header(source: bytes, unknown_duration: bool) -> bytes:
     """Narrow tkhd fields and rebase the unchanged mdat's file references."""
     changed = {b"tkhd": 0, b"stco": 0, b"iloc": 0}
@@ -448,6 +468,12 @@ def generate(
             "idat",
             set_iloc_reserved_construction_method_bit(sources["idat"]),
             "open_error",
+        ),
+        (
+            "pitm_version_1_wide_item_id.avif",
+            "idat",
+            use_version_one_pitm_wide_item_id(sources["idat"]),
+            None,
         ),
         (
             "error_grid_without_dimg_references.avif",

@@ -7933,6 +7933,13 @@ formats:
       - iinf_version_1_entry_count.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: pitm_version_1_wide_item_id
+      description: Still AVIF encodes its primary item identifier in the version-one 32-bit pitm field with unchanged Pillow pixels
+      test_assets:
+      - pitm_version_1_wide_item_id.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
     - id: iloc_idat_primary_item
       description: Still AVIF stores its unchanged primary AV1 item in meta/idat using construction method one and nonzero base and extent offsets
       test_assets:
