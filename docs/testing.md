@@ -26,7 +26,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Tests | `make test` | Rustdoc, all-feature tests, strict WASI Clippy, and feature/target lanes |
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
-| Selected coverage | `make coverage-selected COVERAGE_CASES='decode:webp:<id>'` | Runs exact matrix cases and writes a local LLVM report with execution evidence |
+| Selected coverage | `make coverage-selected COVERAGE_CASES='decode:webp:<id>'` | Runs exact matrix cases and retains the report, command log, and local execution evidence outside `target/` |
 | Complete coverage | `make coverage-complete` | Requires all four metrics to reach 100% |
 | Package inspection | `make package-verify` | Builds, extracts, and tests the distributable archive |
 | Documentation setup | `make docs-setup` | Creates an isolated environment and installs the hashed lock |
@@ -61,9 +61,9 @@ describes how to regenerate them.
 
 ## Coverage and focused work
 
-Use the repository's registered Coverage MCP flow for incremental source
-claims, with the exact selected fixture IDs and source revision. Report all
-four aggregate totals. Selected-case reports do not establish full coverage,
+Use Coverage MCP for source observations with the exact selected fixture IDs
+and source revision. Report all four aggregate totals (lines, branches,
+functions, and regions). Selected-case reports do not establish full coverage,
 and missing observations are not automatically regressions.
 
 For focused exploration, pass one or more exact manifest keys to
@@ -75,24 +75,48 @@ make coverage-selected COVERAGE_CASES='decode:webp:lossy_vp8 encode:png:enc_rgb'
 
 The runner rejects malformed, duplicate, unknown, and planned-only selections,
 then delegates canonical validation and execution to the existing Rust matrix
-harness. It writes a branch report, captured command log, and a machine-readable
-local evidence file under `target/release-evidence/selected/` (or the path
-provided by `SELECTED_COVERAGE_REPORT`). The local evidence binds the report to
-the Git revision, worktree state, relevant source and fixture hashes, toolchain,
-target, feature set, exact arguments, and qualified per-case execution results.
-It is not a Coverage MCP source/build receipt. After each focused run, query
-Coverage MCP with that report and retain its actual status and limitations;
-the current MCP interface has no local CLI bridge or receipt-registration
-action, so absent provider receipts remain `source=unverified` and
-`tests=unknown`. Do not apply full-suite floors or claim a marginal gain from
-incompatible reports. Use MCP `selected_tests` to inspect coordinate changes
-between focused reports; missing locations in a selection are not regressions.
-Use MCP `incremental` only when the focused report and full-suite baseline have
-matching source/build identity, instrumentation, denominator, and known test
-results. Without those provider receipts MCP returns a limited comparison, so
-the report cannot establish marginal gain or be unioned into the baseline.
-This command stays opt-in and is not part of push, release, or full-coverage CI
-jobs.
+harness. By default it writes the LLVM report, captured command log, and local
+evidence receipt together under a unique
+`.coverage-mcp/local-evidence/selected/<run-id>/` directory. It prints each
+repository-relative path when the run finishes. These artifacts are outside
+`target/`, so target cleanup leaves them in place. They are local, ignored
+evidence; keep a separate copy if you need them beyond this checkout's
+lifetime.
+
+Set `SELECTED_COVERAGE_REPORT` to choose another report path. The report, log,
+and receipt remain adjacent. The runner accepts paths inside the repository,
+rejects paths that resolve outside it, and refuses to overwrite an existing
+report, log, or receipt. The receipt records the Git revision and worktree
+state, relevant source and fixture hashes, toolchain, target, feature set,
+exact command arguments, per-case results, and all four report totals. It is
+local evidence, not a registered Coverage MCP source/build receipt.
+
+After a focused run, pass its printed repository-relative report path to
+Coverage MCP `coverage_gaps` and record the returned status and limitations.
+The current interface exposes `coverage_gaps` and `coverage_compare`; it has no
+local CLI bridge or action to register the receipt. MCP may therefore report
+`source=unverified` and `tests=unknown`. Use `coverage_compare` with scope
+`selected_tests` to compare two selected reports; this reports observed
+coordinates without combining their totals. Use scope `incremental` only when
+the selected report and a resolvable full exploration baseline have compatible
+source/build identity, instrumentation, denominator, and known test results.
+If the baseline is missing, stale, or incompatible, record that limitation
+without claiming aggregate gain or union. Selected reports do not enforce
+full-suite floors. This command stays opt-in and is not part of push, release,
+or full-coverage CI jobs.
+
+Run `make coverage` occasionally to refresh a full exploration baseline, not
+for every selected increment. Give that report its own directory outside
+`target/`:
+
+```sh
+mkdir -p .coverage-mcp/local-evidence/full
+run_dir="$(mktemp -d .coverage-mcp/local-evidence/full/run.XXXXXX)"
+COVERAGE_REPORT="$run_dir/coverage.json" make coverage
+```
+
+This full run still measures the complete source denominator and enforces the
+configured alpha floors. It is not required for each focused change.
 
 The alpha floors are 59% lines, 46% branches, 52% functions, and 58% regions.
 No source exclusions are added to reach those floors. Complete coverage retains
