@@ -48,6 +48,7 @@ FIXTURE_SHA256 = {
     "trailing_boxes_over_budget.avif": "0a92d1c734bb48ab51ffe4aef1f0c5f5693ca06790058cb9a0c74c4c9eb73971",
     "error_iref_records_over_budget_trailing_byte.avif": "a160f1c9ddc2dd178b79ba152ac834d8887c6ec1921b4d5e904ec9df37c2c11c",
     "error_grid_without_dimg_references.avif": "a283fb5590e31db1f491fe1e010a22fec3f55da99080dd4dcc61b95e89d6316a",
+    "error_grid_descriptor_short_extent.avif": "95670f2861407e944391adfdd75bbc97e6ebd010aedda7850dd65a7286cb49e5",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -178,6 +179,26 @@ def replace_grid_dimg_reference_kind(source: bytes) -> bytes:
     return candidate
 
 
+def shorten_grid_descriptor_extent(source: bytes) -> bytes:
+    """Declare only three bytes for the primary grid's eight-byte descriptor."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iloc":
+            return payload
+        expected_prefix = bytes.fromhex("00000000440000050001000000010000027300000008")
+        if payload[: len(expected_prefix)] != expected_prefix:
+            raise RuntimeError("grid source iloc no longer has its pinned primary extent")
+        changed += 1
+        return payload[:18] + struct.pack(">I", 3) + payload[22:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("short grid descriptor mutation must preserve the file size")
+    return candidate
+
+
 def use_version_zero_track_header(source: bytes, unknown_duration: bool) -> bytes:
     """Narrow tkhd fields and rebase the unchanged mdat's file references."""
     changed = {b"tkhd": 0, b"stco": 0, b"iloc": 0}
@@ -294,6 +315,7 @@ def generate(
     file_source: Path = FILE_SOURCE,
     idat_source: Path = IDAT_SOURCE,
     sequence_source: Path = SEQUENCE_SOURCE,
+    check: bool = False,
 ) -> tuple[Path, ...]:
     """Generate or verify inputs against live pinned Pillow observations."""
     manifest = yaml.safe_load((ROOT / "manifest.yaml").read_bytes())
@@ -326,6 +348,12 @@ def generate(
             "grid",
             replace_grid_dimg_reference_kind(sources["grid"]),
             "decode_error",
+        ),
+        (
+            "error_grid_descriptor_short_extent.avif",
+            "grid",
+            shorten_grid_descriptor_extent(sources["grid"]),
+            "open_error",
         ),
         (
             "animated_tkhd_version_zero.avif",
@@ -376,14 +404,18 @@ def generate(
         elif oracle_error is not None:
             raise RuntimeError(f"{filename}: unsupported oracle outcome {oracle_error!r}")
         path = output_dir / filename
-        if path.exists() and path.read_bytes() != data:
+        if check and (not path.exists() or path.read_bytes() != data):
+            raise RuntimeError(f"fixture is missing or differs from its deterministic input: {path}")
+        if not check and path.exists() and path.read_bytes() != data:
             raise RuntimeError(f"refusing to replace a different fixture at {path}")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if not check:
+        output_dir.mkdir(parents=True, exist_ok=True)
     for filename, _, data, _ in variants:
         path = output_dir / filename
-        if not path.exists():
+        if not check and not path.exists():
             path.write_bytes(data)
-        print(f"Verified AVIF container-edge fixture: {path}")
+        action = "Verified" if check else "Generated or verified"
+        print(f"{action} AVIF container-edge fixture: {path}")
     return tuple(output_dir / filename for filename, _, _, _ in variants)
 
 
@@ -393,8 +425,9 @@ def main() -> None:
     parser.add_argument("--file-source", type=Path, default=FILE_SOURCE)
     parser.add_argument("--idat-source", type=Path, default=IDAT_SOURCE)
     parser.add_argument("--sequence-source", type=Path, default=SEQUENCE_SOURCE)
+    parser.add_argument("--check", action="store_true", help="verify fixtures without writing them")
     args = parser.parse_args()
-    generate(args.output_dir, args.file_source, args.idat_source, args.sequence_source)
+    generate(args.output_dir, args.file_source, args.idat_source, args.sequence_source, args.check)
 
 
 if __name__ == "__main__":
