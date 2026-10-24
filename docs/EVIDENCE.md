@@ -1,5 +1,29 @@
 # Versioned compatibility evidence
 
+## AVIF version-one pitm wide item identifier parity — 2026-10-24
+
+Added active parity row `decode:avif:pitm_version_1_wide_item_id`. The
+deterministic generator upgrades the pinned indexed-`idat` still's `pitm`
+primary item field from version zero's 16-bit form to version one's 32-bit form,
+retaining item ID 1. The file grows by two bytes while preserving the full
+encoded media payload; its SHA-256 is
+`985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c`. Pinned
+Pillow 12.2.0 output is unchanged at 49,152 bytes of RGB pixel parity.
+
+The selected parity row passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-pitm-v1-wide-item-id-20261024/coverage.json`.
+Raw LLVM at `src/codecs/avif/samples.rs:554` shows eight visits to the
+version-one 32-bit branch in `parse_pitm`. Coverage MCP had identified that
+arm as uncovered in the full parity report. Its local reports have unverified
+source/build identity and unknown test attribution; incremental comparison is
+incomparable because the full report's exact branch detail is incomplete. No
+aggregate coverage gain is claimed.
+
+The public fixture matrix now contains 2,544 total rows: 2,027 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,027 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF reserved iloc construction-method bit parity — 2026-10-24
 
 Added active parity row
@@ -8588,7 +8612,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6eb368a154b6f4ec7c2fc13e2e0ee9048148c75597205acc7adfc4112efdb3f0`; matrix `dc4a2f36727abd75904054515f0ca6e1713ec0f395e1163e6183440c1c67d254`.
+- Current fixture integrity only: manifest `8a9f9727398930de4b25d22489cc3ba41c1db576642fcae3be085e5900874d55`; matrix `7b8d5c3c088fae898e9f55c7de4a6fa3ee71d6e369c9edeba00b3e569925fb62`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
