@@ -1,5 +1,35 @@
 # Versioned compatibility evidence
 
+## AVIF nonzero pixi FullBox version parity — 2026-10-24
+
+Added active parity row `decode:avif:error_pixi_nonzero_version`. The
+deterministic fixture changes only the baseline still's `pixi` FullBox version
+from zero to one, preserving the complete AV1 payload and 3,077-byte file size.
+Pinned Pillow 12.2.0 rejects the complete input at open with
+`PIL.UnidentifiedImageError: cannot identify image file <bytes>`. The fixture
+SHA-256 is
+`a50bd4126788de5efdeefa05ec6583267311fe021af9168928850589d9fd5689`.
+
+The focused public parity and coverage command passed 1/1 at
+`.coverage-mcp/local-evidence/selected/avif-pixi-nonzero-version-20261024/coverage.json`.
+Raw LLVM records six visits to the nonzero-version arm in
+`src/codecs/avif/samples.rs::parse_property` at line 699. The full report before
+this row recorded zero visits to that arm and 243,967 visits to the version-zero
+arm; the refreshed full report records six and 243,967 visits, respectively.
+Coverage MCP confirmed the arm is now covered in the refreshed report. Its
+incremental comparison is `incomparable` because the baseline's exact branch
+detail is incomplete and report source/test receipts are unverified. No
+aggregate gain is claimed from that comparison.
+
+The refreshed full parity coverage is 93,217/139,046 lines (67.0404%),
+18,487/32,028 branches (57.7214%), 5,189/8,891 functions (58.3624%), and
+142,453/215,942 regions (65.9682%).
+
+The public fixture matrix now contains 2,553 total rows: 2,036 decode / inspect /
+verify rows and 517 encode rows. Of those, 2,036 decode rows and 486 encode
+rows are active; 31 encode rows remain planned. The separate target-only fault
+lane contains 85 cases.
+
 ## AVIF zero-plane pixi parity — 2026-10-24
 
 Added active parity row `decode:avif:error_pixi_zero_planes`. The deterministic
@@ -8782,7 +8812,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `dbf8fcd41644b59d158e4226af36aa58eec6d5c26a06c70ccfc2ca8ce58fa315`; matrix `c97f864cfa496faf842009746af994722dbabb0a7c1e7dbefb461b5e2cee4c4d`.
+- Current fixture integrity only: manifest `3a330d92eebe401cda819fc5ba622022089cf65aa7401a504ef1cc02b431e261`; matrix `a4993f13f02045933b85ca4e5ed398ef323f7f343a02601ea85ec86c1651fbe1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

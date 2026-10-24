@@ -57,6 +57,7 @@ FIXTURE_SHA256 = {
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
     "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
+    "error_pixi_nonzero_version.avif": "a50bd4126788de5efdeefa05ec6583267311fe021af9168928850589d9fd5689",
     "error_pixi_zero_planes.avif": "b29a15defd39037aebaa7dffdd878c828201d1d9adc852302e8c76b123036431",
     "error_pixi_depth_above_16.avif": "bdf5ecf32956f1c05ed93c9b3e5a9fb2381f5429c1996ccb6b5701201fdbd34d",
     "error_pixi_channel_depth_mismatch.avif": "420568bd6387e4262a2b3076a466b0d39efe35f9c01c99a66364352389b92242",
@@ -64,6 +65,7 @@ FIXTURE_SHA256 = {
     "error_iloc_reserved_construction_method_bits.avif": "14045959d327207b120b345879a1c83a6a0cb252526ce9c9a06101244cc60c2f",
     "pitm_version_1_wide_item_id.avif": "985e27b0dbaa32a2835d940ac0729db4b43addf80d207f4598b11d518719874c",
 }
+BASELINE_PIXI_PAYLOAD = bytes.fromhex("0000000003080808")
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
 
@@ -112,10 +114,12 @@ def append_property_index(source: bytes, association: int) -> bytes:
     return candidate
 
 
-def set_pixi_first_channel_depth(source: bytes, depth: int) -> bytes:
-    """Set the baseline pixi property's first channel depth."""
-    if not 0 <= depth <= 255:
-        raise ValueError("pixi channel depth must fit in one byte")
+def set_pixi_byte(source: bytes, offset: int, value: int, field: str) -> bytes:
+    """Set one byte in the pinned baseline pixi property."""
+    if not 0 <= value <= 255:
+        raise ValueError(f"pixi {field} must fit in one byte")
+    if not 0 <= offset < len(BASELINE_PIXI_PAYLOAD):
+        raise ValueError("pixi mutation offset must address the baseline property")
     changed = 0
 
     def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
@@ -126,19 +130,24 @@ def set_pixi_first_channel_depth(source: bytes, depth: int) -> bytes:
         rebuilt = []
         for kind, _, child in children:
             if kind == b"pixi":
-                if child != bytes.fromhex("0000000003080808"):
+                if child != BASELINE_PIXI_PAYLOAD:
                     raise RuntimeError(
                         "file source pixi no longer has its pinned RGB depth layout"
                     )
                 changed += 1
-                child = child[:5] + bytes((depth,)) + child[6:]
+                child = child[:offset] + bytes((value,)) + child[offset + 1 :]
             rebuilt.append(pack_box(kind, child))
         return b"".join(rebuilt)
 
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
-        raise RuntimeError("pixi channel-depth mutation must preserve the file size")
+        raise RuntimeError(f"pixi {field} mutation must preserve the file size")
     return candidate
+
+
+def set_pixi_first_channel_depth(source: bytes, depth: int) -> bytes:
+    """Set the baseline pixi property's first channel depth."""
+    return set_pixi_byte(source, 5, depth, "channel depth")
 
 
 def zero_pixi_first_channel_depth(source: bytes) -> bytes:
@@ -148,58 +157,17 @@ def zero_pixi_first_channel_depth(source: bytes) -> bytes:
 
 def set_pixi_plane_count(source: bytes, planes: int) -> bytes:
     """Set the baseline pixi property's plane count."""
-    if not 0 <= planes <= 255:
-        raise ValueError("pixi plane count must fit in one byte")
-    changed = 0
+    return set_pixi_byte(source, 4, planes, "plane count")
 
-    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
-        nonlocal changed
-        if path != (b"meta", b"iprp", b"ipco"):
-            return payload
-        children = read_boxes(payload, 0, len(payload))
-        rebuilt = []
-        for kind, _, child in children:
-            if kind == b"pixi":
-                if child != bytes.fromhex("0000000003080808"):
-                    raise RuntimeError(
-                        "file source pixi no longer has its pinned RGB depth layout"
-                    )
-                changed += 1
-                child = child[:4] + bytes((planes,)) + child[5:]
-            rebuilt.append(pack_box(kind, child))
-        return b"".join(rebuilt)
 
-    candidate = rewrite_boxes(source, transform)
-    if changed != 1 or len(candidate) != len(source):
-        raise RuntimeError("pixi plane-count mutation must preserve the file size")
-    return candidate
+def set_pixi_full_box_version(source: bytes, version: int) -> bytes:
+    """Set the baseline pixi property's FullBox version byte."""
+    return set_pixi_byte(source, 0, version, "FullBox version")
 
 
 def mismatch_pixi_second_channel_depth(source: bytes) -> bytes:
     """Set only the baseline pixi property's second channel depth to seven."""
-    changed = 0
-
-    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
-        nonlocal changed
-        if path != (b"meta", b"iprp", b"ipco"):
-            return payload
-        children = read_boxes(payload, 0, len(payload))
-        rebuilt = []
-        for kind, _, child in children:
-            if kind == b"pixi":
-                if child != bytes.fromhex("0000000003080808"):
-                    raise RuntimeError(
-                        "file source pixi no longer has its pinned RGB depth layout"
-                    )
-                changed += 1
-                child = child[:6] + bytes((7,)) + child[7:]
-            rebuilt.append(pack_box(kind, child))
-        return b"".join(rebuilt)
-
-    candidate = rewrite_boxes(source, transform)
-    if changed != 1 or len(candidate) != len(source):
-        raise RuntimeError("pixi channel-depth mismatch must preserve the file size")
-    return candidate
+    return set_pixi_byte(source, 6, 7, "second channel depth")
 
 
 def append_trailing_boxes_over_budget(source: bytes) -> bytes:
@@ -683,6 +651,12 @@ def generate(
             "error_pixi_zero_depth.avif",
             "file",
             zero_pixi_first_channel_depth(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_pixi_nonzero_version.avif",
+            "file",
+            set_pixi_full_box_version(sources["file"], 1),
             "open_error",
         ),
         (
