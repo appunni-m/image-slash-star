@@ -297,6 +297,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_auxc_nonzero_version.avif",
+        "class": "error_auxc_nonzero_version",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "AVIF alpha auxC property uses a nonzero FullBox version; Pillow rejects it at open",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "error_av1c_invalid_marker.avif",
         "class": "error_av1c_invalid_marker",
         "contracts": {
@@ -29163,7 +29212,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 77,
+      "avif": 78,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -29173,17 +29222,17 @@
       "webp": 141
     },
     "by_origin": {
-      "pillow_fixture": 690,
-      "specification_reference": 77
+      "pillow_fixture": 691,
+      "specification_reference": 78
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 416,
+      "spec_violation": 417,
       "tolerated": 0,
       "truncated": 199
     },
-    "classes": 690,
+    "classes": 691,
     "formats": 8
   }
 }

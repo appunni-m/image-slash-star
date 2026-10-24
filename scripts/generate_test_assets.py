@@ -19068,6 +19068,7 @@ def gen_avif():
         file_source=baseline_path,
         idat_source=d / "iloc_idat_indexed_extent.avif",
         sequence_source=d / "animated.avif",
+        alpha_source=d / "alpha.avif",
     )
 
     meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(
