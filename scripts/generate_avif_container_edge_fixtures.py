@@ -45,6 +45,7 @@ FIXTURE_SHA256 = {
     "iloc_idat_data_reference_1.avif": "b0689513b0693085ef11397fa967bcc56741ae79b80d8a81d4ef424ce561bea2",
     "iloc_idat_data_reference_65535.avif": "756ea5b7a21c472cee85913fbb64260fccd5267f98900dd2b815760738f07eb4",
     "trailing_boxes_over_budget.avif": "0a92d1c734bb48ab51ffe4aef1f0c5f5693ca06790058cb9a0c74c4c9eb73971",
+    "error_iref_records_over_budget_trailing_byte.avif": "a160f1c9ddc2dd178b79ba152ac834d8887c6ec1921b4d5e904ec9df37c2c11c",
 }
 CONTAINER_KINDS = (b"moov", b"trak", b"mdia", b"minf", b"stbl", b"iprp")
 
@@ -107,6 +108,47 @@ def append_trailing_boxes_over_budget(source: bytes) -> bytes:
     candidate = source + b"".join(pack_box(b"free", b"") for _ in range(additional_count))
     if len(read_boxes(candidate, 0, len(candidate))) != total_box_count:
         raise RuntimeError("box-budget fixture must contain exactly 4,097 root boxes")
+    return candidate
+
+
+def append_reference_records_over_budget(source: bytes) -> bytes:
+    """Append an oversized item-reference table with a malformed trailing byte.
+
+    The still's item-information and property tables consume ten records in
+    the sample parser. The 4,088 references exceed its 4,096-record budget
+    before the parser retains them. Pillow rejects the malformed trailing
+    child while preserving the media bytes.
+    """
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError("record-budget source must have the baseline still's three root boxes")
+
+    reference_count = 4_088
+    reference_payload = (
+        struct.pack(">HH", 1, reference_count)
+        + struct.pack(">H", 1) * reference_count
+    )
+    reference_child = pack_box(b"zzzz", reference_payload)
+    iref = pack_box(b"iref", bytes(4) + reference_child + b"\x00")
+    offset_delta = len(iref)
+    changed = {b"meta": 0, b"iloc": 0}
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        kind = path[-1]
+        if kind == b"iloc":
+            if len(payload) != 22 or payload[4:6] != bytes.fromhex("4400"):
+                raise RuntimeError("record-budget source iloc layout changed")
+            changed[kind] += 1
+            offset = struct.unpack_from(">I", payload, 14)[0]
+            return payload[:14] + struct.pack(">I", offset + offset_delta) + payload[18:]
+        if kind == b"meta":
+            changed[kind] += 1
+            return payload + iref
+        return payload
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != {b"meta": 1, b"iloc": 1} or len(candidate) != len(source) + offset_delta:
+        raise RuntimeError("record-budget mutation changed unexpected container fields")
     return candidate
 
 
@@ -213,7 +255,7 @@ def generate(
     idat_source: Path = IDAT_SOURCE,
     sequence_source: Path = SEQUENCE_SOURCE,
 ) -> tuple[Path, ...]:
-    """Generate or verify ten inputs against live pinned Pillow observations."""
+    """Generate or verify inputs against live pinned Pillow observations."""
     manifest = yaml.safe_load((ROOT / "manifest.yaml").read_bytes())
     verify_primary_oracle(manifest)
     sources = {
@@ -231,6 +273,12 @@ def generate(
             "file",
             append_trailing_boxes_over_budget(sources["file"]),
             False,
+        ),
+        (
+            "error_iref_records_over_budget_trailing_byte.avif",
+            "file",
+            append_reference_records_over_budget(sources["file"]),
+            True,
         ),
         ("animated_tkhd_version_zero.avif", "sequence", use_version_zero_track_header(sources["sequence"], False), False),
         ("animated_tkhd_version_zero_unknown_duration.avif", "sequence", use_version_zero_track_header(sources["sequence"], True), False),
