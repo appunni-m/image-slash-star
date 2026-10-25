@@ -2569,17 +2569,13 @@ fn encode_baseline_420_mcu_pair(
     // The pair loop visits only existing 16-pixel MCUs, so each first luma
     // column is present. Only the adjacent column and second row need checks.
     let second_luma_row_present = first_y_row.saturating_add(1) < y_block_rows;
-    let first_present = [
-        true,
-        first_y_column.saturating_add(1) < y_block_columns,
-        second_luma_row_present,
-        first_y_column.saturating_add(1) < y_block_columns && second_luma_row_present,
-        true,
-        true,
-    ];
+    let first_presence = Mcu420LumaPresence {
+        right_column: first_y_column.saturating_add(1) < y_block_columns,
+        bottom_row: second_luma_row_present,
+    };
     let (first_differences, predictors_after_first) =
-        mcu_dc_differences(first_values, first_present, previous_dc);
-    if first_present.iter().all(|&present| present) {
+        mcu_dc_differences(first_values, first_presence, previous_dc);
+    if first_presence.is_full() {
         encode_six_coefficient_major_raw_blocks(
             writers,
             first_blocks,
@@ -2597,7 +2593,7 @@ fn encode_baseline_420_mcu_pair(
             writers,
             first_blocks,
             first_differences,
-            first_present,
+            first_presence,
             luma_dc,
             luma_ac,
             chroma_dc,
@@ -2644,17 +2640,13 @@ fn encode_baseline_420_mcu_pair(
     let second_y_column = pair_mcu_x.saturating_add(1).saturating_mul(2);
     // The guard above proves that the next 16-pixel MCU exists, so its first
     // luma column is present too.
-    let second_present = [
-        true,
-        second_y_column.saturating_add(1) < y_block_columns,
-        second_luma_row_present,
-        second_y_column.saturating_add(1) < y_block_columns && second_luma_row_present,
-        true,
-        true,
-    ];
+    let second_presence = Mcu420LumaPresence {
+        right_column: second_y_column.saturating_add(1) < y_block_columns,
+        bottom_row: second_luma_row_present,
+    };
     let (second_differences, predictors_after_second) =
-        mcu_dc_differences(second_values, second_present, predictors_after_first);
-    if second_present.iter().all(|&present| present) {
+        mcu_dc_differences(second_values, second_presence, predictors_after_first);
+    if second_presence.is_full() {
         encode_six_coefficient_major_raw_blocks(
             writers,
             second_blocks,
@@ -2672,7 +2664,7 @@ fn encode_baseline_420_mcu_pair(
             writers,
             second_blocks,
             second_differences,
-            second_present,
+            second_presence,
             luma_dc,
             luma_ac,
             chroma_dc,
@@ -3883,39 +3875,57 @@ impl CoefficientMajorBlock<'_> {
     }
 }
 
+#[derive(Clone, Copy)]
+struct Mcu420LumaPresence {
+    right_column: bool,
+    bottom_row: bool,
+}
+
+impl Mcu420LumaPresence {
+    #[inline(always)]
+    const fn is_full(self) -> bool {
+        self.right_column && self.bottom_row
+    }
+}
+
 #[inline(always)]
 fn mcu_dc_differences(
     values: [i32; 6],
-    present: [bool; 6],
+    presence: Mcu420LumaPresence,
     mut predictors: [i32; 3],
 ) -> ([i32; 6], [i32; 3]) {
     let mut differences = [0i32; 6];
-    for block in 0usize..4 {
-        if present[block] {
-            differences[block] = values[block].saturating_sub(predictors[0]);
-            predictors[0] = values[block];
-        }
+    differences[0] = values[0].saturating_sub(predictors[0]);
+    predictors[0] = values[0];
+    if presence.right_column {
+        differences[1] = values[1].saturating_sub(predictors[0]);
+        predictors[0] = values[1];
     }
-    for block in 4usize..6 {
-        if present[block] {
-            let component = block.saturating_sub(3);
-            differences[block] = values[block].saturating_sub(predictors[component]);
-            predictors[component] = values[block];
-        }
+    if presence.bottom_row {
+        differences[2] = values[2].saturating_sub(predictors[0]);
+        predictors[0] = values[2];
     }
+    if presence.is_full() {
+        differences[3] = values[3].saturating_sub(predictors[0]);
+        predictors[0] = values[3];
+    }
+    differences[4] = values[4].saturating_sub(predictors[1]);
+    predictors[1] = values[4];
+    differences[5] = values[5].saturating_sub(predictors[2]);
+    predictors[2] = values[5];
     (differences, predictors)
 }
 
 #[allow(
     clippy::too_many_arguments,
-    reason = "partial edge MCUs require six presence flags and separate luma/chroma tables"
+    reason = "partial 4:2:0 edge MCUs have two variable luma extents and separate luma/chroma tables"
 )]
 #[inline(always)]
 fn encode_six_coefficient_major_edge_raw_blocks(
     writers: &mut [RawBlockWriter; 6],
     blocks: [CoefficientMajorBlock<'_>; 6],
     dc_differences: [i32; 6],
-    present: [bool; 6],
+    presence: Mcu420LumaPresence,
     luma_dc: &huffman::DerivedTable,
     luma_ac: &huffman::DerivedTable,
     chroma_dc: &huffman::DerivedTable,
@@ -3923,6 +3933,10 @@ fn encode_six_coefficient_major_edge_raw_blocks(
     luma_ready: &huffman::CoefficientReadyTable,
     chroma_ready: &huffman::CoefficientReadyTable,
 ) {
+    // This path runs only for an incomplete edge MCU. Its top-left luma block
+    // and both chroma blocks always exist; its bottom-right luma block cannot
+    // exist unless all four luma blocks are present and the full-block path is
+    // selected instead.
     let [writer0, writer1, writer2, writer3, writer4, writer5] = writers;
     writer0.reset();
     writer1.reset();
@@ -3930,44 +3944,34 @@ fn encode_six_coefficient_major_edge_raw_blocks(
     writer3.reset();
     writer4.reset();
     writer5.reset();
-    for (writer, difference, is_present) in [
-        (&mut *writer0, dc_differences[0], present[0]),
-        (&mut *writer1, dc_differences[1], present[1]),
-        (&mut *writer2, dc_differences[2], present[2]),
-        (&mut *writer3, dc_differences[3], present[3]),
-    ] {
-        encode_raw_dc(writer, difference, luma_dc);
-        if !is_present {
-            writer.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
-        }
+    encode_raw_dc(writer0, dc_differences[0], luma_dc);
+    encode_raw_dc(writer1, dc_differences[1], luma_dc);
+    if !presence.right_column {
+        writer1.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
     }
-    for (writer, difference, is_present) in [
-        (&mut *writer4, dc_differences[4], present[4]),
-        (&mut *writer5, dc_differences[5], present[5]),
-    ] {
-        encode_raw_dc(writer, difference, chroma_dc);
-        if !is_present {
-            writer.write(u64::from(chroma_ac.codes[0]), chroma_ac.lengths[0]);
-        }
+    encode_raw_dc(writer2, dc_differences[2], luma_dc);
+    if !presence.bottom_row {
+        writer2.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
     }
+    encode_raw_dc(writer3, dc_differences[3], luma_dc);
+    writer3.write(u64::from(luma_ac.codes[0]), luma_ac.lengths[0]);
+    encode_raw_dc(writer4, dc_differences[4], chroma_dc);
+    encode_raw_dc(writer5, dc_differences[5], chroma_dc);
 
     let mut run0 = 0u32;
     let mut run1 = 0u32;
     let mut run2 = 0u32;
-    let mut run3 = 0u32;
     let mut run4 = 0u32;
     let mut run5 = 0u32;
     for &coefficient_index in &ZIGZAG[1..] {
-        if present[0] {
-            encode_raw_ac_value(
-                writer0,
-                blocks[0].coefficient(coefficient_index),
-                &mut run0,
-                luma_ac,
-                luma_ready,
-            );
-        }
-        if present[1] {
+        encode_raw_ac_value(
+            writer0,
+            blocks[0].coefficient(coefficient_index),
+            &mut run0,
+            luma_ac,
+            luma_ready,
+        );
+        if presence.right_column {
             encode_raw_ac_value(
                 writer1,
                 blocks[1].coefficient(coefficient_index),
@@ -3976,7 +3980,7 @@ fn encode_six_coefficient_major_edge_raw_blocks(
                 luma_ready,
             );
         }
-        if present[2] {
+        if presence.bottom_row {
             encode_raw_ac_value(
                 writer2,
                 blocks[2].coefficient(coefficient_index),
@@ -3985,52 +3989,30 @@ fn encode_six_coefficient_major_edge_raw_blocks(
                 luma_ready,
             );
         }
-        if present[3] {
-            encode_raw_ac_value(
-                writer3,
-                blocks[3].coefficient(coefficient_index),
-                &mut run3,
-                luma_ac,
-                luma_ready,
-            );
-        }
-        if present[4] {
-            encode_raw_ac_value(
-                writer4,
-                blocks[4].coefficient(coefficient_index),
-                &mut run4,
-                chroma_ac,
-                chroma_ready,
-            );
-        }
-        if present[5] {
-            encode_raw_ac_value(
-                writer5,
-                blocks[5].coefficient(coefficient_index),
-                &mut run5,
-                chroma_ac,
-                chroma_ready,
-            );
-        }
+        encode_raw_ac_value(
+            writer4,
+            blocks[4].coefficient(coefficient_index),
+            &mut run4,
+            chroma_ac,
+            chroma_ready,
+        );
+        encode_raw_ac_value(
+            writer5,
+            blocks[5].coefficient(coefficient_index),
+            &mut run5,
+            chroma_ac,
+            chroma_ready,
+        );
     }
-    if present[0] {
-        finish_raw_ac(writer0, run0, luma_ac);
-    }
-    if present[1] {
+    finish_raw_ac(writer0, run0, luma_ac);
+    if presence.right_column {
         finish_raw_ac(writer1, run1, luma_ac);
     }
-    if present[2] {
+    if presence.bottom_row {
         finish_raw_ac(writer2, run2, luma_ac);
     }
-    if present[3] {
-        finish_raw_ac(writer3, run3, luma_ac);
-    }
-    if present[4] {
-        finish_raw_ac(writer4, run4, chroma_ac);
-    }
-    if present[5] {
-        finish_raw_ac(writer5, run5, chroma_ac);
-    }
+    finish_raw_ac(writer4, run4, chroma_ac);
+    finish_raw_ac(writer5, run5, chroma_ac);
 }
 
 #[allow(
