@@ -6019,6 +6019,57 @@
       }
     },
     {
+      "id": "enc_lossless_predictor_sampling_limit",
+      "source_asset": "webp_lossless_predictor_sampling_limit_1025x512.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "6dfd5e7e7cb493ce2be907120c2331af3777be40afc9cf66a14c7a47d0e44c58",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 5
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossless_predictor_sampling_limit_1025x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 5
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless_grayscale_alpha_predictor",
       "source_asset": "webp_lossless_gray_alpha_predictor.png",
       "source_format": "png",
