@@ -11345,6 +11345,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "baseline_grayscale_duplicate_component_scan.jpg",
+        "class": "baseline_grayscale_duplicate_component_scan",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline grayscale JPEG repeats its sole component in a second scan; Pillow verifies but rejects pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "corrupt.jpg",
         "class": "corrupt_header",
         "contracts": {
@@ -29664,23 +29696,23 @@
       "bmp": 86,
       "gif": 49,
       "ico": 31,
-      "jpeg": 108,
+      "jpeg": 109,
       "png": 65,
       "tiff": 144,
       "webp": 142
     },
     "by_origin": {
-      "pillow_fixture": 703,
+      "pillow_fixture": 704,
       "specification_reference": 78
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 428,
+      "spec_violation": 429,
       "tolerated": 0,
       "truncated": 200
     },
-    "classes": 703,
+    "classes": 704,
     "formats": 8
   }
 }
