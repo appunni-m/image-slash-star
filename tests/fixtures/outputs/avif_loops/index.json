@@ -653,9 +653,9 @@
   ],
   "artifacts": [
     {
-      "bytes": 15528,
+      "bytes": 15390,
       "path": "README.md",
-      "sha256": "d6c774715ddf541c46ed02266c2f9d40f6b75c3eda3c6e183bfa4f81f6b4261a"
+      "sha256": "f50b3112c3656abbb0646b24c6ebacd610dc7382962a7075ed370ee4b5c5ccfb"
     },
     {
       "bytes": 2267,

@@ -2,9 +2,9 @@
 
 This bundle records 113 input observations made with Pillow 12.2.0 and
 libavif 1.4.1/dav1d 1.5.3. Of these, 105 accepted files decode completely;
-eight malformed files fail native parsing and Pillow opening. The 356 hashed
-artifacts total 12,773,463 bytes, including 113 inputs, the compiled observer
-source, and 12,167,420 bytes of Pillow-decoded frame outputs. Mutation cases
+eight malformed files fail native parsing and Pillow opening. The 359 hashed
+artifacts total 12,776,646 bytes, including 114 input files, the compiled
+observer source, and 12,168,956 bytes of Pillow-decoded frame outputs. Mutation cases
 share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
