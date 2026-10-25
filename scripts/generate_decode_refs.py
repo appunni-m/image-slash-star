@@ -3362,6 +3362,9 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds",
             "decode_with_token_error_then_retry_succeeds",
         },
+        "tiff.header.registered_magic_rejection": {
+            "decode_error_then_retry_succeeds"
+        },
         "tiff.strip_assembly.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

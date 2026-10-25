@@ -553,6 +553,14 @@ FAULT_CONTRACTS = {
         "point": "tiff.lzw.zero_expected_output",
         "contract": "decode_with_token_error_then_retry_succeeds",
     },
+    "tiff_header_registered_magic_rejection": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_header_registered_magic_rejection",
+        "source_case": "decode:tiff:compression_lzw",
+        "point": "tiff.header.registered_magic_rejection",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

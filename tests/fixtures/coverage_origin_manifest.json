@@ -382,7 +382,7 @@
       "path": "src/codecs/png/inspect.rs"
     },
     {
-      "guard_count": 17,
+      "guard_count": 18,
       "guards": [
         {
           "index": 1,
@@ -450,6 +450,10 @@
         },
         {
           "index": 17,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 18,
           "origin": "defensive_model"
         }
       ],

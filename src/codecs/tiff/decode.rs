@@ -1424,6 +1424,14 @@ pub(super) fn parse_header(data: &[u8]) -> CodecResult<(Endian, usize)> {
         Endian::Little => matches!(magic, b"\x2a\x00" | b"\x00\x2a" | b"\x2b\x00"),
         Endian::Big => matches!(magic, b"\x00\x2a" | b"\x2a\x00" | b"\x00\x2b"),
     };
+    #[cfg(coverage)]
+    let registered = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffUnregisteredMagic,
+    ) {
+        false
+    } else {
+        registered
+    };
     if !registered {
         return Err(CodecError::Malformed("TIFF magic is invalid".to_owned()));
     }

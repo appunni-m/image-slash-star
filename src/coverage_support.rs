@@ -150,6 +150,8 @@ pub enum CoverageFaultPoint {
     TiffRgb16OutputReservation,
     /// Force TIFF LZW decoding to observe a zero expected output length.
     TiffLzwZeroExpectedOutput,
+    /// Force TIFF header validation to reject an otherwise registered magic value.
+    TiffUnregisteredMagic,
     /// Report a TIFF subsampled YCbCr clump-buffer length mismatch.
     TiffYcbcrClumpLengthMismatch,
     /// Force specialized TIFF YCbCr RGB output reservation to fail.
