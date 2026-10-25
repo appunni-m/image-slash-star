@@ -29,6 +29,7 @@ SOURCE_PINS = {
     "baseline_420.jpg": (5948, "c669c42fcf388430afd4400bbdcbc66f30165d50e4b162ed77e1f67392cce4ef"),
     "progressive_spectral.jpg": (3939, "13588c6b896b425d2a0e2798e29702053f9f8a912d0b2b47efb2990d75ad392e"),
     "baseline_444_multiscan_interleaved_restart.jpg": (649, "ddbcf29eb1549aae0356661ff2b879b7b2b23b7aae924adbb424af22246e20d7"),
+    "grayscale_sampling_420_128x128.jpg": (11384, "ec3d968f651020392282ddf1ff6734ae45d95ccd4f4f7e69658f8a25be435cce"),
 }
 
 
@@ -44,6 +45,7 @@ class Recipe:
     scan_index: int = 0
     open_error: bool = False
     component_records: bytes | None = None
+    source_count: int = 3
 
 
 RECIPES = (
@@ -62,6 +64,7 @@ RECIPES = (
         7,
         source="progressive_spectral.jpg",
         scan_index=1,
+        source_count=1,
     ),
     Recipe(
         "error_baseline_multiscan_second_sos_length_7",
@@ -69,6 +72,7 @@ RECIPES = (
         7,
         source="baseline_444_multiscan_interleaved_restart.jpg",
         scan_index=1,
+        source_count=1,
     ),
     Recipe(
         "baseline_420_reversed_chroma_sos_order",
@@ -76,6 +80,15 @@ RECIPES = (
         12,
         source="baseline_420.jpg",
         component_records=bytes.fromhex("01 00 03 11 02 11"),
+    ),
+    Recipe(
+        "baseline_grayscale_duplicate_sos_component",
+        "7327cfb484a3a6b56770954730a79e6619ec9edb1ddcaf34ed7c7820a1b6a085",
+        10,
+        count=2,
+        source="grayscale_sampling_420_128x128.jpg",
+        component_records=bytes.fromhex("01 00 01 00"),
+        source_count=1,
     ),
 )
 
@@ -133,30 +146,48 @@ def mutate(source: bytes, recipe: Recipe) -> bytes:
         raise RuntimeError("SOS source must be complete and contain the selected scan")
     marker = scans[recipe.scan_index][0]
     length_offset = marker + 2
-    expected_length, expected_count = (12, 3) if recipe.scan_index == 0 else (8, 1)
+    expected_count = recipe.source_count
+    expected_length = 6 + 2 * expected_count
     if (
         source[marker:marker + 2] != b"\xff\xda"
         or struct.unpack_from(">H", source, length_offset)[0] != expected_length
         or source[length_offset + 2] != expected_count
     ):
         raise RuntimeError("pinned SOS declaration changed")
-    candidate = bytearray(source)
-    candidate[length_offset:length_offset + 2] = struct.pack(">H", recipe.length)
-    allowed = set(range(length_offset, length_offset + 2))
-    if recipe.count is not None:
-        candidate[length_offset + 2] = recipe.count
-        allowed.add(length_offset + 2)
+    output_length_delta = 0
     if recipe.component_records is not None:
-        records_start = length_offset + 3
-        records_end = records_start + len(recipe.component_records)
-        if len(recipe.component_records) != expected_count * 2:
-            raise RuntimeError("replacement SOS component records do not match the source count")
-        candidate[records_start:records_end] = recipe.component_records
-        allowed.update(range(records_start, records_end))
-    if any(a != b and index not in allowed for index, (a, b) in enumerate(zip(source, candidate))):
-        raise RuntimeError("SOS mutation changed media or an unrelated field")
-    output = bytes(candidate)
-    if len(output) != len(source) or hashlib.sha256(output).hexdigest() != recipe.sha256:
+        target_count = recipe.count
+        if target_count is None:
+            target_count = len(recipe.component_records) // 2
+        if len(recipe.component_records) != target_count * 2:
+            raise RuntimeError("replacement SOS component records do not match the target count")
+        if recipe.length != 6 + len(recipe.component_records):
+            raise RuntimeError("replacement SOS length does not match its component records")
+        source_segment_end = marker + 2 + expected_length
+        source_fields_start = length_offset + 3 + expected_count * 2
+        spectral_fields = source[source_fields_start:source_segment_end]
+        if len(spectral_fields) != 3:
+            raise RuntimeError("pinned SOS spectral fields are incomplete")
+        segment_prefix = bytearray(source[marker:length_offset + 3])
+        struct.pack_into(">H", segment_prefix, 2, recipe.length)
+        segment_prefix[4] = target_count
+        replacement = bytes(segment_prefix) + recipe.component_records + spectral_fields
+        output = source[:marker] + replacement + source[source_segment_end:]
+        output_length_delta = len(recipe.component_records) - 2 * expected_count
+    else:
+        candidate = bytearray(source)
+        candidate[length_offset:length_offset + 2] = struct.pack(">H", recipe.length)
+        allowed = set(range(length_offset, length_offset + 2))
+        if recipe.count is not None:
+            candidate[length_offset + 2] = recipe.count
+            allowed.add(length_offset + 2)
+        if any(a != b and index not in allowed for index, (a, b) in enumerate(zip(source, candidate))):
+            raise RuntimeError("SOS mutation changed media or an unrelated field")
+        output = bytes(candidate)
+    if (
+        len(output) != len(source) + output_length_delta
+        or hashlib.sha256(output).hexdigest() != recipe.sha256
+    ):
         raise RuntimeError(f"complete SOS fixture hash changed: {recipe.name}")
     return output
 
@@ -167,7 +198,7 @@ def generate_fixtures(
     source_dir: Path = DEFAULT_DIRECTORY,
     check: bool = False,
 ) -> tuple[Path, ...]:
-    """Validate all twelve live outcomes before publishing or checking inputs."""
+    """Validate every pinned live outcome before publishing or checking inputs."""
     verify_primary_oracle(yaml.safe_load((ROOT / "manifest.yaml").read_text()))
     sources = {}
     source_metadata = {}
