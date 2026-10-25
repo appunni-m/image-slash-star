@@ -123,6 +123,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_tiff_palette4_fillorder2_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_ycbcr_subsampled_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_signed_private_tags_fixture.py --check
+	$(PYTHON) scripts/generate_tiff_later_ifd_bits_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_animated_top_level_image_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_animated_origin_partial_fixture.py --check
 	$(PYTHON) scripts/generate_webp_lossless_run_cap_fixture.py --check

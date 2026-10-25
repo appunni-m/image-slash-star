@@ -672,6 +672,12 @@ fn count_directories(data: &[u8], first_offset: usize, endian: Endian) -> (u32, 
                 break;
             }
         };
+        // Pillow cannot finish frame-count enumeration when a later page has
+        // no usable sample depth or gives its samples different bit widths.
+        if seen.len() > 1 && directory.numeric_values_are_nonempty_and_uniform(258) == Some(false) {
+            complete = false;
+            break;
+        }
         offset = directory.next_offset();
     }
     (bounded_u32(seen.len()), complete)

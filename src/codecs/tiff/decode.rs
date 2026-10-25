@@ -4320,6 +4320,35 @@ impl<'a> Directory<'a> {
         Some(values)
     }
 
+    /// Check whether a present numeric field has at least one uniform value.
+    ///
+    /// The byte scan avoids allocating a decoded value vector during IFD-chain
+    /// inspection. Missing and unsupported fields return `None`.
+    pub(super) fn numeric_values_are_nonempty_and_uniform(&self, tag: u16) -> Option<bool> {
+        let entry = self.entries.iter().find(|entry| entry.tag == tag)?;
+        if entry.count == 0 {
+            return Some(false);
+        }
+
+        let value_width = entry.byte_len.checked_div(entry.count)?;
+        if value_width == 0 || entry.byte_len.checked_rem(entry.count)? != 0 {
+            return Some(false);
+        }
+        let position = if entry.byte_len <= 4 {
+            entry.inline_position
+        } else {
+            entry.value_position
+        };
+        let end = position.checked_add(entry.byte_len)?;
+        let bytes = self.data.get(position..end)?;
+        let mut values = bytes.chunks_exact(value_width);
+        let first = values.next()?;
+        if !values.remainder().is_empty() {
+            return Some(false);
+        }
+        Some(values.all(|value| value == first))
+    }
+
     pub(super) fn field_type(&self, tag: u16) -> Option<u16> {
         self.fields
             .iter()

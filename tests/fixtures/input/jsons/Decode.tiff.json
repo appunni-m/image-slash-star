@@ -21300,6 +21300,128 @@
       ]
     },
     {
+      "id": "later_ifd_mixed_bits",
+      "asset": "later_ifd_mixed_bits.tiff",
+      "asset_sha256": "e403d7283ffbce1891e93f79000ab41ed71a2f6cd2912302b5d0f47c8b8ef649",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "unknown pixel mode",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": true,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/later_ifd_mixed_bits.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "later_ifd_empty_bits",
+      "asset": "later_ifd_empty_bits.tiff",
+      "asset_sha256": "41e519c3bdaed68e0a4cea7a800a0969d0841560c042f15805d1625c29270be4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "unknown pixel mode",
+          "rust_kind": "malformed",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": true,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/later_ifd_empty_bits.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "cyclic_ifd_leniency",
       "asset": "cyclic_ifd.tiff",
       "asset_sha256": "fb45342f6b3cd9e556a574e61ca5452de98d26222d33c3fb42e13851a83c8b21",

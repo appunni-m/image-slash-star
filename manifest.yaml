@@ -7748,6 +7748,16 @@ formats:
       description: Multi-page RGBA TIFF preserves straight-alpha samples on each page
       test_assets:
       - rgba_animation_transparency.tiff
+    - id: later_ifd_mixed_bits
+      description: Pillow decodes TIFF page one but rejects sequence enumeration when a later IFD has mixed BitsPerSample values
+      test_assets:
+      - later_ifd_mixed_bits.tiff
+      expect_sequence_error: true
+    - id: later_ifd_empty_bits
+      description: Pillow decodes TIFF page one but rejects sequence enumeration when a later IFD has an empty BitsPerSample tag
+      test_assets:
+      - later_ifd_empty_bits.tiff
+      expect_sequence_error: true
     - id: cyclic_ifd_leniency
       description: Pillow stops a self-referential IFD chain after the first unique page
       test_assets:
