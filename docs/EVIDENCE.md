@@ -1,5 +1,14 @@
 # Versioned compatibility evidence
 
+## WebP color-transform size-field truncation parity — 2026-10-25
+
+Added a malformed VP8L stream that completes a subtract-green transform and
+leaves only two of the following transform's three size bits. Pinned Pillow
+accepts it in `verify` and reports `OSError: failed to read next frame` during
+decode. The independent VP8L parser classifies the failure as a truncated
+transform header at bit offset 46. The selected public parity case passed 1/1.
+The current matrix contains 2,593 total rows: 2,075 decode / inspect / verify rows and 518 encode rows. Of those, 2,075 decode rows and 487 encode rows are active; 31 encode rows remain planned. This targeted run does not establish an aggregate coverage gain.
+
 ## Full local coverage snapshot — 2026-10-25
 
 `make COVERAGE_REPORT='.coverage-mcp/local-evidence/full-20261025-jpeg-even-upsampling/coverage.json' coverage`
@@ -9385,7 +9394,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `00451e50a533c5d0555ea3e36c8082ca710613ed06e9faa20fd08c963de7dcf4`; matrix `e58f9f860f1b98cf58f8e20ef5ebb95d58eda593e3dda03c863edf926fd68c9c`.
+- Current fixture integrity only: manifest `4546962e61dfd114d8e27d6bb2b17b5c6046a94e7926fb1c341e32b415dfe981`; matrix `e78f7e295fd7063b0c5f0c3bbbdbcd064ab548c02fcb5d1f9cff95d328563f13`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
