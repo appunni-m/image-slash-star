@@ -44,6 +44,15 @@ ASSET = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
 ASSET_64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
     "animated_lossless_inter_420_b32x32_10bit_64x64.avif"
 )
+ASSET_B32_FULL_TEXTURE_PARTITION32 = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "input"
+    / "images"
+    / "avif"
+    / "animated_lossless_inter_420_b32x32_10bit_partition32_full_texture.avif"
+)
 ASSET_CLIPPED_B32_28X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
     "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif"
 )
@@ -70,6 +79,25 @@ FIXTURE_SPECS = {
         "expected_frame_sha256": (
             "0a9a2996f570e2959cbd25e68991ceb2fbd153485af10d4ebfb2fed8fe3170a7",
             "a9346f58b101a9c058ad8271404b371773b0fea8fc3255c8c8befcf7104c4345",
+        ),
+    },
+    "b32x32_10bit_partition32_full_texture": {
+        "asset": ASSET_B32_FULL_TEXTURE_PARTITION32,
+        "width": 32,
+        "height": 32,
+        "speed": 0,
+        "partition_size": 32,
+        "patch_x": 0,
+        "patch_y": 0,
+        "patch_width": 31,
+        "patch_height": 31,
+        "patch_pattern": "texture",
+        "expected_file_sha256": (
+            "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257"
+        ),
+        "expected_frame_sha256": (
+            "8162da3443dda791abfa8d7ca3815361bc112dded58e9bfd65dbb33a9f37afac",
+            "4da7720b396c2f8d950c4baf6054c3e6aad65b799dde878c1a4bfbd7c37b8a69",
         ),
     },
     "b32x32_10bit_64x64": {

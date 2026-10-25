@@ -47963,6 +47963,42 @@ impl Lossy420Decoder {
         }
     }
 
+    // Keep this predicate in one non-generic coverage body. The reconstruction
+    // method below is monomorphized for many transform callbacks, and optimized
+    // coverage builds otherwise lose branch observations when geometry is
+    // constant-propagated into each specialization. Normal builds inline the
+    // predicate into the hot path.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn lossless_partial_grid_enabled(
+        transform_plan: InterTransformPlan,
+        sample_depth: SampleDepth,
+        transform_mode: u32,
+        segment_lossless: bool,
+        visible_width: u32,
+        visible_height: u32,
+    ) -> bool {
+        matches!(
+            transform_plan,
+            InterTransformPlan::LosslessGrid {
+                luma_width: 32,
+                luma_height: 32,
+                sampling: ChromaSampling::Subsampled420
+                    | ChromaSampling::Subsampled422
+                    | ChromaSampling::Full,
+            }
+        ) && matches!(sample_depth.bits(), 8 | 10 | 12)
+            && transform_mode == 0
+            && segment_lossless
+            && visible_width != 0
+            && visible_height != 0
+            && visible_width <= 32
+            && visible_height <= 32
+            && visible_width.is_multiple_of(4)
+            && visible_height.is_multiple_of(4)
+            && (visible_width < 32 || visible_height < 32)
+    }
+
     #[expect(
         clippy::too_many_arguments,
         reason = "lossless grid single-reference reconstruction carries block, frame, prediction, and residual state"
@@ -48136,28 +48172,14 @@ impl Lossy420Decoder {
         // Mode-0 8-bit, 10-bit, and 12-bit I420, I422, and I444 B32 edge blocks
         // use the same WHT grid as a full block, with terminal syntax limited to
         // the active extent.
-        // A lossless grid plan carries the block dimensions and chroma
-        // sampling derived from these same decoder inputs, confirming the
-        // complete B32x32 geometry and sampling mode.
-        let lossless_partial_grid = matches!(
+        let lossless_partial_grid = Self::lossless_partial_grid_enabled(
             transform_plan,
-            InterTransformPlan::LosslessGrid {
-                luma_width: 32,
-                luma_height: 32,
-                sampling: ChromaSampling::Subsampled420
-                    | ChromaSampling::Subsampled422
-                    | ChromaSampling::Full,
-            }
-        ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.transform_mode == 0
-            && quantization.segment_lossless
-            && visible_width != 0
-            && visible_height != 0
-            && visible_width <= 32
-            && visible_height <= 32
-            && visible_width.is_multiple_of(4)
-            && visible_height.is_multiple_of(4)
-            && (visible_width < 32 || visible_height < 32);
+            tools.sample_depth,
+            tools.transform_mode,
+            quantization.segment_lossless,
+            visible_width,
+            visible_height,
+        );
         let lossy_direct_chroma_grid = matches!(
             transform_plan,
             InterTransformPlan::LossyWideDirectChromaGrid { .. }
