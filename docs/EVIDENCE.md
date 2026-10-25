@@ -1,5 +1,25 @@
 # Versioned compatibility evidence
 
+## TIFF later-IFD BitsPerSample parity — 2026-10-25
+
+Added public sequence-decode parity rows for a second TIFF directory with
+empty or nonuniform `BitsPerSample`. Both fixtures derive from the pinned
+`multipage.tiff` source; the generator checks source and output digests, first
+page pixels, and Pillow 12.2.0's sequence error. TIFF inspection now marks a
+sequence count incomplete when a later directory has empty or nonuniform
+sample depths, while the normal decoder retains the matching malformed-data
+error.
+
+The seven-row selection covering these cases and existing multipage controls
+passed 7/7. The LLVM report is
+`.coverage-mcp/local-evidence/selected/20261025T132428.639043Z-6c94ed7ecadd415b95c0894d8a57d1f2/coverage.json`
+(SHA-256 `aebd9cbeec4296e7e330293e9ec26400aea3a7c8597f39d483d523398e936457`).
+Its branch counters show both outcomes for the two `BitsPerSample` checks at
+`decode_ifd:201`. Coverage MCP still labels this selected report's source as
+unverified and test attribution as unknown, and reports four missing branch
+observations at that line; this is local selected-run evidence, not an
+aggregate coverage or regression claim. No Rust unit tests were added.
+
 ## WebP color-transform size-field truncation parity — 2026-10-25
 
 Added a malformed VP8L stream that completes a subtract-green transform and
@@ -7,7 +27,7 @@ leaves only two of the following transform's three size bits. Pinned Pillow
 accepts it in `verify` and reports `OSError: failed to read next frame` during
 decode. The independent VP8L parser classifies the failure as a truncated
 transform header at bit offset 46. The selected public parity case passed 1/1.
-The current matrix contains 2,603 total rows: 2,077 decode / inspect / verify rows and 526 encode rows. Of those, 2,077 decode rows and 495 encode rows are active; 31 encode rows remain planned.
+The current matrix contains 2,605 total rows: 2,079 decode / inspect / verify rows and 526 encode rows. Of those, 2,079 decode rows and 495 encode rows are active; 31 encode rows remain planned.
 
 ## WebP lossy-alpha filter parity — 2026-10-25
 
@@ -9425,7 +9445,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2339617eaf41df60303dc2dca79df57a0c97181098ce467e3efbf342958bfbec`; matrix `af0db7c2df256d2bd4bb7db1cda9d03f480792170a905e3ca43a6f53dbd70ff1`.
+- Current fixture integrity only: manifest `02980f9bfe17bb1bf69d169171bee8f7774b153988c32afe472fef3c0b9432cc`; matrix `bd95e1c61b9428e5dbd134ea18af878adf5bb4ff8ee2f41324a04bef13b7eba1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
