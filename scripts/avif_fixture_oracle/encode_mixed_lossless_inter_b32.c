@@ -5,19 +5,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t luma_value(unsigned frame, unsigned x, unsigned y)
+static uint8_t luma_value(unsigned frame, unsigned x, unsigned y, int residual_roi)
 {
-    if (frame == 0) {
-        return 48;
-    }
-
-    if (x < 32 && y < 32) {
+    if (frame != 0 && x < 32 && y < 32) {
         return 96;
     }
+
+    if (residual_roi && x >= 32 && y >= 32) {
+        return frame == 0 ? 48 : 49;
+    }
+
     return 48;
 }
 
-static int fill_frame(avifImage *image, unsigned frame)
+static int fill_frame(avifImage *image, unsigned frame, int residual_roi)
 {
     if (avifImageAllocatePlanes(image, AVIF_PLANES_YUV) != AVIF_RESULT_OK) {
         return 0;
@@ -34,7 +35,7 @@ static int fill_frame(avifImage *image, unsigned frame)
                 const unsigned int pixel_y = plane == AVIF_CHAN_Y ? y : y * 2;
                 uint8_t value = 128;
                 if (plane == AVIF_CHAN_Y) {
-                    value = luma_value(frame, pixel_x, pixel_y);
+                    value = luma_value(frame, pixel_x, pixel_y, residual_roi);
                 }
                 data[(size_t)y * row_bytes + x] = value;
             }
@@ -43,7 +44,7 @@ static int fill_frame(avifImage *image, unsigned frame)
     return 1;
 }
 
-static int write_sequence(const char *path, unsigned canvas_size)
+static int write_sequence(const char *path, unsigned canvas_size, int residual_roi)
 {
     avifEncoder *encoder = avifEncoderCreate();
     avifImage *image = avifImageCreate(canvas_size, canvas_size, 8, AVIF_PIXEL_FORMAT_YUV420);
@@ -89,7 +90,7 @@ static int write_sequence(const char *path, unsigned canvas_size)
     }
 
     for (unsigned frame = 0; frame < 2; ++frame) {
-        if (!fill_frame(image, frame)) {
+        if (!fill_frame(image, frame, residual_roi)) {
             fprintf(stderr, "failed to fill frame %u\n", frame);
             goto cleanup;
         }
@@ -135,17 +136,43 @@ cleanup:
 
 int main(int argc, char **argv)
 {
-    unsigned canvas_size = 64;
-    if (argc == 3) {
-        if (strcmp(argv[2], "60") == 0) {
-            canvas_size = 60;
-        } else if (strcmp(argv[2], "64") != 0) {
-            fprintf(stderr, "canvas size must be 60 or 64 pixels\n");
-            return 2;
-        }
-    } else if (argc != 2) {
-        fprintf(stderr, "usage: encode_mixed_lossless_inter_b32 OUTPUT.avif [60|64]\n");
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s OUTPUT.avif [60|64] [--residual-roi]\n", argv[0]);
         return 2;
     }
-    return write_sequence(argv[1], canvas_size) ? 0 : 1;
+
+    unsigned canvas_size = 64;
+    int residual_roi = 0;
+    int canvas_size_seen = 0;
+    for (int index = 2; index < argc; ++index) {
+        if (strcmp(argv[index], "--residual-roi") == 0) {
+            if (residual_roi) {
+                fprintf(stderr, "--residual-roi may be provided only once\n");
+                return 2;
+            }
+            residual_roi = 1;
+        } else if (strcmp(argv[index], "60") == 0) {
+            if (canvas_size_seen) {
+                fprintf(stderr, "canvas size may be provided only once\n");
+                return 2;
+            }
+            canvas_size = 60;
+            canvas_size_seen = 1;
+        } else if (strcmp(argv[index], "64") == 0) {
+            if (canvas_size_seen) {
+                fprintf(stderr, "canvas size may be provided only once\n");
+                return 2;
+            }
+            canvas_size = 64;
+            canvas_size_seen = 1;
+        } else {
+            fprintf(stderr, "expected one canvas size (60 or 64) and --residual-roi\n");
+            return 2;
+        }
+    }
+    if (residual_roi && canvas_size != 64) {
+        fprintf(stderr, "--residual-roi requires a 64-pixel canvas\n");
+        return 2;
+    }
+    return write_sequence(argv[1], canvas_size, residual_roi) ? 0 : 1;
 }

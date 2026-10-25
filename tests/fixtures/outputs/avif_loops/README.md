@@ -1,14 +1,13 @@
 # Native AVIF repetition evidence
 
-This bundle records 109 input observations made with Pillow 12.2.0 and libavif
-1.4.1/dav1d 1.5.3. One hundred one accepted files decode completely; eight malformed
-files fail native parsing and Pillow opening. The 341 hashed artifacts total
-12,289,856 bytes, including 109 inputs, the compiled observer source, and
-11,694,332 bytes of Pillow-decoded frame outputs. Mutation cases share the
-original frame artifacts; each observation records complete per-frame pixel
-hashes and durations.
+This bundle records 111 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. One hundred three accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 350 hashed artifacts total 12,375,905
+bytes, including 111 inputs, the compiled observer source, and 11,772,668
+bytes of Pillow-decoded frame outputs. Mutation cases share the original frame
+artifacts; each observation records complete per-frame pixel hashes and durations.
 
-The 77 fixture sources are declared in
+The 78 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -91,6 +90,11 @@ The 60x60 companion keeps the same mixed-lossless segment map and inter B32
 leaf at MI `(8,8)`, but clips its visible extent to 28x28 at the bottom-right
 canvas edge. It has exact Pillow RGB frame observations and a separate native
 infinite-loop observation.
+The residual 64x64 companion keeps the full-visible qindex-zero inter B32
+leaf at MI `(8,8)` and changes all 1,024 pixels in its bottom-right ROI
+between frames. The pinned encoder trace proves the leaf remains unsplit;
+both exact Pillow RGB frames and a separate native infinite-loop observation
+are retained.
 The 28x64 full-range 10-bit I420 companion fixes encoder partitions to 32x32.
 AV1 pads its partition tree to 32 luma columns, so the translated patch stays
 inside the full-width left B32 leaf. The generator checks its key/inter

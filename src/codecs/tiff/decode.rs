@@ -207,6 +207,7 @@ fn decode_ifd(
         CodecError::Malformed(format!("TIFF bit depth exceeds format limits: {error}"))
     })?;
     let compression = directory.one_or(259, COMPRESSION_NONE);
+    let reverse_compressed_fill_order = fill_order == 2 && compression != COMPRESSION_NONE;
     let photometric = directory.one_or(262, 1);
     let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
@@ -439,6 +440,7 @@ fn decode_ifd(
             let pixels = decode_subsampled_ycbcr_tiles(
                 data,
                 compression,
+                reverse_compressed_fill_order,
                 &offsets,
                 &byte_counts,
                 SubsampledYcbcrTileGeometry {
@@ -487,6 +489,7 @@ fn decode_ifd(
                     output_row_bytes: row_bytes,
                     output_len: expected_total,
                     compression,
+                    reverse_compressed_fill_order,
                     predictor,
                     bits_per_sample,
                     endian,
@@ -580,8 +583,14 @@ fn decode_ifd(
                 let tile_data = if compression == COMPRESSION_NONE {
                     encoded
                 } else {
-                    decoded = decode_block(compression, encoded, tile_size, token)
-                        .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+                    decoded = decode_block(
+                        compression,
+                        encoded,
+                        tile_size,
+                        reverse_compressed_fill_order,
+                        token,
+                    )
+                    .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
                     &decoded
                 };
                 let placement = PackedTilePlacement {
@@ -630,8 +639,14 @@ fn decode_ifd(
                 .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
                 continue;
             }
-            let mut decoded = decode_block(compression, encoded, tile_size, token)
-                .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+            let mut decoded = decode_block(
+                compression,
+                encoded,
+                tile_size,
+                reverse_compressed_fill_order,
+                token,
+            )
+            .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
             // Every compressed decoder returns exactly the requested size, and
             // uncompressed tile counts were normalized to tile_size above.
             if uses_horizontal_predictor(predictor, compression, bits_per_sample) {
@@ -709,6 +724,7 @@ fn decode_ifd(
                 output_row_bytes: row_bytes,
                 output_len: expected_total,
                 compression,
+                reverse_compressed_fill_order,
                 predictor,
                 bits_per_sample,
                 endian,
@@ -843,8 +859,14 @@ fn decode_ifd(
             let expected = row_bytes
                 .checked_mul(stored_rows)
                 .dimensions("TIFF strip buffer size overflows")?;
-            let mut decoded = decode_block(compression, encoded, expected, token)
-                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+            let mut decoded = decode_block(
+                compression,
+                encoded,
+                expected,
+                reverse_compressed_fill_order,
+                token,
+            )
+            .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
             if let Some(predictor_row_bytes) = predictor_row_bytes {
                 if let Some(token) = token {
                     reverse_horizontal_predictor_with_token(
@@ -963,8 +985,14 @@ fn decode_ifd(
                 .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
             continue;
         }
-        let mut decoded = decode_block(compression, encoded, expected, token)
-            .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+        let mut decoded = decode_block(
+            compression,
+            encoded,
+            expected,
+            reverse_compressed_fill_order,
+            token,
+        )
+        .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
         if let Some(predictor_row_bytes) = predictor_row_bytes {
             if let Some(token) = token {
                 reverse_horizontal_predictor_with_token(
@@ -1022,6 +1050,7 @@ struct SeparatePlanarStripLayout<'a> {
     output_row_bytes: usize,
     output_len: usize,
     compression: usize,
+    reverse_compressed_fill_order: bool,
     predictor: usize,
     bits_per_sample: u8,
     endian: Endian,
@@ -1103,8 +1132,14 @@ fn decode_separate_planar_strips(
             None
         } else {
             Some(
-                decode_block(layout.compression, encoded, expected, token)
-                    .map_err(|error| error.at(offset as u64, "tiff_strip"))?,
+                decode_block(
+                    layout.compression,
+                    encoded,
+                    expected,
+                    layout.reverse_compressed_fill_order,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?,
             )
         };
         if let Some(decoded) = decoded.as_mut()
@@ -1174,6 +1209,7 @@ struct SeparatePlanarTileLayout<'a> {
     output_row_bytes: usize,
     output_len: usize,
     compression: usize,
+    reverse_compressed_fill_order: bool,
     predictor: usize,
     bits_per_sample: u8,
     endian: Endian,
@@ -1273,8 +1309,14 @@ fn decode_separate_planar_tiles(
             None
         } else {
             Some(
-                decode_block(layout.compression, encoded, tile_size, token)
-                    .map_err(|error| error.at(offset as u64, "tiff_tile"))?,
+                decode_block(
+                    layout.compression,
+                    encoded,
+                    tile_size,
+                    layout.reverse_compressed_fill_order,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_tile"))?,
             )
         };
         if let Some(decoded) = decoded.as_mut()
@@ -1412,6 +1454,7 @@ struct SubsampledYcbcrTileGeometry {
 fn decode_subsampled_ycbcr_tiles(
     data: &[u8],
     compression: usize,
+    reverse_compressed_fill_order: bool,
     offsets: &[usize],
     declared_byte_counts: &[usize],
     geometry: SubsampledYcbcrTileGeometry,
@@ -1519,8 +1562,14 @@ fn decode_subsampled_ycbcr_tiles(
                 "TIFF tile decoded prefix exceeds the output limit".to_owned(),
             ));
         }
-        let tile_samples = decode_block(compression, encoded, copied_tile_prefix, token)
-            .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+        let tile_samples = decode_block(
+            compression,
+            encoded,
+            copied_tile_prefix,
+            reverse_compressed_fill_order,
+            token,
+        )
+        .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
         let tile_x_clumps = tile_x
             .checked_div(horizontal)
             .dimensions("TIFF tile x clump offset overflows")?;
@@ -1564,8 +1613,24 @@ fn decode_block(
     compression: usize,
     encoded: &[u8],
     expected: usize,
+    reverse_compressed_fill_order: bool,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
+    // TIFF FillOrder applies to the stored bytes, including compressed input.
+    // Keep the common FillOrder=1 path borrowing the input without a copy.
+    let mut reversed = None;
+    if reverse_compressed_fill_order {
+        crate::codecs::error::check_cancelled(token)?;
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(encoded.len()).map_err(|_| {
+            CodecError::Dimensions("unable to allocate TIFF compressed block".to_owned())
+        })?;
+        bytes.extend_from_slice(encoded);
+        reverse_tiff_fill_order(&mut bytes, token)?;
+        reversed = Some(bytes);
+    }
+    let encoded = reversed.as_deref().unwrap_or(encoded);
+
     match compression {
         COMPRESSION_LZW => match token {
             Some(token) => decode_lzw_with_token(encoded, expected, token),
@@ -1593,7 +1658,7 @@ fn decode_block(
     }
 }
 
-/// Normalize uncompressed packed bytes to TIFF's default high-bit-first order.
+/// Reverse each TIFF byte's bit order in cancellation-aware chunks.
 fn reverse_tiff_fill_order(
     bytes: &mut [u8],
     token: Option<&crate::CancellationToken>,

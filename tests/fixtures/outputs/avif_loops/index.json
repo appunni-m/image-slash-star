@@ -545,13 +545,39 @@
       "collection_index_sha256": "219e2c277bd3d003044753d04288caebbfd86bdaf2ae229bc9ee190cf6f1abac",
       "generator_sha256": "61946f93e2d5d4af4274663c4fc3a949bb3d4dd4838209e993ff60b55a7b01d9",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "cc68de02d88756a5dde7e69e805a72002aedfd4774f4785a31c5a5158307e7e1",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "mixed_lossless_inter_b32_i420_residual_64x64"
+      ],
+      "collection_index_sha256": "bc5e9b0b63b898d1422ff61a6062c6f3e76a3d14b0e70c56ccd6c71f06205f7e",
+      "generator_sha256": "9e8ab76b980c6666300e9241f76d720b187f88f5365b27aa6fb844a9c063028f",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 14746,
+      "bytes": 15059,
       "path": "README.md",
-      "sha256": "444263147b244af07b0d59f997a3ded22ba1d81abdd6bbed55a20b95f701f111"
+      "sha256": "8b1bd12dfb9a2520108bf8becbff7ce551d428cb6b8d32288cf7fd136e1deed8"
     },
     {
       "bytes": 2267,
@@ -942,6 +968,11 @@
       "bytes": 1083,
       "path": "inputs/mixed_lossless_inter_b32_i420_64x64.avif",
       "sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257"
+    },
+    {
+      "bytes": 1087,
+      "path": "inputs/mixed_lossless_inter_b32_i420_residual_64x64.avif",
+      "sha256": "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36"
     },
     {
       "bytes": 1163,
@@ -2022,6 +2053,16 @@
       "bytes": 12288,
       "path": "pixels/mixed_lossless_inter_b32_i420_64x64/frame_1.bin",
       "sha256": "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/mixed_lossless_inter_b32_i420_residual_64x64/frame_0.bin",
+      "sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/mixed_lossless_inter_b32_i420_residual_64x64/frame_1.bin",
+      "sha256": "f99f8c1c96218f4dde446f18003ec53ae2c35e57a4f1e1b46ce406a2dbe6ef61"
     },
     {
       "bytes": 3072,
@@ -9156,6 +9197,54 @@
       "repeat_equal": true,
       "source": "lossy_wide_i422_b128x64",
       "source_sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc"
+    },
+    {
+      "input_bytes": 1087,
+      "input_path": "inputs/mixed_lossless_inter_b32_i420_residual_64x64.avif",
+      "input_sha256": "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "mixed_lossless_inter_b32_i420_residual_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "f99f8c1c96218f4dde446f18003ec53ae2c35e57a4f1e1b46ce406a2dbe6ef61",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "mixed_lossless_inter_b32_i420_residual_64x64",
+      "source_sha256": "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36"
     }
   ],
   "incremental_collections": [
