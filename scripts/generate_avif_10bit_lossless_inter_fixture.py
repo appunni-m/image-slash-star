@@ -144,6 +144,49 @@ FIXTURE_SPECS = {
             "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6",
         ),
     },
+
+    "b16x16_10bit": {
+        "asset": ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+            "animated_lossless_inter_420_b16x16_10bit.avif"
+        ),
+        "width": 16,
+        "height": 16,
+        "speed": 8,
+        "partition_size": 0,
+        "patch_x": 0,
+        "patch_y": 0,
+        "patch_width": 15,
+        "patch_height": 15,
+        "patch_pattern": "texture",
+        "expected_file_sha256": (
+            "8eb14ad3c57916b9e7fdded28b08a9254302cfc76f0cb5a934b41f11dc4184b6"
+        ),
+        "expected_frame_sha256": (
+            "89c6e7c9c88ae078db6b770f1aea3335b3eb846566a4f47ecf36cf6d4951f651",
+            "4ee9152c5aba3e92b8bfd971fa001efa16529a57d1b54fd6f7c1919e2f8e4b4a",
+        ),
+    },
+    "b16x16_10bit_small_patch": {
+        "asset": ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+            "animated_lossless_inter_420_b16x16_10bit_small_patch.avif"
+        ),
+        "width": 16,
+        "height": 16,
+        "speed": 8,
+        "partition_size": 0,
+        "patch_x": 4,
+        "patch_y": 4,
+        "patch_width": 4,
+        "patch_height": 4,
+        "patch_pattern": "ramp",
+        "expected_file_sha256": (
+            "99dd72e3dc39af9f7d9bcb89d5e3bb0553f7cc04db021c0107fe2f4dcd06ae7b"
+        ),
+        "expected_frame_sha256": (
+            "1fa5eece83c707a1d3c89c7027db4b774a88315352b60bd95ceceabef4972d90",
+            "a1c2d65db9e8e6d621462be1bc0567a3ad266856e95b3cb66d3e35f41c399ef6",
+        ),
+    },
 }
 PINNED_PILLOW = (
     "12.2.0",
@@ -526,7 +569,7 @@ def generate(args: argparse.Namespace) -> None:
                     spec["speed"],
                     spec["partition_size"],
                 ) != (32, 32, 8, 0):
-                    if spec["width"] == spec["height"]:
+                    if spec["width"] == spec["height"] and "patch_width" not in spec:
                         command.extend(
                             [
                                 str(spec["width"]),
