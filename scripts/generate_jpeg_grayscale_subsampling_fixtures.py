@@ -96,29 +96,55 @@ def add_restart_interval_before_eoi(source, interval):
     return source[:-2] + dri + source[-2:]
 
 
-def set_baseline_spectral_start(source, spectral_start):
-    """Set the single baseline scan's Ss field without changing entropy bytes."""
+def set_baseline_sos_field(source, field_name, expected, value, maximum):
+    """Change one grayscale SOS byte without changing the entropy-coded scan."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
-        raise RuntimeError("complete Pillow JPEG required for a spectral-start input")
+        raise RuntimeError("complete Pillow JPEG required for a changed-SOS input")
     scan_start = source.find(b"\xff\xda")
     if scan_start < 0 or source.find(b"\xff\xda", scan_start + 2) >= 0:
-        raise RuntimeError("spectral-start input must have exactly one SOS")
+        raise RuntimeError("changed-SOS input must have exactly one SOS")
 
     segment_length = int.from_bytes(source[scan_start + 2:scan_start + 4], "big")
     payload_start = scan_start + 4
     if segment_length < 8 or payload_start + segment_length - 2 > len(source):
         raise RuntimeError("baseline SOS header is incomplete")
     if source[payload_start] != 1:
-        raise RuntimeError("grayscale spectral-start input must have one scan component")
-    spectral_start_offset = payload_start + 3
-    if source[spectral_start_offset] != 0:
-        raise RuntimeError("Pillow baseline source no longer starts its scan at Ss=0")
-    if not 0 <= spectral_start <= 63:
-        raise ValueError("baseline spectral start must be between 0 and 63")
+        raise RuntimeError("changed-SOS input must have one grayscale scan component")
+    field_offsets = {
+        "spectral_start": payload_start + 3,
+        "spectral_end": payload_start + 4,
+        "successive_approximation": payload_start + 5,
+    }
+    offset = field_offsets.get(field_name)
+    if offset is None:
+        raise ValueError("unsupported baseline SOS field: " + field_name)
+    if source[offset] != expected:
+        raise RuntimeError("Pillow baseline source has an unexpected SOS " + field_name)
+    if not 0 <= value <= maximum:
+        raise ValueError("baseline SOS " + field_name + " is outside its byte-field range")
 
     candidate = bytearray(source)
-    candidate[spectral_start_offset] = spectral_start
+    candidate[offset] = value
     return bytes(candidate)
+
+
+def set_baseline_spectral_start(source, spectral_start):
+    """Set the single baseline scan's Ss field without changing entropy bytes."""
+    return set_baseline_sos_field(source, "spectral_start", 0, spectral_start, 63)
+
+
+def set_baseline_spectral_end(source, spectral_end):
+    """Set the single baseline scan's Se field without changing entropy bytes."""
+    return set_baseline_sos_field(source, "spectral_end", 63, spectral_end, 63)
+
+
+def set_baseline_successive_approximation(source, ah, al):
+    """Set the single baseline scan's Ah/Al nibbles without changing entropy bytes."""
+    if not 0 <= ah <= 15 or not 0 <= al <= 15:
+        raise ValueError("baseline SOS Ah and Al values must fit four-bit fields")
+    return set_baseline_sos_field(
+        source, "successive_approximation", 0, (ah << 4) | al, 255
+    )
 
 
 def late_table_cases(source):
@@ -180,6 +206,16 @@ def generate(output, check):
         set_baseline_spectral_start(
             expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")], 1
         )
+    )
+    grayscale_420 = expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")]
+    expected[Path("jpeg/grayscale_sampling_420_17x9_sos_se_nonmax.jpg")] = (
+        set_baseline_spectral_end(grayscale_420, 62)
+    )
+    expected[Path("jpeg/grayscale_sampling_420_17x9_sos_ah_nonzero.jpg")] = (
+        set_baseline_successive_approximation(grayscale_420, 1, 0)
+    )
+    expected[Path("jpeg/grayscale_sampling_420_17x9_sos_al_nonzero.jpg")] = (
+        set_baseline_successive_approximation(grayscale_420, 0, 1)
     )
     for relative, data in expected.items():
         destination = output / relative

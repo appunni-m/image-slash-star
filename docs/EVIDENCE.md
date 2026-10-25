@@ -25,7 +25,7 @@ no source change during execution, and an unchanged fixture snapshot. The
 report is selected-case evidence only, not a project-wide coverage claim. No
 Rust source changed and no unit tests were added.
 
-The current matrix contains 2,610 total rows: 2,083 decode / inspect / verify rows and 527 encode rows. Of those, 2,083 decode rows and 496 encode rows are active; 31 encode rows remain planned.
+The current matrix contains 2,614 total rows: 2,087 decode / inspect / verify rows and 527 encode rows. Of those, 2,087 decode rows and 496 encode rows are active; 31 encode rows remain planned.
 
 ## AVIF B32 lossless coverage follow-up — 2026-10-25
 
@@ -9545,7 +9545,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `43f79ac46ae3c18b0fb1a724777ccab96d3ca2e7fbf2bf9a750f6f9eda4767d9`; matrix `b995a0ce4567d67d5a130376dc1a73832596c5aad1be7867d7e08eafeb1af261`.
+- Current fixture integrity only: manifest `82f5ba61d3adb85c4d6deb7bdaf4370d267ead543b439be1d48b6f94cee286ab`; matrix `f9a0ccd2baeb9a43b6b75553f2f0a9a541658a8c8a694388baece5199b084ac3`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -10961,8 +10961,8 @@ Coverage MCP still reports an unobserved `split > 0` outcome in GIF's median
 tie fallback; the valid median-cut rows keep each candidate box nonempty, so
 that remaining state is not represented as Pillow behavior.
 
-The current fixture matrix contains 2,611 total rows: 2,084 decode / inspect /
-verify rows and 527 encode rows. Of those, 2,084 decode rows and 496 encode
+The current fixture matrix contains 2,614 total rows: 2,087 decode / inspect /
+verify rows and 527 encode rows. Of those, 2,087 decode rows and 496 encode
 rows are active; 31 planned encode rows remain. The separate target-only fault
 lane contains 67 rows. The coverage-origin inventory records 213 exact
 `cfg(coverage)` guards across 28 Rust files.
@@ -10990,3 +10990,29 @@ zero-execution function instances for this location, and its incremental
 comparison is incomparable because baseline branch details do not reconcile
 with its totals. MCP source identity is unverified and test attribution is
 unknown, so no aggregate coverage gain is claimed.
+
+## JPEG grayscale SOS spectral-end and approximation parity — 2026-10-26
+
+Added three public Pillow parity rows for grayscale 4:2:0 JPEGs derived from
+the deterministic 17×9 source: `Se=62`, `Ah=1/Al=0`, and `Ah=0/Al=1`. The
+generator changes only the corresponding SOS byte. Pinned Pillow accepts all
+three inputs and returns the same 153-byte `L` pixel output as the source
+(SHA-256
+`6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c`). The
+three new public parity cases passed 3/3; the combined selection including the
+earlier nonzero-`Ss` row passed 4/4.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/jpeg-sos-boundary-fields-merged-main-20261026/coverage.json`
+(SHA-256
+`2d10a141a5273a83ff5f179e9a21709f148e373dfcd1d912f5a8477900573084`). Its
+active grayscale direct-path function instance recorded true outcomes for
+`scan.ss != 0` (4 true, 9 false), `scan.se != 63` (3 true, 6 false),
+`scan.ah != 0` (3 true, 3 false), and `scan.al != 0` (3 true, 0 false) at
+`decode.rs:2676–2679`. These are selected-case counters, not full-suite totals.
+The earlier full LLVM report recorded 0 true / 74 false for each guard.
+
+Coverage MCP marks this report's source unverified and test attribution
+unknown. Its incremental comparison with the full baseline is incomparable
+because the baseline branch details do not reconcile with reported totals; no
+aggregate coverage gain is claimed. No Rust source or unit tests were added.
