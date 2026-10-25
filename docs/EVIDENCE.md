@@ -25,7 +25,7 @@ no source change during execution, and an unchanged fixture snapshot. The
 report is selected-case evidence only, not a project-wide coverage claim. No
 Rust source changed and no unit tests were added.
 
-The current matrix contains 2,614 total rows: 2,087 decode / inspect / verify rows and 527 encode rows. Of those, 2,087 decode rows and 496 encode rows are active; 31 encode rows remain planned.
+The current matrix contains 2,615 total rows: 2,088 decode / inspect / verify rows and 527 encode rows. Of those, 2,088 decode rows and 496 encode rows are active; 31 encode rows remain planned.
 
 ## AVIF B32 lossless coverage follow-up — 2026-10-25
 
@@ -9545,7 +9545,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `82f5ba61d3adb85c4d6deb7bdaf4370d267ead543b439be1d48b6f94cee286ab`; matrix `f9a0ccd2baeb9a43b6b75553f2f0a9a541658a8c8a694388baece5199b084ac3`.
+- Current fixture integrity only: manifest `f62a6a78d3e1b9733da0db337d9af91b03cf6f9b62c7f0f2fc27d271d14bc3f0`; matrix `128f18ab34754d0f4d75d4f9425bfd36f185e1a24acd0117861f4c4a62903237`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11016,3 +11016,28 @@ Coverage MCP marks this report's source unverified and test attribution
 unknown. Its incremental comparison with the full baseline is incomparable
 because the baseline branch details do not reconcile with reported totals; no
 aggregate coverage gain is claimed. No Rust source or unit tests were added.
+
+## JPEG baseline grayscale empty-entropy parity — 2026-10-26
+
+Added `decode:jpeg:grayscale_sampling_420_17x9_empty_entropy`. Its maintained
+generator starts from the deterministic 17×9 grayscale 4:2:0 JPEG and removes
+only the entropy payload, leaving a complete SOS header followed immediately
+by EOI. The generator is now part of `make verify`, which checks the full
+fixture family for deterministic regeneration. The complete 330-byte input
+has SHA-256
+`142f0ed4c9dc5dc0210a866d14702644f8dc5ae756b9bd4442eba518a8089afc`. Pinned
+Pillow 12.2.0 accepts it and returns 153 `L` bytes with SHA-256
+`563114a366c030ebb8171aa3a92559ddbb650cebcee185eaa10c9bae576c44c5`. The
+selected public parity case passed 1/1.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/jpeg-gray-empty-entropy-20261026/coverage.json`
+(SHA-256
+`da0b989df51a88089ce8dff61e90300ac6ec6da304afb9f5cdd4c85fbbd77609`). The
+active grayscale direct-path function recorded four true observations and no
+false observations for `scan.entropy_start == scan.entropy_end` at
+`src/codecs/jpeg/decode/decode.rs:2681`. This confirms the edge input reaches
+the empty-entropy guard. Coverage MCP reports the opposite arm as missing in
+this one-row selection; the existing all-JPEG selected run recorded 60 false
+observations. MCP source identity remains unverified and test attribution is
+unknown, so no aggregate coverage gain is claimed.
