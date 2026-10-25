@@ -312,7 +312,11 @@ jobs:
       - name: Install pinned npm
         run: npm install --global "npm@$NPM_VERSION"
       - name: Install the pinned Rust toolchain
-        run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal && rustup default "$RUST_TOOLCHAIN"
+        run: >-
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          --component rustfmt,clippy
+          --target wasm32-unknown-unknown,wasm32-wasip1
+          && rustup default "$RUST_TOOLCHAIN"
       - name: Install hash-locked documentation tools
         run: make docs-setup PYTHON=python
       - name: Check documentation and build the public site
