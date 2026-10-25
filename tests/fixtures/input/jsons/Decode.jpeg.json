@@ -15803,6 +15803,58 @@
       ]
     },
     {
+      "id": "grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0",
+      "asset": "grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg",
+      "asset_sha256": "e052c9d38d82b8a9ea64b6075fc8934931f5146f3f9ea409b10fe8775b1eac05",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "grayscale_sampling_420_17x9",
       "asset": "grayscale_sampling_420_17x9.jpg",
       "asset_sha256": "5ce93b78d7497ab9b6f651bd97b43ec594ebe28ec59ecdaffd8c9f06b59b5583",

@@ -114450,6 +114450,84 @@
           "error_contracts": {}
         },
         {
+          "id": "grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Single-scan grayscale 4:2:2 snapshots DRI 7 at SOS then resets DRI to zero before EOI; six MCUs need no restart markers",
+          "asset": "grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "e052c9d38d82b8a9ea64b6075fc8934931f5146f3f9ea409b10fe8775b1eac05",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0_jpg.bin",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "grayscale_sampling_420_17x9",
           "type": "decode",
           "format": "jpeg",
@@ -219579,12 +219657,12 @@
     }
   },
   "summary": {
-    "total_rows": 2602,
-    "decode_rows": 2076,
+    "total_rows": 2603,
+    "decode_rows": 2077,
     "encode_rows": 526,
     "formats": 8,
-    "assets_available": 2072,
-    "decode_active": 2076,
+    "assets_available": 2073,
+    "decode_active": 2077,
     "decode_planned": 0,
     "encode_not_wired": 31
   },

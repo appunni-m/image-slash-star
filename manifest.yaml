@@ -2480,6 +2480,10 @@ formats:
         scan MCU
       test_assets:
       - grayscale_sampling_422_17x9.jpg
+    - id: grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0
+      description: Single-scan grayscale 4:2:2 snapshots DRI 7 at SOS then resets DRI to zero before EOI; six MCUs need no restart markers
+      test_assets:
+      - grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg
     - id: grayscale_sampling_420_17x9
       description: Pillow grayscale frame sampling retains one block per non-interleaved
         scan MCU
