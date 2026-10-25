@@ -1801,6 +1801,18 @@ fn execute_fault_contract(
                 img::ImageFormat::Png,
                 img::ImageErrorStage::Inspection,
             ),
+            ("tiff.lzw.zero_expected_output", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffLzwZeroExpectedOutput,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.lzw.zero_expected_output", "decode_with_token_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffLzwZeroExpectedOutput,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -1879,6 +1891,7 @@ fn execute_fault_contract(
                 ));
             }
         };
+    let token_decode = row.fault.contract == "decode_with_token_error_then_retry_succeeds";
     if (row.operation == "inspect")
         != (row.fault.contract == "inspection_error_then_retry_succeeds")
     {
@@ -2052,6 +2065,9 @@ fn execute_fault_contract(
         "png.apng.sequence_counter_exhaustion" => {
             Some("decode sequence: APNG sequence number overflows")
         }
+        "tiff.lzw.zero_expected_output" => {
+            Some("decode: TIFF LZW stream starts with an invalid code")
+        }
         "tiff.ycbcr.clump_length_mismatch" => {
             Some("decode: TIFF YCbCr clump buffer has an invalid length")
         }
@@ -2123,6 +2139,9 @@ fn execute_fault_contract(
             img::inspect(&bytes).map(|_| ())
         } else if sequence_decode {
             img::decode_sequence(&bytes).map(|_| ())
+        } else if token_decode {
+            let token = img::CancellationToken::new();
+            img::decode_with_token(&bytes, &token).map(|_| ())
         } else {
             img::decode(&bytes).map(|_| ())
         }
@@ -2157,7 +2176,8 @@ fn execute_fault_contract(
             ..
         }) if matches!(
             row.fault.point.as_str(),
-            "tiff.ycbcr.clump_length_mismatch"
+            "tiff.lzw.zero_expected_output"
+                | "tiff.ycbcr.clump_length_mismatch"
                 | "tiff.ycbcr.full_resolution_length_mismatch"
                 | "tiff.ignored_samples.row_bytes_zero"
                 | "tiff.ignored_samples.assembly_length_mismatch"
@@ -2288,8 +2308,13 @@ fn execute_fault_contract(
             ));
         }
     } else {
-        let retry = img::decode(&bytes)
-            .map_err(|error| format!("{}: decode retry failed: {error:?}", row.id))?;
+        let retry = (if token_decode {
+            let token = img::CancellationToken::new();
+            img::decode_with_token(&bytes, &token)
+        } else {
+            img::decode(&bytes)
+        })
+        .map_err(|error| format!("{}: decode retry failed: {error:?}", row.id))?;
         if retry.format != expected_format {
             return Err(format!(
                 "{}: retry decoded as {:?}, expected {:?}",

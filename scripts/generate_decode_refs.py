@@ -3358,6 +3358,10 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.rle.command_work_budget": {
             "decode_work_budget_exceeded_then_retry_succeeds"
         },
+        "tiff.lzw.zero_expected_output": {
+            "decode_error_then_retry_succeeds",
+            "decode_with_token_error_then_retry_succeeds",
+        },
         "tiff.strip_assembly.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

@@ -1631,6 +1631,16 @@ fn decode_block(
     }
     let encoded = reversed.as_deref().unwrap_or(encoded);
 
+    #[cfg(coverage)]
+    let expected = if compression == COMPRESSION_LZW
+        && crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffLzwZeroExpectedOutput,
+        ) {
+        0
+    } else {
+        expected
+    };
+
     match compression {
         COMPRESSION_LZW => match token {
             Some(token) => decode_lzw_with_token(encoded, expected, token),

@@ -292,6 +292,34 @@ fault_contracts:
       point: bmp.rle.command_work_budget
       contract: decode_work_budget_exceeded_then_retry_succeeds
     oracle_status: not_applicable
+  - id: tiff_lzw_zero_expected_output_rejection
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:compression_lzw
+    fault:
+      point: tiff.lzw.zero_expected_output
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: tiff_lzw_zero_expected_output_token_rejection
+    type: fault-contract
+    operation: decode
+    format: tiff
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:tiff:compression_lzw
+    fault:
+      point: tiff.lzw.zero_expected_output
+      contract: decode_with_token_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_strip_assembly_reservation_failure
     type: fault-contract
     operation: decode
