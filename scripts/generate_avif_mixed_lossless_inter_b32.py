@@ -31,6 +31,9 @@ ASSET = (
     / "animated_mixed_lossless_inter_b32_i420_64x64.avif"
 )
 CLIPPED_ASSET = ASSET.with_name("animated_mixed_lossless_inter_b32_i420_60x60.avif")
+RESIDUAL_ASSET = ASSET.with_name(
+    "animated_mixed_lossless_inter_b32_i420_residual_64x64.avif"
+)
 REFERENCE_FRAME_TEMPLATE = (
     ROOT
     / "tests"
@@ -42,14 +45,21 @@ REFERENCE_FRAME_TEMPLATE = (
 CLIPPED_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
     "Decode.avif_animated_mixed_lossless_inter_b32_i420_60x60_avif_frame_{index}.bin"
 )
+RESIDUAL_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
+    "Decode.avif_animated_mixed_lossless_inter_b32_i420_residual_64x64_avif_frame_{index}.bin"
+)
 REFERENCE = REFERENCE_FRAME_TEMPLATE.with_name(
     REFERENCE_FRAME_TEMPLATE.name.format(index=0)
 )
 CLIPPED_REFERENCE = CLIPPED_REFERENCE_FRAME_TEMPLATE.with_name(
     CLIPPED_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
 )
+RESIDUAL_REFERENCE = RESIDUAL_REFERENCE_FRAME_TEMPLATE.with_name(
+    RESIDUAL_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
+)
 RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_64x64.receipt.json"
 CLIPPED_RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_60x60.receipt.json"
+RESIDUAL_RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_residual_64x64.receipt.json"
 DEFAULT_ENCODER = STAGING_ROOT / "encode-avif-mixed-lossless-inter-b32"
 
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
@@ -65,6 +75,13 @@ EXPECTED_FRAME_SHA256 = (
     "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
     "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4",
 )
+RESIDUAL_EXPECTED_FILE_SHA256 = "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36"
+RESIDUAL_EXPECTED_PIXEL_SHA256 = "1dd668726550968fd54f7d92264a3a3a15c0aaec7ab866277cead24e2637402d"
+RESIDUAL_EXPECTED_FRAME_SHA256 = (
+    "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
+    "f99f8c1c96218f4dde446f18003ec53ae2c35e57a4f1e1b46ce406a2dbe6ef61",
+)
+RESIDUAL_EXPECTED_FILE_BYTES = 1087
 CLIPPED_EXPECTED_FILE_SHA256 = "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce"
 CLIPPED_EXPECTED_PIXEL_SHA256 = "31f32dc03ca4a9cbffe09bf77929c32931d460a97c0dceb236b9254c1284671f"
 CLIPPED_EXPECTED_FRAME_SHA256 = (
@@ -104,9 +121,14 @@ def patch_receipts() -> dict[str, str]:
     }
 
 
-def run_encoder(encoder: Path, output: Path, canvas_size: int) -> str:
+def run_encoder(
+    encoder: Path, output: Path, canvas_size: int, *, residual_roi: bool = False
+) -> str:
+    command = [str(encoder), str(output), str(canvas_size)]
+    if residual_roi:
+        command.append("--residual-roi")
     result = subprocess.run(
-        [str(encoder), str(output), str(canvas_size)],
+        command,
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -358,28 +380,47 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--encoder", type=Path, default=DEFAULT_ENCODER)
     parser.add_argument("--canvas-size", type=int, choices=(60, 64), default=64)
+    parser.add_argument(
+        "--lossless-roi-residual",
+        action="store_true",
+        help="change all pixels in the qindex-zero B32 ROI between frames",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--reference-output", type=Path)
     parser.add_argument("--receipt-output", type=Path)
     args = parser.parse_args()
+    residual_roi = args.lossless_roi_residual
+    if residual_roi and args.canvas_size != 64:
+        parser.error("--lossless-roi-residual requires --canvas-size 64")
     clipped = args.canvas_size == 60
-    expected_file_sha256 = (
-        CLIPPED_EXPECTED_FILE_SHA256 if clipped else EXPECTED_FILE_SHA256
-    )
-    expected_pixel_sha256 = (
-        CLIPPED_EXPECTED_PIXEL_SHA256 if clipped else EXPECTED_PIXEL_SHA256
-    )
-    expected_frame_sha256 = (
-        CLIPPED_EXPECTED_FRAME_SHA256 if clipped else EXPECTED_FRAME_SHA256
-    )
-    output_path = args.output or (CLIPPED_ASSET if clipped else ASSET)
-    reference_output = args.reference_output or (
-        CLIPPED_REFERENCE if clipped else REFERENCE
-    )
-    reference_frame_template = (
-        CLIPPED_REFERENCE_FRAME_TEMPLATE if clipped else REFERENCE_FRAME_TEMPLATE
-    )
-    receipt_output = args.receipt_output or (CLIPPED_RECEIPT if clipped else RECEIPT)
+    if residual_roi:
+        expected_file_sha256 = RESIDUAL_EXPECTED_FILE_SHA256
+        expected_pixel_sha256 = RESIDUAL_EXPECTED_PIXEL_SHA256
+        expected_frame_sha256 = RESIDUAL_EXPECTED_FRAME_SHA256
+        expected_file_bytes = RESIDUAL_EXPECTED_FILE_BYTES
+        output_path = args.output or RESIDUAL_ASSET
+        reference_output = args.reference_output or RESIDUAL_REFERENCE
+        reference_frame_template = RESIDUAL_REFERENCE_FRAME_TEMPLATE
+        receipt_output = args.receipt_output or RESIDUAL_RECEIPT
+    else:
+        expected_file_sha256 = (
+            CLIPPED_EXPECTED_FILE_SHA256 if clipped else EXPECTED_FILE_SHA256
+        )
+        expected_pixel_sha256 = (
+            CLIPPED_EXPECTED_PIXEL_SHA256 if clipped else EXPECTED_PIXEL_SHA256
+        )
+        expected_frame_sha256 = (
+            CLIPPED_EXPECTED_FRAME_SHA256 if clipped else EXPECTED_FRAME_SHA256
+        )
+        expected_file_bytes = EXPECTED_FILE_BYTES
+        output_path = args.output or (CLIPPED_ASSET if clipped else ASSET)
+        reference_output = args.reference_output or (
+            CLIPPED_REFERENCE if clipped else REFERENCE
+        )
+        reference_frame_template = (
+            CLIPPED_REFERENCE_FRAME_TEMPLATE if clipped else REFERENCE_FRAME_TEMPLATE
+        )
+        receipt_output = args.receipt_output or (CLIPPED_RECEIPT if clipped else RECEIPT)
     encoder = args.encoder.resolve()
     if not encoder.is_file():
         raise RuntimeError(f"fixture encoder does not exist: {encoder}")
@@ -388,15 +429,19 @@ def main() -> None:
         temporary_root = Path(temporary)
         first_path = temporary_root / "first.avif"
         second_path = temporary_root / "second.avif"
-        first_trace = run_encoder(encoder, first_path, args.canvas_size)
-        second_trace = run_encoder(encoder, second_path, args.canvas_size)
+        first_trace = run_encoder(
+            encoder, first_path, args.canvas_size, residual_roi=residual_roi
+        )
+        second_trace = run_encoder(
+            encoder, second_path, args.canvas_size, residual_roi=residual_roi
+        )
         first_raw = first_path.read_bytes()
         second_raw = second_path.read_bytes()
         validate_repeatability(first_raw, second_raw)
         normalized = normalize_sequence_timestamps(first_raw)
         if normalized != normalize_sequence_timestamps(second_raw):
             raise RuntimeError("mixed-lossless inter AVIF sequence is not deterministic")
-        if len(normalized) != EXPECTED_FILE_BYTES or sha256(normalized) != expected_file_sha256:
+        if len(normalized) != expected_file_bytes or sha256(normalized) != expected_file_sha256:
             raise RuntimeError("encoded AVIF differs from the pinned file hash")
 
         normalized_path = temporary_root / "normalized.avif"
@@ -408,6 +453,19 @@ def main() -> None:
             expected_pixel_sha256,
             expected_frame_sha256,
         )
+        if residual_roi:
+            changed_pixels = sum(
+                pixels[0][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
+                != pixels[1][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
+                for y in range(32, 64)
+                for x in range(32, 64)
+            )
+            if changed_pixels != 32 * 32:
+                raise RuntimeError(
+                    "the qindex-zero B32 ROI must change at every Pillow pixel"
+                )
+        else:
+            changed_pixels = 0
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     reference_output.parent.mkdir(parents=True, exist_ok=True)
@@ -452,6 +510,7 @@ def main() -> None:
             "codec_versions": observed_pillow[2],
         },
         "bitstream": bitstream,
+        "lossless_roi_residual_pixels": changed_pixels,
         "encoder_geometry_trace": geometry_trace,
         "repeat_geometry_trace_matches": True,
         "sequence_timestamps_normalized": ["mvhd", "tkhd", "mdhd"],

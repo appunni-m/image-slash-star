@@ -25,6 +25,64 @@ The report's fixture snapshot contained 2,587 total rows: 2,070 decode / inspect
 rows were active; 31 encode rows remained planned. Typed target-only fault
 contracts are tracked separately from Pillow parity rows.
 
+## AVIF mixed-lossless B32 residual parity — 2026-10-25
+
+Added active parity row
+`decode:avif:animated_mixed_lossless_inter_b32_i420_residual_64x64`. Its
+deterministic 64×64 two-frame AVIF has a full-visible unsplit qindex-zero
+inter B32 ROI whose 1,024 RGB pixels all change between frames. The fixture
+SHA-256 is
+`58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36`; pinned
+Pillow frame hashes are
+`90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634` and
+`f99f8c1c96218f4dde446f18003ec53ae2c35e57a4f1e1b46ce406a2dbe6ef61`. The
+native loop evidence confirms two frames and infinite repetition, normalized
+to loop count zero. The exact selected parity row passed 1/1.
+
+Coverage MCP still reports missing branch arms at
+`src/codecs/avif/av1/block.rs:48152`. The selected report did not observe either
+arm for this row, so it does not close that gap and no aggregate coverage gain
+is claimed. MCP marks source identity unverified and test attribution unknown.
+The current matrix contains 2,592 total rows: 2,074 decode / inspect / verify rows and 518 encode rows.
+Of those, 2,074 decode rows and 487 encode rows are active; 31 encode rows
+remain planned. The separate target-only fault lane contains 102 cases.
+
+## TIFF compressed FillOrder 2 parity — 2026-10-25
+
+Added three 17×13 grayscale TIFF parity rows covering Deflate, LZW, and
+PackBits with `FillOrder=2`. Their complete fixture SHA-256 values are
+`359ce018950a1959a1fc1f621e2313177817772bc42545346cd191b744d1e851`,
+`688b5355bd642d870c6d8450fb943ad189d9dbd7b9df834127bdbbc3f060dae7`, and
+`68b28cdf7af702becd02ccb328da7680593873563b51c14844c4305feef54924`.
+All three decode to the same 221-byte grayscale payload with SHA-256
+`b03d7423b9aaf79161be9a0f1a119cd3a814f4d81815f10b80aad8bdc2f5c4f4`; the
+selected Pillow parity run passed 3/3.
+
+The decoder now reverses bits in compressed FillOrder 2 block bytes before
+decompression, using cancellation-aware chunks and fallible allocation. The
+FillOrder 1 path continues to borrow the encoded input. The focused 23-row
+FillOrder selection passed 23/23. Local LLVM recorded both outcomes of the
+`compression == COMPRESSION_NONE` branch at
+`src/codecs/tiff/decode.rs:254` (51 true and 12 false observations). Coverage
+MCP returned no remaining missing location for that line in the selected
+report at
+`.coverage-mcp/local-evidence/selected-tiff-fillorder2-20261025/coverage.json`.
+The complete TIFF decode selection passed 431/431 rows. Coverage MCP then
+identified two remaining `decode_ifd` allocation-failure arms at lines 802 and
+923; the corresponding existing target-only fault contracts passed 2/2, and
+MCP returned no missing locations for those lines in
+`.coverage-mcp/local-evidence/selected-tiff-fault-contracts-20261025/coverage.json`.
+The 431-row report is
+`.coverage-mcp/local-evidence/selected-tiff-parity-431-20261025/coverage.json`.
+Comparison with the retained full report is incomparable because branch detail
+is incomplete and the reported branch totals differ (32,020 versus 32,040).
+The selected reports have unverified source identity and unknown test
+attribution, so no aggregate coverage gain or full-suite closure is claimed.
+
+The current matrix contains 2,592 total rows: 2,074 decode / inspect / verify
+rows and 518 encode rows. TIFF has 431 decode rows. Of the total, 2,074 decode
+rows and 487 encode rows are active; 31 encode rows remain planned.
+
 ## Focused AVIF monochrome and WebP token parity — 2026-10-25
 
 After synchronizing the preserved AVIF work with merged main, the selected run
@@ -9327,7 +9385,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e9b43539916f2aa3aade7b620e0bb1b8ccac45e925e4eef826e5af027a385fc9`; matrix `79e15cdff745cc9f8031b7fe34f711e65ef26e2f8bb43a360747f298a4f97650`.
+- Current fixture integrity only: manifest `00451e50a533c5d0555ea3e36c8082ca710613ed06e9faa20fd08c963de7dcf4`; matrix `e58f9f860f1b98cf58f8e20ef5ebb95d58eda593e3dda03c863edf926fd68c9c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
