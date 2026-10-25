@@ -7,7 +7,38 @@ leaves only two of the following transform's three size bits. Pinned Pillow
 accepts it in `verify` and reports `OSError: failed to read next frame` during
 decode. The independent VP8L parser classifies the failure as a truncated
 transform header at bit offset 46. The selected public parity case passed 1/1.
-The current matrix contains 2,593 total rows: 2,075 decode / inspect / verify rows and 518 encode rows. Of those, 2,075 decode rows and 487 encode rows are active; 31 encode rows remain planned. This targeted run does not establish an aggregate coverage gain.
+The current matrix contains 2,600 total rows: 2,075 decode / inspect / verify rows and 525 encode rows. Of those, 2,075 decode rows and 494 encode rows are active; 31 encode rows remain planned.
+
+## WebP lossy-alpha filter parity — 2026-10-25
+
+Added seven active public encode rows for horizontal, vertical, and gradient
+alpha prediction, nonzero palette gaps, palette wraparound, and the
+token-aware horizontal-filter path. The alpha encoder now compares the
+unfiltered and estimated-filter candidates and emits the exact pinned Pillow
+WebP bytes. The selected alpha set passed 28/28 rows, including 124 public
+encode calls with no panics. No Rust unit tests were added.
+
+`make fmt`, strict `make lint`, `make lint-x86-simd`, `make verify
+PYTHON=.oracle-venv/bin/python`, and `make test-feature-matrix` passed. The full
+coverage matrix passed all 57 matrix tests, 69 feature-gate tests, and four
+animation-loop checks. Configured coverage floors passed at 93,688/139,473
+lines (67.172858%), 18,573/32,068 branches (57.917550%), 5,213/8,917
+functions (58.461366%), and 143,021/216,455 regions (66.074242%). Strict
+`make coverage-complete` still fails its 100% requirement. The retained local
+report is
+`.coverage-mcp/local-evidence/full-20261025-webp-alpha-filter-option-final/coverage.json`.
+Coverage MCP reports no missing branches in the new filter estimator or
+filter-plane helpers in that report. Its source identity is unverified and test
+attribution is unknown; the largest remaining WebP groups include
+`fill_hash_chain_impl`, `write_huffman_tree`, `write_token_stream`, and
+`apply_palette`. Inspect their source paths before adding parity rows because
+some gaps belong to mutually exclusive generic token/no-token paths.
+
+A six-input A–B–B–A comparison against pinned Pillow confirmed exact encoded
+bytes for every input. The Rust/Pillow speed ratio ranged from 0.35× to 0.81×;
+this records an open encoder-performance gap and is not a speedup claim. The
+x86 SSE2 and AVX2 builds pass strict cross-target lint, but runtime timing on
+x86 hardware remains outstanding.
 
 ## Full local coverage snapshot — 2026-10-25
 
@@ -9394,7 +9425,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4546962e61dfd114d8e27d6bb2b17b5c6046a94e7926fb1c341e32b415dfe981`; matrix `e78f7e295fd7063b0c5f0c3bbbdbcd064ab548c02fcb5d1f9cff95d328563f13`.
+- Current fixture integrity only: manifest `d1664eca120160caf7be157268b3c82c166d96439638e1a5d05fb80e517866f2`; matrix `98cd26c72d10e49ff0a17b8224f155d995b52f24b3288cdb8f4e483383d4741d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
