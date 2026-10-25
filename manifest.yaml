@@ -2571,6 +2571,11 @@ formats:
       test_assets:
       - baseline_grayscale_duplicate_component_scan.jpg
       expect_error: true
+    - id: baseline_grayscale_duplicate_sos_component
+      description: Baseline grayscale JPEG lists its sole component twice in one scan; Pillow verifies but rejects pixel decoding
+      test_assets:
+      - baseline_grayscale_duplicate_sos_component.jpg
+      expect_error: true
     - id: grayscale_sampling_422_512x512
       description: Pillow grayscale frame sampling retains one block per non-interleaved
         scan MCU
