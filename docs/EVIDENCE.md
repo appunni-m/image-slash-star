@@ -9545,7 +9545,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `c1a336175d78629d38c7aa46231049d4e756e754c14d5c187f117e81403987eb`; matrix `a552ef3fd95fd000178a9c1b46fbda25013e34eae28cf261125a46fd0386dbfe`.
+- Current fixture integrity only: manifest `43f79ac46ae3c18b0fb1a724777ccab96d3ca2e7fbf2bf9a750f6f9eda4767d9`; matrix `b995a0ce4567d67d5a130376dc1a73832596c5aad1be7867d7e08eafeb1af261`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -10961,8 +10961,32 @@ Coverage MCP still reports an unobserved `split > 0` outcome in GIF's median
 tie fallback; the valid median-cut rows keep each candidate box nonempty, so
 that remaining state is not represented as Pillow behavior.
 
-The current fixture matrix contains 2,476 total rows: 1,961 decode / inspect /
-verify rows and 515 encode rows. Of those, 1,961 decode rows and 483 encode
-rows are active; 32 planned encode rows remain. The separate target-only fault
-lane contains 67 rows. The coverage-origin inventory records 191 exact
+The current fixture matrix contains 2,611 total rows: 2,084 decode / inspect /
+verify rows and 527 encode rows. Of those, 2,084 decode rows and 496 encode
+rows are active; 31 planned encode rows remain. The separate target-only fault
+lane contains 67 rows. The coverage-origin inventory records 213 exact
 `cfg(coverage)` guards across 28 Rust files.
+
+## JPEG baseline grayscale nonzero SOS spectral-start parity — 2026-10-26
+
+Added `decode:jpeg:grayscale_sampling_420_17x9_sos_ss_nonzero`. Its maintained
+generator starts with the deterministic 17×9 grayscale 4:2:0 input and changes
+only the baseline SOS `Ss` byte from zero to one. The complete 468-byte input
+has SHA-256
+`52dbda00c3f20563251d3db1f4ec77debe55b90fc8838dce9bfee05e5730e5d0`.
+Pinned Pillow 12.2.0 accepts the input and returns the same 17×9 `L` pixels as
+the zero-`Ss` source: 153 bytes with SHA-256
+`6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c`. The
+selected public parity case passed 1/1.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/jpeg-gray-spectral-start-20261026/coverage.json`
+(SHA-256
+`eeb0c61f1fe34f8299909c756dc70050cce65ed3435ee9faf99f4b364852ac8f`). The
+active LLVM function instance records four true observations and zero false
+observations for `scan.ss != 0` at `src/codecs/jpeg/decode/decode.rs:2676`; the
+full baseline had zero true observations. Coverage MCP lists duplicate
+zero-execution function instances for this location, and its incremental
+comparison is incomparable because baseline branch details do not reconcile
+with its totals. MCP source identity is unverified and test attribution is
+unknown, so no aggregate coverage gain is claimed.

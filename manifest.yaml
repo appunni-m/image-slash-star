@@ -2531,6 +2531,10 @@ formats:
         scan MCU
       test_assets:
       - grayscale_sampling_420_17x9.jpg
+    - id: grayscale_sampling_420_17x9_sos_ss_nonzero
+      description: Baseline grayscale 4:2:0 with nonzero SOS spectral start exercises the sequential fallback while Pillow ignores the field
+      test_assets:
+      - grayscale_sampling_420_17x9_sos_ss_nonzero.jpg
     - id: grayscale_sampling_422_128x128
       description: Pillow grayscale frame sampling retains one block per non-interleaved
         scan MCU
