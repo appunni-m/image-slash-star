@@ -20,6 +20,29 @@ unverified and test attribution as unknown, and reports four missing branch
 observations at that line; this is local selected-run evidence, not an
 aggregate coverage or regression claim. No Rust unit tests were added.
 
+## AVIF variable-luma loop-filter parity — 2026-10-25
+
+Added the active `animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128`
+row, a deterministic two-frame 256x256 I420 AVIF whose inter frame exercises
+variable luma transforms with nonzero loop-filter levels. The pinned Pillow
+12.2.0 references match both decoded RGB frames, and the native libavif loop
+evidence parses successfully.
+
+The exact selected parity run passed 1/1 case. Its LLVM report is
+`.coverage-mcp/local-evidence/selected-from-worktree/av1-variable-luma-loopfilter-final-2026-10-25/coverage.json`
+(SHA-256 `26bac7919731c1c27d8a16e0f35de3a617af63de874fdb17557a4d27b47d8565`).
+At `filter.rs:247`, the report has one `build_masks` instance with both branch
+counters observed and a separately mangled zero-count copy. Coverage MCP lists
+the true and false observations as gaps; it labels source identity unverified
+and test attribution unknown. Direct LLVM records at the same source revision
+show the active function's true counter moving from 0 in the full baseline to
+1 in the selected run (with 7 false-edge hits); the zero-count copy remains.
+Coverage MCP's incremental comparison is incomparable because the baseline's
+branch detail is incomplete. This is a precise local edge observation, not an
+MCP-verified aggregate coverage gain. No Rust unit tests were added.
+
+The current matrix contains 2,606 total rows: 2,080 decode / inspect / verify rows and 526 encode rows. Of those, 2,080 decode rows and 495 encode rows are active; 31 encode rows remain planned.
+
 ## WebP color-transform size-field truncation parity — 2026-10-25
 
 Added a malformed VP8L stream that completes a subtract-green transform and
@@ -9445,7 +9468,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `02980f9bfe17bb1bf69d169171bee8f7774b153988c32afe472fef3c0b9432cc`; matrix `bd95e1c61b9428e5dbd134ea18af878adf5bb4ff8ee2f41324a04bef13b7eba1`.
+- Current fixture integrity only: manifest `6b38f4c2578b4494ac7cbadb18358cb26a3469e68b517958ad0c6ef6544a0699`; matrix `436f734a3da8091b12a2ceebfe0fe3203a1f90403bc3c2ec0fb5d912b7a9d712`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

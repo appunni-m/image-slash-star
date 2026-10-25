@@ -5688,9 +5688,9 @@
       "transport_prefix": "__image_slash_star_av1_fixture_selector__="
     },
     "avif": {
-      "decode_active": 592,
+      "decode_active": 593,
       "decode_planned": 0,
-      "decode_rows": 592,
+      "decode_rows": 593,
       "encode_active": 1,
       "encode_planned": 31,
       "encode_rows": 32,
@@ -6737,13 +6737,13 @@
       "status": "open_until_all_four_metrics_are_100_percent"
     },
     "matrix": {
-      "decode_active": 2079,
+      "decode_active": 2080,
       "decode_planned": 0,
-      "decode_rows": 2079,
+      "decode_rows": 2080,
       "encode_active": 495,
       "encode_planned": 31,
       "encode_rows": 526,
-      "total_rows": 2605
+      "total_rows": 2606
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

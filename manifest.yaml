@@ -10608,6 +10608,11 @@ formats:
       test_assets:
       - animated_lossy_wide_i444_mode2_mixed_b128x128.avif
       status: active
+    - id: animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128
+      description: Two-frame 256x256 8-bit 4:2:0 AVIF sequence with one 128x128 mode-2 inter leaf using mixed variable luma transforms and nonzero loop-filter levels
+      test_assets:
+      - animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128.avif
+      status: active
     - id: animated_lossy_global_rotzoom_compound_i444_b128x128
       description: Four-frame 256x256 8-bit lossy 4:4:4 AVIF sequence with non-identity global RotZoom references and compound GlobalGlobal spatial neighbors
       test_assets:
