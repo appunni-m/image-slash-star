@@ -118300,6 +118300,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_sub_444_unaligned_large_width_fallback",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 33x33 RGB source exceeds the row-streaming pixel threshold but selects the generic fallback because its 4:4:4 width is not divisible by eight",
+          "params": {
+            "subsampling": "444",
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "33x33.jpg",
+          "source_sha256": "afdec16d964c39b1d8f8329f72d798669ce507bf0904f96388fd273ddf65cc45",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_444_unaligned_large_width_fallback.bin",
+          "encoded_ref_bytes": 1470,
+          "encoded_ref_sha256": "2e3477bd6c8e471005723e5a7c86a3aa2e6ba060a8fae116eae11a86eb4a71f8",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_444_unaligned_large_width_fallback.bin",
+          "ref_sha256": "1c215933edf3484516304582490a95e0d64d38ae506d992b5fe7ed6ac548cb63",
+          "ref_bytes": 3267,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            33,
+            33
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_sub_444_aligned_subthreshold",
           "type": "encode",
           "format": "jpeg",
@@ -220479,9 +220535,9 @@
     }
   },
   "summary": {
-    "total_rows": 2609,
+    "total_rows": 2610,
     "decode_rows": 2083,
-    "encode_rows": 526,
+    "encode_rows": 527,
     "formats": 8,
     "assets_available": 2079,
     "decode_active": 2083,

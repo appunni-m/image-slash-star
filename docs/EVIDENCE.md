@@ -1,5 +1,32 @@
 # Versioned compatibility evidence
 
+## JPEG baseline 4:4:4 unaligned-width parity — 2026-10-25
+
+Added active encoder parity row
+encode:jpeg:enc_sub_444_unaligned_large_width_fallback, reusing the 33×33
+RGB JPEG source. Its area (1,089 pixels) passes the baseline row-streaming
+threshold, while width 33 fails the 8-pixel alignment guard at
+src/codecs/jpeg/encode/mod.rs:683 and selects the generic fallback. The
+pinned Pillow reference is 1,470 encoded bytes with SHA-256
+2e3477bd6c8e471005723e5a7c86a3aa2e6ba060a8fae116eae11a86eb4a71f8; the
+decoded 3,267-byte RGB reference has SHA-256
+1c215933edf3484516304582490a95e0d64d38ae506d992b5fe7ed6ac548cb63.
+
+The exact selected parity run passed 1/1, matched all encoded bytes, and
+re-decoded to 33×33 RGB pixel parity. Its report is
+.coverage-mcp/local-evidence/selected/jpeg-444-wide-20261025/coverage.json
+(SHA-256
+e2eccb6e0f1143a1b542a936b09f094b3687576aa11798277d61d7846a5baa94).
+Coverage MCP reports the true arm of the width guard as still missing in this
+selection, consistent with this unaligned input covering the false edge. MCP
+marks source/build identity unverified and test attribution unknown; the local
+receipt records source revision f916e810ed7d435e0e1fc4493da3a881d9e2b469,
+no source change during execution, and an unchanged fixture snapshot. The
+report is selected-case evidence only, not a project-wide coverage claim. No
+Rust source changed and no unit tests were added.
+
+The current matrix contains 2,610 total rows: 2,083 decode / inspect / verify rows and 527 encode rows. Of those, 2,083 decode rows and 496 encode rows are active; 31 encode rows remain planned.
+
 ## AVIF B32 lossless coverage follow-up — 2026-10-25
 
 Kept the 32x32 10-bit I420 all-lossless sequence with a translated 31x31
@@ -9518,7 +9545,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6097b0d921f5178858e45c0c8abccdf01dc93d3a92bf9b9430dfaf9ab1e67fca`; matrix `94c28733a9418b2ba3c3904b0c8d7c51e2e916f60ccf071334e91e4da6e04168`.
+- Current fixture integrity only: manifest `c1a336175d78629d38c7aa46231049d4e756e754c14d5c187f117e81403987eb`; matrix `a552ef3fd95fd000178a9c1b46fbda25013e34eae28cf261125a46fd0386dbfe`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
