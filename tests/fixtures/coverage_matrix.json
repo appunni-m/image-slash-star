@@ -216193,6 +216193,392 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossy_rgba_alpha_palette_wrap_gap",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP with a three-value alpha palette containing a wraparound delta",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_palette_wrap_512x512.png",
+          "source_sha256": "5936d19e4c41877d6c94d181b856324b34e8d2b7eed2f657fc6e47e47f6cd599",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_palette_wrap_gap.bin",
+          "encoded_ref_bytes": 604,
+          "encoded_ref_sha256": "38407ea182d8f20db86a8f9dd9c7694a2a169bb4653ac7de0e5a8908a2c56e08",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_palette_wrap_gap.bin",
+          "ref_sha256": "40e4ac87fecd685d34c2d4cf41ba0904d760d5f30ab999e24a870d10f00825eb",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_filtered_linear_ramp",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP matches Pillow's horizontal ALPH filter for a high-cardinality linear ramp",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_linear_ramp_512x512.png",
+          "source_sha256": "d149b7d176fda7a98a0229fb1ddbc92ecbde802cfb5240be35d923a6c1434650",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_filtered_linear_ramp.bin",
+          "encoded_ref_bytes": 602,
+          "encoded_ref_sha256": "60d01ffaecbb92372704ee5c865fbddae479a550a9d749ee08b21551d75fd10f",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filtered_linear_ramp.bin",
+          "ref_sha256": "444f4aaec9ade503d331c37ccb57c754631955284a397d8a5f3e001eef1b2d8e",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_filtered_vertical_ramp",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP matches Pillow's vertical ALPH filter for a high-cardinality ramp",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_vertical_ramp_512x512.png",
+          "source_sha256": "1921ab04563d4e36d39164322d25cafc8198ac5bbe26e3cd63fb8782262c0d14",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_filtered_vertical_ramp.bin",
+          "encoded_ref_bytes": 584,
+          "encoded_ref_sha256": "2b4128b13fde8b22b71516118ce29355ec2a9337bf86c01acdd358ce1c3d0266",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filtered_vertical_ramp.bin",
+          "ref_sha256": "74e8b031c69764d5e2b629635a1299baef409bf99862e4eea6684e2bea2450ec",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_nonzero_vertical_ramp",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP matches a high-cardinality alpha plane with no transparent sample",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_nonzero_vertical_ramp_512x512.png",
+          "source_sha256": "6f8095071106593bd21d7598911773b8bd845f15a4263c627eafba7e82dedd1c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_nonzero_vertical_ramp.bin",
+          "encoded_ref_bytes": 614,
+          "encoded_ref_sha256": "688ed217dd3000d9bbff1e6c3a34c3a79c805d3353d098b462de2213c2d388f7",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_nonzero_vertical_ramp.bin",
+          "ref_sha256": "923a214e646e430b31351c534ef6905b72e68d24a025b8300a58fcbe25290216",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_nonzero_palette_gap",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP matches a nonzero alpha palette with mixed small and wraparound gaps",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_nonzero_palette_gap_512x512.png",
+          "source_sha256": "9d83a5589136a7be2b9e4a5d0427f24f8c1689d1f15f4a20e42d4f0bbf405cef",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_nonzero_palette_gap.bin",
+          "encoded_ref_bytes": 628,
+          "encoded_ref_sha256": "b862523e9a2c35849270a795481f0487cc151b6cbb94e0c3a5ffce278543f93c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_nonzero_palette_gap.bin",
+          "ref_sha256": "5e73ea634a4b8c20358e14e469b44c3171dd9d999bc862ca8072778aaa1fc9a8",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_filtered_gradient_plane",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP matches Pillow's gradient ALPH filter for a piecewise linear alpha plane",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_gradient_plane_512x512.png",
+          "source_sha256": "d865c9d0ef03758d744a70f307132453e87f6d6cb7db73fed492e72e192ba015",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_filtered_gradient_plane.bin",
+          "encoded_ref_bytes": 622,
+          "encoded_ref_sha256": "eaac7e490aa635a7f8323be7346245e4f080b0fa032d00c8e71e169eef94439a",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filtered_gradient_plane.bin",
+          "ref_sha256": "5d729fcb6efafe530ef52ab1471c1ad452b89262b9fdae7fed9f84bdfabb0269",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_rgba_alpha_filtered_linear_ramp_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Cooperative lossy RGBA WebP encoding matches Pillow's filtered high-cardinality alpha output",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_linear_ramp_512x512.png",
+          "source_sha256": "d149b7d176fda7a98a0229fb1ddbc92ecbde802cfb5240be35d923a6c1434650",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_filtered_linear_ramp_token.bin",
+          "encoded_ref_bytes": 602,
+          "encoded_ref_sha256": "60d01ffaecbb92372704ee5c865fbddae479a550a9d749ee08b21551d75fd10f",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filtered_linear_ramp_token.bin",
+          "ref_sha256": "444f4aaec9ade503d331c37ccb57c754631955284a397d8a5f3e001eef1b2d8e",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_rgba_alpha_raw",
           "type": "encode",
           "format": "webp",
@@ -219060,9 +219446,9 @@
     }
   },
   "summary": {
-    "total_rows": 2593,
+    "total_rows": 2600,
     "decode_rows": 2075,
-    "encode_rows": 518,
+    "encode_rows": 525,
     "formats": 8,
     "assets_available": 2071,
     "decode_active": 2075,

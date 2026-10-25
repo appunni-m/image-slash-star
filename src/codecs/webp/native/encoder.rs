@@ -1161,6 +1161,23 @@ fn channels(pixel: u32) -> [usize; 4] {
     ]
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AlphaFilter {
+    Horizontal,
+    Vertical,
+    Gradient,
+}
+
+impl AlphaFilter {
+    const fn header_bits(self) -> u8 {
+        match self {
+            Self::Horizontal => 1,
+            Self::Vertical => 2,
+            Self::Gradient => 3,
+        }
+    }
+}
+
 #[allow(
     clippy::too_many_arguments,
     reason = "the thin wrapper forwards explicit stream settings with disjoint reusable scratch buffers"
@@ -1353,6 +1370,9 @@ struct ImageStreamScratch {
     // The packed ALPH transform image is consumed before the next frame can
     // use this encoder, so retain its capacity without retaining frame output.
     alpha_packed: Vec<u32>,
+    // Retain the filtered alpha plane between sequential frames without
+    // retaining its contents after the frame is encoded.
+    alpha_filtered: Vec<u8>,
 }
 
 #[derive(Clone, Copy)]
@@ -2846,6 +2866,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     packed: &[u32],
     packed_width: usize,
     alpha: &[u8],
+    filtering_method: Option<AlphaFilter>,
     output_scratch: &mut Vec<u8>,
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
@@ -2890,7 +2911,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         packed_width,
         true,
         ImageStreamConfig {
-            histogram_bits: 5,
+            histogram_bits: 9,
             quality: 32,
             reference_low_effort: false,
             hash_chain_low_effort: false,
@@ -2907,13 +2928,13 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     // either winner, replacing its contents with the raw plane when that is
     // strictly shorter and inserting the one-byte ALPH header in place when
     // compression wins or the candidate sizes tie. Pillow keeps compression
-    // on a tie.
+    // on a tie. `alpha` is already filtered when `filtering_method` is `Some`.
     // Keep the token-aware path below unchanged because its per-candidate copy
     // checkpoints are part of the existing Rust-only work-budget contract.
     if token.is_none() {
         if alpha.len() < encoded.len() {
             encoded.clear();
-            encoded.push(0); // no compression, no filtering, no preprocessing
+            encoded.push(filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
             encoded.extend_from_slice(alpha);
             return Ok(encoded);
         }
@@ -2922,16 +2943,16 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
         encoded.reserve(1);
         encoded.push(0);
         encoded.copy_within(..encoded_length, 1);
-        encoded[0] = 1; // lossless compression, no filtering, no preprocessing
+        encoded[0] = 1 | (filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
         return Ok(encoded);
     }
 
     let mut compressed = Vec::with_capacity(encoded.len() + 1);
-    compressed.push(1); // lossless compression, no filtering, no preprocessing
+    compressed.push(1 | (filtering_method.map_or(0, AlphaFilter::header_bits) << 2));
     extend_bytes_with_checkpoint(&mut compressed, &encoded, token)?;
 
     let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
-    uncompressed.push(0); // no compression, no filtering, no preprocessing
+    uncompressed.push(filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
     extend_bytes_with_checkpoint(&mut uncompressed, alpha, token)?;
 
     check_token(token)?;
@@ -3021,7 +3042,217 @@ fn encode_alpha_with_scratch(
     check_token(token)?;
     assert_eq!(alpha.len(), width as usize * height as usize);
 
-    let mut palette_values = collect_alpha_palette(alpha, token)?;
+    let palette = collect_alpha_palette(alpha, token)?;
+    let filtering_method = if palette.len > 16 {
+        estimate_alpha_filter(alpha, width as usize, height as usize, token)?
+    } else {
+        None
+    };
+    let unfiltered =
+        encode_alpha_candidate_with_filter(alpha, width, height, palette, None, scratch, token)?;
+    let Some(filtering_method) = filtering_method else {
+        return Ok(unfiltered);
+    };
+
+    let mut filtered_alpha = core::mem::take(&mut scratch.alpha_filtered);
+    let filtered_result = filter_alpha_plane(
+        alpha,
+        width as usize,
+        height as usize,
+        filtering_method,
+        &mut filtered_alpha,
+        token,
+    )
+    .and_then(|()| {
+        let palette = collect_alpha_palette(&filtered_alpha, token)?;
+        encode_alpha_candidate_with_filter(
+            &filtered_alpha,
+            width,
+            height,
+            palette,
+            Some(filtering_method),
+            scratch,
+            token,
+        )
+    });
+    scratch.alpha_filtered = filtered_alpha;
+    scratch.alpha_filtered.clear();
+    let filtered = filtered_result?;
+
+    Ok(if filtered.len() < unfiltered.len() {
+        filtered
+    } else {
+        unfiltered
+    })
+}
+
+#[cfg_attr(coverage, inline(never))]
+fn estimate_alpha_filter(
+    alpha: &[u8],
+    width: usize,
+    height: usize,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Option<AlphaFilter>, EncodingError> {
+    const FILTER_COUNT: usize = 4;
+    const SCORE_BINS: usize = 16;
+    let mut bins = [[false; SCORE_BINS]; FILTER_COUNT];
+
+    for y in (2..height.saturating_sub(1)).step_by(2) {
+        check_token(token)?;
+        let row = y * width;
+        let mut mean = u16::from(alpha[row]);
+        for x in (2..width.saturating_sub(1)).step_by(2) {
+            let index = row + x;
+            let value = alpha[index];
+            let left = alpha[index - 1];
+            let top = alpha[index - width];
+            let top_left = alpha[index - width - 1];
+            let gradient = (i16::from(left) + i16::from(top) - i16::from(top_left))
+                .clamp(0, 255)
+                .to_le_bytes()[0];
+            let predictors = [mean.to_le_bytes()[0], left, top, gradient];
+            for (filter, predictor) in predictors.into_iter().enumerate() {
+                let bin = usize::from(value.abs_diff(predictor) >> 4);
+                bins[filter][bin] = true;
+            }
+            mean = (3 * mean + u16::from(value) + 2) >> 2;
+        }
+    }
+
+    let filters = [
+        None,
+        Some(AlphaFilter::Horizontal),
+        Some(AlphaFilter::Vertical),
+        Some(AlphaFilter::Gradient),
+    ];
+    let mut best_filter = None;
+    let mut best_score = usize::MAX;
+    for (filter, filter_bins) in filters.into_iter().zip(&bins) {
+        let score = filter_bins
+            .iter()
+            .enumerate()
+            .filter_map(|(bin, &observed)| observed.then_some(bin))
+            .sum();
+        if score < best_score {
+            best_score = score;
+            best_filter = filter;
+        }
+    }
+    Ok(best_filter)
+}
+
+#[cfg_attr(coverage, inline(never))]
+fn filter_alpha_plane(
+    alpha: &[u8],
+    width: usize,
+    height: usize,
+    filtering_method: AlphaFilter,
+    filtered: &mut Vec<u8>,
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    match filtering_method {
+        AlphaFilter::Horizontal => filter_alpha_plane_with_predictor(
+            alpha,
+            width,
+            height,
+            filtered,
+            token,
+            |index, x, y| {
+                if x > 0 {
+                    alpha[index - 1]
+                } else if y > 0 {
+                    alpha[index - width]
+                } else {
+                    0
+                }
+            },
+        ),
+        AlphaFilter::Vertical => filter_alpha_plane_with_predictor(
+            alpha,
+            width,
+            height,
+            filtered,
+            token,
+            |index, x, y| {
+                if y > 0 {
+                    alpha[index - width]
+                } else if x > 0 {
+                    alpha[index - 1]
+                } else {
+                    0
+                }
+            },
+        ),
+        AlphaFilter::Gradient => filter_alpha_plane_with_predictor(
+            alpha,
+            width,
+            height,
+            filtered,
+            token,
+            |index, x, y| {
+                if x > 0 && y > 0 {
+                    let left = alpha[index - 1];
+                    let top = alpha[index - width];
+                    let top_left = alpha[index - width - 1];
+                    (i16::from(left) + i16::from(top) - i16::from(top_left))
+                        .clamp(0, 255)
+                        .to_le_bytes()[0]
+                } else if y > 0 {
+                    alpha[index - width]
+                } else if x > 0 {
+                    alpha[index - 1]
+                } else {
+                    0
+                }
+            },
+        ),
+    }
+}
+
+#[inline(always)]
+fn filter_alpha_plane_with_predictor<P>(
+    alpha: &[u8],
+    width: usize,
+    height: usize,
+    filtered: &mut Vec<u8>,
+    token: Option<&crate::CancellationToken>,
+    mut predictor: P,
+) -> Result<(), EncodingError>
+where
+    P: FnMut(usize, usize, usize) -> u8,
+{
+    const FILTER_CHECKPOINT_PIXELS: usize = 1_024;
+    filtered.clear();
+    filtered.resize(alpha.len(), 0);
+    let mut pixels_until_checkpoint = FILTER_CHECKPOINT_PIXELS;
+    for y in 0..height {
+        let row = y * width;
+        for x in 0..width {
+            let index = row + x;
+            filtered[index] = alpha[index].wrapping_sub(predictor(index, x, y));
+            pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+            if pixels_until_checkpoint == 0 {
+                check_token(token)?;
+                pixels_until_checkpoint = FILTER_CHECKPOINT_PIXELS;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg_attr(coverage, inline(never))]
+fn encode_alpha_candidate_with_filter(
+    alpha: &[u8],
+    width: u32,
+    height: u32,
+    mut palette_values: AlphaPalette,
+    filtering_method: Option<AlphaFilter>,
+    scratch: &mut ImageStreamScratch,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Vec<u8>, EncodingError> {
+    check_token(token)?;
+    assert_eq!(alpha.len(), width as usize * height as usize);
+
     let palette_len = palette_values.len;
     let palette_values = &mut palette_values.values[..palette_len];
     let mut signs = 0u8;
@@ -3069,16 +3300,18 @@ fn encode_alpha_with_scratch(
             }
         } else {
             for index in 0..sortable_len {
-                let (offset, _) = palette_values[index..sortable_len]
-                    .iter()
-                    .enumerate()
-                    .map(|(offset, &value)| {
-                        let delta = value.wrapping_sub(predicted);
-                        (offset, delta.min(0u8.wrapping_sub(delta)))
-                    })
-                    .min_by_key(|&(_, distance)| distance)
-                    .unwrap();
-                palette_values.swap(index, index + offset);
+                let initial_delta = palette_values[index].wrapping_sub(predicted);
+                let mut best_offset = 0;
+                let mut best_distance = initial_delta.min(0u8.wrapping_sub(initial_delta));
+                for (offset, &value) in palette_values[index + 1..sortable_len].iter().enumerate() {
+                    let delta = value.wrapping_sub(predicted);
+                    let distance = delta.min(0u8.wrapping_sub(delta));
+                    if distance < best_distance {
+                        best_offset = offset + 1;
+                        best_distance = distance;
+                    }
+                }
+                palette_values.swap(index, index + best_offset);
                 predicted = palette_values[index];
             }
         }
@@ -3164,6 +3397,7 @@ fn encode_alpha_with_scratch(
             packed,
             packed_width,
             alpha,
+            filtering_method,
             &mut scratch.output,
             &mut scratch.tokens,
             Some(token),
@@ -3179,6 +3413,7 @@ fn encode_alpha_with_scratch(
             packed,
             packed_width,
             alpha,
+            filtering_method,
             &mut scratch.output,
             &mut scratch.tokens,
             None,

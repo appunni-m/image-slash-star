@@ -5953,6 +5953,41 @@ formats:
       source_format: png
       source_asset: webp_rgba_alpha_compressible_checker.png
       params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_palette_wrap_gap
+      description: Lossy RGBA WebP with a three-value alpha palette containing a wraparound delta
+      source_format: png
+      source_asset: webp_rgba_alpha_palette_wrap_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_filtered_linear_ramp
+      description: Lossy RGBA WebP matches Pillow's horizontal ALPH filter for a high-cardinality linear ramp
+      source_format: png
+      source_asset: webp_rgba_alpha_linear_ramp_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_filtered_vertical_ramp
+      description: Lossy RGBA WebP matches Pillow's vertical ALPH filter for a high-cardinality ramp
+      source_format: png
+      source_asset: webp_rgba_alpha_vertical_ramp_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_nonzero_vertical_ramp
+      description: Lossy RGBA WebP matches a high-cardinality alpha plane with no transparent sample
+      source_format: png
+      source_asset: webp_rgba_alpha_nonzero_vertical_ramp_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_nonzero_palette_gap
+      description: Lossy RGBA WebP matches a nonzero alpha palette with mixed small and wraparound gaps
+      source_format: png
+      source_asset: webp_rgba_alpha_nonzero_palette_gap_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_filtered_gradient_plane
+      description: Lossy RGBA WebP matches Pillow's gradient ALPH filter for a piecewise linear alpha plane
+      source_format: png
+      source_asset: webp_rgba_alpha_gradient_plane_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_filtered_linear_ramp_token
+      description: Cooperative lossy RGBA WebP encoding matches Pillow's filtered high-cardinality alpha output
+      source_format: png
+      source_asset: webp_rgba_alpha_linear_ramp_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4, 'rust_encode_with_token': True}
     - id: enc_lossy_rgba_alpha_raw
       description: Lossy RGBA WebP encoding with a seeded high-entropy alpha plane
       source_format: png

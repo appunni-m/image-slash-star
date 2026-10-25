@@ -3149,6 +3149,70 @@ def gen_png():
         ]
     )
     webp_alpha_checker.save(d / "webp_rgba_alpha_compressible_checker.png")
+    webp_alpha_ramp_size = (512, 512)
+    webp_alpha_palette_wrap = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_palette_wrap.putdata(
+        [
+            (128, 128, 128, (0, 1, 200)[x % 3])
+            for _y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_palette_wrap.save(d / "webp_rgba_alpha_palette_wrap_512x512.png")
+    webp_alpha_ramp = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_ramp.putdata(
+        [
+            (128, 128, 128, (x * 3 + y * 5) & 0xFF)
+            for y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_ramp.save(d / "webp_rgba_alpha_linear_ramp_512x512.png")
+    webp_alpha_vertical_ramp = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_vertical_ramp.putdata(
+        [
+            (128, 128, 128, x & 0xFF)
+            for _y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_vertical_ramp.save(d / "webp_rgba_alpha_vertical_ramp_512x512.png")
+    webp_alpha_nonzero_vertical_ramp = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_nonzero_vertical_ramp.putdata(
+        [
+            (128, 128, 128, (x * 3) % 255 + 1)
+            for _y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_nonzero_vertical_ramp.save(
+        d / "webp_rgba_alpha_nonzero_vertical_ramp_512x512.png"
+    )
+    webp_alpha_nonzero_palette_gap = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_nonzero_palette_gap.putdata(
+        [
+            (
+                128,
+                128,
+                128,
+                (x % 121) + 1 if x % 121 < 100 else 230 + (x % 121) - 100,
+            )
+            for _y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_nonzero_palette_gap.save(
+        d / "webp_rgba_alpha_nonzero_palette_gap_512x512.png"
+    )
+    webp_alpha_gradient_plane = Image.new("RGBA", webp_alpha_ramp_size)
+    webp_alpha_gradient_plane.putdata(
+        [
+            (128, 128, 128, (x // 64) * 17 + (y // 64) * 18)
+            for y in range(webp_alpha_ramp_size[1])
+            for x in range(webp_alpha_ramp_size[0])
+        ]
+    )
+    webp_alpha_gradient_plane.save(d / "webp_rgba_alpha_gradient_plane_512x512.png")
     webp_alpha_noise_rng = random.Random(0xA17A)
     webp_alpha_noise = Image.new("RGBA", webp_alpha_size)
     webp_alpha_noise.putdata(
