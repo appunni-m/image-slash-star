@@ -22,6 +22,23 @@ fixture as 128x128 RGB. The asset SHA-256 is
 decoded-pixel SHA-256 is
 `ce195285d0ae374bc2ae5538da590658fbe26846b27cf2b0d2300979319f4c99`.
 
+`lossy_mode_filter_delta_no_update.webp` uses the same source pixels and
+libwebp 1.6.0 encoder configuration, with a fixture-only change that keeps
+loop-filter deltas enabled while clearing the delta-update bit. This exercises
+the VP8 keyframe path that preserves its default zero deltas. Regenerate it
+with an unpacked upstream libwebp 1.6.0 source tree:
+
+```sh
+.oracle-venv/bin/python scripts/generate_webp_lf_no_update_fixture.py \
+    /path/to/libwebp-1.6.0
+```
+
+The generator pins the complete WebP bytes to
+`39a3eeb4102f2b10bdb25f9cca0687345afa5ce3c27ff38a243b36b82ee78bd0` and the
+Pillow 12.2.0 decoded pixels to
+`6b2c202c55d0bf70d9f32b74c1b8705232ae41e0ed24203ea2b1b138dfd914fe`.
+Pillow opens, verifies, and loads the fixture as 128x128 RGB.
+
 `vp8x_reserved_flag_0x01.webp`, `vp8x_reserved_flag_0x40.webp`, and
 `vp8x_reserved_flag_0x80.webp` are complete RIFF WebP files derived
 independently from the pinned `icc.webp` source. The generator validates the

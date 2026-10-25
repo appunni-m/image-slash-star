@@ -187367,6 +187367,84 @@
           "error_contracts": {}
         },
         {
+          "id": "lossy_vp8_loop_filter_delta_no_update",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "VP8 keyframe enables loop-filter deltas but leaves the update bit clear",
+          "asset": "lossy_mode_filter_delta_no_update.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "39a3eeb4102f2b10bdb25f9cca0687345afa5ce3c27ff38a243b36b82ee78bd0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossy_mode_filter_delta_no_update_webp.bin",
+          "ref_sha256": "6b2c202c55d0bf70d9f32b74c1b8705232ae41e0ed24203ea2b1b138dfd914fe",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "lossy_vp8_segmentation_feature_data_disabled_16x16",
           "type": "decode",
           "format": "webp",
@@ -215134,6 +215212,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_sampling_limit.bin",
           "encoded_ref_bytes": 256,
           "encoded_ref_sha256": "e5ad8e9c8b240b9e5b7de8fcb47a254e7ff3999a63c4564a052c0e533efb759b",
@@ -215146,17 +215234,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_grayscale_alpha_predictor",
@@ -219501,12 +219579,12 @@
     }
   },
   "summary": {
-    "total_rows": 2601,
-    "decode_rows": 2075,
+    "total_rows": 2602,
+    "decode_rows": 2076,
     "encode_rows": 526,
     "formats": 8,
-    "assets_available": 2071,
-    "decode_active": 2075,
+    "assets_available": 2072,
+    "decode_active": 2076,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
