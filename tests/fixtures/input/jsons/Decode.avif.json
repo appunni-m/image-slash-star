@@ -25100,6 +25100,61 @@
       ]
     },
     {
+      "id": "animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128",
+      "asset": "animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128.avif",
+      "asset_sha256": "7be16326561aa3e67340b787cecfe9c5917ea282b312a28f665a03549fd62e31",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_lossy_i420_mode2_variable_tx_loopfilter_b128x128.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_lossy_global_rotzoom_compound_i444_b128x128",
       "asset": "animated_lossy_global_rotzoom_compound_i444_b128x128.avif",
       "asset_sha256": "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
