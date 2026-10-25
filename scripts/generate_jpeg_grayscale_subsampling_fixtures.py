@@ -147,6 +147,26 @@ def set_baseline_successive_approximation(source, ah, al):
     )
 
 
+def remove_single_scan_entropy(source):
+    """Place EOI immediately after a complete single-component SOS header."""
+    if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
+        raise RuntimeError("complete Pillow JPEG required for empty-entropy input")
+    scan_start = source.find(b"\xff\xda")
+    if scan_start < 0 or source.find(b"\xff\xda", scan_start + 2) >= 0:
+        raise RuntimeError("empty-entropy input must have exactly one SOS")
+
+    segment_length = int.from_bytes(source[scan_start + 2:scan_start + 4], "big")
+    entropy_start = scan_start + 2 + segment_length
+    if segment_length < 8 or entropy_start > len(source) - 2:
+        raise RuntimeError("single-component SOS header is incomplete")
+    if source[scan_start + 4] != 1:
+        raise RuntimeError("empty-entropy input must have one grayscale scan component")
+    if source.rfind(b"\xff\xd9") != len(source) - 2:
+        raise RuntimeError("complete Pillow JPEG must end at EOI without trailing bytes")
+
+    return source[:entropy_start] + source[-2:]
+
+
 def late_table_cases(source):
     """Append changed tables after complete entropy to protect first-scan provenance."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
@@ -208,6 +228,9 @@ def generate(output, check):
         )
     )
     grayscale_420 = expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")]
+    expected[Path("jpeg/grayscale_sampling_420_17x9_empty_entropy.jpg")] = (
+        remove_single_scan_entropy(grayscale_420)
+    )
     expected[Path("jpeg/grayscale_sampling_420_17x9_sos_se_nonmax.jpg")] = (
         set_baseline_spectral_end(grayscale_420, 62)
     )
@@ -225,7 +248,7 @@ def generate(output, check):
         else:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(data)
-    decode_declarations = sum(case["decode_input"] for case in cases()) + 1
+    decode_declarations = sum(path.suffix == ".jpg" for path in expected)
     print(
         f"{'Checked' if check else 'Generated'} {len(expected)} complete inputs "
         f"for {len(cases())} encode and {decode_declarations} decode declarations"

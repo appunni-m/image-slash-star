@@ -2531,6 +2531,10 @@ formats:
         scan MCU
       test_assets:
       - grayscale_sampling_420_17x9.jpg
+    - id: grayscale_sampling_420_17x9_empty_entropy
+      description: Empty-entropy baseline grayscale 4:2:0 scan is accepted by Pillow and decodes to deterministic pixels
+      test_assets:
+      - grayscale_sampling_420_17x9_empty_entropy.jpg
     - id: grayscale_sampling_420_17x9_sos_ss_nonzero
       description: Baseline grayscale 4:2:0 with nonzero SOS spectral start exercises the sequential fallback while Pillow ignores the field
       test_assets:
