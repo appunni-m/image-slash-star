@@ -6956,6 +6956,15 @@ def gen_webp():
     append_lsb(bits, 0, 3)
     write_vp8l_bits("vp8l_color_transform_stream_truncated.webp", bits)
 
+    # Finish a subtract-green transform, then leave only two bits for the
+    # three-bit size field of a following color transform.
+    bits = [1]
+    append_lsb(bits, 2, 2)
+    bits.append(1)
+    append_lsb(bits, 1, 2)
+    bits.extend((0, 0))
+    write_vp8l_bits("vp8l_color_transform_size_bits_truncated.webp", bits)
+
     bits = [0, 0, 1]
     append_lsb(bits, 0, 3)
     write_vp8l_bits("vp8l_meta_huffman_stream_truncated.webp", bits)

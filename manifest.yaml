@@ -5453,6 +5453,7 @@ formats:
       - vp8l_predictor_size_bits_truncated.webp
       - vp8l_predictor_transform_stream_truncated.webp
       - vp8l_color_transform_stream_truncated.webp
+      - vp8l_color_transform_size_bits_truncated.webp
       - vp8l_meta_huffman_stream_truncated.webp
       - vp8l_two_symbol_truncated_one_symbol.webp
       - vp8l_code_lengths_max_symbol_flag_truncated.webp
