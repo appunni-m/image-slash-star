@@ -96,6 +96,31 @@ def add_restart_interval_before_eoi(source, interval):
     return source[:-2] + dri + source[-2:]
 
 
+def set_baseline_spectral_start(source, spectral_start):
+    """Set the single baseline scan's Ss field without changing entropy bytes."""
+    if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
+        raise RuntimeError("complete Pillow JPEG required for a spectral-start input")
+    scan_start = source.find(b"\xff\xda")
+    if scan_start < 0 or source.find(b"\xff\xda", scan_start + 2) >= 0:
+        raise RuntimeError("spectral-start input must have exactly one SOS")
+
+    segment_length = int.from_bytes(source[scan_start + 2:scan_start + 4], "big")
+    payload_start = scan_start + 4
+    if segment_length < 8 or payload_start + segment_length - 2 > len(source):
+        raise RuntimeError("baseline SOS header is incomplete")
+    if source[payload_start] != 1:
+        raise RuntimeError("grayscale spectral-start input must have one scan component")
+    spectral_start_offset = payload_start + 3
+    if source[spectral_start_offset] != 0:
+        raise RuntimeError("Pillow baseline source no longer starts its scan at Ss=0")
+    if not 0 <= spectral_start <= 63:
+        raise ValueError("baseline spectral start must be between 0 and 63")
+
+    candidate = bytearray(source)
+    candidate[spectral_start_offset] = spectral_start
+    return bytes(candidate)
+
+
 def late_table_cases(source):
     """Append changed tables after complete entropy to protect first-scan provenance."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
@@ -151,6 +176,11 @@ def generate(output, check):
     ] = add_restart_interval_before_eoi(scan_restart_7, 0)
     for name, complete_input in late_table_cases(expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")]).items():
         expected[Path("jpeg") / (name + ".jpg")] = complete_input
+    expected[Path("jpeg/grayscale_sampling_420_17x9_sos_ss_nonzero.jpg")] = (
+        set_baseline_spectral_start(
+            expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")], 1
+        )
+    )
     for relative, data in expected.items():
         destination = output / relative
         if check:
