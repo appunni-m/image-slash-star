@@ -649,13 +649,39 @@
       "collection_index_sha256": "ef1139c29aa39d936196e650d79e357972cefd22db5c432aa033757e471e8798",
       "generator_sha256": "8037067243bee69a78a1631c780814065bdc487f14fe12fb6dd4fc6c298b9ce5",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "7811b43c1db342f23207169f6e4c9069db3b1df0b6492e21098d25cb82162294",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_420_b32x32_10bit_partition32_full_texture"
+      ],
+      "collection_index_sha256": "00ebd57485983321aea37d20665aa6eb75792c9fc46f5a8832ea79bafa92a020",
+      "generator_sha256": "20a8a2670fa1a62019c5b3df46f2d1831bf9ab3894e0e9caf2175e826e1dcdcd",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 15390,
+      "bytes": 15689,
       "path": "README.md",
-      "sha256": "f50b3112c3656abbb0646b24c6ebacd610dc7382962a7075ed370ee4b5c5ccfb"
+      "sha256": "ab660bb671a870972e0fdb82eed1db8eca6c96b7f4e66097fad5beee1729f43e"
     },
     {
       "bytes": 2267,
@@ -826,6 +852,11 @@
       "bytes": 1431,
       "path": "inputs/lossless_inter_420_b32x32_10bit_64x64.avif",
       "sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448"
+    },
+    {
+      "bytes": 4676,
+      "path": "inputs/lossless_inter_420_b32x32_10bit_partition32_full_texture.avif",
+      "sha256": "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257"
     },
     {
       "bytes": 1152,
@@ -1561,6 +1592,16 @@
       "bytes": 12288,
       "path": "pixels/lossless_inter_420_b32x32_10bit_64x64/frame_1.bin",
       "sha256": "0db725dc882996aaea0f9d84e8c9094d1ce25bc99e39ff8f38d39c452c1e24d7"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossless_inter_420_b32x32_10bit_partition32_full_texture/frame_0.bin",
+      "sha256": "8162da3443dda791abfa8d7ca3815361bc112dded58e9bfd65dbb33a9f37afac"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossless_inter_420_b32x32_10bit_partition32_full_texture/frame_1.bin",
+      "sha256": "4da7720b396c2f8d950c4baf6054c3e6aad65b799dde878c1a4bfbd7c37b8a69"
     },
     {
       "bytes": 384,
@@ -4333,6 +4374,54 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_b32x32_10bit",
       "source_sha256": "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a"
+    },
+    {
+      "input_bytes": 4676,
+      "input_path": "inputs/lossless_inter_420_b32x32_10bit_partition32_full_texture.avif",
+      "input_sha256": "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_420_b32x32_10bit_partition32_full_texture",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "8162da3443dda791abfa8d7ca3815361bc112dded58e9bfd65dbb33a9f37afac",
+            "size": [
+              32,
+              32
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "4da7720b396c2f8d950c4baf6054c3e6aad65b799dde878c1a4bfbd7c37b8a69",
+            "size": [
+              32,
+              32
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_420_b32x32_10bit_partition32_full_texture",
+      "source_sha256": "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257"
     },
     {
       "input_bytes": 1431,

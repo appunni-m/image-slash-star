@@ -1,5 +1,35 @@
 # Versioned compatibility evidence
 
+## AVIF B32 lossless coverage follow-up — 2026-10-25
+
+Kept the 32x32 10-bit I420 all-lossless sequence with a translated 31x31
+texture patch as a public parity case. The finalized five-row selection passed
+5/5 exact Pillow pixel comparisons; its two-row control selection passed 2/2.
+Coverage MCP's selected comparison observed 71 additional branch coordinates
+across 32 function groups, with the same 32,056-branch denominator. Its result
+is limited because source/build identity is unverified and test attribution is
+unknown. The local receipts for both selections record the same source-manifest
+SHA-256
+`c06ebd6afe7cc9dcc5dda317bb59c2b606bba236d52b95646d1e0bf9f3399c5c`, no source
+change during either run, and all selected parity rows passing.
+
+The five-row report is
+`.coverage-mcp/local-evidence/selected-from-worktree/av1-final-five/coverage.json`
+(SHA-256
+`df5052e93991f4dad8fb5be78211f4651fab05912fc9d01cb41f796ac5afd5eb`); the
+controls are in
+`.coverage-mcp/local-evidence/selected-from-worktree/av1-final-controls/coverage.json`.
+The five-row LLVM data records both outcomes of the partial-grid geometry
+check at `block.rs:47999` (one true, six false); controls recorded three false
+outcomes. The combined selection does not isolate which clipped case produced
+the true outcome, and selected evidence does not establish full-suite or
+release coverage. No Rust unit tests were added; all selected cases use the
+public Pillow parity matrix.
+
+The current matrix contains 2,609 total rows: 2,083 decode / inspect /
+verify rows and 526 encode rows. Of those, 2,083 decode rows and 495 encode
+rows are active; 31 encode rows remain planned.
+
 ## AVIF 10-bit I420 lossless input variants — 2026-10-25
 
 Retained two distinct two-frame 16x16 all-lossless AVIF parity inputs: a
@@ -13,11 +43,12 @@ Coverage MCP's selected-test comparison with the earlier small-patch selection
 observed 39 additional branch locations and no missing observations. Its
 receipt leaves source/build identity unverified and test attribution unknown,
 so this is selection-level evidence rather than a verified aggregate coverage
-gain. The branch at `src/codecs/avif/av1/block.rs:48152` remains uncovered; the
-fixtures do not assert a particular encoder leaf geometry. No Rust unit tests
-were added. The current matrix contains 2,608 total rows: 2,082 decode /
-inspect / verify rows and 526 encode rows. Of those, 2,082 decode rows and 495
-encode rows are active; 31 encode rows remain planned.
+gain. At that source revision, the branch at
+`src/codecs/avif/av1/block.rs:48152` remained uncovered; the fixtures did not
+assert a particular encoder leaf geometry. No Rust unit tests were added. At
+that checkpoint, the matrix contained 2,608 total rows: 2,082 decode / inspect
+/ verify rows and 526 encode rows. Of those, 2,082 decode rows and 495 encode
+rows were active; 31 encode rows remained planned.
 
 ## TIFF later-IFD BitsPerSample parity — 2026-10-25
 
@@ -9487,7 +9518,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a2f4620a93e7a9e86e8515899d8e45bc252adbbd049342fa9487e9e8f2b756d5`; matrix `da7b1219cab30bd6706634336a1ce02d87cb286d0991df189eb1b77e248c59af`.
+- Current fixture integrity only: manifest `6097b0d921f5178858e45c0c8abccdf01dc93d3a92bf9b9430dfaf9ab1e67fca`; matrix `94c28733a9418b2ba3c3904b0c8d7c51e2e916f60ccf071334e91e4da6e04168`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

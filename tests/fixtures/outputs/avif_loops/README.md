@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 113 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 105 accepted files decode completely;
-eight malformed files fail native parsing and Pillow opening. The 359 hashed
-artifacts total 12,776,646 bytes, including 114 input files, the compiled
-observer source, and 12,168,956 bytes of Pillow-decoded frame outputs. Mutation cases
+This bundle records 115 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 107 accepted files decode completely;
+eight malformed files fail native parsing and Pillow opening. The 362 hashed
+artifacts total 12,787,466 bytes, including 115 input files, the compiled
+observer source, and 12,175,100 bytes of Pillow-decoded frame outputs. Mutation cases
 share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 78 fixture sources are declared in
+The 79 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -60,6 +60,10 @@ an 8x8 tiled inter frame. Its inter picture uses 128x56 coded dimensions,
 160x56 upscaled dimensions, and SGR restoration on Y, U, and V. Both exact
 Pillow frame hashes, 33 ms durations, and the native infinite-loop observation
 are retained.
+The companion 32x32 full-range 10-bit I420 source fixes encoder partitions to
+32x32 and translates a textured 31x31 patch. Its key/inter AV1 samples are
+repeatable, both exact Pillow RGB frames match their pinned hashes, and the
+native observer confirms two decoded frames with infinite repetition.
 The companion full-range 8-bit I420 source follows the same flat-key and
 8x8-inter pattern. Its inter picture uses 128x56 coded dimensions, 160x56
 upscaled dimensions, and SGR restoration on Y, U, and V, retaining the exact
