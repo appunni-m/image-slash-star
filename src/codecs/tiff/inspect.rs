@@ -6,6 +6,9 @@ use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescri
 
 const COMPRESSION_NONE: usize = 1;
 const COMPRESSION_JPEG: usize = 7;
+const DEFAULT_YCBCR_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
+const DEFAULT_YCBCR_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
+    [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
 
 /// Inspect the first TIFF page and count the complete IFD chain.
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
@@ -467,12 +470,9 @@ pub(super) fn layout_and_palette(
 /// interpretation. Libtiff's RGB conversion ignores the positioning tag and
 /// uses one chroma pair for each clump.
 pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrParameters> {
-    const DEFAULT_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
-    const DEFAULT_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
-        [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
-    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_COEFFICIENTS)?;
+    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_YCBCR_COEFFICIENTS)?;
     let reference_black_white =
-        read_ycbcr_rationals(directory, 532, DEFAULT_REFERENCE_BLACK_WHITE)?;
+        read_ycbcr_rationals(directory, 532, DEFAULT_YCBCR_REFERENCE_BLACK_WHITE)?;
 
     let subsampling = match directory.field_type(530) {
         Some(1 | 3 | 4 | 6 | 8 | 9) if directory.value_count(530) == Some(2) => {
@@ -494,10 +494,10 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
 
     let is_default = coefficients.floating.is_none()
         && reference_black_white.floating.is_none()
-        && rational_values_match_default(&coefficients.rational, &DEFAULT_COEFFICIENTS)
+        && rational_coefficients_match_default(&coefficients.rational)
         && rational_values_match_default(
             &reference_black_white.rational,
-            &DEFAULT_REFERENCE_BLACK_WHITE,
+            &DEFAULT_YCBCR_REFERENCE_BLACK_WHITE,
         );
     Ok(YcbcrParameters {
         subsampling,
@@ -592,6 +592,18 @@ fn read_ycbcr_rationals<const N: usize>(
         floating: None,
         invalid: false,
     })
+}
+
+fn rational_coefficients_match_default(actual: &[(i64, i64); 3]) -> bool {
+    actual.iter().zip(&DEFAULT_YCBCR_COEFFICIENTS).all(
+        |(&(numerator, denominator), &(expected_numerator, expected_denominator))| {
+            // The default coefficients are nonzero, so zero rationals cannot match.
+            let actual_is_zero = numerator == 0 || denominator == 0;
+            !actual_is_zero
+                && i128::from(numerator).checked_mul(i128::from(expected_denominator))
+                    == i128::from(expected_numerator).checked_mul(i128::from(denominator))
+        },
+    )
 }
 
 fn rational_values_match_default<const N: usize>(
