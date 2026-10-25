@@ -94,6 +94,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_ico_zero_bpp_depth_fallbacks_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_grayscale_subsampling_fixtures.py --check
+	$(PYTHON) scripts/generate_jpeg_grayscale_duplicate_scan_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_fixture.py --check

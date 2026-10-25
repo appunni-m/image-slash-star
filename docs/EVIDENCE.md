@@ -1,5 +1,39 @@
 # Versioned compatibility evidence
 
+## JPEG duplicate grayscale scan parity — 2026-10-26
+
+Added the active decode row
+`decode:jpeg:baseline_grayscale_duplicate_component_scan`. Its deterministic
+fixture duplicates the sole full baseline scan in the pinned grayscale source
+and passes Pillow's container verification, while Pillow pixel loading rejects
+the repeated scan. The JPEG grayscale direct-safe path now rejects a repeated
+single-component scan as malformed; color multi-scan duplicate-component
+behavior remains covered by its existing parity row.
+
+The four-row selected parity batch passed 4/4, including the malformed input,
+baseline grayscale, progressive grayscale, and color multi-scan regression
+cases. Raw LLVM branch counters observed both outcomes at
+`reconstruct_single_scan_grayscale_direct_safe`; Coverage MCP marked the report
+unverified and did not attribute those outcomes to tests, so this is selected
+local branch evidence only. The retained selected report SHA-256 is
+`5845b9223258a5771661bcf65196ce88cf366203e2727d6e417145292098c4df`.
+
+The subsequent full all-feature LLVM run passed the complete integration suite
+and retained
+`.coverage-mcp/local-evidence/full-20261026-gray-multiscan/coverage.json`
+(SHA-256
+`de5ee2500bf23f4d6002f6405607250cf225e2db66456bca01730cbcb5557917`). It
+measured 93,857/139,522 lines (67.2704%), 18,638/32,078 branches (58.1021%),
+5,225/8,928 functions (58.5237%), and 143,367/216,563 regions (66.2011%),
+above the configured floors. Coverage MCP read an imported copy with source
+unverified and test attribution unknown; its branch gaps are leads, not
+verified test attribution or regression claims. The four-metric 100% goal
+remains open.
+
+The current fixture matrix contains 2,617 total rows: 2,090 decode / inspect /
+verify rows and 527 encode rows. Of those, 2,090 decode rows and 496 encode
+rows are active; 31 encode rows remain planned.
+
 ## JPEG baseline 4:4:4 unaligned-width parity — 2026-10-25
 
 Added active encoder parity row
@@ -9545,7 +9579,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5639354b90ab8addf1d7964bda9efa5c5a4849e2c601dca6b1925d8b796fc2c6`; matrix `3fc3903ecd2da8e27e845bccc5ea47104649a666bd96d95a6051aa221328699e`.
+- Current fixture integrity only: manifest `46a8df52b96fd76d5d2eba506f6ca527f0b285b875a18799a6294b5f97cfba20`; matrix `d3232febc9ec61c57b30ef6bb45444cc2de38ed17e4609b3ff6d8e8d254d2e98`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

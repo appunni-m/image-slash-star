@@ -2660,7 +2660,11 @@ fn reconstruct_single_scan_grayscale_direct_safe(
         return Ok(None);
     };
     let [scan] = info.scans.as_slice() else {
-        return Ok(None);
+        // A sequential grayscale frame has one component, so a second scan
+        // repeats it. Pillow accepts the header but rejects pixel decoding.
+        return Err(CodecError::Malformed(
+            "JPEG grayscale scan repeats its component".to_owned(),
+        ));
     };
     let [scan_component] = scan.components.as_slice() else {
         return Ok(None);
