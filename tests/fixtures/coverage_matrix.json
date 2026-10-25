@@ -215104,6 +215104,61 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_predictor_sampling_limit",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-five VP8L expands its initial predictor grid when a 2-bit grid exceeds 16,384 cells",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 5
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_predictor_sampling_limit_1025x512.png",
+          "source_sha256": "6dfd5e7e7cb493ce2be907120c2331af3777be40afc9cf66a14c7a47d0e44c58",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_predictor_sampling_limit.bin",
+          "encoded_ref_bytes": 256,
+          "encoded_ref_sha256": "e5ad8e9c8b240b9e5b7de8fcb47a254e7ff3999a63c4564a052c0e533efb759b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_predictor_sampling_limit.bin",
+          "ref_sha256": "d822c64b96e3bb557019e44bfd54a5a6869e93ad8d8e5ec5add3e4c5c47daebd",
+          "ref_bytes": 1574400,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1025,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_grayscale_alpha_predictor",
           "type": "encode",
           "format": "webp",
@@ -216443,6 +216498,16 @@
           },
           "source_mode": "Rgba8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_nonzero_palette_gap.bin",
           "encoded_ref_bytes": 628,
           "encoded_ref_sha256": "b862523e9a2c35849270a795481f0487cc151b6cbb94e0c3a5ffce278543f93c",
@@ -216455,17 +216520,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_rgba_alpha_filtered_gradient_plane",
@@ -219446,9 +219501,9 @@
     }
   },
   "summary": {
-    "total_rows": 2600,
+    "total_rows": 2601,
     "decode_rows": 2075,
-    "encode_rows": 525,
+    "encode_rows": 526,
     "formats": 8,
     "assets_available": 2071,
     "decode_active": 2075,

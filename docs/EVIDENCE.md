@@ -7,7 +7,7 @@ leaves only two of the following transform's three size bits. Pinned Pillow
 accepts it in `verify` and reports `OSError: failed to read next frame` during
 decode. The independent VP8L parser classifies the failure as a truncated
 transform header at bit offset 46. The selected public parity case passed 1/1.
-The current matrix contains 2,600 total rows: 2,075 decode / inspect / verify rows and 525 encode rows. Of those, 2,075 decode rows and 494 encode rows are active; 31 encode rows remain planned.
+The current matrix contains 2,601 total rows: 2,075 decode / inspect / verify rows and 526 encode rows. Of those, 2,075 decode rows and 495 encode rows are active; 31 encode rows remain planned.
 
 ## WebP lossy-alpha filter parity — 2026-10-25
 
@@ -9425,7 +9425,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d1664eca120160caf7be157268b3c82c166d96439638e1a5d05fb80e517866f2`; matrix `98cd26c72d10e49ff0a17b8224f155d995b52f24b3288cdb8f4e483383d4741d`.
+- Current fixture integrity only: manifest `70c1aaf14495eabe1fb83d0bac7f3338f59c7c68117fd482b95b9eff91a27dbc`; matrix `0c0bb3fb7524d5aede483312350cf69ade0bfdceda56438b386ccae7f91eb0ff`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

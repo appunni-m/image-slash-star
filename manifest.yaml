@@ -5853,6 +5853,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_sampling_rows_checkpoint.png
       params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_predictor_sampling_limit
+      description: Method-five VP8L expands its initial predictor grid when a 2-bit grid exceeds 16,384 cells
+      source_format: png
+      source_asset: webp_lossless_predictor_sampling_limit_1025x512.png
+      params: {'lossless': True, 'quality': 80, 'method': 5}
     - id: enc_lossless_grayscale_alpha_predictor
       description: Grayscale RGBA with varying alpha checks token-aware lossless predictor selection
       source_format: png

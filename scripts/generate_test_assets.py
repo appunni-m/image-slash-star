@@ -3318,6 +3318,25 @@ def gen_png():
         bytes(sampling_rows_pixels),
     )
     sampling_rows_image.save(d / "webp_lossless_sampling_rows_checkpoint.png")
+    # Method five starts with a two-bit predictor grid. This geometry makes
+    # that grid 257×128 (one cell above the 16,384-cell limit), so the encoder
+    # must advance the sampling bits before it evaluates predictor modes.
+    predictor_sampling_width, predictor_sampling_height = 1_025, 512
+    predictor_sampling_pixels = bytearray(
+        predictor_sampling_width * predictor_sampling_height * 3
+    )
+    for y in range(predictor_sampling_height):
+        row_offset = y * predictor_sampling_width * 3
+        for x in range(predictor_sampling_width):
+            offset = row_offset + x * 3
+            predictor_sampling_pixels[offset] = x & 0xFF
+            predictor_sampling_pixels[offset + 1] = y & 0xFF
+            predictor_sampling_pixels[offset + 2] = (x + y) & 0xFF
+    Image.frombytes(
+        "RGB",
+        (predictor_sampling_width, predictor_sampling_height),
+        bytes(predictor_sampling_pixels),
+    ).save(d / "webp_lossless_predictor_sampling_limit_1025x512.png")
     sampling_tile_columns = sampling_width // 8
     sampling_tile_rows = sampling_height // 8
     alpha_tiles = []
