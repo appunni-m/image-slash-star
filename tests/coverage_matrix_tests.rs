@@ -1813,6 +1813,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.header.registered_magic_rejection", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffUnregisteredMagic,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -2068,6 +2074,7 @@ fn execute_fault_contract(
         "tiff.lzw.zero_expected_output" => {
             Some("decode: TIFF LZW stream starts with an invalid code")
         }
+        "tiff.header.registered_magic_rejection" => Some("decode: TIFF magic is invalid"),
         "tiff.ycbcr.clump_length_mismatch" => {
             Some("decode: TIFF YCbCr clump buffer has an invalid length")
         }
@@ -2177,6 +2184,7 @@ fn execute_fault_contract(
         }) if matches!(
             row.fault.point.as_str(),
             "tiff.lzw.zero_expected_output"
+                | "tiff.header.registered_magic_rejection"
                 | "tiff.ycbcr.clump_length_mismatch"
                 | "tiff.ycbcr.full_resolution_length_mismatch"
                 | "tiff.ignored_samples.row_bytes_zero"

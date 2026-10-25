@@ -220029,6 +220029,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "tiff_header_registered_magic_rejection",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:compression_lzw"
+      },
+      "fault": {
+        "point": "tiff.header.registered_magic_rejection",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",
