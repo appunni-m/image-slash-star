@@ -1,5 +1,24 @@
 # Versioned compatibility evidence
 
+## AVIF 10-bit I420 lossless input variants — 2026-10-25
+
+Retained two distinct two-frame 16x16 all-lossless AVIF parity inputs: a
+near-full-frame texture shifted by one pixel and a moving 4x4 luma patch. Both
+have exact Pillow RGB frame references and independent native infinite-loop
+observations. The exact selected parity run passed 2/2 cases. Its LLVM report
+is `.coverage-mcp/local-evidence/selected/20261025T155900.516310Z-a23aa3bbec5b4d718a3af53a981d7a71/coverage.json`
+(SHA-256 `f9370f8dd76b8fc308283d017c27b985ef6e2518d1e969bb1ce5b72ce9782145`).
+
+Coverage MCP's selected-test comparison with the earlier small-patch selection
+observed 39 additional branch locations and no missing observations. Its
+receipt leaves source/build identity unverified and test attribution unknown,
+so this is selection-level evidence rather than a verified aggregate coverage
+gain. The branch at `src/codecs/avif/av1/block.rs:48152` remains uncovered; the
+fixtures do not assert a particular encoder leaf geometry. No Rust unit tests
+were added. The current matrix contains 2,608 total rows: 2,082 decode /
+inspect / verify rows and 526 encode rows. Of those, 2,082 decode rows and 495
+encode rows are active; 31 encode rows remain planned.
+
 ## TIFF later-IFD BitsPerSample parity — 2026-10-25
 
 Added public sequence-decode parity rows for a second TIFF directory with
@@ -9468,7 +9487,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6b38f4c2578b4494ac7cbadb18358cb26a3469e68b517958ad0c6ef6544a0699`; matrix `436f734a3da8091b12a2ceebfe0fe3203a1f90403bc3c2ec0fb5d912b7a9d712`.
+- Current fixture integrity only: manifest `a2f4620a93e7a9e86e8515899d8e45bc252adbbd049342fa9487e9e8f2b756d5`; matrix `1885ce8921655a2327b6d55c16f27deeb4f64686148b0ba82c02bb5abdbaced6`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
