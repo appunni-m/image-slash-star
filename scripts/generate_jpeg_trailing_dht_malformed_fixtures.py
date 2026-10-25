@@ -16,6 +16,10 @@ SOURCE_SHA256 = "cf8e4443dcff4df7858b6573664aa3fe73dd401827aa293d0eca84eb0667f66
 TRAILING_COMMENT = bytes.fromhex("fffe00046f6bffd9")
 BROKEN_DATA_MESSAGE = "broken data stream when reading image file"
 MALFORMED_DHT = {
+    "baseline_444_single_scan_trailing_dht_length_one.jpg": (
+        bytes.fromhex("ffc40001"),
+        "ce200aef72bb9a259f48cf9f154a51ca8ba16280601b39c7076c8c4c6df07b0a",
+    ),
     "baseline_444_single_scan_trailing_dht_truncated_counts.jpg": (
         bytes.fromhex("ffc4000300"),
         "eb9cc39fb74763240136310a0fed1af15cc133377f83257772ae204c57f3a028",

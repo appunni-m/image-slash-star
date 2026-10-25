@@ -1731,6 +1731,11 @@ formats:
       test_assets:
       - baseline_444_single_scan_trailing_dht_truncated_values.jpg
       expect_error: true
+    - id: baseline_444_single_scan_trailing_dht_length_one
+      description: Baseline 4:4:4 JPEG has a trailing DHT marker with the invalid one-byte segment length
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_length_one.jpg
+      expect_error: true
     - id: baseline_444_single_scan_dqt_marker_fill
       description: Baseline 4:4:4 JPEG adds a fill byte before its trailing DQT marker
       test_assets:
