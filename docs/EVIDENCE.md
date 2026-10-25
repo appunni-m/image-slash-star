@@ -25,7 +25,7 @@ no source change during execution, and an unchanged fixture snapshot. The
 report is selected-case evidence only, not a project-wide coverage claim. No
 Rust source changed and no unit tests were added.
 
-The current matrix contains 2,615 total rows: 2,088 decode / inspect / verify rows and 527 encode rows. Of those, 2,088 decode rows and 496 encode rows are active; 31 encode rows remain planned.
+The current matrix contains 2,616 total rows: 2,089 decode / inspect / verify rows and 527 encode rows. Of those, 2,089 decode rows and 496 encode rows are active; 31 encode rows remain planned.
 
 ## AVIF B32 lossless coverage follow-up — 2026-10-25
 
@@ -9545,7 +9545,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f62a6a78d3e1b9733da0db337d9af91b03cf6f9b62c7f0f2fc27d271d14bc3f0`; matrix `128f18ab34754d0f4d75d4f9425bfd36f185e1a24acd0117861f4c4a62903237`.
+- Current fixture integrity only: manifest `5639354b90ab8addf1d7964bda9efa5c5a4849e2c601dca6b1925d8b796fc2c6`; matrix `3fc3903ecd2da8e27e845bccc5ea47104649a666bd96d95a6051aa221328699e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11041,3 +11041,34 @@ the empty-entropy guard. Coverage MCP reports the opposite arm as missing in
 this one-row selection; the existing all-JPEG selected run recorded 60 false
 observations. MCP source identity remains unverified and test attribution is
 unknown, so no aggregate coverage gain is claimed.
+
+## JPEG trailing DHT length-one parity — 2026-10-26
+
+Added `decode:jpeg:baseline_444_single_scan_trailing_dht_length_one`, a
+complete JPEG whose trailing DHT marker declares the invalid one-byte segment
+length. The deterministic generator replaces the anchored trailing COM in the
+8×8 baseline image. Pillow 12.2.0 verifies the file structurally and reports
+`OSError: broken data stream when reading image file` during pixel decoding;
+the selected Rust parity row passes with the same malformed result. The input
+SHA-256 is
+`ce200aef72bb9a259f48cf9f154a51ca8ba16280601b39c7076c8c4c6df07b0a`.
+
+A clean full `make coverage` run on `origin/main` at
+`0d72fbda5757d1ff878bfeaa9d9d56d62d3110c3` passed all executed tests and
+reported 67.2685% lines, 58.0959% branches, 58.5237% functions, and 66.1997%
+regions. Its report is
+`.coverage-mcp/local-evidence/full-20261026-main/coverage.json` (SHA-256
+`552996f85421077b702606d73e00d71ef2943b724c5f68a665c27306bb312931`). The
+full report had no true outcome for the `segment_length < 2` branch at
+`src/codecs/jpeg/decode/decode.rs:2900`. The exact selected run passed 1/1 and
+its receipt records three true outcomes for that branch, with no source or
+fixture change during execution. Its report is
+`.coverage-mcp/local-evidence/selected/20261025T213051.396026Z-4fd74cd709074907b76d0e5e0dfb41ca/coverage.json`
+(SHA-256
+`97f41f835b3b1d5030c96f032235c4c3e7f465cf5084ecf3b90a13d13d237ccb`).
+
+Coverage MCP could not provide a grouped or incremental result: its shared
+daemon did not become healthy at `127.0.0.1:59471`. The retained LLVM report
+and local receipt support this one source-bound case observation; no MCP
+snapshot or aggregate coverage gain is claimed. No Rust source or unit tests
+were added.
