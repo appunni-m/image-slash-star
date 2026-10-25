@@ -2761,6 +2761,10 @@ formats:
       description: A 17x17 RGB source exercises baseline 4:4:4 independent entropy encoding below the row-streaming threshold
       params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
       source_asset: 17x17.jpg
+    - id: enc_sub_444_unaligned_large_width_fallback
+      description: A 33x33 RGB source exceeds the row-streaming pixel threshold but selects the generic fallback because its 4:4:4 width is not divisible by eight
+      params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
+      source_asset: 33x33.jpg
     - id: enc_sub_444_aligned_subthreshold
       description: A 64x8 RGB source exercises the aligned baseline 4:4:4 row-streaming path below the pixel threshold
       params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}

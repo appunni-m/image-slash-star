@@ -594,6 +594,59 @@
       }
     },
     {
+      "id": "enc_sub_444_unaligned_large_width_fallback",
+      "source_asset": "33x33.jpg",
+      "source_format": "jpeg",
+      "source_mode": "Rgb8",
+      "source_sha256": "afdec16d964c39b1d8f8329f72d798669ce507bf0904f96388fd273ddf65cc45",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "subsampling": "444",
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/33x33.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_sub_444_aligned_subthreshold",
       "source_asset": "baseline_422_aligned_64x8.jpg",
       "source_format": "jpeg",
