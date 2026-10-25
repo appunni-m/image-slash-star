@@ -2535,6 +2535,18 @@ formats:
       description: Baseline grayscale 4:2:0 with nonzero SOS spectral start exercises the sequential fallback while Pillow ignores the field
       test_assets:
       - grayscale_sampling_420_17x9_sos_ss_nonzero.jpg
+    - id: grayscale_sampling_420_17x9_sos_se_nonmax
+      description: Pillow-tolerated grayscale 4:2:0 scan with SOS Se=62 preserves the single-scan decode pixels
+      test_assets:
+      - grayscale_sampling_420_17x9_sos_se_nonmax.jpg
+    - id: grayscale_sampling_420_17x9_sos_ah_nonzero
+      description: Pillow-tolerated grayscale 4:2:0 scan with nonzero SOS Ah preserves the single-scan decode pixels
+      test_assets:
+      - grayscale_sampling_420_17x9_sos_ah_nonzero.jpg
+    - id: grayscale_sampling_420_17x9_sos_al_nonzero
+      description: Pillow-tolerated grayscale 4:2:0 scan with nonzero SOS Al preserves the single-scan decode pixels
+      test_assets:
+      - grayscale_sampling_420_17x9_sos_al_nonzero.jpg
     - id: grayscale_sampling_422_128x128
       description: Pillow grayscale frame sampling retains one block per non-interleaved
         scan MCU
