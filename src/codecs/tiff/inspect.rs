@@ -6,6 +6,8 @@ use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescri
 
 const COMPRESSION_NONE: usize = 1;
 const COMPRESSION_JPEG: usize = 7;
+const YCBCR_COEFFICIENTS_TAG: u16 = 529;
+const YCBCR_REFERENCE_BLACK_WHITE_TAG: u16 = 532;
 const DEFAULT_YCBCR_COEFFICIENTS: [(i64, i64); 3] = [(299, 1000), (587, 1000), (114, 1000)];
 const DEFAULT_YCBCR_REFERENCE_BLACK_WHITE: [(i64, i64); 6] =
     [(0, 1), (255, 1), (128, 1), (255, 1), (128, 1), (255, 1)];
@@ -305,6 +307,12 @@ struct YcbcrNumericValues<const N: usize> {
     invalid: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum YcbcrRationalField {
+    UseDefaults,
+    Present(u16),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct YcbcrParameters {
     pub(super) subsampling: (usize, usize),
@@ -470,9 +478,12 @@ pub(super) fn layout_and_palette(
 /// interpretation. Libtiff's RGB conversion ignores the positioning tag and
 /// uses one chroma pair for each clump.
 pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrParameters> {
-    let coefficients = read_ycbcr_rationals(directory, 529, DEFAULT_YCBCR_COEFFICIENTS)?;
-    let reference_black_white =
-        read_ycbcr_rationals(directory, 532, DEFAULT_YCBCR_REFERENCE_BLACK_WHITE)?;
+    let coefficients = read_ycbcr_coefficients(directory)?;
+    let reference_black_white = read_ycbcr_rationals::<6>(
+        directory,
+        YCBCR_REFERENCE_BLACK_WHITE_TAG,
+        DEFAULT_YCBCR_REFERENCE_BLACK_WHITE,
+    )?;
 
     let subsampling = match directory.field_type(530) {
         Some(1 | 3 | 4 | 6 | 8 | 9) if directory.value_count(530) == Some(2) => {
@@ -512,32 +523,64 @@ pub(super) fn ycbcr_parameters(directory: &Directory<'_>) -> CodecResult<YcbcrPa
     })
 }
 
+fn read_ycbcr_coefficients(directory: &Directory<'_>) -> CodecResult<YcbcrNumericValues<3>> {
+    let YcbcrRationalField::Present(field_type) =
+        ycbcr_rational_field::<3>(directory, YCBCR_COEFFICIENTS_TAG)
+    else {
+        return Ok(ycbcr_numeric_defaults(DEFAULT_YCBCR_COEFFICIENTS, false));
+    };
+
+    if !matches!(field_type, 4 | 5 | 10 | 11 | 12) {
+        return Ok(ycbcr_numeric_defaults(DEFAULT_YCBCR_COEFFICIENTS, true));
+    }
+
+    read_ycbcr_rational_values(
+        directory,
+        YCBCR_COEFFICIENTS_TAG,
+        field_type,
+        DEFAULT_YCBCR_COEFFICIENTS,
+    )
+}
+
 fn read_ycbcr_rationals<const N: usize>(
     directory: &Directory<'_>,
     tag: u16,
     defaults: [(i64, i64); N],
 ) -> CodecResult<YcbcrNumericValues<N>> {
-    let Some(field_type) = directory.field_type(tag) else {
-        return Ok(YcbcrNumericValues {
-            rational: defaults,
-            floating: None,
-            invalid: false,
-        });
+    let YcbcrRationalField::Present(field_type) = ycbcr_rational_field::<N>(directory, tag) else {
+        return Ok(ycbcr_numeric_defaults(defaults, false));
     };
-    if directory.field_count(tag) != Some(N) {
-        return Ok(YcbcrNumericValues {
-            rational: defaults,
-            floating: None,
-            invalid: false,
-        });
+
+    read_ycbcr_rational_values(directory, tag, field_type, defaults)
+}
+
+fn ycbcr_rational_field<const N: usize>(directory: &Directory<'_>, tag: u16) -> YcbcrRationalField {
+    let Some(field_type) = directory.field_type(tag) else {
+        return YcbcrRationalField::UseDefaults;
+    };
+    if directory.field_count(tag) != Some(N) || directory.value_count(tag) != Some(N) {
+        return YcbcrRationalField::UseDefaults;
     }
-    if directory.value_count(tag) != Some(N) {
-        return Ok(YcbcrNumericValues {
-            rational: defaults,
-            floating: None,
-            invalid: false,
-        });
+    YcbcrRationalField::Present(field_type)
+}
+
+fn ycbcr_numeric_defaults<const N: usize>(
+    defaults: [(i64, i64); N],
+    invalid: bool,
+) -> YcbcrNumericValues<N> {
+    YcbcrNumericValues {
+        rational: defaults,
+        floating: None,
+        invalid,
     }
+}
+
+fn read_ycbcr_rational_values<const N: usize>(
+    directory: &Directory<'_>,
+    tag: u16,
+    field_type: u16,
+    defaults: [(i64, i64); N],
+) -> CodecResult<YcbcrNumericValues<N>> {
     if matches!(field_type, 11 | 12) {
         let mut values = [0.0; N];
         for (index, value) in values.iter_mut().enumerate() {
@@ -562,13 +605,6 @@ fn read_ycbcr_rationals<const N: usize>(
             }
         }
         3 | 4 => {
-            if tag == 529 && field_type == 3 {
-                return Ok(YcbcrNumericValues {
-                    rational: defaults,
-                    floating: None,
-                    invalid: true,
-                });
-            }
             let numeric_values = directory.values(tag).ok_or_else(|| {
                 CodecError::Malformed(format!("TIFF YCbCr tag {tag} is truncated"))
             })?;
@@ -580,11 +616,7 @@ fn read_ycbcr_rationals<const N: usize>(
             }
         }
         _ => {
-            return Ok(YcbcrNumericValues {
-                rational: defaults,
-                floating: None,
-                invalid: tag == 529,
-            });
+            return Ok(ycbcr_numeric_defaults(defaults, false));
         }
     }
     Ok(YcbcrNumericValues {
