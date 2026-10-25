@@ -52,6 +52,50 @@ def source_pixels(width, height):
     return bytes(pixels)
 
 
+def add_restart_interval_before_sos(source, interval):
+    """Set a DRI interval without changing the scan's entropy-coded bytes."""
+    if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
+        raise RuntimeError("complete Pillow JPEG required for restart-interval input")
+    if not 0 < interval <= 0xFFFF:
+        raise ValueError("JPEG restart interval must fit a nonzero 16-bit value")
+
+    position = 2
+    while position < len(source):
+        marker_start = position
+        if source[position] != 0xFF:
+            raise RuntimeError("unexpected JPEG marker alignment before SOS")
+        while position < len(source) and source[position] == 0xFF:
+            position += 1
+        if position >= len(source):
+            raise RuntimeError("truncated JPEG marker before SOS")
+        marker = source[position]
+        position += 1
+        if marker == 0xDA:
+            dri = b"\xff\xdd\x00\x04" + interval.to_bytes(2, "big")
+            return source[:marker_start] + dri + source[marker_start:]
+        if marker in (0xD8, 0xD9, *range(0xD0, 0xD8)):
+            raise RuntimeError("unexpected standalone marker before SOS")
+        if marker == 0xDD:
+            raise RuntimeError("Pillow source JPEG already contains a DRI marker")
+        if position + 2 > len(source):
+            raise RuntimeError("truncated JPEG segment length before SOS")
+        segment_length = int.from_bytes(source[position : position + 2], "big")
+        if segment_length < 2 or position + segment_length > len(source):
+            raise RuntimeError("invalid JPEG segment length before SOS")
+        position += segment_length
+    raise RuntimeError("Pillow JPEG has no SOS marker")
+
+
+def add_restart_interval_before_eoi(source, interval):
+    """Change the next-scan DRI state after a complete JPEG scan."""
+    if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
+        raise RuntimeError("complete Pillow JPEG required for trailing DRI input")
+    if not 0 <= interval <= 0xFFFF:
+        raise ValueError("JPEG restart interval must fit a 16-bit value")
+    dri = b"\xff\xdd\x00\x04" + interval.to_bytes(2, "big")
+    return source[:-2] + dri + source[-2:]
+
+
 def late_table_cases(source):
     """Append changed tables after complete entropy to protect first-scan provenance."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
@@ -100,6 +144,11 @@ def generate(output, check):
             buffer = io.BytesIO()
             image.save(buffer, format="JPEG", **encode_params("jpeg", dict(case["params"])))
             expected[Path("jpeg") / (case["name"] + ".jpg")] = buffer.getvalue()
+    grayscale_422 = expected[Path("jpeg/grayscale_sampling_422_17x9.jpg")]
+    scan_restart_7 = add_restart_interval_before_sos(grayscale_422, 7)
+    expected[
+        Path("jpeg/grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg")
+    ] = add_restart_interval_before_eoi(scan_restart_7, 0)
     for name, complete_input in late_table_cases(expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")]).items():
         expected[Path("jpeg") / (name + ".jpg")] = complete_input
     for relative, data in expected.items():
@@ -110,7 +159,11 @@ def generate(output, check):
         else:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(data)
-    print(f"{'Checked' if check else 'Generated'} {len(expected)} complete inputs for {len(cases())} encode and 11 decode declarations")
+    decode_declarations = sum(case["decode_input"] for case in cases()) + 1
+    print(
+        f"{'Checked' if check else 'Generated'} {len(expected)} complete inputs "
+        f"for {len(cases())} encode and {decode_declarations} decode declarations"
+    )
 
 
 def main():
