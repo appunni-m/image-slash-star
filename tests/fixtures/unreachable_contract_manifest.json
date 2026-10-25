@@ -68,6 +68,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "tiff_lzw_zero_expected_output_rejection",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_lzw_zero_expected_output_rejection",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "tiff_lzw_zero_expected_output_token_rejection",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_strip_assembly_reservation_failure",

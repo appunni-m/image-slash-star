@@ -537,6 +537,22 @@ FAULT_CONTRACTS = {
         "point": "bmp.rle.command_work_budget",
         "contract": "decode_work_budget_exceeded_then_retry_succeeds",
     },
+    "tiff_lzw_zero_expected_output_rejection": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_lzw_zero_expected_output_rejection",
+        "source_case": "decode:tiff:compression_lzw",
+        "point": "tiff.lzw.zero_expected_output",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "tiff_lzw_zero_expected_output_token_rejection": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection",
+        "source_case": "decode:tiff:compression_lzw",
+        "point": "tiff.lzw.zero_expected_output",
+        "contract": "decode_with_token_error_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

@@ -148,6 +148,8 @@ pub enum CoverageFaultPoint {
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.
     TiffRgb16OutputReservation,
+    /// Force TIFF LZW decoding to observe a zero expected output length.
+    TiffLzwZeroExpectedOutput,
     /// Report a TIFF subsampled YCbCr clump-buffer length mismatch.
     TiffYcbcrClumpLengthMismatch,
     /// Force specialized TIFF YCbCr RGB output reservation to fail.
