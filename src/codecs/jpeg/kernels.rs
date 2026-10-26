@@ -9,6 +9,11 @@
 
 use wide::bytemuck::{cast, pod_read_unaligned};
 use wide::{i16x8, i32x8, u8x16, u16x8};
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+use wide::{i16x16, i32x16, u8x32};
 
 const Y_R: i32 = 19_595;
 const Y_G: i32 = 38_470;
@@ -54,6 +59,93 @@ const CR_RG_I16: i16x8 = i16x8::new([27_439; 8]);
 const CR_RB_I16: i16x8 = i16x8::new([5_329; 8]);
 const LUMA_BIAS_I32: i32x8 = i32x8::new([32_768; 8]);
 const CHROMA_BIAS_I32: i32x8 = i32x8::new([CHROMA_BIAS; 8]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const fn rgb_channel_shuffle_indices(source_start: usize, channel: usize) -> [u8; 32] {
+    let mut indices = [0x80; 32];
+    let mut lane = 0usize;
+    while lane < 16 {
+        let source_index = lane.saturating_mul(3).saturating_add(channel);
+        if source_index >= source_start && source_index < source_start.saturating_add(32) {
+            indices[lane] = source_index.saturating_sub(source_start).to_le_bytes()[0];
+        }
+        lane = lane.saturating_add(1);
+    }
+    indices
+}
+
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const Y_RG_I16X16: i16x16 = i16x16::new([19_595; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const Y_BG_I16X16: i16x16 = i16x16::new([7_471; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const CB_RB_I16X16: i16x16 = i16x16::new([-11_059; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const CB_GB_I16X16: i16x16 = i16x16::new([-21_709; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const CR_RG_I16X16: i16x16 = i16x16::new([27_439; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const CR_RB_I16X16: i16x16 = i16x16::new([5_329; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const LUMA_BIAS_I32X16: i32x16 = i32x16::new([32_768; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const CHROMA_BIAS_I32X16: i32x16 = i32x16::new([CHROMA_BIAS; 16]);
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_RED_FIRST: u8x32 = u8x32::new(rgb_channel_shuffle_indices(0, 0));
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_GREEN_FIRST: u8x32 = u8x32::new(rgb_channel_shuffle_indices(0, 1));
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_BLUE_FIRST: u8x32 = u8x32::new(rgb_channel_shuffle_indices(0, 2));
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_RED_SECOND: u8x32 = u8x32::new(rgb_channel_shuffle_indices(16, 0));
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_GREEN_SECOND: u8x32 = u8x32::new(rgb_channel_shuffle_indices(16, 1));
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+const RGB16_BLUE_SECOND: u8x32 = u8x32::new(rgb_channel_shuffle_indices(16, 2));
 const PAIR_EVEN: u8x16 = u8x16::new([
     0, 2, 4, 6, 8, 10, 12, 14, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
 ]);
@@ -313,28 +405,55 @@ pub(crate) fn rgb_to_ycbcr_420_packet(
     first_row: &[u8; 48],
     second_row: &[u8; 48],
 ) -> ([u8; 16], [u8; 16], [u8; 8], [u8; 8]) {
-    let first_rgb0: &[u8; 24] = first_row[..24]
-        .try_into()
-        .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
-    let first_rgb1: &[u8; 24] = first_row[24..]
-        .try_into()
-        .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
-    let second_rgb0: &[u8; 24] = second_row[..24]
-        .try_into()
-        .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
-    let second_rgb1: &[u8; 24] = second_row[24..]
-        .try_into()
-        .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
+    #[cfg(any(
+        target_arch = "aarch64",
+        all(target_arch = "x86_64", target_feature = "avx2")
+    ))]
+    {
+        let (y_first_values, cb_first_values, cr_first_values) = convert_sixteen_values(first_row);
+        let (y_second_values, cb_second_values, cr_second_values) =
+            convert_sixteen_values(second_row);
+        let y_first = pack_sixteen(y_first_values);
+        let y_second = pack_sixteen(y_second_values);
+        let cb = downsample_h2v2_vectors(
+            pack_sixteen(cb_first_values),
+            pack_sixteen(cb_second_values),
+        );
+        let cr = downsample_h2v2_vectors(
+            pack_sixteen(cr_first_values),
+            pack_sixteen(cr_second_values),
+        );
+        (y_first.to_array(), y_second.to_array(), cb, cr)
+    }
 
-    let (y00, cb00, cr00) = convert_eight_values(first_rgb0);
-    let (y01, cb01, cr01) = convert_eight_values(first_rgb1);
-    let (y10, cb10, cr10) = convert_eight_values(second_rgb0);
-    let (y11, cb11, cr11) = convert_eight_values(second_rgb1);
-    let y_first = pack_two_eight(y00, y01).to_array();
-    let y_second = pack_two_eight(y10, y11).to_array();
-    let cb = downsample_h2v2_vectors(pack_two_eight(cb00, cb01), pack_two_eight(cb10, cb11));
-    let cr = downsample_h2v2_vectors(pack_two_eight(cr00, cr01), pack_two_eight(cr10, cr11));
-    (y_first, y_second, cb, cr)
+    #[cfg(not(any(
+        target_arch = "aarch64",
+        all(target_arch = "x86_64", target_feature = "avx2")
+    )))]
+    {
+        let first_rgb0: &[u8; 24] = first_row[..24]
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
+        let first_rgb1: &[u8; 24] = first_row[24..]
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
+        let second_rgb0: &[u8; 24] = second_row[..24]
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
+        let second_rgb1: &[u8; 24] = second_row[24..]
+            .try_into()
+            .unwrap_or_else(|_| unreachable!("fixed RGB half-packet is 24 bytes"));
+
+        let (y00, cb00, cr00) = convert_eight_values(first_rgb0);
+        let (y01, cb01, cr01) = convert_eight_values(first_rgb1);
+        let (y10, cb10, cr10) = convert_eight_values(second_rgb0);
+        let (y11, cb11, cr11) = convert_eight_values(second_rgb1);
+        let y_first = pack_two_eight(y00, y01).to_array();
+        let y_second = pack_two_eight(y10, y11).to_array();
+        let cb = downsample_h2v2_vectors(pack_two_eight(cb00, cb01), pack_two_eight(cb10, cb11));
+        let cr = downsample_h2v2_vectors(pack_two_eight(cr00, cr01), pack_two_eight(cr10, cr11));
+        (y_first, y_second, cb, cr)
+    }
 }
 
 #[expect(
@@ -424,6 +543,63 @@ fn convert_eight_values(pixels: &[u8; 24]) -> (i32x8, i32x8, i32x8) {
         + CHROMA_BIAS_I32)
         .unbounded_shr_scalar(16);
     (y_values, cb_values, cr_values)
+}
+
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "8-bit RGB samples and libjpeg fixed-point coefficients stay within i32 lanes"
+)]
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn convert_sixteen_values(pixels: &[u8; 48]) -> (i32x16, i32x16, i32x16) {
+    let first = pod_read_unaligned::<u8x32>(&pixels[..32]);
+    let second = pod_read_unaligned::<u8x32>(&pixels[16..]);
+    let red = cast::<u8x32, [u8x16; 2]>(
+        first.shuffle_zeroing(RGB16_RED_FIRST) | second.shuffle_zeroing(RGB16_RED_SECOND),
+    )[0];
+    let green = cast::<u8x32, [u8x16; 2]>(
+        first.shuffle_zeroing(RGB16_GREEN_FIRST) | second.shuffle_zeroing(RGB16_GREEN_SECOND),
+    )[0];
+    let blue = cast::<u8x32, [u8x16; 2]>(
+        first.shuffle_zeroing(RGB16_BLUE_FIRST) | second.shuffle_zeroing(RGB16_BLUE_SECOND),
+    )[0];
+    let red = i16x16::from(red);
+    let green = i16x16::from(green);
+    let blue = i16x16::from(blue);
+    let green_i32 = i32x16::from(green);
+    let red_minus_green = red - green;
+    let blue_minus_green = blue - green;
+    let red_minus_blue = red - blue;
+    let green_minus_blue = green - blue;
+
+    let y_values = (red_minus_green.widening_mul(Y_RG_I16X16)
+        + blue_minus_green.widening_mul(Y_BG_I16X16)
+        + green_i32.unbounded_shl_scalar(16)
+        + LUMA_BIAS_I32X16)
+        .unbounded_shr_scalar(16);
+    let cb_values = (red_minus_blue.widening_mul(CB_RB_I16X16)
+        + green_minus_blue.widening_mul(CB_GB_I16X16)
+        + CHROMA_BIAS_I32X16)
+        .unbounded_shr_scalar(16);
+    let cr_values = (red_minus_green.widening_mul(CR_RG_I16X16)
+        + red_minus_blue.widening_mul(CR_RB_I16X16)
+        + CHROMA_BIAS_I32X16)
+        .unbounded_shr_scalar(16);
+    (y_values, cb_values, cr_values)
+}
+
+#[cfg(any(
+    target_arch = "aarch64",
+    all(target_arch = "x86_64", target_feature = "avx2")
+))]
+#[inline(always)]
+fn pack_sixteen(values: i32x16) -> u8x16 {
+    let [first, second] = cast::<i32x16, [i32x8; 2]>(values);
+    pack_two_eight(first, second)
 }
 
 #[cfg_attr(coverage, inline(never))]
