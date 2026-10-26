@@ -1731,6 +1731,16 @@ formats:
       test_assets:
       - baseline_444_single_scan_trailing_dht_truncated_values.jpg
       expect_error: true
+    - id: baseline_444_single_scan_trailing_dht_short_length_with_tail_counts
+      description: Baseline 4:4:4 JPEG declares one trailing DHT count but places the remaining zero counts outside the segment before EOI
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_short_length_with_tail_counts.jpg
+      expect_error: true
+    - id: baseline_444_single_scan_trailing_dht_short_length_with_tail_value
+      description: Baseline 4:4:4 JPEG declares a trailing DHT symbol but places its value outside the segment before EOI
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_short_length_with_tail_value.jpg
+      expect_error: true
     - id: baseline_444_single_scan_trailing_dht_length_one
       description: Baseline 4:4:4 JPEG has a trailing DHT marker with the invalid one-byte segment length
       test_assets:

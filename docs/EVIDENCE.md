@@ -1,5 +1,32 @@
 # Versioned compatibility evidence
 
+## JPEG trailing DHT segment-boundary parity — 2026-10-26
+
+Added active decode rows
+`decode:jpeg:baseline_444_single_scan_trailing_dht_short_length_with_tail_counts`
+and
+`decode:jpeg:baseline_444_single_scan_trailing_dht_short_length_with_tail_value`.
+The first declares only one DHT count byte and places the remaining count bytes
+outside the segment; the second declares one symbol and places its value byte
+outside the segment. Both complete JPEG inputs pass Pillow structure
+verification, while Pillow 12.2.0 rejects pixel decoding with
+`OSError: broken data stream when reading image file`; the Rust public decoder
+matches the malformed-input result.
+
+The two selected parity cases passed 2/2. Their retained LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026T014941.848086Z-38eb7f1cd96f4921ae3377a017f4025c/coverage.json`
+(SHA-256
+`49be79c7021c13ad6d18c4d8667fb86355d166bf232164a37e7110a006eac206`). Raw
+branch counters observed the DHT count-table and symbol-value boundary guards
+in `src/codecs/jpeg/decode/decode.rs`. Coverage MCP marked source identity
+unverified and test attribution unknown, so this is selected local evidence,
+not a verified aggregate coverage gain. No Rust source changed and no unit
+tests were added.
+
+The current fixture matrix contains 2,621 total rows: 2,093 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,093 decode rows and 497 encode
+rows are active; 31 planned encode rows remain.
+
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
 
 Added the active decode row
@@ -9603,7 +9630,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `533712dcdb1af4febcab239b8dffeb0faac37487458e31024319b8fd3912d834`; matrix `71bcc9ab1ad574487482dcbc923272f79b756230bb1f87cd6f96bcbe4a71b9e5`.
+- Current fixture integrity only: manifest `58ae62f1c9e13f8556a5c2f3667072c925887c37cc0435405062119c99597433`; matrix `8db734067df4b34c9a6cd48705d9dd8aa7b2c7c5d61c7bfca55e9af39facf60c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

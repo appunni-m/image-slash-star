@@ -28,6 +28,14 @@ MALFORMED_DHT = {
         bytes.fromhex("ffc400130001") + bytes(15),
         "3615cb0eea96e135169f3d944b0596a982de6e019bb3a4e9377c70aa1667d146",
     ),
+    "baseline_444_single_scan_trailing_dht_short_length_with_tail_counts.jpg": (
+        bytes.fromhex("ffc4000400") + bytes(16),
+        "3cc99bb0f16246850d5f675a3aa59c4dfadf09ea5b60ab107ae4b73a9fb60d22",
+    ),
+    "baseline_444_single_scan_trailing_dht_short_length_with_tail_value.jpg": (
+        bytes.fromhex("ffc400130001") + bytes(15) + b"\x00",
+        "c3bd851624bf52277099ce3a95df9f006fc3a1b416f546662000fbbf88a58f9d",
+    ),
 }
 
 

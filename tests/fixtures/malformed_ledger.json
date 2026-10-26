@@ -11281,6 +11281,70 @@
         "verify_status": "ok"
       },
       {
+        "asset": "baseline_444_single_scan_trailing_dht_short_length_with_tail_counts.jpg",
+        "class": "baseline_444_single_scan_trailing_dht_short_length_with_tail_counts",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:4:4 JPEG declares one trailing DHT count but places the remaining zero counts outside the segment before EOI",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "baseline_444_single_scan_trailing_dht_short_length_with_tail_value.jpg",
+        "class": "baseline_444_single_scan_trailing_dht_short_length_with_tail_value",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:4:4 JPEG declares a trailing DHT symbol but places its value outside the segment before EOI",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "baseline_444_single_scan_trailing_dht_truncated_counts.jpg",
         "class": "baseline_444_single_scan_trailing_dht_truncated_counts",
         "contracts": {
@@ -29728,13 +29792,13 @@
       "bmp": 86,
       "gif": 49,
       "ico": 31,
-      "jpeg": 110,
+      "jpeg": 112,
       "png": 65,
       "tiff": 144,
       "webp": 142
     },
     "by_origin": {
-      "pillow_fixture": 705,
+      "pillow_fixture": 707,
       "specification_reference": 78
     },
     "by_spec_status": {
@@ -29742,9 +29806,9 @@
       "not_the_format": 40,
       "spec_violation": 430,
       "tolerated": 0,
-      "truncated": 200
+      "truncated": 202
     },
-    "classes": 705,
+    "classes": 707,
     "formats": 8
   }
 }
