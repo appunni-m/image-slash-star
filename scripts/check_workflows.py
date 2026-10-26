@@ -1183,9 +1183,10 @@ def release_oidc_isolation_violations(contents: str) -> list[str]:
             for step in steps[1:]
             if (action := re.search(r"(?m)^\s*uses:\s*(\S+)", step)) is not None
         ]
+        # This exact v1.0.6 revision was reviewed; see RELEASING.md.
         if [action.group(1).partition(" #")[0] for action in publish_actions] != [
             "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
-            "rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18",
+            "rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9",
         ]:
             violations.append(
                 "publish may use only the reviewed artifact and crates.io OIDC action revisions"
