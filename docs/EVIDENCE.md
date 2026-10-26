@@ -9761,7 +9761,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4e2e7ec94fc17b04953dcf26566dc8ec8e93813a1fe0774b7269fce08f4affad`; matrix `1dfde88d10c4fe23874135ea06f78c9e52230de1c78653931dd45edbc4c9ec38`.
+- Current fixture integrity only: manifest `9ee22d2d996e4b74d57e326dfcfc3e9349858738245364997b6a4b2bf6c09bab`; matrix `abcfb759db26fbcab7105ab50005e891622424a976fdacab7b0970bf36f8601e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11401,3 +11401,42 @@ binary and still reports uncovered branches in `TileState::commit_with_metadata`
 Source identity is unverified and named-test attribution is unknown, so this is
 targeting evidence rather than an aggregate coverage claim. No unit tests were
 added.
+
+## AVIF lossy I422 B32x64 vertical-split parity — 2026-10-26
+
+Added active public row
+`decode:avif:animated_lossy_inter_422_vertical_split_b32x64`. The maintained
+generator checks a deterministic two-frame 32x64 lossy 4:2:2 AVIF, pinned
+Pillow 12.2.0 RGB output, and reproducible encoded bytes. The input SHA-256 is
+`0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798`; the
+6,144-byte RGB frame hashes are
+`f1aab4fdf740e5726556337b0287ec940079cc48a4f1995d5f2b8fb5fbc9348c` and
+`c72b8082dac958d7aeda2637782f8226e7238711a7e967959100d25ad270e39d`. The
+independent pinned libavif record observes both frames and infinite repetition.
+
+The selected public parity and LLVM coverage run passed 1/1 and matched all
+6,144 RGB bytes. Its report is
+`.coverage-mcp/local-evidence/selected/avif-i422-vertical-split-final-2-20261026/coverage.json`
+(SHA-256
+`43b475948a8c5558b479d8a1a1b86e711cecadd194a5d2d81389df16f34f9f90`). Raw
+branch counters at `src/codecs/avif/av1/block.rs:48348` recorded true-arm counts
+of 2 and 6 in two selected specializations. The full run still has unobserved
+arms in other specializations at that source span, so the template-wide gap
+remains open.
+
+A refreshed `make coverage` run passed its executed suites, including 57/57
+coverage-matrix tests, 69/69 feature-gate tests, and the AVIF loop-evidence
+integrity test. Its LLVM report is
+`.coverage-mcp/local-evidence/full-20261026-avif-i422-vertical-split/coverage.json`
+(SHA-256
+`cd94d83e8f342f831f88b92523bc6329862e02f423581940b82d1678b7b6150e`). Totals
+are 93,661/139,561 lines (67.1112%), 18,558/32,056 branches (57.8924%),
+5,220/8,928 functions (58.4677%), and 143,043/216,607 regions (66.0380%).
+Coverage MCP reports source identity unverified and test attribution unknown;
+the full-report comparison is limited and the selected incremental comparison
+is incomparable because baseline detail is incomplete. No aggregate coverage
+gain is claimed. No production Rust code or unit tests were added.
+
+The current fixture matrix contains 2,640 total rows: 2,112 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,112 decode rows and 497 encode
+rows are active; 31 planned encode rows remain.

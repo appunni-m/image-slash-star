@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 130 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 122 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 412 hashed
-artifacts total 22,437,598 bytes, including 130 input files, the compiled
-observer source, and 21,781,244 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 131 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 123 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 415 hashed
+artifacts total 22,456,939 bytes, including 131 input files, the compiled
+observer source, and 21,793,532 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 93 fixture sources are declared in
+The 94 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -59,6 +59,9 @@ pixels and native infinite-loop observation for its translated-patch sequence.
 The two-frame 64x32 lossy 4:2:2 checker companion exercises a subdivided inter
 transform tree beside intra transform syntax; its complete Pillow RGB frames
 and pinned libavif infinite-loop observation are retained. The two-frame
+32x64 lossy I422 vertical-split companion reaches the B32x64 TX4 chroma-grid
+path; its complete Pillow RGB frames and pinned libavif infinite-loop
+observation are retained. The two-frame
 full-range 8-bit I420 companion forces `PARTITION_VERT_4`, producing four
 B16x64 leaves with a low-frequency residual in the first leaf so the inter
 frame retains TX_MODE_SELECT. Its exact Pillow frames and native loop
