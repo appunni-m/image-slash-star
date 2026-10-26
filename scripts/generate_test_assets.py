@@ -8155,6 +8155,40 @@ def _build_vp8l_1x1_webp(bits, *, alpha_used):
     return b"RIFF" + struct.pack("<I", len(chunk) + 4) + b"WEBP" + chunk
 
 
+def _build_vp8l_two_node_cache_peek_4x1_webp():
+    """Build an RGB VP8L stream that peeks both leaves of a two-node cache tree."""
+    width, height, cache_bits = 4, 1, 1
+    bits = [0, 1]  # no transforms; enable the two-entry color cache
+    _append_vp8l_lsb(bits, cache_bits, 4)
+    bits.append(0)  # no meta-Huffman image
+
+    bits.append(0)  # dynamic green Huffman tree
+    _append_vp8l_lsb(bits, 0, 4)  # four code-length-code lengths
+    for code_length in (0, 0, 1, 1):  # symbols 0 and 1 each have a one-bit code
+        _append_vp8l_lsb(bits, code_length, 3)
+    bits.append(0)  # describe the complete green alphabet without a max-symbol limit
+    bits.extend(
+        int(symbol in (280, 281))
+        for symbol in range(280 + (1 << cache_bits))
+    )
+
+    # The remaining trees are read but bypassed because all green symbols are
+    # color-cache lookups. A zero cache entry is a valid RGB black pixel.
+    for _ in range(4):
+        _append_vp8l_single_symbol_tree(bits, 0)
+    bits.extend((0, 0, 0, 1))  # lookup symbols 280, 280, 280, and 281
+
+    packed_bits = bytearray((len(bits) + 7) // 8)
+    for index, bit in enumerate(bits):
+        packed_bits[index // 8] |= bit << (index % 8)
+    dimensions = (width - 1) | ((height - 1) << 14)
+    payload = b"\x2f" + struct.pack("<I", dimensions) + bytes(packed_bits)
+    chunk = b"VP8L" + struct.pack("<I", len(payload)) + payload
+    if len(payload) & 1:
+        chunk += b"\0"
+    return b"RIFF" + struct.pack("<I", len(chunk) + 4) + b"WEBP" + chunk
+
+
 def gen_webp_lossless_branch_coverage(directory):
     """Write minimal VP8L streams for RGB fallback and color-cache branches."""
     # An opaque image with SubtractGreen takes decode_frame_rgb's transformed
@@ -8182,6 +8216,7 @@ def gen_webp_lossless_branch_coverage(directory):
             rgb,
             "a18c8a0f1512f6f6e1d0b588188136f236ff1fabac20ff49904e6aa902682deb",
             "RGB",
+            (1, 1),
             bytes((10, 20, 30)),
         ),
         (
@@ -8189,10 +8224,27 @@ def gen_webp_lossless_branch_coverage(directory):
             rgba,
             "f05bf2424594f98f7cefb5dd1af2cd59a72f1f43aad8be58ab2679cea01c0776",
             "RGBA",
+            (1, 1),
             bytes((10, 20, 30, 128)),
         ),
+        (
+            "lossless_vp8l_two_node_cache_peek_4x1.webp",
+            _build_vp8l_two_node_cache_peek_4x1_webp(),
+            "388dc731d98c2f58a7e0842ee1efaeff168047f6a336539a29fbbc8e22001f19",
+            "RGB",
+            (4, 1),
+            bytes(4 * 3),
+        ),
     )
-    for filename, encoded, expected_sha256, expected_mode, expected_pixels in fixtures:
+    for fixture in fixtures:
+        (
+            filename,
+            encoded,
+            expected_sha256,
+            expected_mode,
+            expected_size,
+            expected_pixels,
+        ) = fixture
         if hashlib.sha256(encoded).hexdigest() != expected_sha256:
             raise RuntimeError(f"{filename} differs from its pinned hash")
         path = directory / filename
@@ -8202,7 +8254,7 @@ def gen_webp_lossless_branch_coverage(directory):
             if (
                 decoded.format != "WEBP"
                 or decoded.mode != expected_mode
-                or decoded.size != (1, 1)
+                or decoded.size != expected_size
                 or decoded.tobytes() != expected_pixels
             ):
                 raise RuntimeError(f"{filename} differs from its pinned Pillow pixels")

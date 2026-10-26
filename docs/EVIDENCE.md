@@ -76,8 +76,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,627 total rows: 2,099 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,099 decode rows and 497 encode
+The current fixture matrix contains 2,628 total rows: 2,100 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,100 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9683,7 +9683,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `c5c45afcfdac992c1d58d775882611ee4e3389dc24bbeb5cbdf59f03ef8eb6d5`; matrix `be6303c6cbf78f8dad7d37ae164ff0fd4b1c337232e2371971fb10aba6f6b81e`.
+- Current fixture integrity only: manifest `1f78b3cf45b6f365a136e20c3dd8ebdcfb055aeb80c0cf6c3ba4d89e43a55bc2`; matrix `e8c1fb1be6a18b752d74a48f9595097645b83837956732b18e1207b0be740bce`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11210,3 +11210,26 @@ daemon did not become healthy at `127.0.0.1:59471`. The retained LLVM report
 and local receipt support this one source-bound case observation; no MCP
 snapshot or aggregate coverage gain is claimed. No Rust source or unit tests
 were added.
+
+## WebP two-node Huffman color-cache lookahead parity — 2026-10-26
+
+Added `decode:webp:lossless_vp8l_two_node_cache_peek`. Its maintained
+generator writes a 4×1 RGB VP8L stream with a one-bit color cache and a dynamic
+green tree containing only the one-bit symbols 280 and 281. The code sequence
+280, 280, 280, 281 makes lookahead select both leaves in
+`HuffmanTree::peek_symbol`. The 66-byte input has SHA-256
+`388dc731d98c2f58a7e0842ee1efaeff168047f6a336539a29fbbc8e22001f19`. Pillow
+12.2.0 returns twelve black RGB bytes with SHA-256
+`15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b`; the
+selected public parity row passes. The independent VP8L parser reports a
+one-bit cache, four lookups, and both cache indices.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026T080421.416756Z-7e5ea112674c4bd4af32ee11130c7622/coverage.json`
+(SHA-256
+`5b76ebfcaf47b835f62b7014119afb8fbb77d1e5f4f40bb168f2b780c3cdab60`). Its
+source-hashed local receipt records three observations for each branch outcome
+at `src/codecs/webp/native/huffman.rs:505`; the preceding full WebP selection
+recorded zero for both outcomes. The report is selected-case evidence rather
+than a Coverage MCP snapshot or an aggregate coverage claim. No Rust runtime
+code or unit tests were added.

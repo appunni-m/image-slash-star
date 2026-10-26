@@ -190838,6 +190838,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "lossless_vp8l_two_node_cache_peek",
+          "type": "decode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "VP8L two-node green Huffman lookahead returns both cached-color indices",
+          "asset": "lossless_vp8l_two_node_cache_peek_4x1.webp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "388dc731d98c2f58a7e0842ee1efaeff168047f6a336539a29fbbc8e22001f19",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.webp_lossless_vp8l_two_node_cache_peek_4x1_webp.bin",
+          "ref_sha256": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+          "ref_bytes": 12,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "lossless_vp8l_cache_width_11_max_index",
           "type": "decode",
           "format": "webp",
@@ -222326,12 +222404,12 @@
     }
   },
   "summary": {
-    "total_rows": 2627,
-    "decode_rows": 2099,
+    "total_rows": 2628,
+    "decode_rows": 2100,
     "encode_rows": 528,
     "formats": 8,
-    "assets_available": 2095,
-    "decode_active": 2099,
+    "assets_available": 2096,
+    "decode_active": 2100,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
