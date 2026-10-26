@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Generate a deterministic 4:2:2 AVIF sequence with compound references."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import random
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from PIL import Image, _avif, features
+from PIL import __version__ as PILLOW_VERSION
+
+from inspect_av1_obus import inspect
+
+
+ROOT = Path(__file__).resolve().parent.parent
+INPUT_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
+FILENAME = "animated_lossy_inter_422_compound_refs_b64x32.avif"
+FILE_SHA256 = "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
+FRAME_SHA256 = (
+    "aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9",
+    "b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb",
+    "df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491",
+)
+
+
+def make_frame(seed: int) -> Image.Image:
+    """Build a deterministic 64x32 jittered checker frame."""
+    random_source = random.Random(seed)
+    pixels = bytearray()
+    for y in range(32):
+        for x in range(64):
+            base = 220 if ((x // 4 + y // 8) & 1) else 24
+            base = max(0, min(255, base + random_source.randrange(-24, 25)))
+            pixels.extend((base, (base * 3 + x * 5) & 255, (base * 5 + y * 7) & 255))
+    return Image.frombytes("RGB", (64, 32), bytes(pixels))
+
+
+def normalize_timestamps(encoded: bytes) -> bytes:
+    """Zero version-one BMFF timestamps so repeated encodes are byte-stable."""
+    normalized = bytearray(encoded)
+    for box_type in (b"mvhd", b"tkhd", b"mdhd"):
+        offset = normalized.find(box_type)
+        if offset < 4 or normalized[offset + 4] != 1:
+            raise RuntimeError(f"expected a version-one {box_type!r} box")
+        if normalized.find(box_type, offset + 4) != -1:
+            raise RuntimeError(f"found duplicate {box_type!r} boxes")
+        end = offset + 24
+        if end > len(normalized):
+            raise RuntimeError(f"truncated {box_type!r} box")
+        normalized[offset + 8 : end] = bytes(16)
+    return bytes(normalized)
+
+
+def make_frames() -> tuple[Image.Image, Image.Image, Image.Image]:
+    """Create two references and a target that blends both reference frames."""
+    first = make_frame(1096)
+    second = make_frame(2096)
+    return first, second, Image.blend(first, second, 0.5)
+
+
+def encode_fixture() -> bytes:
+    """Encode the pinned sequence and require selectable prior references."""
+    frames = make_frames()
+    output = BytesIO()
+    frames[0].save(
+        output,
+        format="AVIF",
+        save_all=True,
+        append_images=list(frames[1:]),
+        duration=[100] * len(frames),
+        loop=0,
+        quality=75,
+        speed=0,
+        max_threads=1,
+        subsampling="4:2:2",
+        autotiling=False,
+        codec="aom",
+        advanced={
+            "min-partition-size": "16",
+            "max-partition-size": "32",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "enable-interintra-comp": "0",
+            "enable-warped-motion": "0",
+            "enable-global-motion": "0",
+        },
+    )
+    return normalize_timestamps(output.getvalue())
+
+
+def verify_pillow_frames(encoded: bytes) -> None:
+    """Require exact pinned Pillow frame pixels for the full sequence."""
+    frame_hashes = []
+    with Image.open(BytesIO(encoded)) as sequence:
+        if sequence.format != "AVIF" or sequence.mode != "RGB" or sequence.size != (64, 32):
+            raise RuntimeError("Pillow AVIF metadata differs from the pinned fixture")
+        if sequence.n_frames != len(FRAME_SHA256):
+            raise RuntimeError(f"expected three frames, found {sequence.n_frames}")
+        for frame_index in range(sequence.n_frames):
+            sequence.seek(frame_index)
+            sequence.load()
+            frame_hashes.append(
+                hashlib.sha256(sequence.convert("RGB").tobytes()).hexdigest()
+            )
+    if tuple(frame_hashes) != FRAME_SHA256:
+        raise RuntimeError(f"Pillow frame hashes changed: {tuple(frame_hashes)!r}")
+
+
+def verify_av1_headers(encoded: bytes) -> None:
+    """Require an 8-bit 4:2:2 sequence exposing both earlier frame references."""
+    with TemporaryDirectory() as temporary_directory:
+        fixture = Path(temporary_directory) / FILENAME
+        fixture.write_bytes(encoded)
+        report = inspect(fixture)
+
+    sequence_headers = [
+        obu["sequence_header"]
+        for sample in report["samples"]
+        for obu in sample["obus"]
+        if "sequence_header" in obu
+    ]
+    if not sequence_headers or any(
+        header.get("monochrome")
+        or header.get("subsampling_x") != 1
+        or header.get("subsampling_y") != 0
+        or header.get("profile") != 2
+        for header in sequence_headers
+    ):
+        raise RuntimeError("expected the AV1 sequence to use 8-bit 4:2:2 profile 2")
+
+    final_headers = [
+        obu["frame_header"]
+        for sample in report["samples"]
+        for obu in sample["obus"]
+        if obu.get("frame_header", {}).get("order_hint") == 2
+    ]
+    if len(final_headers) != 1:
+        raise RuntimeError("expected one final frame header with order hint two")
+    header = final_headers[0]
+    if header.get("reference_mode") != "select":
+        raise RuntimeError("the final inter frame does not allow compound selection")
+    if header.get("reference_indices") != [1, 0, 0, 0, 0, 0, 0]:
+        raise RuntimeError("the final inter frame does not expose both prior references")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify the checked-in fixture without writing it",
+    )
+    args = parser.parse_args()
+
+    observed = (PILLOW_VERSION, features.version("avif"), _avif.codec_versions())
+    expected = (
+        "12.2.0",
+        "1.4.1",
+        "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    )
+    if observed != expected:
+        raise RuntimeError(f"the pinned Pillow AVIF oracle is required; found {observed!r}")
+
+    encoded = encode_fixture()
+    if encoded != encode_fixture():
+        raise RuntimeError("repeated AVIF encodes differ")
+    if hashlib.sha256(encoded).hexdigest() != FILE_SHA256:
+        raise RuntimeError("the AVIF sequence differs from its pinned hash")
+    verify_pillow_frames(encoded)
+    verify_av1_headers(encoded)
+
+    output = INPUT_DIR / FILENAME
+    if args.check:
+        if not output.is_file() or output.read_bytes() != encoded:
+            raise RuntimeError(f"the checked-in {FILENAME} is stale")
+        print(f"Verified {output.relative_to(ROOT)} ({len(encoded)} bytes)")
+        return
+
+    if output.exists() and output.read_bytes() != encoded:
+        raise RuntimeError(f"refusing to replace a differing fixture: {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(encoded)
+    print(f"Wrote {output.relative_to(ROOT)} ({len(encoded)} bytes)")
+
+
+if __name__ == "__main__":
+    main()

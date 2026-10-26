@@ -32,9 +32,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 614 rows total, 614 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 615 rows total, 615 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, 1 active parity case and 31 explicit planned gaps.
-- Whole matrix: 2,641 rows total, 2,113 active decode rows, 497 active encode rows, 0 planned decode rows, and 31 planned encode rows.
+- Whole matrix: 2,642 rows total, 2,114 active decode rows, 497 active encode rows, 0 planned decode rows, and 31 planned encode rows.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

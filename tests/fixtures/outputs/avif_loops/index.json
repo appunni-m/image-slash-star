@@ -1091,13 +1091,39 @@
       "collection_index_sha256": "03887c5728101b741fcd4ab57e0a0cabdb4e8f2496b6e38903f8b5186fc7f2ec",
       "generator_sha256": "cfebb60d91fa27d85be07ded019cf2d782c43cb79541df0a759f304fd72ec7b1",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "c3740c8acf412bb5c205d9854021ff5e261a24f1957945c4d995b2512372aad5",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossy_inter_422_compound_refs_b64x32"
+      ],
+      "collection_index_sha256": "6a7e7431156e59ea4e86c7254f491e8303dc31a088e0d4b8419b18c4ee3c37dc",
+      "generator_sha256": "495e370bf9aeb2454dc8b471a09c40fca3f56521981e5540cc36e99e37174c03",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 18722,
+      "bytes": 18925,
       "path": "README.md",
-      "sha256": "7e8215a8e182b179a6cbea7d42c682f03b815fbc00f1f294d9b86a7c8f4a3d69"
+      "sha256": "30fcc4fec5ad3886b3f604b92a36e1c9513837ecc20a0d4a4bfd6587dd7abcdc"
     },
     {
       "bytes": 2267,
@@ -3183,6 +3209,26 @@
       "bytes": 12288,
       "path": "pixels/tx64_root_split_inter_420_64x64/frame_2.bin",
       "sha256": "cdcf7ce5c1885c086852bb9ba4119857d54cdbaca2f80cd5c78fb7166977ae5d"
+    },
+    {
+      "bytes": 5565,
+      "path": "inputs/lossy_inter_422_compound_refs_b64x32.avif",
+      "sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
+    },
+    {
+      "bytes": 6144,
+      "path": "pixels/lossy_inter_422_compound_refs_b64x32/frame_0.bin",
+      "sha256": "aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9"
+    },
+    {
+      "bytes": 6144,
+      "path": "pixels/lossy_inter_422_compound_refs_b64x32/frame_1.bin",
+      "sha256": "b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb"
+    },
+    {
+      "bytes": 6144,
+      "path": "pixels/lossy_inter_422_compound_refs_b64x32/frame_2.bin",
+      "sha256": "df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491"
     }
   ],
   "build": {
@@ -11300,6 +11346,66 @@
       "repeat_equal": true,
       "source": "lossy_inter_422_vertical_split_b32x64",
       "source_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798"
+    },
+    {
+      "input_bytes": 5565,
+      "input_path": "inputs/lossy_inter_422_compound_refs_b64x32.avif",
+      "input_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_422_compound_refs_b64x32",
+      "native": {
+        "decoded_frames": 3,
+        "diagnostic": "",
+        "frame_count": 3,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "c3740c8acf412bb5c205d9854021ff5e261a24f1957945c4d995b2512372aad5",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9",
+            "size": [
+              64,
+              32
+            ]
+          },
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb",
+            "size": [
+              64,
+              32
+            ]
+          },
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491",
+            "size": [
+              64,
+              32
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_422_compound_refs_b64x32",
+      "source_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
     }
   ],
   "incremental_collections": [
