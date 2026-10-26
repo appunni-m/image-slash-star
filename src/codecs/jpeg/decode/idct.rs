@@ -58,6 +58,39 @@ const VRANGE_CENTER: i32x4 = i32x4::new([128; 4]);
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VRANGE_MAX: i32x4 = i32x4::new([255; 4]);
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_0_298631336: i32x8 = i32x8::new([FIX_0_298631336; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_0_390180644_NEG: i32x8 = i32x8::new([-FIX_0_390180644; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_0_541196100: i32x8 = i32x8::new([FIX_0_541196100; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_0_765366865: i32x8 = i32x8::new([FIX_0_765366865; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_0_899976223_NEG: i32x8 = i32x8::new([-FIX_0_899976223; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_1_175875602: i32x8 = i32x8::new([FIX_1_175875602; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_1_501321110: i32x8 = i32x8::new([FIX_1_501321110; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_1_847759065_NEG: i32x8 = i32x8::new([-FIX_1_847759065; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_1_961570560_NEG: i32x8 = i32x8::new([-FIX_1_961570560; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_2_053119869: i32x8 = i32x8::new([FIX_2_053119869; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_2_562915447_NEG: i32x8 = i32x8::new([-FIX_2_562915447; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VFIX_3_072711026: i32x8 = i32x8::new([FIX_3_072711026; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VDESCALE_11_BIAS: i32x8 = i32x8::new([1 << 10; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VDESCALE_18_BIAS: i32x8 = i32x8::new([1 << 17; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VRANGE_CENTER: i32x8 = i32x8::new([128; 8]);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+const AVX2_VRANGE_MAX: i32x8 = i32x8::new([255; 8]);
+
 pub(crate) const DCTSIZE: usize = 8;
 pub(crate) const DCTSIZE2: usize = 64;
 
@@ -343,6 +376,13 @@ pub(crate) fn jpeg_idct_islow_dequantized_to_u8_safe(
             <= output.len()
     );
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    if high_horizontal_nonzero {
+        idct_pass1_eight_columns_avx2(block, quant_table, workspace);
+        idct_pass2_eight_rows_avx2(workspace, output, output_stride, output_x, output_y);
+        return;
+    }
+
     idct_pass1_four_columns_safe(block, quant_table, workspace, 0);
     if high_horizontal_nonzero {
         idct_pass1_four_columns_safe(block, quant_table, workspace, 4);
@@ -535,6 +575,261 @@ fn idct_pass1_four_columns_safe(
                 .saturating_add(lane.saturating_mul(4)),
             high[lane],
         );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "bounded JPEG ISLOW coefficients and quantizers prove the AVX2 lane multiplies fit"
+)]
+#[inline(always)]
+fn idct_pass1_eight_columns_avx2(
+    block: &[i32; DCTSIZE2],
+    quant_table: &[i32; DCTSIZE2],
+    workspace: &mut [i32; DCTSIZE2],
+) {
+    let load = |frequency_row: usize| {
+        let offset = frequency_row.saturating_mul(DCTSIZE);
+        load_idct_eight(block, offset) * load_idct_eight(quant_table, offset)
+    };
+    let r0 = load(0);
+    let r1 = load(1);
+    let r2 = load(2);
+    let r3 = load(3);
+    let r4 = load(4);
+    let r5 = load(5);
+    let r6 = load(6);
+    let r7 = load(7);
+
+    let z1 = avx2_idct_add(r2, r6) * AVX2_VFIX_0_541196100;
+    let tmp2 = avx2_idct_add(z1, r6 * AVX2_VFIX_1_847759065_NEG);
+    let tmp3 = avx2_idct_add(z1, r2 * AVX2_VFIX_0_765366865);
+    let tmp0 = avx2_idct_add(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+    let tmp1 = avx2_idct_sub(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+
+    let tmp10 = avx2_idct_add(tmp0, tmp3);
+    let tmp13 = avx2_idct_sub(tmp0, tmp3);
+    let tmp11 = avx2_idct_add(tmp1, tmp2);
+    let tmp12 = avx2_idct_sub(tmp1, tmp2);
+
+    let z1 = avx2_idct_add(r7, r1);
+    let z2 = avx2_idct_add(r5, r3);
+    let z3 = avx2_idct_add(r7, r3);
+    let z4 = avx2_idct_add(r5, r1);
+    let z5 = avx2_idct_add(z3, z4) * AVX2_VFIX_1_175875602;
+
+    let t0 = r7 * AVX2_VFIX_0_298631336;
+    let t1 = r5 * AVX2_VFIX_2_053119869;
+    let t2 = r3 * AVX2_VFIX_3_072711026;
+    let t3 = r1 * AVX2_VFIX_1_501321110;
+    let z1 = z1 * AVX2_VFIX_0_899976223_NEG;
+    let z2 = z2 * AVX2_VFIX_2_562915447_NEG;
+    let z3 = avx2_idct_add(z3 * AVX2_VFIX_1_961570560_NEG, z5);
+    let z4 = avx2_idct_add(z4 * AVX2_VFIX_0_390180644_NEG, z5);
+
+    let o0 = avx2_idct_add(avx2_idct_add(t0, z1), z3);
+    let o1 = avx2_idct_add(avx2_idct_add(t1, z2), z4);
+    let o2 = avx2_idct_add(avx2_idct_add(t2, z2), z3);
+    let o3 = avx2_idct_add(avx2_idct_add(t3, z1), z4);
+
+    store_idct_pass1_rows_avx2(
+        workspace,
+        [
+            avx2_idct_descale_11(avx2_idct_add(tmp10, o3)),
+            avx2_idct_descale_11(avx2_idct_add(tmp11, o2)),
+            avx2_idct_descale_11(avx2_idct_add(tmp12, o1)),
+            avx2_idct_descale_11(avx2_idct_add(tmp13, o0)),
+            avx2_idct_descale_11(avx2_idct_sub(tmp13, o0)),
+            avx2_idct_descale_11(avx2_idct_sub(tmp12, o1)),
+            avx2_idct_descale_11(avx2_idct_sub(tmp11, o2)),
+            avx2_idct_descale_11(avx2_idct_sub(tmp10, o3)),
+        ],
+    );
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn load_idct_eight(values: &[i32; DCTSIZE2], offset: usize) -> i32x8 {
+    pod_read_unaligned(cast_slice(&values[offset..offset.saturating_add(8)]))
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn store_idct_pass1_rows_avx2(workspace: &mut [i32; DCTSIZE2], rows: [i32x8; DCTSIZE]) {
+    let rows = rows.map(i32x8::to_array);
+    let columns: [[i32; DCTSIZE]; DCTSIZE] =
+        std::array::from_fn(|column| std::array::from_fn(|row| rows[row][column]));
+    for (column, values) in columns.into_iter().enumerate() {
+        let column_values = i32x8::new(values);
+        let [top, bottom] = cast::<i32x8, [i32x4; 2]>(column_values);
+        let column_group = column.div_euclid(4).saturating_mul(16);
+        let column_offset = column_group.saturating_add(column.rem_euclid(4).saturating_mul(4));
+        store_idct_four(workspace, column_offset, top);
+        store_idct_four(workspace, column_offset.saturating_add(32), bottom);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "the AVX2 lane multiplies operate on bounded JPEG ISLOW intermediate values"
+)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the AVX2 row transform writes one complete fixed-size component block"
+)]
+#[inline(always)]
+fn idct_pass2_eight_rows_avx2(
+    workspace: &[i32; DCTSIZE2],
+    output: &mut [u8],
+    output_stride: usize,
+    output_x: usize,
+    output_y: usize,
+) {
+    let left = [
+        load_idct_eight_rows(workspace, 0, 0),
+        load_idct_eight_rows(workspace, 0, 1),
+        load_idct_eight_rows(workspace, 0, 2),
+        load_idct_eight_rows(workspace, 0, 3),
+    ];
+    let right = [
+        load_idct_eight_rows(workspace, 16, 0),
+        load_idct_eight_rows(workspace, 16, 1),
+        load_idct_eight_rows(workspace, 16, 2),
+        load_idct_eight_rows(workspace, 16, 3),
+    ];
+
+    let z2 = left[2];
+    let z3 = right[2];
+    let z1 = avx2_idct_add(z2, z3) * AVX2_VFIX_0_541196100;
+    let tmp2 = avx2_idct_add(z1, z3 * AVX2_VFIX_1_847759065_NEG);
+    let tmp3 = avx2_idct_add(z1, z2 * AVX2_VFIX_0_765366865);
+
+    let z2 = left[0];
+    let z3 = right[0];
+    let tmp0 = avx2_idct_add(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+    let tmp1 = avx2_idct_sub(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+
+    let tmp10 = avx2_idct_add(tmp0, tmp3);
+    let tmp13 = avx2_idct_sub(tmp0, tmp3);
+    let tmp11 = avx2_idct_add(tmp1, tmp2);
+    let tmp12 = avx2_idct_sub(tmp1, tmp2);
+
+    let v0 = right[3];
+    let v1 = right[1];
+    let v2 = left[3];
+    let v3 = left[1];
+    let z1 = avx2_idct_add(v0, v3);
+    let z2 = avx2_idct_add(v1, v2);
+    let z3 = avx2_idct_add(v0, v2);
+    let z4 = avx2_idct_add(v1, v3);
+    let z5 = avx2_idct_add(z3, z4) * AVX2_VFIX_1_175875602;
+
+    let t0 = v0 * AVX2_VFIX_0_298631336;
+    let t1 = v1 * AVX2_VFIX_2_053119869;
+    let t2 = v2 * AVX2_VFIX_3_072711026;
+    let t3 = v3 * AVX2_VFIX_1_501321110;
+    let z1 = z1 * AVX2_VFIX_0_899976223_NEG;
+    let z2 = z2 * AVX2_VFIX_2_562915447_NEG;
+    let z3 = avx2_idct_add(z3 * AVX2_VFIX_1_961570560_NEG, z5);
+    let z4 = avx2_idct_add(z4 * AVX2_VFIX_0_390180644_NEG, z5);
+
+    let o0 = avx2_idct_add(avx2_idct_add(t0, z1), z3);
+    let o1 = avx2_idct_add(avx2_idct_add(t1, z2), z4);
+    let o2 = avx2_idct_add(avx2_idct_add(t2, z2), z3);
+    let o3 = avx2_idct_add(avx2_idct_add(t3, z1), z4);
+
+    store_idct_eight_rows(
+        output,
+        output_stride,
+        output_x,
+        output_y,
+        [
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp10, o3))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp11, o2))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp12, o1))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp13, o0))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp13, o0))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp12, o1))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp11, o2))),
+            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp10, o3))),
+        ],
+    );
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn load_idct_eight_rows(workspace: &[i32; DCTSIZE2], column_group: usize, column: usize) -> i32x8 {
+    let offset = column_group.saturating_add(column.saturating_mul(4));
+    cast::<[i32x4; 2], i32x8>([
+        load_idct_four(workspace, offset),
+        load_idct_four(workspace, offset.saturating_add(32)),
+    ])
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn avx2_idct_add(left: i32x8, right: i32x8) -> i32x8 {
+    left.saturating_add(right)
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn avx2_idct_sub(left: i32x8, right: i32x8) -> i32x8 {
+    left.saturating_sub(right)
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn avx2_idct_descale_11(value: i32x8) -> i32x8 {
+    value
+        .saturating_add(AVX2_VDESCALE_11_BIAS)
+        .unbounded_shr_scalar(11)
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn avx2_idct_descale_18(value: i32x8) -> i32x8 {
+    value
+        .saturating_add(AVX2_VDESCALE_18_BIAS)
+        .unbounded_shr_scalar(18)
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(always)]
+fn avx2_idct_range_limit(value: i32x8) -> i32x8 {
+    value
+        .saturating_add(AVX2_VRANGE_CENTER)
+        .max(i32x8::ZERO)
+        .min(AVX2_VRANGE_MAX)
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the AVX2 store receives the full transformed block and component-plane coordinates"
+)]
+#[inline(always)]
+fn store_idct_eight_rows(
+    output: &mut [u8],
+    output_stride: usize,
+    output_x: usize,
+    output_y: usize,
+    columns: [i32x8; 8],
+) {
+    let columns = columns.map(i32x8::to_array);
+    let rows: [[i32; DCTSIZE]; DCTSIZE] =
+        std::array::from_fn(|row| std::array::from_fn(|column| columns[column][row]));
+    for (row, values) in rows.iter().enumerate() {
+        let values = i32x8::new(*values);
+        let packed =
+            u8x16::narrow_i16x8(i16x8::from_i32x8_saturate(values), i16x8::ZERO).to_array();
+        let start = output_y
+            .saturating_add(row)
+            .saturating_mul(output_stride)
+            .saturating_add(output_x);
+        output[start..start.saturating_add(DCTSIZE)].copy_from_slice(&packed[..DCTSIZE]);
     }
 }
 
