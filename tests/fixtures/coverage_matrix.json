@@ -105841,6 +105841,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "baseline_422_restart_trailing_dri_zero",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "A trailing DRI=0 marker does not change the restart interval captured by the preceding 4:2:2 scan",
+          "asset": "baseline_422_restart_trailing_dri_zero.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "fb5c738ab0b6dfc013cae23a72f5672d346693d58a8f2f1b610729f2cce65ecc",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_422_restart_trailing_dri_zero_jpg.bin",
+          "ref_sha256": "b1e9a9f445e2c91f72818b9a24c1668e212042364c9f7f61d244b9cb63ce25aa",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "baseline_444_restart",
           "type": "decode",
           "format": "jpeg",
@@ -224072,12 +224150,12 @@
     }
   },
   "summary": {
-    "total_rows": 2638,
-    "decode_rows": 2110,
+    "total_rows": 2639,
+    "decode_rows": 2111,
     "encode_rows": 528,
     "formats": 8,
-    "assets_available": 2106,
-    "decode_active": 2110,
+    "assets_available": 2107,
+    "decode_active": 2111,
     "decode_planned": 0,
     "encode_not_wired": 31
   },

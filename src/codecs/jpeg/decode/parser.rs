@@ -64,7 +64,8 @@ pub(super) struct JpegInfo {
     pub(super) dc_huff_tables: Vec<Option<HuffTableStorage>>,
     pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
     pub(super) scan_components: Vec<ScanComponent>,
-    pub(super) restart_interval: u16,
+    /// Restart interval captured by the first scan, not a later DRI marker.
+    pub(super) first_scan_restart_interval: u16,
     pub(super) entropy_has_restart_markers: bool,
     pub(super) entropy_start: usize,
     pub(super) eoi_pos: usize,
@@ -699,6 +700,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     if !saw_sos {
         return Err(CodecError::Malformed("JPEG contains no scan".to_owned()));
     }
+    let first_scan_restart_interval = scans
+        .first()
+        .map(|scan| scan.restart_interval)
+        .malformed("JPEG contains no scan")?;
 
     Ok(JpegInfo {
         width,
@@ -709,7 +714,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         dc_huff_tables,
         ac_huff_tables,
         scan_components,
-        restart_interval,
+        first_scan_restart_interval,
         entropy_has_restart_markers,
         entropy_start,
         eoi_pos,
