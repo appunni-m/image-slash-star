@@ -2182,6 +2182,10 @@ formats:
       description: Pillow baseline 4:2:2 JPEG with DRI 1 falls back from the direct decoder path
       test_assets:
       - baseline_422_restart_blocks_1.jpg
+    - id: baseline_422_restart_trailing_dri_zero
+      description: A trailing DRI=0 marker does not change the restart interval captured by the preceding 4:2:2 scan
+      test_assets:
+      - baseline_422_restart_trailing_dri_zero.jpg
     - id: baseline_444_restart
       description: Pillow baseline 4:4:4 JPEG with DRI 1 falls back from the direct decoder path
       test_assets:

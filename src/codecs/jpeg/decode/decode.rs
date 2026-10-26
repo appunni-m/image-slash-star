@@ -743,7 +743,7 @@ fn reconstruct_baseline_grayscale_direct_safe(
     quant_tables: &[[i32; 64]],
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 1
-        || info.restart_interval != 0
+        || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 1
         || entropy_segments.segments.len() != 1
     {
@@ -952,7 +952,7 @@ fn reconstruct_baseline_cmyk_direct_safe(
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 4
         || info.adobe_color_transform == Some(2)
-        || info.restart_interval != 0
+        || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 4
         || info
             .components
@@ -1316,7 +1316,7 @@ fn reconstruct_baseline_420_direct_safe(
 ) -> CodecResult<Option<DecodedImage>> {
     let mcu_columns = bounded_usize(num_mcus_x);
     let mcu_rows = bounded_usize(num_mcus_y);
-    let restart_interval = usize::from(info.restart_interval);
+    let restart_interval = usize::from(info.first_scan_restart_interval);
     // Parsed dimensions and sampling factors guarantee at least one MCU column.
     let restart_is_row_aligned =
         restart_interval == 0 || restart_interval.is_multiple_of(mcu_columns);
@@ -1583,7 +1583,7 @@ fn reconstruct_baseline_422_direct_safe(
     converter: &YccColorConverter,
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 3
-        || info.restart_interval != 0
+        || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 3
         || info.components[0].h_samp != 2
         || info.components[0].v_samp != 1
@@ -1739,7 +1739,7 @@ fn reconstruct_baseline_444_direct_safe(
     converter: &YccColorConverter,
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 3
-        || info.restart_interval != 0
+        || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 3
         || info
             .components
@@ -2053,8 +2053,8 @@ pub(super) fn reconstruct_image(
     let total_mcus = bounded_usize(num_mcus_x.saturating_mul(num_mcus_y));
     let mut segment_iter = entropy_segments.segments.iter().peekable();
     let mut seg_idx = 0usize;
-    let mcus_per_seg = if info.restart_interval > 0 {
-        usize::from(info.restart_interval)
+    let mcus_per_seg = if info.first_scan_restart_interval > 0 {
+        usize::from(info.first_scan_restart_interval)
     } else {
         total_mcus
     };
@@ -2672,7 +2672,7 @@ fn reconstruct_single_scan_grayscale_direct_safe(
 
     if info.progressive
         || (component.h_samp == 1 && component.v_samp == 1)
-        || info.restart_interval != 0
+        || info.first_scan_restart_interval != 0
         || scan.restart_interval != 0
         || scan.huff_tables_snapshotted
         || scan_component.comp_index != 0
