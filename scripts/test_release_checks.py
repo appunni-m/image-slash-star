@@ -2568,7 +2568,37 @@ class WorkflowDownloadTests(unittest.TestCase):
             check_workflows.release_oidc_isolation_violations(unsafe),
         )
 
-    def test_release_publisher_rejects_an_unreviewed_action_revision(self) -> None:
+    def test_release_rejects_superseded_crates_io_action_revision(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml").read_text(
+                        encoding="utf-8"
+                    )
+        reviewed = (
+            "uses: rust-lang/crates-io-auth-action@"
+            "3268eb413133e2960fa4ae0e963ca76380c54cd9"
+        )
+        policy_message = (
+            "publish may use only the reviewed artifact and crates.io OIDC "
+            "action revisions"
+        )
+
+        for revision in (
+            "c6f97d42243bad5fab37ca0427f495c86d5b1a18",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        ):
+            with self.subTest(revision=revision):
+                unsafe = workflow.replace(
+                    reviewed,
+                    "uses: rust-lang/crates-io-auth-action@" + revision,
+                    1,
+                )
+                self.assertNotEqual(unsafe, workflow)
+                self.assertIn(
+                    policy_message,
+                    check_workflows.release_oidc_isolation_violations(unsafe),
+                )
+
+    def test_release_rejects_unreviewed_artifact_action_revision(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
                     / ".github" / "workflows" / "release.yml").read_text(
                         encoding="utf-8"

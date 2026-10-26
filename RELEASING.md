@@ -28,6 +28,24 @@ and 58% regions. Every executed test must pass. Full completion still requires
 `make coverage-complete`; neither a package release nor a floor pass closes
 the coverage goal.
 
+## Review publisher action updates
+
+The crates.io authentication action is pinned to a reviewed commit. When its
+pin changes, review both the upstream source and committed distribution bundle,
+then update the exact revision check and its regression coverage in the same
+change.
+
+Revision 1.0.6 at commit
+[3268eb4](https://github.com/rust-lang/crates-io-auth-action/commit/3268eb413133e2960fa4ae0e963ca76380c54cd9)
+keeps the action entrypoint unchanged and updates bundled Undici from 6.26.0 to
+6.29.1. The [Undici 6.29.1 release](https://github.com/nodejs/undici/releases/tag/v6.29.1)
+includes security fixes, including
+[GHSA-xjj6-f33q-929c](https://github.com/nodejs/undici/security/advisories/GHSA-xjj6-f33q-929c)
+and
+[GHSA-2m5v-pch6-74hx](https://github.com/nodejs/undici/security/advisories/GHSA-2m5v-pch6-74hx).
+The workflow policy accepts this exact action commit and rejects the previous
+and any unreviewed revision.
+
 ## Publish and verify
 
 The crates.io trusted publisher identifies repository
