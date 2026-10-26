@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 122 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 114 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 383 hashed
-artifacts total 12,922,439 bytes, including 122 input files, the compiled
-observer source, and 12,285,692 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 125 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 117 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 392 hashed
+artifacts total 12,979,599 bytes, including 125 input files, the compiled
+observer source, and 12,334,844 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 89 fixture sources are declared in
+The 92 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -55,6 +55,13 @@ opposite sides of the x window, and both retain exact Pillow frame hashes,
 durations, and native loop observations.
 The two-frame 32x32 lossy 4:2:2 checker source records the exact Pillow RGB
 pixels and native infinite-loop observation for its translated-patch sequence.
+The two-frame 64x32 lossy 4:2:2 checker companion exercises a subdivided inter
+transform tree beside intra transform syntax; its complete Pillow RGB frames
+and pinned libavif infinite-loop observation are retained. The two-frame
+full-range 8-bit I420 companion forces `PARTITION_VERT_4`, producing four
+B16x64 leaves with a low-frequency residual in the first leaf so the inter
+frame retains TX_MODE_SELECT. Its exact Pillow frames and native loop
+observation are recorded.
 The full-range 10-bit I420 source starts with a flat key frame and changes to
 an 8x8 tiled inter frame. Its inter picture uses 128x56 coded dimensions,
 160x56 upscaled dimensions, and SGR restoration on Y, U, and V. Both exact
@@ -126,6 +133,9 @@ retaining exact Pillow pixels and native sequence timing.
 The two-frame 16x64 lossy I420 source uses a TX_MODE_LARGEST inter frame
 with a positive qindex. Its exact Pillow RGB frames and native infinite-loop
 observation are retained; its tall frame also exercises non-16x16 guard outcomes.
+The quality-99 16x64 lossy I420 companion selects TX_MODE_SELECT with qindex 9.
+Its exact Pillow RGB frames, 100 ms durations, and native infinite-loop observation
+are retained.
 The two-frame 64x16 lossy I420 companion transposes that frame geometry. Its
 inter frame also signals TX_MODE_LARGEST with a positive qindex; exact Pillow
 RGB frames and an independent native infinite-loop observation are retained.

@@ -301,6 +301,10 @@ FIXTURES = {
         "animated_lossy_inter_422_checker_random_b32x32.avif",
         "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
     ),
+    "lossy_inter_422_tx_context_checker_b64x32": (
+        "animated_lossy_inter_422_tx_context_checker_b64x32.avif",
+        "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56",
+    ),
     "motion_chroma_wide": ("animated_motion_chroma_wide.avif", "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311"),
     "tx64_root_split_inter_420_64x64": (
         "animated_tx64_root_split_inter_420_64x64.avif",
@@ -321,6 +325,14 @@ FIXTURES = {
     "lossy_inter_420_mode_largest_16x64": (
         "animated_lossy_inter_420_mode_largest_16x64.avif",
         "4e2eba0851921d8629b8c3d1d1660652bf9b5d01e279737cbe7594e2e0a9ec40",
+    ),
+    "lossy_inter_420_mode_select_16x64": (
+        "animated_lossy_inter_420_mode_select_16x64.avif",
+        "6de7ecf1d5ed5eab61c60fab3899cdc328cf3416ddcc1338bc7823412e64ddd2",
+    ),
+    "lossy_inter_420_b16x64_mode_select_64x64": (
+        "animated_lossy_inter_420_b16x64_mode_select_64x64.avif",
+        "6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a",
     ),
     "lossy_inter_420_mode_largest_64x16": (
         "animated_lossy_inter_420_mode_largest_64x16.avif",
