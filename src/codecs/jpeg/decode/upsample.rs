@@ -285,11 +285,7 @@ pub(super) fn fancy_upsample(
     }
 }
 
-/// Upsample one destination row without materializing the full component plane.
-///
-/// The h1v2, h2v1, and h2v2 branches preserve the same IJG triangle filter and
-/// edge rounding as [`fancy_upsample`]. Other integer ratios use the same
-/// nearest neighbor mapping as its fallback branch.
+/// Borrowed image-derived component plane and its JPEG sampling geometry.
 pub(super) struct UpsampleComponent<'a> {
     pub(super) samples: &'a [u8],
     pub(super) stride: usize,
@@ -299,6 +295,13 @@ pub(super) struct UpsampleComponent<'a> {
     pub(super) vertical_ratio: usize,
 }
 
+/// Upsample one destination row without materializing the full component plane.
+///
+/// The h1v2, h2v1, and h2v2 branches preserve the same IJG triangle filter and
+/// edge rounding as [`fancy_upsample`]. Other integer ratios use the same
+/// nearest neighbor mapping as its fallback branch. The YCCK caller derives
+/// source dimensions with ceiling division and sizes each output row to the
+/// image width, so only the final sampling group can be clipped.
 pub(super) fn fancy_upsample_row(
     component: &UpsampleComponent<'_>,
     dst_y: usize,
@@ -372,13 +375,7 @@ pub(super) fn fancy_upsample_row(
     let Some(destination_height) = src_h.checked_mul(v_ratio) else {
         return Err(invalid_geometry());
     };
-    let Some(destination_width) = src_w.checked_mul(h_ratio) else {
-        return Err(invalid_geometry());
-    };
-    if src.len() < required_source_len
-        || dst_y >= destination_height
-        || output.len() > destination_width
-    {
+    if src.len() < required_source_len || dst_y >= destination_height {
         return Err(invalid_geometry());
     }
 
@@ -457,93 +454,72 @@ fn upsample_h1v2_row(current: &[u8], adjacent: &[u8], output: &mut [u8], bias: i
 
 #[allow(
     clippy::arithmetic_side_effects,
-    reason = "Loop ranges and output bounds prove each h2v1 source and destination index is in range."
+    reason = "The YCCK caller supplies a ceiling-sized source row and image-width output, clipping at most the final h2v1 sample."
 )]
 fn upsample_h2v1_row(src: &[u8], output: &mut [u8]) {
-    if output.is_empty() {
-        return;
-    }
     let mut invalue = i32::from(src[0]);
     output[0] = low_u8(invalue);
-    if output.len() > 1 {
-        output[1] = if src.len() > 1 {
-            interpolate(invalue, i32::from(src[1]), 3, 2, 2)
-        } else {
-            low_u8(invalue)
-        };
+    if src.len() == 1 {
+        if output.len() > 1 {
+            output[1] = low_u8(invalue);
+        }
+        return;
     }
 
-    for col in 1..src.len().saturating_sub(1) {
+    output[1] = interpolate(invalue, i32::from(src[1]), 3, 2, 2);
+
+    for col in 1..src.len() - 1 {
         invalue = i32::from(src[col]).saturating_mul(3);
         let destination = col.saturating_mul(2);
-        if destination < output.len() {
-            output[destination] = weighted_sum(invalue, i32::from(src[col - 1]), 1, 2);
-        }
-        if destination.saturating_add(1) < output.len() {
-            output[destination + 1] = weighted_sum(invalue, i32::from(src[col + 1]), 2, 2);
-        }
+        output[destination] = weighted_sum(invalue, i32::from(src[col - 1]), 1, 2);
+        output[destination + 1] = weighted_sum(invalue, i32::from(src[col + 1]), 2, 2);
     }
 
-    if src.len() > 1 {
-        let last = src.len() - 1;
-        let destination = last.saturating_mul(2);
-        invalue = i32::from(src[last]);
-        if destination < output.len() {
-            output[destination] = interpolate(invalue, i32::from(src[last - 1]), 3, 1, 2);
-        }
-        if destination.saturating_add(1) < output.len() {
-            output[destination + 1] = low_u8(invalue);
-        }
+    let last = src.len() - 1;
+    let destination = last.saturating_mul(2);
+    invalue = i32::from(src[last]);
+    output[destination] = interpolate(invalue, i32::from(src[last - 1]), 3, 1, 2);
+    if destination.saturating_add(1) < output.len() {
+        output[destination + 1] = low_u8(invalue);
     }
 }
 
 #[allow(
     clippy::arithmetic_side_effects,
-    reason = "Validated equal nonempty rows and bounded loop ranges prove each h2v2 index is in range."
+    reason = "The YCCK caller supplies equal ceiling-sized rows and image-width output, clipping at most the final h2v2 sample."
 )]
 fn upsample_h2v2_row(top: &[u8], adjacent: &[u8], output: &mut [u8]) {
-    if output.is_empty() {
+    if top.len() == 1 {
+        let this_col_sum = vertical_sum(top[0], adjacent[0]);
+        output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
+        if output.len() > 1 {
+            output[1] = interpolate(this_col_sum, 0, 4, 7, 4);
+        }
         return;
     }
+
     let mut this_col_sum = vertical_sum(top[0], adjacent[0]);
-    let mut next_col_sum = if top.len() > 1 {
-        vertical_sum(top[1], adjacent[1])
-    } else {
-        this_col_sum
-    };
+    let mut next_col_sum = vertical_sum(top[1], adjacent[1]);
     output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
-    if output.len() > 1 {
-        output[1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
-    }
+    output[1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
     let mut last_col_sum = this_col_sum;
     this_col_sum = next_col_sum;
 
-    for col in 1..top.len().saturating_sub(1) {
+    for col in 1..top.len() - 1 {
         let next = col + 1;
         next_col_sum = vertical_sum(top[next], adjacent[next]);
         let destination = col.saturating_mul(2);
-        if destination < output.len() {
-            output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
-        }
-        if destination.saturating_add(1) < output.len() {
-            output[destination + 1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
-        }
+        output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
+        output[destination + 1] = interpolate(this_col_sum, next_col_sum, 3, 7, 4);
         last_col_sum = this_col_sum;
         this_col_sum = next_col_sum;
     }
 
-    if top.len() > 1 {
-        let last = top.len() - 1;
-        let destination = last.saturating_mul(2);
-        if destination < output.len() {
-            output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
-        }
-        if destination.saturating_add(1) < output.len() {
-            output[destination + 1] = interpolate(this_col_sum, 0, 4, 7, 4);
-        }
-    } else if output.len() > 1 {
-        output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
-        output[1] = interpolate(this_col_sum, 0, 4, 7, 4);
+    let last = top.len() - 1;
+    let destination = last.saturating_mul(2);
+    output[destination] = interpolate(this_col_sum, last_col_sum, 3, 8, 4);
+    if destination.saturating_add(1) < output.len() {
+        output[destination + 1] = interpolate(this_col_sum, 0, 4, 7, 4);
     }
 }
 
