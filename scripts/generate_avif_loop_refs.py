@@ -301,6 +301,10 @@ FIXTURES = {
         "animated_lossy_inter_422_checker_random_b32x32.avif",
         "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
     ),
+    "lossy_inter_422_vertical_split_b32x64": (
+        "animated_lossy_inter_422_vertical_split_b32x64.avif",
+        "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798",
+    ),
     "lossy_inter_422_tx_context_checker_b64x32": (
         "animated_lossy_inter_422_tx_context_checker_b64x32.avif",
         "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56",
