@@ -26059,7 +26059,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "Malformed WebP container and codec headers",
+        "description": "Basic inspection reports the Pillow error for an extended WebP with no image chunk",
         "inspect_status": "error",
         "origins": [
           "pillow_fixture"

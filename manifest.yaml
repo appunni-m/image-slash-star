@@ -5340,6 +5340,7 @@ formats:
       - alpha_preprocessing.webp
     - id: animated
       description: Animated WebP (all composited frames)
+      rust_inspect_basic: true
       test_assets:
       - animated.webp
       - animated_sequence_rgba_keyframes.webp
@@ -5367,6 +5368,7 @@ formats:
       - animated_anmf_beyond_riff_extent.webp
     - id: size_small
       description: Small image (16x16)
+      rust_decode_with_metadata_limit: 20
       test_assets:
       - 16x16.webp
     - id: size_odd
@@ -5493,7 +5495,6 @@ formats:
       - bad_initial_chunk.webp
       - extended_vp8l_alpha_header_only.webp
       - extended_missing_image_chunk.webp
-      - extended_vp8x_no_chunks.webp
       - extended_vp8x_truncated_chunk_header.webp
       - partial_first_chunk_header.webp
       - vp8x_short_header.webp
@@ -5599,6 +5600,12 @@ formats:
       - vp8_partition_30.webp
       - vp8_partition_31.webp
       - vp8_partition_32.webp
+      expect_error: true
+    - id: error_malformed_container_extended_vp8x_no_chunks
+      description: Basic inspection reports the Pillow error for an extended WebP with no image chunk
+      rust_inspect_basic: true
+      test_assets:
+      - extended_vp8x_no_chunks.webp
       expect_error: true
     - id: error_lossless_vp8l_short_backreference_truncated_tail
       description: Full RIFF WebP with a valid lossless header and short-copy stream truncated during pixel reconstruction
