@@ -432,3 +432,66 @@ creation and modification timestamps. The retained file SHA-256 values are:
 - Select mode, 12-bit: `8583340a327c7feffa803fa3b0a80267a49b6fa21c062f9b19799e2a82bf1dcc`
 `make fixtures-check` validates both tracked fixtures using the pinned Pillow
 oracle without rebuilding the fixture encoder.
+
+## Lossy inter I420 B16x64 TX_MODE_SELECT sequence
+
+`animated_lossy_inter_420_b16x64_mode_select_64x64.avif` is a two-frame 8-bit
+I420 sequence whose second frame's 64x64 root is forced to
+`PARTITION_VERT_4`, creating four B16x64 leaves. The left leaf has a
+low-frequency residual and the other leaves keep texture, so the frame
+signals `TX_MODE_SELECT` while the first leaf selects the maximum 16x64
+transform. The fixture-only controls are in
+`libaom-lossy-inter-i420-b16x64.patch`; they do not alter the Rust decoder.
+
+Build a separate pinned libaom copy with that patch:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i420-b16x64-source
+git -C target/oracle-staging/libaom-i420-b16x64-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i420-b16x64-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i420-b16x64.patch"
+cmake -S target/oracle-staging/libaom-i420-b16x64-source \
+  -B target/oracle-staging/libaom-i420-b16x64-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i420-b16x64-prefix"
+cmake --build target/oracle-staging/libaom-i420-b16x64-build -j 4
+cmake --install target/oracle-staging/libaom-i420-b16x64-build
+```
+
+Build the pinned static libavif fixture library against that AOM copy, then
+compile and run the deterministic encoder:
+
+```sh
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i420-b16x64-source
+git -C target/oracle-staging/libavif-i420-b16x64-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i420-b16x64-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i420-b16x64-source \
+  -B target/oracle-staging/libavif-i420-b16x64-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i420-b16x64-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i420-b16x64-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i420-b16x64-prefix/include"
+cmake --build target/oracle-staging/libavif-i420-b16x64-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i420-b16x64-source/include \
+  -I target/oracle-staging/libavif-i420-b16x64-build/include \
+  -I target/oracle-staging/libaom-i420-b16x64-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i420_b16x64.c \
+  target/oracle-staging/libavif-i420-b16x64-build/libavif.a \
+  target/oracle-staging/libaom-i420-b16x64-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i420-b16x64
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b16x64_mode_select.py \
+  --encoder target/oracle-staging/encode-avif-inter-i420-b16x64
+```
+
+The generator checks two byte-identical timestamp-normalized encodes, the AV1
+frame headers, exact Pillow 12.2.0 RGB pixels, and this pinned AVIF SHA-256:
+`6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a`.
+`make fixtures-check` validates the committed fixture against its generator and
+Pillow observations without rebuilding the native encoder.

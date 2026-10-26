@@ -16,10 +16,9 @@ that arm for one generic instantiation. A coordinate-level comparison found
 seven new false-arm observations across related 16x16 guards, while other
 generic instantiations remain uncovered. Coverage MCP marks source identity
 unverified and named-test attribution unknown, so this is selected evidence,
-not a verified aggregate gain. The candidate `wide_lossy_single` branch at
-`src/codecs/avif/av1/block.rs:48406` remains uncovered. The fixture claims the
-signaled transform mode, not a particular transform size. No Rust code or unit
-tests were added.
+not a verified aggregate gain. This earlier case did not reach the candidate
+`wide_lossy_single` path; the fixture claims the signaled transform mode, not a
+particular transform size. No Rust code or unit tests were added.
 
 ## AVIF coded B64x16 inter parity — 2026-10-26
 
@@ -53,6 +52,34 @@ reports 13,447 of 32,078 branches missing, with source identity unverified and
 test attribution unknown, so this selected run does not establish an aggregate
 gain. No Rust source or unit tests were added.
 
+## AVIF thin B16x64 lossy TX_MODE_SELECT parity — 2026-10-26
+
+Added active row
+`decode:avif:animated_lossy_inter_420_b16x64_mode_select_64x64`. Its
+fixture-only pinned libaom patch forces `PARTITION_VERT_4` at the 64x64 inter
+root, producing four B16x64 leaves. The first leaf has a low-frequency
+residual; the other leaves retain texture so the frame signals
+`TX_MODE_SELECT`. The deterministic generator verifies the pinned Pillow
+12.2.0 RGB frames and AV1 headers. A temporary decoder trace confirmed the
+first inter leaf is 16x64 at qindex 76 and selects the wide single transform;
+both public Rust frame outputs match Pillow exactly. The pinned native loop
+observer records both frames and infinite repetition.
+
+The one-row selected parity run passed 1/1. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026T124731.508781Z-b6bb2feb74784ffca8ae467eac027ce1/coverage.json`
+(SHA-256
+`dcd5fd136ea83db1da78563e4758f1098fdc9f31e8c689b2fbdafb0d57bb724f`). The
+full active AVIF decode selection then passed 607/607; its retained report is
+`.coverage-mcp/local-evidence/selected/20261026T125143.028760Z-27bd0323559441969424d44b79b1ec82/coverage.json`
+(SHA-256
+`0961e684dee04a06af1e1f2314866711d218571a45503933eeda12dc801d010f`). The
+selected report records the thin-block and positive-qindex outcomes at
+`src/codecs/avif/av1/block.rs:48418` and `:48420`. Coverage MCP reports source
+identity unverified and test attribution unknown for the selected evidence;
+the full report lookup timed out. No aggregate or marginal coverage gain is
+claimed. This case remains a distinct B16x64 regression witness. No Rust unit
+tests were added.
+
 ## JPEG trailing DHT segment-boundary parity — 2026-10-26
 
 Added active decode rows
@@ -76,8 +103,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,630 total rows: 2,102 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,102 decode rows and 497 encode
+The current fixture matrix contains 2,633 total rows: 2,105 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,105 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9683,7 +9710,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `85727fec0717dd39c72a7c624760bbc33b74595e4d88cb9e1d6dbf1abe6b0a8e`; matrix `95cb9f81089ddde28c59aab625713454e4f306d16c7afc09eacad77568687cb1`.
+- Current fixture integrity only: manifest `0c2d19b1fe16bbbe929673379b227835245c080c2fa89ecd7d626821dd0ade6e`; matrix `93a0aebfcf2fc09a139693daf6d9a2a1a64226075054af0b2f370bbfdb4b5c9e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11293,3 +11320,33 @@ at `src/codecs/avif/av1/block.rs:49247` shows unobserved generic
 monomorphizations in this selected run. Source identity is unverified and test
 attribution is unknown. Its incremental comparison to the older full baseline
 timed out, so no aggregate coverage gain is claimed. No unit tests were added.
+
+## AVIF lossy I422 split-transform neighbor context parity — 2026-10-26
+
+Added active row
+`decode:avif:animated_lossy_inter_422_tx_context_checker_b64x32`. The
+maintained generator verifies the 64x32 two-frame lossy 4:2:2 input, pinned
+Pillow 12.2.0 RGB frame hashes, and reproducible AVIF bytes. The input
+SHA-256 is
+`38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56`; the
+frame hashes are
+`3268f29921f0c622303b8fcf16c10c8bcd25500338944422ea4c18ced0ae821e` and
+`aac1dfe4688ff506cb0b3eca55ae4094f8bee4b12100c1b2d7c2b962cf90aa1f`. A
+pinned native libavif observation supplies the sequence-loop evidence.
+
+The decoder now records coded block dimensions for an inter neighbor's
+`tx_intra` context while preserving the per-cell split-transform plan. The
+selected public parity run included the existing 32x32 I422 control and passed
+2/2 exact RGB rows; the full AVIF decode matrix passed 605/605. Strict
+formatting, workspace Clippy, and the x86-64 SSE2 and AVX2 cross-Clippy lanes
+passed.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026T120515.229922Z-c65a47bf1a7d4389bb5433ac3fa13f53/coverage.json`
+(SHA-256
+`05482db667104e09730b44bf5cb0192e6bbb96165cbb0b0b4b94e3f35ba074c2`).
+Coverage MCP measured 4,066/32,134 branch observations for this selected
+binary and still reports uncovered branches in `TileState::commit_with_metadata`.
+Source identity is unverified and named-test attribution is unknown, so this is
+targeting evidence rather than an aggregate coverage claim. No unit tests were
+added.

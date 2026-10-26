@@ -10967,6 +10967,11 @@ formats:
       test_assets:
       - animated_lossy_inter_422_checker_random_b32x32.avif
       status: active
+    - id: animated_lossy_inter_422_tx_context_checker_b64x32
+      description: Two-frame 64x32 lossy 4:2:2 AVIF sequence with a split inter transform tree beside intra transform syntax
+      test_assets:
+      - animated_lossy_inter_422_tx_context_checker_b64x32.avif
+      status: active
     - id: animated_lossy_inter_420_superres_sgr_8bit_160x56
       description: Two-frame 8-bit full-range lossy 4:2:0 AVIF sequence with super-resolution, SGR restoration, and largest-transform mode on the inter frame
       test_assets:
@@ -11036,6 +11041,16 @@ formats:
       description: Two-frame 16x64 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_LARGEST at positive qindex
       test_assets:
       - animated_lossy_inter_420_mode_largest_16x64.avif
+      status: active
+    - id: animated_lossy_inter_420_mode_select_16x64
+      description: Two-frame 16x64 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_SELECT at positive qindex
+      test_assets:
+      - animated_lossy_inter_420_mode_select_16x64.avif
+      status: active
+    - id: animated_lossy_inter_420_b16x64_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_VERT_4 to create four coded B16x64 leaves at positive qindex and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_420_b16x64_mode_select_64x64.avif
       status: active
     - id: animated_lossy_inter_420_mode_largest_64x16
       description: Two-frame 64x16 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_LARGEST at positive qindex

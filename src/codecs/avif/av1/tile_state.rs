@@ -776,13 +776,23 @@ impl TileState {
                     .ok_or_else(|| malformed("variable-transform cell size is invalid"))?;
             }
         }
-        let first_tx = metadata.tx_cells.map_or(
+        let neighbor_tx_context = if metadata.coding.is_intra() {
+            metadata.tx_cells.map_or(
+                TxCellUpdate {
+                    width_log2: leaf.tx_context_width,
+                    height_log2: leaf.tx_context_height,
+                },
+                |cells| cells[0],
+            )
+        } else {
+            // `tx_intra` records coded block dimensions for inter neighbors;
+            // the per-cell `tx_cells` below still retain the split plan.
+            let (width_log2, height_log2) = node.block_size.context_dimensions();
             TxCellUpdate {
-                width_log2: leaf.tx_context_width,
-                height_log2: leaf.tx_context_height,
-            },
-            |cells| cells[0],
-        );
+                width_log2,
+                height_log2,
+            }
+        };
 
         #[cfg(coverage)]
         let block_reservation_count = if crate::coverage_support::take_fault_point(
@@ -809,8 +819,8 @@ impl TileState {
             chroma_predictor: leaf.chroma_predictor,
             palette_cache: leaf.palette_cache,
             has_chroma,
-            tx_context_width: first_tx.width_log2,
-            tx_context_height: first_tx.height_log2,
+            tx_context_width: neighbor_tx_context.width_log2,
+            tx_context_height: neighbor_tx_context.height_log2,
             block_skipped: leaf.block_skipped,
             skip_mode: metadata.skip_mode,
             coding: metadata.coding,

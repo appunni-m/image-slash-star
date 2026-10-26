@@ -230,6 +230,12 @@ impl BlockSize {
         }
     }
 
+    /// Width/height context dimensions for the coded block footprint.
+    pub(super) const fn context_dimensions(self) -> (u8, u8) {
+        let (width, height) = self.mi_dimensions();
+        (context_dimension(width), context_dimension(height))
+    }
+
     pub(super) const fn pixel_dimensions(self) -> (u32, u32) {
         let (width, height) = self.mi_dimensions();
         (width.wrapping_mul(4), height.wrapping_mul(4))
@@ -745,6 +751,7 @@ const fn context_dimension(units: u32) -> u8 {
         4 => 2,
         8 => 3,
         16 => 4,
+        32 => 5,
         _ => 0,
     }
 }
