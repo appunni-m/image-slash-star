@@ -10728,6 +10728,12 @@ formats:
       - animated_lossless_inter_420_b32x32_10bit.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_monochrome_b32x32_10bit
+      description: Two-frame 32x32 10-bit full-range monochrome all-lossless AVIF sequence with a translating patch and full-size B32x32 inter leaf
+      test_assets:
+      - animated_lossless_inter_monochrome_b32x32_10bit.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: animated_lossless_inter_420_b32x32_10bit_partition32_full_texture
       description: Two-frame 32x32 10-bit full-range 4:2:0 all-lossless AVIF sequence with fixed 32-pixel partitions and a translated 31x31 textured patch
       test_assets:

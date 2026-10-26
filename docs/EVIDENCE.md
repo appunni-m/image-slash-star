@@ -9761,7 +9761,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9ee22d2d996e4b74d57e326dfcfc3e9349858738245364997b6a4b2bf6c09bab`; matrix `abcfb759db26fbcab7105ab50005e891622424a976fdacab7b0970bf36f8601e`.
+- Current fixture integrity only: manifest `beaa8720cc7edb668377e6f2af64cb4a5a752917f7bfbc29515680cca8cc3466`; matrix `6c1843d09f09197636ca01af655cf12e45621d972a4ce635c45a50b61ae7ee77`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11437,6 +11437,32 @@ the full-report comparison is limited and the selected incremental comparison
 is incomparable because baseline detail is incomplete. No aggregate coverage
 gain is claimed. No production Rust code or unit tests were added.
 
-The current fixture matrix contains 2,640 total rows: 2,112 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,112 decode rows and 497 encode
+## AVIF high-depth monochrome inter parity — 2026-10-27
+
+Added the active public parity row
+`decode:avif:animated_lossless_inter_monochrome_b32x32_10bit`. Its pinned
+10-bit all-lossless key/inter sequence uses a full-size B32x32 monochrome leaf.
+The 1,114-byte input SHA-256 is
+`28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624`; Pillow
+12.2.0 RGB frame hashes are
+`9eb4dc1f2ea4eb4cd5bc4dca1bc035a1eeee1d08248a527348e3be8cb5d25129` and
+`c40bb457a52128f753525937c909cd08ebd8f96d7a5431a4e9751392dc5b487f`. The
+fixture generator checks deterministic bytes, monochrome AV1 sequence headers,
+and exact Pillow frame pixels. The complete AVIF loop-witness parity test also
+passed with the new two-frame case registered.
+
+The focused `make coverage-selected` row passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/avif-hi10-monochrome-20261027/coverage.json`
+(SHA-256
+`c4bd568056ec0057874090638622796c26ed583d601551307bb18ac0f91263a7`). Raw
+LLVM branch counters record one false outcome at
+`src/codecs/avif/av1/entropy.rs:10787`, where the older full report recorded
+zero. Coverage MCP still lists the span because the selected report also has a
+zero-count branch record at that same coordinate. Both reports have unverified
+source identity, and the incremental comparison is incomparable because the
+baseline detail is incomplete; no aggregate coverage gain is claimed. No
+production Rust code or unit tests were added.
+
+The current fixture matrix contains 2,641 total rows: 2,113 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,113 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.

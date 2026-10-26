@@ -1,4 +1,4 @@
-/* Generate the 10/12-bit I420 sequence used by the public AVIF decode matrix. */
+/* Generate the 10/12-bit sequence fixtures used by the public AVIF decode matrix. */
 #include <avif/avif.h>
 
 #include <errno.h>
@@ -69,12 +69,14 @@ static int parse_unsigned(const char *text, unsigned *value) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2 && argc != 5 && argc != 6 && argc != 8 && argc != 10 &&
+  const int monochrome = argc == 3 && strcmp(argv[2], "mono") == 0;
+  if (!monochrome && argc != 2 && argc != 5 && argc != 6 && argc != 8 && argc != 10 &&
       argc != 11 && argc != 12) {
     fprintf(stderr,
             "usage: %s OUTPUT.avif [DIMENSION SPEED PARTITION_SIZE] "
             "or [WIDTH HEIGHT SPEED PARTITION_SIZE [PATCH_X PATCH_Y "
-            "[PATCH_WIDTH PATCH_HEIGHT [ramp|flat|texture [10|12]]]]]\n",
+            "[PATCH_WIDTH PATCH_HEIGHT [ramp|flat|texture [10|12]]]]] "
+            "or mono\n",
             argv[0]);
     return 1;
   }
@@ -134,8 +136,9 @@ int main(int argc, char **argv) {
 
   int status = 0;
   avifEncoder *encoder = avifEncoderCreate();
-  avifImage *image =
-      avifImageCreate(width, height, bit_depth, AVIF_PIXEL_FORMAT_YUV420);
+  const avifPixelFormat pixel_format =
+      monochrome ? AVIF_PIXEL_FORMAT_YUV400 : AVIF_PIXEL_FORMAT_YUV420;
+  avifImage *image = avifImageCreate(width, height, bit_depth, pixel_format);
   avifRWData output = AVIF_DATA_EMPTY;
   FILE *file = NULL;
   if (!encoder || !image) {

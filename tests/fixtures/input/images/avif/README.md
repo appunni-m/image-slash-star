@@ -54,6 +54,7 @@ generation provenance follow.
 | `animated_lossless_inter_420_b16x16_10bit.avif` | Deterministic two-frame full-range 10-bit I420 lossless sequence with a one-pixel-shifted near-full-frame texture | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `8eb14ad3c57916b9e7fdded28b08a9254302cfc76f0cb5a934b41f11dc4184b6` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_b16x16_10bit_small_patch.avif` | Deterministic two-frame full-range 10-bit I420 lossless sequence with a moving 4x4 luma patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `99dd72e3dc39af9f7d9bcb89d5e3bb0553f7cc04db021c0107fe2f4dcd06ae7b` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_b32x32_10bit.avif` | Deterministic two-frame full-range 10-bit I420 lossless sequence with a translated patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_monochrome_b32x32_10bit.avif` | Deterministic two-frame 32x32 full-range 10-bit monochrome lossless sequence with a translated patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_qmatrix_level15_qindex0_16x64.avif` | Deterministic two-frame full-range 8-bit I420 lossless sequence with qindex zero and qmatrix level 15 | `scripts/generate_avif_lossless_qmatrix_sequence.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; speed 0, one thread, CICP 1/13/6; timestamp-normalized | `b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_b32x32_10bit_partition32_full_texture.avif` | Deterministic two-frame 32x32 full-range 10-bit I420 lossless sequence with fixed 32-pixel partitions and a translated 31x31 textured patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif` | Deterministic two-frame 28x64 full-range 10-bit I420 lossless sequence with a translated textured 24x24 patch in the padded left B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f` | MIT/Apache-2.0 (repository-generated) |
@@ -194,6 +195,18 @@ bitstream shape and Pillow 12.2.0 RGB frame references. Each frame is 3,072
 bytes, with SHA-256 values
 `0a9a2996f570e2959cbd25e68991ceb2fbd153485af10d4ebfb2fed8fe3170a7` and
 `a9346f58b101a9c058ad8271404b371773b0fea8fc3255c8c8befcf7104c4345`.
+
+`animated_lossless_inter_monochrome_b32x32_10bit.avif` uses the same pinned
+generator and encoder helper, with the helper's `mono` option selecting the
+AV1 monochrome plane layout. It is a 32x32 full-range 10-bit all-lossless
+key/inter sequence whose second frame translates a patch inside a full-size
+B32x32 inter leaf. Its normalized file SHA-256 is
+`28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624`; the
+Pillow 12.2.0 RGB frame hashes are
+`9eb4dc1f2ea4eb4cd5bc4dca1bc035a1eeee1d08248a527348e3be8cb5d25129` and
+`c40bb457a52128f753525937c909cd08ebd8f96d7a5431a4e9751392dc5b487f`. This
+parity case exercises high-depth inter reconstruction while excluding the
+generic I444 path for monochrome input.
 
 The 28x64 companion forces 32x32 partitions. AV1 pads this frame to 32 luma
 columns for its partition tree, and its translated 24x24 patch stays inside the

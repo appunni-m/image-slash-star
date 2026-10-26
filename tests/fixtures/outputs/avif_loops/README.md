@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 131 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 123 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 415 hashed
-artifacts total 22,456,939 bytes, including 131 input files, the compiled
-observer source, and 21,793,532 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 132 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 124 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 418 hashed
+artifacts total 22,464,197 bytes, including 132 input files, the compiled
+observer source, and 21,799,676 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 94 fixture sources are declared in
+The 95 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -75,6 +75,10 @@ The companion 32x32 full-range 10-bit I420 source fixes encoder partitions to
 32x32 and translates a textured 31x31 patch. Its key/inter AV1 samples are
 repeatable, both exact Pillow RGB frames match their pinned hashes, and the
 native observer confirms two decoded frames with infinite repetition.
+The companion 32x32 monochrome source uses the same pinned 10-bit all-lossless
+encoder with a YUV400 plane layout. Both exact Pillow RGB frames and the native
+two-frame infinite-loop observation are retained; the sequence covers the
+high-depth inter path for monochrome input.
 The companion full-range 8-bit I420 source follows the same flat-key and
 8x8-inter pattern. Its inter picture uses 128x56 coded dimensions, 160x56
 upscaled dimensions, and SGR restoration on Y, U, and V, retaining the exact

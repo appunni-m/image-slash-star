@@ -81,6 +81,23 @@ FIXTURE_SPECS = {
             "a9346f58b101a9c058ad8271404b371773b0fea8fc3255c8c8befcf7104c4345",
         ),
     },
+    "monochrome_b32x32_10bit": {
+        "asset": ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+            "animated_lossless_inter_monochrome_b32x32_10bit.avif"
+        ),
+        "width": 32,
+        "height": 32,
+        "speed": 8,
+        "partition_size": 0,
+        "monochrome": True,
+        "expected_file_sha256": (
+            "28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624"
+        ),
+        "expected_frame_sha256": (
+            "9eb4dc1f2ea4eb4cd5bc4dca1bc035a1eeee1d08248a527348e3be8cb5d25129",
+            "c40bb457a52128f753525937c909cd08ebd8f96d7a5431a4e9751392dc5b487f",
+        ),
+    },
     "b32x32_10bit_partition32_full_texture": {
         "asset": ASSET_B32_FULL_TEXTURE_PARTITION32,
         "width": 32,
@@ -428,7 +445,7 @@ def validate_timestamp_repeatability(first: bytes, second: bytes) -> None:
 
 
 def validate_bitstream(
-    path: Path, width: int, height: int, bit_depth: int = 10
+    path: Path, width: int, height: int, bit_depth: int = 10, monochrome: bool = False
 ) -> list[tuple[int, str]]:
     container = inspect_container(path)
     if container["ftyp"]["major"] != "avis":
@@ -461,7 +478,7 @@ def validate_bitstream(
         "bit_depth": bit_depth,
         "max_width": width,
         "max_height": height,
-        "monochrome": False,
+        "monochrome": monochrome,
         "color_primaries": 1,
         "transfer_characteristics": 13,
         "matrix_coefficients": 6,
@@ -474,7 +491,7 @@ def validate_bitstream(
         for header in sequence_headers
     ):
         raise RuntimeError(
-            f"sequence header differs from the pinned {bit_depth}-bit full-range I420 shape"
+            f"sequence header differs from the pinned {bit_depth}-bit full-range image shape"
         )
 
     expected_types = ("key", "inter")
@@ -591,6 +608,8 @@ def generate(args: argparse.Namespace) -> None:
                 raw_path = work / f"{fixture_name}-run-{index}.avif"
                 normalized_path = work / f"{fixture_name}-run-{index}-normalized.avif"
                 command = [str(encoder), str(raw_path)]
+                if spec.get("monochrome"):
+                    command.append("mono")
                 if (
                     spec["width"],
                     spec["height"],
@@ -640,6 +659,7 @@ def generate(args: argparse.Namespace) -> None:
                         spec["width"],
                         spec["height"],
                         spec.get("bit_depth", 10),
+                        spec.get("monochrome", False),
                     )
                 )
                 observations.append(

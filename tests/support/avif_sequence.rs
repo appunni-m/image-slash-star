@@ -598,6 +598,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_420_clipped_b32x32_185x64",
         "lossless_inter_420_clipped_b16x16_60x64",
         "lossless_inter_monochrome_b16x16",
+        "lossless_inter_monochrome_b32x32_10bit",
         "lossy_split_inter_420_b16x16",
         "lossy_b16_mixed_topology_inter_420_b16x16",
         "lossy_wide_monochrome_b128x128",
@@ -845,6 +846,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             }
             "lossless_inter_monochrome_b16x16" => {
                 matrix_sequence_case("animated_lossless_inter_monochrome_b16x16")
+            }
+            "lossless_inter_monochrome_b32x32_10bit" => {
+                matrix_sequence_case("animated_lossless_inter_monochrome_b32x32_10bit")
             }
             "lossy_split_inter_420_b16x16" => {
                 matrix_sequence_case("animated_lossy_split_inter_420_b16x16")
