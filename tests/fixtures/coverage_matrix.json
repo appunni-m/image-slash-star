@@ -194978,7 +194978,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -195139,7 +195139,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -195300,7 +195300,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -195316,7 +195316,7 @@
           "rust_expect_sequence_error": false,
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null,
           "status": "active",
           "asset_sha256": "a926d873715928a5226a50d71f4a95e178fc260793dd00ed5db834b7f8055ba0",
@@ -195622,7 +195622,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -195783,7 +195783,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -195944,7 +195944,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196105,7 +196105,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196266,7 +196266,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196427,7 +196427,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196588,7 +196588,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196749,7 +196749,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -196910,7 +196910,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197071,7 +197071,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197232,7 +197232,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197393,7 +197393,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197554,7 +197554,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197715,7 +197715,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -197876,7 +197876,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -198037,7 +198037,7 @@
           "decoded_source_byte_order": null,
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
-          "rust_inspect_basic": false,
+          "rust_inspect_basic": true,
           "rust_decode_with_metadata_limit": null
         },
         {
@@ -198278,7 +198278,7 @@
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": 20
         },
         {
           "asset": "odd.webp",
@@ -201238,99 +201238,6 @@
           "rust_sequence_error_reason": null,
           "verification_scope": "structure",
           "asset_sha256": "397ec25778d7e72f8394b972d93a7103c97c278d3989ee7bcea77f93c46ff0ca",
-          "execution": {
-            "target": "aarch64-apple-darwin",
-            "features": [
-              "jpeg",
-              "png",
-              "gif",
-              "bmp",
-              "tiff",
-              "webp",
-              "ico",
-              "avif"
-            ],
-            "suite": "native_all_features"
-          },
-          "assertion_origins": {
-            "detection": "pillow_fixture",
-            "inspection": "pillow_fixture",
-            "verification": "pillow_fixture",
-            "decode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "detect": "ok",
-            "inspect": "error",
-            "verify": "error",
-            "decode": "error",
-            "decode_sequence": "error"
-          },
-          "error_contracts": {
-            "inspect": {
-              "pillow_type": "builtins.OSError",
-              "pillow_message": "could not create decoder object",
-              "rust_kind": "malformed",
-              "rust_format": "WEBP",
-              "rust_message": "non_empty",
-              "origin": "pillow_fixture"
-            },
-            "verify": {
-              "pillow_type": "builtins.OSError",
-              "pillow_message": "could not create decoder object",
-              "rust_kind": "malformed",
-              "rust_format": "WEBP",
-              "rust_message": "non_empty",
-              "origin": "pillow_fixture"
-            },
-            "decode": {
-              "pillow_type": "builtins.OSError",
-              "pillow_message": "could not create decoder object",
-              "rust_kind": "malformed",
-              "rust_format": "WEBP",
-              "rust_message": "non_empty",
-              "origin": "pillow_fixture"
-            },
-            "decode_sequence": {
-              "pillow_type": "builtins.OSError",
-              "pillow_message": "could not create decoder object",
-              "rust_kind": "malformed",
-              "rust_format": "WEBP",
-              "rust_message": "non_empty",
-              "origin": "pillow_fixture"
-            }
-          },
-          "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
-        },
-        {
-          "id": "error_malformed_container_extended_vp8x_no_chunks",
-          "type": "decode",
-          "format": "webp",
-          "category": "error",
-          "description": "Malformed WebP container and codec headers",
-          "asset": "extended_vp8x_no_chunks.webp",
-          "expect_error": true,
-          "status": "active",
-          "oracle_status": "error",
-          "oracle_error_type": "builtins.OSError",
-          "oracle_error_message": "could not create decoder object",
-          "verify_status": "error",
-          "verify_error_type": "builtins.OSError",
-          "verify_error_message": "could not create decoder object",
-          "oracle_detects_format": true,
-          "inspect_status": "error",
-          "inspect_error_type": "builtins.OSError",
-          "inspect_error_message": "could not create decoder object",
-          "inspect_error_kind": "malformed",
-          "verify_error_kind": "malformed",
-          "oracle_error_kind": "malformed",
-          "expect_sequence_error": false,
-          "rust_expect_sequence_error": false,
-          "rust_sequence_error_kind": null,
-          "rust_sequence_error_reason": null,
-          "verification_scope": "structure",
-          "asset_sha256": "a853cf65860c6baffb3cd77b4b9f808b8dddc088685e746203436d96ba14d966",
           "execution": {
             "target": "aarch64-apple-darwin",
             "features": [
@@ -209962,6 +209869,99 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_malformed_container_extended_vp8x_no_chunks",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Basic inspection reports the Pillow error for an extended WebP with no image chunk",
+          "asset": "extended_vp8x_no_chunks.webp",
+          "expect_error": true,
+          "status": "active",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "could not create decoder object",
+          "verify_status": "error",
+          "verify_error_type": "builtins.OSError",
+          "verify_error_message": "could not create decoder object",
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.OSError",
+          "inspect_error_message": "could not create decoder object",
+          "inspect_error_kind": "malformed",
+          "verify_error_kind": "malformed",
+          "oracle_error_kind": "malformed",
+          "expect_sequence_error": false,
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "verification_scope": "structure",
+          "asset_sha256": "a853cf65860c6baffb3cd77b4b9f808b8dddc088685e746203436d96ba14d966",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "could not create decoder object",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          },
+          "rust_inspect_basic": true,
+          "rust_decode_with_metadata_limit": null
+        },
+        {
           "id": "error_lossless_vp8l_short_backreference_truncated_tail",
           "type": "decode",
           "format": "webp",
@@ -217124,6 +217124,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_distance2_max_match_tail_token.bin",
           "encoded_ref_bytes": 180,
           "encoded_ref_sha256": "a8f0f39369ed421c68a7c156c10055600474a8a496a328ce54b2a7090792e99c",
@@ -217136,17 +217146,7 @@
             1
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_method_6_run_cap",

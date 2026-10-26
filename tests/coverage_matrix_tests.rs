@@ -6561,17 +6561,40 @@ fn run_decode_matrix(format_filter: Option<&str>) {
 
             if row.rust_inspect_basic {
                 let basic_inspected = img::inspect_basic(&data);
-                let matches_complete_inspection = match (&basic_inspected, &inspected) {
+                let matches_basic_contract = match (&basic_inspected, &inspected) {
                     (Ok(basic), Ok(full)) => {
-                        basic == full
-                            && basic.frame_count == row.ref_frame_count
-                            && basic.frame_count_complete
+                        if row.ref_is_animated == Some(true) {
+                            let mut expected = full.clone();
+                            expected.frame_count = None;
+                            expected.frame_count_complete = false;
+                            basic.is_animated
+                                && basic.frame_count.is_none()
+                                && !basic.frame_count_complete
+                                && *basic == expected
+                        } else {
+                            basic == full
+                                && basic.frame_count == row.ref_frame_count
+                                && basic.frame_count_complete
+                        }
+                    }
+                    (Err(_), Err(_)) => {
+                        result_matches_oracle(
+                            &basic_inspected,
+                            &row.inspect_status,
+                            row.inspect_error_kind.as_deref(),
+                            expected_format,
+                        ) && assert_result_error_contract(
+                            &basic_inspected,
+                            &row.error_contracts,
+                            "inspect",
+                        )
+                        .is_ok()
                     }
                     _ => false,
                 };
-                if !matches_complete_inspection {
+                if !matches_basic_contract {
                     eprintln!(
-                        "  FAIL [{}]: basic inspection does not prove the complete one-frame EOF boundary ({basic_inspected:?} versus {inspected:?})",
+                        "  FAIL [{}]: basic inspection does not match its Pillow-derived parity contract ({basic_inspected:?} versus {inspected:?})",
                         row.id
                     );
                     failed += 1;

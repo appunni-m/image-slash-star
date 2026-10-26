@@ -4387,6 +4387,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated.webp",
         "operations": [
@@ -4442,6 +4443,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
         "operations": [
@@ -4497,6 +4499,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha.webp",
         "operations": [
@@ -4552,6 +4555,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_origin_partial.webp",
         "operations": [
@@ -4607,6 +4611,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes_partial_background.webp",
         "operations": [
@@ -4662,6 +4667,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes_opaque_background.webp",
         "operations": [
@@ -4717,6 +4723,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_opaque_background.webp",
         "operations": [
@@ -4772,6 +4779,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_palette_background.webp",
         "operations": [
@@ -4827,6 +4835,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_full_delta.webp",
         "operations": [
@@ -4882,6 +4891,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_lossy.webp",
         "operations": [
@@ -4937,6 +4947,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_overlap.webp",
         "operations": [
@@ -4992,6 +5003,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_holes.webp",
         "operations": [
@@ -5047,6 +5059,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_loop_twice.webp",
         "operations": [
@@ -5102,6 +5115,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_blend.webp",
         "operations": [
@@ -5157,6 +5171,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full.webp",
         "operations": [
@@ -5212,6 +5227,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full_dispose.webp",
         "operations": [
@@ -5267,6 +5283,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha_full_blend_after_dispose.webp",
         "operations": [
@@ -5322,6 +5339,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_dispose.webp",
         "operations": [
@@ -5377,6 +5395,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_full_dispose.webp",
         "operations": [
@@ -5432,6 +5451,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_rgb_partial_dispose.webp",
         "operations": [
@@ -5539,6 +5559,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 20,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/16x16.webp",
         "operations": [
@@ -8226,91 +8247,6 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/extended_missing_image_chunk.webp",
-        "operations": [
-          "PIL.Image.open",
-          "load",
-          "tobytes"
-        ]
-      },
-      "pillow_verify_call": [
-        "PIL.Image.open",
-        "verify"
-      ]
-    },
-    {
-      "id": "error_malformed_container_extended_vp8x_no_chunks",
-      "asset": "extended_vp8x_no_chunks.webp",
-      "asset_sha256": "a853cf65860c6baffb3cd77b4b9f808b8dddc088685e746203436d96ba14d966",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "error",
-        "verify": "error",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "inspect": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "could not create decoder object",
-          "rust_kind": "malformed",
-          "rust_format": "WEBP",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "verify": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "could not create decoder object",
-          "rust_kind": "malformed",
-          "rust_format": "WEBP",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "could not create decoder object",
-          "rust_kind": "malformed",
-          "rust_format": "WEBP",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.OSError",
-          "pillow_message": "could not create decoder object",
-          "rust_kind": "malformed",
-          "rust_format": "WEBP",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "expect_error": true,
-      "expect_sequence_error": false,
-      "verification_scope": "structure",
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "pillow_call": {
-        "open": "tests/fixtures/input/images/webp/extended_vp8x_no_chunks.webp",
         "operations": [
           "PIL.Image.open",
           "load",
@@ -16036,6 +15972,92 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/vp8_partition_32.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_container_extended_vp8x_no_chunks",
+      "asset": "extended_vp8x_no_chunks.webp",
+      "asset_sha256": "a853cf65860c6baffb3cd77b4b9f808b8dddc088685e746203436d96ba14d966",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "could not create decoder object",
+          "rust_kind": "malformed",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/extended_vp8x_no_chunks.webp",
         "operations": [
           "PIL.Image.open",
           "load",
