@@ -142,6 +142,10 @@ FIXTURES = {
         "animated_lossless_inter_420_b32x32.avif",
         "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
     ),
+    "lossless_inter_420_qmatrix_level15_qindex0_16x64": (
+        "animated_lossless_inter_420_qmatrix_level15_qindex0_16x64.avif",
+        "b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de",
+    ),
     "lossless_inter_420_b16x16_10bit": (
         "animated_lossless_inter_420_b16x16_10bit.avif",
         "8eb14ad3c57916b9e7fdded28b08a9254302cfc76f0cb5a934b41f11dc4184b6",

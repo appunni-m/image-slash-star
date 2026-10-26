@@ -5446,6 +5446,7 @@ fn inter_lossless_grid_geometry_supported(
     geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
+    all_lossless: bool,
 ) -> bool {
     let InterLosslessGridGeometry {
         block_size,
@@ -5465,7 +5466,9 @@ fn inter_lossless_grid_geometry_supported(
         && quantization.qindex == 0
         && quantization.segment_qindex == 0
         && !quantization.delta_q_present
-        && !quantization.using_matrix
+        // AV1 assigns a flat level-15 matrix to every lossless segment.
+        // Keep this exception limited to frames proven all-lossless.
+        && (!quantization.using_matrix || all_lossless)
         && quantization.y_dc_delta == 0
         && quantization.y_ac_delta == 0
         && quantization.u_dc_delta == 0
@@ -5521,7 +5524,7 @@ fn inter_mixed_8bit_color_lossless_grid_geometry_supported(
         && matches!(transform_mode, 1 | 2)
         // Reuse the complete geometry/quantization proof while evaluating it
         // in its mode-0 form; only the frame-mode restriction differs here.
-        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0, false)
 }
 
 /// High-depth mixed-segment blocks share the generic lossless-grid traversal
@@ -5541,7 +5544,7 @@ fn inter_mixed_high_depth_lossless_grid_geometry_supported(
         // The ordinary helper is mode-0-only by design; evaluating its
         // remaining geometry/quantization proof here avoids broadening any
         // other inter profile.
-        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0, false)
 }
 
 /// Monochrome mixed-segment blocks share the depth-parametric lossless grid
@@ -5556,7 +5559,7 @@ fn inter_mixed_monochrome_lossless_grid_geometry_supported(
     geometry.layout == PixelLayout::Monochrome
         && matches!(geometry.bit_depth, 8 | 10 | 12)
         && matches!(transform_mode, 1 | 2)
-        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0, false)
 }
 
 fn inter_lossless_grid_large_block_supported(block_size: BlockSize) -> bool {
@@ -8384,6 +8387,7 @@ fn decode_inter_leaf(
         lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
+        context.all_lossless,
     ) || inter_mixed_8bit_color_lossless_grid_geometry_supported(
         lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
@@ -10050,6 +10054,7 @@ fn decode_inter_leaf(
                 visible_width,
                 visible_height,
                 block_skipped,
+                context.all_lossless,
                 prepared_quantization,
                 tools,
                 [first_state.surface, second.surface],
@@ -10068,6 +10073,7 @@ fn decode_inter_leaf(
                 visible_width,
                 visible_height,
                 block_skipped,
+                context.all_lossless,
                 prepared_quantization,
                 tools,
                 first_state.surface,
@@ -18997,7 +19003,7 @@ fn complete_lossless_inter_color_reconstruction_context(
         && quantization.u_ac_delta == 0
         && quantization.v_dc_delta == 0
         && quantization.v_ac_delta == 0
-        && !quantization.using_matrix
+        // Lossless segments use the identity (level-15) matrix by AV1 syntax.
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.allow_intrabc

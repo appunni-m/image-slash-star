@@ -75,6 +75,23 @@ The source Y4M, AVIF, and decoded-pixel SHA-256 values are respectively
 `5824f2bd3c3fa431a0c0c57509f34e11ec148e36bac9531bff083394eab59d2f`, and
 `0140c8dab75efad711db2af0b7f1f837e76e2a8d578ac43052fea15b7693d926`.
 
+The no-restoration companion uses the same deterministic 17x17 I420 source
+with restoration disabled. It preserves actual luma and ceil-rounded chroma
+upscaling while exercising the intra reconstruction path. The generator also
+checks that all three AV1 restoration types are absent. Generate it with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_equal_width_superres.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc \
+  --chroma 420-actual-no-restoration
+```
+
+The source Y4M, AVIF, and decoded-pixel SHA-256 values are respectively
+`2b6a7a2db94663d55e4be325b666b9dbae21bf8ef368863772ebacdef37dcb86`,
+`175f4eed6919458cd0f3af455f20e6a0be83bfd059b2e63e745ad8fab3e46c35`, and
+`36b2cbf4958b72a92a936b63d8b905bfd49dfb49b18511cc01723e880576b57b`.
+
+
 Generate the two-tile monochrome super-resolution case with the same pinned
 encoder:
 

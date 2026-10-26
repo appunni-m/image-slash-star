@@ -47171,6 +47171,7 @@ impl Lossy420Decoder {
                 txb_skipped: luma_txb_skipped,
                 transform: luma_transform,
             },
+            false,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -47226,6 +47227,7 @@ impl Lossy420Decoder {
                 txb_skipped: luma_txb_skipped,
                 transform: luma_transform,
             },
+            false,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -47286,6 +47288,7 @@ impl Lossy420Decoder {
                 luma_transform,
                 sampling,
             },
+            false,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -47345,6 +47348,7 @@ impl Lossy420Decoder {
                 luma_transform,
                 sampling,
             },
+            false,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -47517,6 +47521,7 @@ impl Lossy420Decoder {
             },
             false,
             transform_plan,
+            false,
             filters,
             coefficient_contexts,
             decode_transform_type,
@@ -47687,6 +47692,7 @@ impl Lossy420Decoder {
             },
             false,
             transform_plan,
+            false,
             filters,
             coefficient_contexts,
             decode_transform_type,
@@ -47776,6 +47782,7 @@ impl Lossy420Decoder {
             },
             block_skipped,
             transform_plan,
+            false,
             filters,
             coefficient_contexts,
             &mut decode_transform_type,
@@ -47865,6 +47872,7 @@ impl Lossy420Decoder {
             },
             block_skipped,
             transform_plan,
+            false,
             filters,
             coefficient_contexts,
             &mut decode_transform_type,
@@ -48010,6 +48018,7 @@ impl Lossy420Decoder {
         visible_width: u32,
         visible_height: u32,
         block_skipped: bool,
+        frame_all_lossless: bool,
         prepared_quantization: PreparedInterQuantization,
         tools: BlockTools,
         reference: &FrameSurface,
@@ -48041,6 +48050,7 @@ impl Lossy420Decoder {
             },
             block_skipped,
             self.lossless_inter_transform_plan(block_size, tools.sample_depth)?,
+            frame_all_lossless,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -48058,6 +48068,7 @@ impl Lossy420Decoder {
         visible_width: u32,
         visible_height: u32,
         block_skipped: bool,
+        frame_all_lossless: bool,
         prepared_quantization: PreparedInterQuantization,
         tools: BlockTools,
         references: [&FrameSurface; 2],
@@ -48088,6 +48099,7 @@ impl Lossy420Decoder {
             },
             block_skipped,
             self.lossless_inter_transform_plan(block_size, tools.sample_depth)?,
+            frame_all_lossless,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -48109,6 +48121,7 @@ impl Lossy420Decoder {
         prediction_state: InterPrediction<'_>,
         block_skipped: bool,
         transform_plan: InterTransformPlan,
+        frame_all_lossless: bool,
         filters: [InterpolationFilter; 2],
         coefficient_contexts: InterCoefficientContexts,
         mut decode_transform_type: impl FnMut(
@@ -49231,7 +49244,7 @@ impl Lossy420Decoder {
                     && quantization.qindex == 0
                     && quantization.segment_qindex == 0
                     && !quantization.delta_q_present
-                    && !quantization.using_matrix
+                    && (!quantization.using_matrix || frame_all_lossless)
                     && quantization.y_dc_delta == 0
                     && quantization.y_ac_delta == 0
                     && quantization.u_dc_delta == 0

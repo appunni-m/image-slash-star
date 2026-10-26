@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 121 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 113 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 380 hashed
-artifacts total 12,914,980 bytes, including 121 input files, the compiled
-observer source, and 12,279,548 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 122 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 114 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 383 hashed
+artifacts total 12,922,439 bytes, including 122 input files, the compiled
+observer source, and 12,285,692 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 88 fixture sources are declared in
+The 89 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -176,6 +176,10 @@ collected observer build identities remain in `additional_collections`.
 The five-frame 56x64 derived-skip sequence retains all Pillow frames and an
 independent native repetition observation; its separately compiled observer
 identity is recorded in `additional_collections`.
+The two-frame 16x64 all-lossless I420 qmatrix sequence signals qindex zero and
+matrix level 15 on both frames. Pillow and libavif decode both frames, report
+100 ms timing, and report infinite repetition; its independently collected
+native observer identity is recorded in `additional_collections`.
 The `stts_zero_delta` mutation changes only the animated track's `stts`
 `sample_delta` from one to zero without changing file length or media payload.
 Pillow reports five zero-millisecond frames with unchanged pixels, and pinned
