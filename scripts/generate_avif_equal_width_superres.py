@@ -41,6 +41,7 @@ class FixtureProfile:
     monochrome: bool = False
     tile_cols_log2: int = 0
     monochrome_restoration_types: tuple[int, int, int] = (3, 0, 0)
+    expected_restoration_types: tuple[int, int, int] | None = None
     cicp: tuple[int, int, int] | None = None
     full_range: bool | None = None
 
@@ -101,6 +102,20 @@ PROFILES = {
         subsampling_x=1,
         subsampling_y=1,
         advanced_options=ADVANCED_OPTIONS,
+    ),
+    "420-actual-no-restoration": FixtureProfile(
+        chroma_format="420jpeg",
+        asset_name="superres_actual_upscaled_i420_no_restoration_17x17.avif",
+        width=17,
+        height=17,
+        superres_denominator=9,
+        source_sha256="2b6a7a2db94663d55e4be325b666b9dbae21bf8ef368863772ebacdef37dcb86",
+        asset_sha256="175f4eed6919458cd0f3af455f20e6a0be83bfd059b2e63e745ad8fab3e46c35",
+        pixels_sha256="36b2cbf4958b72a92a936b63d8b905bfd49dfb49b18511cc01723e880576b57b",
+        subsampling_x=1,
+        subsampling_y=1,
+        advanced_options=NO_RESTORATION_OPTIONS,
+        expected_restoration_types=(0, 0, 0),
     ),
     "400-actual": FixtureProfile(
         chroma_format="mono",
@@ -308,6 +323,11 @@ def validate_bitstream(path: Path, profile: FixtureProfile) -> None:
             "types": list(profile.monochrome_restoration_types),
             "unit_size_log2": [8, 8],
         }
+    if profile.expected_restoration_types is not None:
+        expected_frame["restoration"] = {
+            **frame.get("restoration", {}),
+            "types": list(profile.expected_restoration_types),
+        }
     if any(frame.get(key) != value for key, value in expected_frame.items()):
         raise RuntimeError("AV1 frame header differs from the requested super-resolution geometry")
 
@@ -349,6 +369,24 @@ def validate_pillow(path: Path, profile: FixtureProfile) -> None:
             or sha256(pixels) != profile.pixels_sha256
         ):
             raise RuntimeError("Pillow pixels differ from the pinned AVIF still reference")
+
+
+def check_fixture(profile: FixtureProfile) -> None:
+    source_hash = sha256(source_y4m(profile))
+    if source_hash != profile.source_sha256:
+        raise RuntimeError(f"generated Y4M source differs from its input hash pin: {source_hash}")
+
+    asset = ASSET_ROOT / profile.asset_name
+    try:
+        asset_hash = sha256(asset.read_bytes())
+    except OSError as error:
+        raise RuntimeError(f"cannot read pinned AVIF fixture: {asset}") from error
+    if asset_hash != profile.asset_sha256:
+        raise RuntimeError(f"fixture differs from its asset hash pin: {asset_hash}")
+
+    validate_bitstream(asset, profile)
+    validate_pillow(asset, profile)
+    print(f"Verified {asset.relative_to(ROOT)} (sha256 {asset_hash})")
 
 
 def generate(avifenc: Path, profile: FixtureProfile) -> None:
@@ -397,8 +435,12 @@ def main() -> None:
     parser.add_argument(
         "--avifenc",
         type=Path,
-        required=True,
         help="avifenc built with pinned libavif 1.4.1 and libaom 3.13.2",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="validate the committed fixture without encoding or writing files",
     )
     parser.add_argument(
         "--chroma",
@@ -407,7 +449,15 @@ def main() -> None:
         help="YUV chroma format for the fixture (default: 420)",
     )
     arguments = parser.parse_args()
-    generate(arguments.avifenc, PROFILES[arguments.chroma])
+    profile = PROFILES[arguments.chroma]
+    if arguments.check:
+        if arguments.avifenc is not None:
+            parser.error("--check cannot be combined with --avifenc")
+        check_fixture(profile)
+    elif arguments.avifenc is None:
+        parser.error("--avifenc is required unless --check is used")
+    else:
+        generate(arguments.avifenc, profile)
 
 
 if __name__ == "__main__":

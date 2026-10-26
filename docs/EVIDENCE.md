@@ -76,8 +76,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,628 total rows: 2,100 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,100 decode rows and 497 encode
+The current fixture matrix contains 2,630 total rows: 2,102 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,102 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9683,7 +9683,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1f78b3cf45b6f365a136e20c3dd8ebdcfb055aeb80c0cf6c3ba4d89e43a55bc2`; matrix `e8c1fb1be6a18b752d74a48f9595097645b83837956732b18e1207b0be740bce`.
+- Current fixture integrity only: manifest `85727fec0717dd39c72a7c624760bbc33b74595e4d88cb9e1d6dbf1abe6b0a8e`; matrix `95cb9f81089ddde28c59aab625713454e4f306d16c7afc09eacad77568687cb1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11233,3 +11233,63 @@ at `src/codecs/webp/native/huffman.rs:505`; the preceding full WebP selection
 recorded zero for both outcomes. The report is selected-case evidence rather
 than a Coverage MCP snapshot or an aggregate coverage claim. No Rust runtime
 code or unit tests were added.
+
+## AV1 lossy intra I420 super-resolution parity — 2026-10-26
+
+Added the public Pillow parity row
+decode:avif:superres_actual_upscaled_i420_no_restoration_17x17. It retains
+the existing 17x17 full-range 8-bit I420 input shape and denominator-9
+super-resolution, with AV1 restoration disabled. The pinned fixture generator
+checks both byte-identical encodes, AV1 geometry, absent restoration on all
+three planes, and Pillow 12.2.0 RGB pixels. The input SHA-256 is
+175f4eed6919458cd0f3af455f20e6a0be83bfd059b2e63e745ad8fab3e46c35; the
+867-byte RGB reference SHA-256 is
+36b2cbf4958b72a92a936b63d8b905bfd49dfb49b18511cc01723e880576b57b. The
+selected public parity case passed 1/1.
+
+Coverage MCP previously identified the unobserved true arm at
+src/codecs/avif/av1/entropy.rs:10614 in the full report for source revision
+3d918164137833338d5272430b17e224ceb4ea40. The exact selected LLVM report
+records 3 true and 0 false observations for that arm; the full baseline
+recorded 0 true and 166,368 false observations. The selected report is
+.coverage-mcp/local-evidence/selected/avif-superres-i420-intra-no-restoration-20261026/coverage.json
+(SHA-256
+8ab75d7737b8becd18f26c4179e84ea225889e508155f608e8e39400230e8bf4).
+Its local receipt records unchanged source and fixtures during execution.
+This establishes the selected branch hit, not a refreshed full-suite
+percentage or a Coverage MCP incremental snapshot. No Rust source or unit
+tests were added.
+
+## AV1 lossless qmatrix sequence parity — 2026-10-26
+
+Added active row
+`decode:avif:animated_lossless_inter_420_qmatrix_level15_qindex0_16x64`. The
+maintained generator reproduces a two-frame 16x64 8-bit I420 AVIF sequence
+with pinned libavif 1.4.1/libaom 3.13.2, qindex zero, qmatrix level 15 on all
+planes, and all-lossless key/inter frames. The 6,144-byte input SHA-256 is
+`b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de`; Pillow
+12.2.0 reference frame hashes are
+`44c3002ad58c2b063ac9c560c8baf279052e13d007eaeb84fef33c77a81b9d39` and
+`e121e6212ae783e1d2a9c83c99f0fe931df1682b045e772cce7f60e693b3f7e5`, each
+with a 100 ms duration.
+
+The focused selected parity run passed the qmatrix case, the no-restoration
+super-resolution case, three existing all-lossless inter controls, and three
+existing mixed-lossless controls (8/8). It retains exact RGB output, including
+3,072 bytes for the qmatrix sequence. The narrow decoder admission change
+threads the parser-proven all-lossless frame flag into lossless inter
+reconstruction; ordinary and mixed-segment paths keep matrix admission
+disabled. Strict native Clippy and both x86-64 SSE2/AVX2 cross-Clippy lanes
+pass.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected-worktree/qmatrix-superres-20261026/coverage.json`
+(SHA-256
+`592a535961454465120de20c6230a95cd0d71454b521a291b5103fc58b8b8990`). Its
+local receipt records all eight selected cases passing and unchanged source
+and fixtures during execution. Coverage MCP read the selected report and
+reported 4,452/45,193 branch observations for the selected binary; a gap query
+at `src/codecs/avif/av1/block.rs:49247` shows unobserved generic
+monomorphizations in this selected run. Source identity is unverified and test
+attribution is unknown. Its incremental comparison to the older full baseline
+timed out, so no aggregate coverage gain is claimed. No unit tests were added.

@@ -10713,6 +10713,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_inter_b32_i420_residual_64x64.avif
       status: active
+    - id: animated_lossless_inter_420_qmatrix_level15_qindex0_16x64
+      description: Two-frame full-range 8-bit 4:2:0 all-lossless AVIF sequence with qindex-zero key and inter frames using qmatrix level 15
+      test_assets:
+      - animated_lossless_inter_420_qmatrix_level15_qindex0_16x64.avif
+      status: active
     - id: animated_lossless_inter_420_b32x32_10bit
       description: Two-frame 32x32 10-bit full-range 4:2:0 all-lossless AVIF sequence with a translating patch and full-size B32x32 inter leaf
       test_assets:
@@ -10986,6 +10991,11 @@ formats:
       description: 17x17 lossy 4:2:0 AVIF still uses denominator 9 to resize coded luma width 16 to 17 and ceil-rounded chroma width 8 to 9
       test_assets:
       - superres_actual_upscaled_i420_17x17.avif
+      status: active
+    - id: superres_actual_upscaled_i420_no_restoration_17x17
+      description: 17x17 lossy 4:2:0 AVIF still uses denominator 9 with restoration disabled, exercising the intra reconstruction path for actual super-resolution
+      test_assets:
+      - superres_actual_upscaled_i420_no_restoration_17x17.avif
       status: active
     - id: superres_actual_upscaled_monochrome_17x16
       description: 17x16 lossy 4:0:0 AVIF still uses denominator 9 to resize its monochrome plane from coded width 16 to visible width 17

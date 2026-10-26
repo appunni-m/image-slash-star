@@ -831,13 +831,39 @@
       "collection_index_sha256": "3aa795ba95681926d349f7e036f5cec982e239bf9e4f616899ae8b314911105b",
       "generator_sha256": "2c7129fc3ba15dde1f9a473949b8c17de0dc43498cd5e521d8c372a1c9737c9d",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "5ab81b47e3c01a735f50576442dc8ec1fae4bad1f2787218b30d6e1dc645ff5e",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_420_qmatrix_level15_qindex0_16x64"
+      ],
+      "collection_index_sha256": "9d05c8664e6b64f31b1c1c96cbc144693562a88ba4788b9122cac32de4e808fa",
+      "generator_sha256": "d9144008179b3c3d06b68b3bf3021f95b59aa6231d490ab95113562d7354a250",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 16960,
+      "bytes": 17258,
       "path": "README.md",
-      "sha256": "8b0b4802cbd8004c2352a990211b51f7de6c269f765ed522e30502bbe86ef125"
+      "sha256": "51cc72031aa7ccdedc532a2bd6d43c054b235a9bdc1673c61115ab9f2bbefec4"
     },
     {
       "bytes": 2267,
@@ -1073,6 +1099,11 @@
       "bytes": 6130,
       "path": "inputs/lossless_inter_420_derived_skip_refs_b32x32_64x64.avif",
       "sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15"
+    },
+    {
+      "bytes": 1315,
+      "path": "inputs/lossless_inter_420_qmatrix_level15_qindex0_16x64.avif",
+      "sha256": "b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de"
     },
     {
       "bytes": 1094,
@@ -1923,6 +1954,16 @@
       "bytes": 12288,
       "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_4.bin",
       "sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossless_inter_420_qmatrix_level15_qindex0_16x64/frame_0.bin",
+      "sha256": "44c3002ad58c2b063ac9c560c8baf279052e13d007eaeb84fef33c77a81b9d39"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossless_inter_420_qmatrix_level15_qindex0_16x64/frame_1.bin",
+      "sha256": "e121e6212ae783e1d2a9c83c99f0fe931df1682b045e772cce7f60e693b3f7e5"
     },
     {
       "bytes": 9408,
@@ -4572,6 +4613,54 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_b32x32",
       "source_sha256": "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7"
+    },
+    {
+      "input_bytes": 1315,
+      "input_path": "inputs/lossless_inter_420_qmatrix_level15_qindex0_16x64.avif",
+      "input_sha256": "b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_420_qmatrix_level15_qindex0_16x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "44c3002ad58c2b063ac9c560c8baf279052e13d007eaeb84fef33c77a81b9d39",
+            "size": [
+              16,
+              64
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "e121e6212ae783e1d2a9c83c99f0fe931df1682b045e772cce7f60e693b3f7e5",
+            "size": [
+              16,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_420_qmatrix_level15_qindex0_16x64",
+      "source_sha256": "b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de"
     },
     {
       "input_bytes": 1329,
