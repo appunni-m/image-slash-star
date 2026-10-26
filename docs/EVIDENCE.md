@@ -9603,7 +9603,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4e0b657e4a16c74a668ab70d95d26105ba78dc2c6e04748169161f53b92c1c7a`; matrix `484abbe43c9b7eb813865c6c6ec48a80b582ed1815f19c08ec4151f62fbbf128`.
+- Current fixture integrity only: manifest `533712dcdb1af4febcab239b8dffeb0faac37487458e31024319b8fd3912d834`; matrix `71bcc9ab1ad574487482dcbc923272f79b756230bb1f87cd6f96bcbe4a71b9e5`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11019,8 +11019,8 @@ Coverage MCP still reports an unobserved `split > 0` outcome in GIF's median
 tie fallback; the valid median-cut rows keep each candidate box nonempty, so
 that remaining state is not represented as Pillow behavior.
 
-The current fixture matrix contains 2,614 total rows: 2,087 decode / inspect /
-verify rows and 527 encode rows. Of those, 2,087 decode rows and 496 encode
+The current fixture matrix contains 2,619 total rows: 2,091 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,091 decode rows and 497 encode
 rows are active; 31 planned encode rows remain. The separate target-only fault
 lane contains 67 rows. The coverage-origin inventory records 213 exact
 `cfg(coverage)` guards across 28 Rust files.

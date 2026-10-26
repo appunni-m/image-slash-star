@@ -215979,6 +215979,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_method_0_distance2_max_match_tail_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "An 8,194-pixel alternating RGB prefix and 257-color tail exercise token-aware extension of a maximum-length VP8L distance-two match",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 0,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_distance2_max_match_tail_8451x1.png",
+          "source_sha256": "242459784becc93c3faf0d20fe68fa0a5979ec529d404574c22b7964842e1784",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_distance2_max_match_tail_token.bin",
+          "encoded_ref_bytes": 180,
+          "encoded_ref_sha256": "a8f0f39369ed421c68a7c156c10055600474a8a496a328ce54b2a7090792e99c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_distance2_max_match_tail_token.bin",
+          "ref_sha256": "5834138628a72670296997b5593616138423457d4bb6a3b575cd41fba47d8bf6",
+          "ref_bytes": 25353,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8451,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_method_6_run_cap",
           "type": "encode",
           "format": "webp",
@@ -221156,9 +221212,9 @@
     }
   },
   "summary": {
-    "total_rows": 2618,
+    "total_rows": 2619,
     "decode_rows": 2091,
-    "encode_rows": 527,
+    "encode_rows": 528,
     "formats": 8,
     "assets_available": 2087,
     "decode_active": 2091,

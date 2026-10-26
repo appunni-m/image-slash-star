@@ -5880,6 +5880,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_run_cap_4356x1.png
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_0_distance2_max_match_tail_token
+      description: An 8,194-pixel alternating RGB prefix and 257-color tail exercise token-aware extension of a maximum-length VP8L distance-two match
+      source_format: png
+      source_asset: webp_lossless_distance2_max_match_tail_8451x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
     - id: enc_lossless_method_6_run_cap
       description: VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization
       source_format: png
