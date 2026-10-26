@@ -314,6 +314,30 @@ FIXTURES = {
         "animated_lossy_inter_i444_mode2_b32x32.avif",
         "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
     ),
+    "lossy_inter_420_mode_largest_16x64": (
+        "animated_lossy_inter_420_mode_largest_16x64.avif",
+        "4e2eba0851921d8629b8c3d1d1660652bf9b5d01e279737cbe7594e2e0a9ec40",
+    ),
+    "lossy_inter_420_mode_largest_64x16": (
+        "animated_lossy_inter_420_mode_largest_64x16.avif",
+        "74d3b5b9b06e208175d4ac533c05de73eb37f46fce8cfc2de581116689d59468",
+    ),
+    "lossy_inter_420_b64x16_mode_largest_64x64": (
+        "animated_lossy_inter_420_b64x16_mode_largest_64x64.avif",
+        "35f16973d0bda15b2a2038102b3f646f2b04d6e07157933bd03b8b32a6452daf",
+    ),
+    "lossy_inter_420_b64x16_mode_select_64x64": (
+        "animated_lossy_inter_420_b64x16_mode_select_64x64.avif",
+        "84eab6d96f97deb02fca49e66602f9cb507d2281cde5d4b52b2a50c54cb0433a",
+    ),
+    "lossy_inter_420_b64x16_10bit_mode_select_64x64": (
+        "animated_lossy_inter_420_b64x16_10bit_mode_select_64x64.avif",
+        "0d85dc1e3e8958e7375c3dcddd048f93cc5bd7ad12f50f82f1299f1c482c1880",
+    ),
+    "lossy_inter_420_b64x16_12bit_mode_select_64x64": (
+        "animated_lossy_inter_420_b64x16_12bit_mode_select_64x64.avif",
+        "8583340a327c7feffa803fa3b0a80267a49b6fa21c062f9b19799e2a82bf1dcc",
+    ),
     "lossy_inter_i444_split_b16x32_mode2": (
         "animated_lossy_inter_i444_split_b16x32_mode2.avif",
         "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
