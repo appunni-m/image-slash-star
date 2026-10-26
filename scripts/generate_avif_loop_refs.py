@@ -246,6 +246,10 @@ FIXTURES = {
         "animated_lossless_inter_monochrome_b16x16.avif",
         "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
     ),
+    "lossless_inter_monochrome_b32x32_10bit": (
+        "animated_lossless_inter_monochrome_b32x32_10bit.avif",
+        "28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624",
+    ),
     "lossy_split_inter_420_b16x16": (
         "animated_lossy_split_inter_420_b16x16.avif",
         "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
