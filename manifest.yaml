@@ -5266,6 +5266,10 @@ formats:
       description: Lossless VP8L cached-color lookahead across a novel RGB literal
       test_assets:
       - lossless_palette_cache_512_final.webp
+    - id: lossless_vp8l_two_node_cache_peek
+      description: VP8L two-node green Huffman lookahead returns both cached-color indices
+      test_assets:
+      - lossless_vp8l_two_node_cache_peek_4x1.webp
     - id: lossless_vp8l_cache_width_11_max_index
       description: VP8L full dynamic green tree looks up cache index 2047 with the maximum 11-bit cache
       test_assets:
