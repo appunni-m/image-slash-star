@@ -1043,9 +1043,9 @@
   ],
   "artifacts": [
     {
-      "bytes": 18158,
+      "bytes": 18258,
       "path": "README.md",
-      "sha256": "daf7900ead38423457b445e99f632abbf4c168f6bbdabb5112785c55eef9afa2"
+      "sha256": "b457ae094394e3c3822bd896aa9bed84b62f46835e87e6566136510cbe1064a7"
     },
     {
       "bytes": 2267,
@@ -1416,6 +1416,11 @@
       "bytes": 7726,
       "path": "inputs/lossy_inter_422_tx_context_checker_b64x32.avif",
       "sha256": "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56"
+    },
+    {
+      "bytes": 1457,
+      "path": "inputs/lossy_inter_i444_compound_split_b16x32_mode2.avif",
+      "sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714"
     },
     {
       "bytes": 1107,
@@ -2519,6 +2524,21 @@
     },
     {
       "bytes": 3072,
+      "path": "pixels/lossy_inter_i444_compound_split_b16x32_mode2/frame_0.bin",
+      "sha256": "d3826d80137dc7de8d45f708eef5135912063502f90918884b53e80531e2e5e9"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossy_inter_i444_compound_split_b16x32_mode2/frame_1.bin",
+      "sha256": "f6211237ef43734ec8fd3ade696c45138242d106e22ab501e3f7379efc7d5227"
+    },
+    {
+      "bytes": 3072,
+      "path": "pixels/lossy_inter_i444_compound_split_b16x32_mode2/frame_2.bin",
+      "sha256": "69ee4d446b34653b7f5bcabd8aae04785a0876f71973ac2ed06ba5310f256975"
+    },
+    {
+      "bytes": 3072,
       "path": "pixels/lossy_inter_i444_mode2_b32x32/frame_0.bin",
       "sha256": "dd6ffd1df0b7b3e0b18dca2e2fd346aa0a2d4669599fb4983800df7528d305d2"
     },
@@ -3121,6 +3141,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3202,6 +3223,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3283,6 +3305,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3367,6 +3390,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3453,6 +3477,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3523,6 +3548,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3604,6 +3630,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3685,6 +3712,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3769,6 +3797,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3796,6 +3825,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3824,6 +3854,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3851,6 +3882,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3878,6 +3910,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3903,6 +3936,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -3953,6 +3987,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -3980,6 +4015,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -4007,6 +4043,7 @@
         "sequence_track_present": -999,
         "terminal_result": -999
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "message": "cannot identify image file <bytes>",
         "status": "error",
@@ -4032,6 +4069,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4080,6 +4118,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4130,6 +4169,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4211,6 +4251,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4270,6 +4311,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4318,6 +4360,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4366,6 +4409,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4450,6 +4494,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4533,6 +4578,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4616,6 +4662,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4697,6 +4744,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4745,6 +4793,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4793,6 +4842,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4841,6 +4891,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4889,6 +4940,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4937,6 +4989,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -4985,6 +5038,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5033,6 +5087,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5081,6 +5136,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5129,6 +5185,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5177,6 +5234,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5225,6 +5283,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5273,6 +5332,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5321,6 +5381,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5369,6 +5430,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5417,6 +5479,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5465,6 +5528,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5513,6 +5577,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5561,6 +5626,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5609,6 +5675,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5690,6 +5757,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5738,6 +5806,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5786,6 +5855,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5834,6 +5904,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5882,6 +5953,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -5963,6 +6035,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6011,6 +6084,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6059,6 +6133,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6107,6 +6182,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6188,6 +6264,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6236,6 +6313,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6284,6 +6362,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6354,6 +6433,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6424,6 +6504,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6483,6 +6564,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6553,6 +6635,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6623,6 +6706,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6671,6 +6755,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6719,6 +6804,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6767,6 +6853,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6815,6 +6902,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6863,6 +6951,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6911,6 +7000,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -6959,6 +7049,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7007,6 +7098,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7055,6 +7147,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7103,6 +7196,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7151,6 +7245,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7210,6 +7305,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7269,6 +7365,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7302,6 +7399,66 @@
       "source_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0"
     },
     {
+      "input_bytes": 1457,
+      "input_path": "inputs/lossy_inter_i444_compound_split_b16x32_mode2.avif",
+      "input_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_i444_compound_split_b16x32_mode2",
+      "native": {
+        "decoded_frames": 3,
+        "diagnostic": "",
+        "frame_count": 3,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "13d63be7f031e86ebae8c5ab8bff3446e9020b2077a08271e78741377818cedf",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "d3826d80137dc7de8d45f708eef5135912063502f90918884b53e80531e2e5e9",
+            "size": [
+              32,
+              32
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "f6211237ef43734ec8fd3ade696c45138242d106e22ab501e3f7379efc7d5227",
+            "size": [
+              32,
+              32
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "69ee4d446b34653b7f5bcabd8aae04785a0876f71973ac2ed06ba5310f256975",
+            "size": [
+              32,
+              32
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_i444_compound_split_b16x32_mode2",
+      "source_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714"
+    },
+    {
       "input_bytes": 1525,
       "input_path": "inputs/lossy_inter_i444_tx_largest_64x64.avif",
       "input_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
@@ -7317,6 +7474,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7376,6 +7534,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7435,6 +7594,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7494,6 +7654,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7553,6 +7714,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7612,6 +7774,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7671,6 +7834,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7730,6 +7894,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7778,6 +7943,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7826,6 +7992,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7874,6 +8041,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7922,6 +8090,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -7970,6 +8139,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8040,6 +8210,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8088,6 +8259,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8136,6 +8308,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8184,6 +8357,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8254,6 +8428,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8324,6 +8499,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8394,6 +8570,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8464,6 +8641,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8534,6 +8712,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8604,6 +8783,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8663,6 +8843,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8722,6 +8903,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8781,6 +8963,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8840,6 +9023,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8910,6 +9094,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -8982,6 +9167,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9066,6 +9252,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9150,6 +9337,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9237,6 +9425,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9321,6 +9510,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9402,6 +9592,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9450,6 +9641,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9533,6 +9725,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9617,6 +9810,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9700,6 +9894,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9784,6 +9979,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9867,6 +10063,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -9951,6 +10148,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10036,6 +10234,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10120,6 +10319,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10204,6 +10404,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10287,6 +10488,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10370,6 +10572,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10460,6 +10663,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10543,6 +10747,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10626,6 +10831,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10707,6 +10913,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10788,6 +10995,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {
@@ -10869,6 +11077,7 @@
         "sequence_track_present": 1,
         "terminal_result": 16
       },
+      "observer_binary_sha256": "741354bdf722d9c0ebdca823a11725d63a87932e6a22b1363629949f49d07c13",
       "pillow": {
         "frames": [
           {

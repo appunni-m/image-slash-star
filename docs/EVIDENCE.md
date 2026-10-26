@@ -1,5 +1,26 @@
 # Versioned compatibility evidence
 
+## I444 compound split parity — 2026-10-26
+
+Added active row `decode:avif:animated_lossy_inter_i444_compound_split_b16x32_mode2`.
+The deterministic 1,457-byte fixture pins its normalized AVIF hash and all
+three Pillow RGB frame hashes. The final frame header permits compound
+selection and exposes both earlier frame references. The pinned native loop
+observer reports three decoded frames and infinite repetition.
+
+The selected parity/coverage run passed 1/1 with exact RGB output. Its LLVM
+report is `.coverage-mcp/local-evidence/selected/i444-compound-probe-20261026/coverage.json`
+(SHA-256 `07edc4ef031fafcc623a061136ca8023157be78ed6d489a391419f138a992b37`).
+At `src/codecs/avif/av1/block.rs:48314`, the target
+`decode_inter_compound_translation` specialization recorded two true-arm hits;
+the saved full report recorded zero true-arm and 67 false-arm hits for that
+specialization. This is branch-specific evidence, not an aggregate coverage
+union. The saved full and selected reports lack Coverage MCP source/build
+receipts; MCP therefore marks source identity unverified and test attribution
+unknown. Its incremental comparison is incomparable because baseline branch
+detail is incomplete. Other generic specializations at this location remain
+uncovered. No production Rust code or unit tests were added.
+
 ## AV1 temporal motion-vector range parity — 2026-10-26
 
 Added active rows `decode:avif:animated_motion_temporal_mv_range_2048x128`,
@@ -133,8 +154,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,637 total rows: 2,109 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,109 decode rows and 497 encode
+The current fixture matrix contains 2,638 total rows: 2,110 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,110 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9740,7 +9761,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8541d4f0e51a728e085616addf3a11053f36f846ab87711f34ec1978645e88c1`; matrix `5f86c4935c60d542d43f06fb574bd3e8bb2e1cde9f3821a0be81401813e0172e`.
+- Current fixture integrity only: manifest `f4f0ac0740e14a0c77d38c482c78d498dd3ee724714ebbfa90c3f2a30403c0f7`; matrix `fd94fa5aa75e8714b79a59eac3da02131aaac2ba0d90e03c249b32623bf3f214`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

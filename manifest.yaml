@@ -11082,6 +11082,11 @@ formats:
       test_assets:
       - animated_lossy_inter_i444_split_b16x32_mode2.avif
       status: active
+    - id: animated_lossy_inter_i444_compound_split_b16x32_mode2
+      description: Three-frame 32x32 4:4:4 lossy AVIF sequence with a mode-2 B16x32 inter split and selectable references to both earlier frames
+      test_assets:
+      - animated_lossy_inter_i444_compound_split_b16x32_mode2.avif
+      status: active
     - id: animated_lossy_inter_i444_obmc_mixed_b16x32
       description: Three-frame 32x32 8-bit 4:4:4 AVIF sequence whose B16x32 uses a compound-neighbor reference lane and OBMC with mixed transform-split topology
       test_assets:
