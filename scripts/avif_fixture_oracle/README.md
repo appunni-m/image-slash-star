@@ -332,3 +332,86 @@ cc -std=c99 -O2 -Wall -Wextra -Werror \
 ```
 
 The generator normalizes only the version-one BMFF movie, track, and media creation/modification timestamps. It rejects a different normalized file digest, changed repeated encodes, or different Pillow RGB frame hashes. A separate clean pinned libavif checkout is used for native loop evidence.
+
+## Lossy inter I420 B64x16 sequence
+
+`animated_lossy_inter_420_b64x16_mode_largest_64x64.avif` and
+`animated_lossy_inter_420_b64x16_mode_select_64x64.avif` are two-frame 8-bit
+I420 sequences. The 10-bit and 12-bit companions,
+`animated_lossy_inter_420_b64x16_10bit_mode_select_64x64.avif` and
+`animated_lossy_inter_420_b64x16_12bit_mode_select_64x64.avif`, keep the
+select-mode pattern at high bit depths. A fixture-only patch to pinned libaom
+3.13.2 makes each inter frame's origin B64x64 choose `PARTITION_HORZ_4`,
+yielding four coded B64x16 leaves with positive qindex. The 8-bit transform
+modes are `TX_MODE_LARGEST` and `TX_MODE_SELECT`; both high-bit-depth
+companions signal `TX_MODE_SELECT`. The pinned dav1d trace confirms the
+inter-frame root partition for the 8-bit pair, and Pillow checks exact RGB
+output for every frame.
+
+The select-mode pattern gives its top leaf a low-frequency residual while
+keeping texture in the other leaves, so the frame signals transform selection
+while the top leaf can retain its maximum transform. A selected LLVM parity
+report observes both guard outcomes in one decoder instantiation across the
+8-bit and 10-bit select cases; seven related generic instantiations remain
+uncovered. The patch only controls fixture encoding and does not change the
+Rust decoder.
+
+Build the fixture-only encoder from separate pinned source copies:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i420-b64x16-source
+git -C target/oracle-staging/libaom-i420-b64x16-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i420-b64x16-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i420-b64x16.patch"
+cmake -S target/oracle-staging/libaom-i420-b64x16-source \
+  -B target/oracle-staging/libaom-i420-b64x16-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i420-b64x16-prefix"
+cmake --build target/oracle-staging/libaom-i420-b64x16-build -j 4
+cmake --install target/oracle-staging/libaom-i420-b64x16-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i420-b64x16-source
+git -C target/oracle-staging/libavif-i420-b64x16-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i420-b64x16-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i420-b64x16-source \
+  -B target/oracle-staging/libavif-i420-b64x16-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i420-b64x16-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i420-b64x16-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i420-b64x16-prefix/include"
+cmake --build target/oracle-staging/libavif-i420-b64x16-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i420-b64x16-source/include \
+  -I target/oracle-staging/libavif-i420-b64x16-build/include \
+  -I target/oracle-staging/libaom-i420-b64x16-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i420_b64x16.c \
+  target/oracle-staging/libavif-i420-b64x16-build/libavif.a \
+  target/oracle-staging/libaom-i420-b64x16-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i420-b64x16
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b64x16.py \
+  --mode largest --encoder target/oracle-staging/encode-avif-inter-i420-b64x16
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b64x16.py \
+  --mode select --encoder target/oracle-staging/encode-avif-inter-i420-b64x16
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b64x16.py \
+  --mode select --bit-depth 10 --encoder target/oracle-staging/encode-avif-inter-i420-b64x16
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b64x16.py \
+  --mode select --bit-depth 12 --encoder target/oracle-staging/encode-avif-inter-i420-b64x16
+```
+
+For each profile, the generator requires two identical normalized encodes, the
+expected AV1 frame-header transform mode and bit depth, and exact Pillow 12.2.0
+RGB frames. It normalizes only the version-one BMFF movie, track, and media
+creation and modification timestamps. The retained file SHA-256 values are:
+
+- Largest mode, 8-bit: `35f16973d0bda15b2a2038102b3f646f2b04d6e07157933bd03b8b32a6452daf`
+- Select mode, 8-bit: `84eab6d96f97deb02fca49e66602f9cb507d2281cde5d4b52b2a50c54cb0433a`
+- Select mode, 10-bit: `0d85dc1e3e8958e7375c3dcddd048f93cc5bd7ad12f50f82f1299f1c482c1880`
+- Select mode, 12-bit: `8583340a327c7feffa803fa3b0a80267a49b6fa21c062f9b19799e2a82bf1dcc`
+`make fixtures-check` validates both tracked fixtures using the pinned Pillow
+oracle without rebuilding the fixture encoder.

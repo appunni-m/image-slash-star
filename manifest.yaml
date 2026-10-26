@@ -11011,6 +11011,36 @@ formats:
       test_assets:
       - animated_lossy_inter_i444_mode2_b32x32.avif
       status: active
+    - id: animated_lossy_inter_420_mode_largest_16x64
+      description: Two-frame 16x64 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_LARGEST at positive qindex
+      test_assets:
+      - animated_lossy_inter_420_mode_largest_16x64.avif
+      status: active
+    - id: animated_lossy_inter_420_mode_largest_64x16
+      description: Two-frame 64x16 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_LARGEST at positive qindex
+      test_assets:
+      - animated_lossy_inter_420_mode_largest_64x16.avif
+      status: active
+    - id: animated_lossy_inter_420_b64x16_mode_largest_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_HORZ_4 to create four coded B64x16 leaves at positive qindex and TX_MODE_LARGEST
+      test_assets:
+      - animated_lossy_inter_420_b64x16_mode_largest_64x64.avif
+      status: active
+    - id: animated_lossy_inter_420_b64x16_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_HORZ_4 to create four coded B64x16 leaves at positive qindex and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_420_b64x16_mode_select_64x64.avif
+      status: active
+    - id: animated_lossy_inter_420_b64x16_10bit_mode_select_64x64
+      description: Two-frame 64x64 10-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_HORZ_4 to create four coded B64x16 leaves at positive qindex and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_420_b64x16_10bit_mode_select_64x64.avif
+      status: active
+    - id: animated_lossy_inter_420_b64x16_12bit_mode_select_64x64
+      description: Two-frame 64x64 12-bit profile-2 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_HORZ_4 to create four coded B64x16 leaves at positive qindex and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_420_b64x16_12bit_mode_select_64x64.avif
+      status: active
     - id: animated_lossy_inter_i444_split_b16x32_mode2
       description: Two-frame 32x32 4:4:4 lossy AVIF sequence with a mode-2 B16x32 inter transform split
       test_assets:

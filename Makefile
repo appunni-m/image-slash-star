@@ -139,6 +139,12 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_monochrome_grid_edges.py --check
 	$(PYTHON) scripts/generate_avif_container_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_filmgrain_chroma_from_luma_odd.py --check
+	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_16x64.py --check
+	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_64x16.py --check
+	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode largest --check
+	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --check
+	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --bit-depth 10 --check
+	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --bit-depth 12 --check
 	$(PYTHON) scripts/generate_avif_inter_i444_frame_header_b64.py --check
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py

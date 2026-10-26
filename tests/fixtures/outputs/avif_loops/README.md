@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 115 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 107 accepted files decode completely;
-eight malformed files fail native parsing and Pillow opening. The 362 hashed
-artifacts total 12,787,466 bytes, including 115 input files, the compiled
-observer source, and 12,175,100 bytes of Pillow-decoded frame outputs. Mutation cases
-share original frame artifacts; each observation records complete per-frame
+This bundle records 121 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 113 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 380 hashed
+artifacts total 12,914,980 bytes, including 121 input files, the compiled
+observer source, and 12,279,548 bytes of Pillow-decoded frame outputs. Mutation
+cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 79 fixture sources are declared in
+The 88 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -123,6 +123,24 @@ native loop observation are retained.
 The two-frame lossy I444 source selects a mode-2 B16x32 deep transform split
 and exercises the true arm of the small-chroma terminal predicate while
 retaining exact Pillow pixels and native sequence timing.
+The two-frame 16x64 lossy I420 source uses a TX_MODE_LARGEST inter frame
+with a positive qindex. Its exact Pillow RGB frames and native infinite-loop
+observation are retained; its tall frame also exercises non-16x16 guard outcomes.
+The two-frame 64x16 lossy I420 companion transposes that frame geometry. Its
+inter frame also signals TX_MODE_LARGEST with a positive qindex; exact Pillow
+RGB frames and an independent native infinite-loop observation are retained.
+The two-frame 64x64 lossy I420 pair forces an inter-frame PARTITION_HORZ_4 at the
+origin, producing four coded B64x16 leaves with positive qindex. The largest-mode
+input uses textured residuals. The TX_MODE_SELECT companion keeps its top B64x16
+residual low-frequency while retaining texture in the other leaves, allowing the
+frame to signal transform-size selection while the top leaf can retain its maximum
+transform. Exact Pillow RGB frames and native infinite-loop observations are
+retained; independent pinned dav1d block traces confirm each horizontal 1-to-4
+partition.
+The 10-bit and 12-bit TX_MODE_SELECT companions preserve the same mixed
+transform pattern at high bit depth. The 12-bit input uses AV1 profile 2. Both
+companions retain exact Pillow RGB frames and independent native loop
+observations.
 The 20x20 all-lossless I444 case exercises the B8x8 inter-intra size-group-1
 context at clipped edges. The three-frame lossy I444 case selects an Alt
 single-reference candidate from the second lane of a compound spatial

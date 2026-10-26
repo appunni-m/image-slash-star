@@ -1,5 +1,58 @@
 # Versioned compatibility evidence
 
+## AVIF tall TX_MODE_LARGEST parity — 2026-10-26
+
+Added active row `decode:avif:animated_lossy_inter_420_mode_largest_16x64`. Its
+pinned generator verifies a two-frame 16x64 8-bit I420 sequence, an inter frame
+signaling `TX_MODE_LARGEST` with positive base qindex, and exact Pillow RGB
+frame hashes. Native libavif evidence records two decoded frames, infinite
+repetition, and 100 ms frame durations.
+
+The selected parity run passed 1/1 with 3,072-byte RGB output. Its report is
+`.coverage-mcp/local-evidence/selected/20261026-avif-i420-mode-largest-16x64.json`.
+Coverage MCP's baseline lacked the false arm of the 16x16 reference-height
+guard at `src/codecs/avif/av1/entropy.rs:14344`; the selected report records
+that arm for one generic instantiation. A coordinate-level comparison found
+seven new false-arm observations across related 16x16 guards, while other
+generic instantiations remain uncovered. Coverage MCP marks source identity
+unverified and named-test attribution unknown, so this is selected evidence,
+not a verified aggregate gain. The candidate `wide_lossy_single` branch at
+`src/codecs/avif/av1/block.rs:48406` remains uncovered. The fixture claims the
+signaled transform mode, not a particular transform size. No Rust code or unit
+tests were added.
+
+## AVIF coded B64x16 inter parity — 2026-10-26
+
+Added active rows
+`decode:avif:animated_lossy_inter_420_b64x16_mode_largest_64x64`,
+`decode:avif:animated_lossy_inter_420_b64x16_mode_select_64x64`,
+`decode:avif:animated_lossy_inter_420_b64x16_10bit_mode_select_64x64`, and
+`decode:avif:animated_lossy_inter_420_b64x16_12bit_mode_select_64x64`. The
+fixture-only encoder forces `PARTITION_HORZ_4` at the 64x64 inter-frame root,
+creating four coded B64x16 leaves with positive qindex. The 8-bit pair signals
+`TX_MODE_LARGEST` and `TX_MODE_SELECT`; the 10-bit profile-0 and 12-bit
+profile-2 companions preserve the select-mode pattern at high bit depths. The
+generator requires deterministic timestamp-normalized encodes, exact Pillow
+12.2.0 RGB frames, and the pinned AV1 frame-header profile. An independent
+pinned dav1d trace confirms the inter-frame root partition for the 8-bit pair.
+
+The combined selected public parity run passed 4/4 with exact RGB output. Its
+local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026-avif-i420-b64x16-depth-coverage-r2.json`
+(SHA-256
+`efc1a82884be25317b04465bf151728161006500a8d15a4db59ba120b62c5c63`). Across
+the selected binary it observes 3,829 of 32,078 branch outcomes, 294 more than
+the earlier 8-bit-pair-only selected report; this is selected-scope evidence,
+not a full-suite union. At `src/codecs/avif/av1/block.rs:48406`, one of eight
+generic branch records has four true-outcome hits and three false-outcome hits;
+the other seven records have no hits. The mode-select cases reach the false
+outcome at 8, 10, and 12 bits. The positive-qindex outcome at line 48407 is
+observed three times; its qindex-zero alternative remains uncovered. Coverage
+MCP cannot read this report from the managed worktree. Its saved full baseline
+reports 13,447 of 32,078 branches missing, with source identity unverified and
+test attribution unknown, so this selected run does not establish an aggregate
+gain. No Rust source or unit tests were added.
+
 ## JPEG trailing DHT segment-boundary parity — 2026-10-26
 
 Added active decode rows
@@ -23,8 +76,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,621 total rows: 2,093 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,093 decode rows and 497 encode
+The current fixture matrix contains 2,627 total rows: 2,099 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,099 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9630,7 +9683,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `58ae62f1c9e13f8556a5c2f3667072c925887c37cc0435405062119c99597433`; matrix `8db734067df4b34c9a6cd48705d9dd8aa7b2c7c5d61c7bfca55e9af39facf60c`.
+- Current fixture integrity only: manifest `4cb7e424dd91fb22dc51a048b37179362384f66519970c3002344e5c94e95552`; matrix `c6a67766e2da5831214f1a74ea0bcc7580b13d6b6de7efd9cb082b73646e42b1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
