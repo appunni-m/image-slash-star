@@ -1,5 +1,35 @@
 # Versioned compatibility evidence
 
+## AV1 temporal motion-vector range parity — 2026-10-26
+
+Added active rows `decode:avif:animated_motion_temporal_mv_range_2048x128`,
+`decode:avif:animated_motion_temporal_mv_range_positive_x_2048x128`,
+`decode:avif:animated_motion_temporal_mv_range_negative_y_128x2048`, and
+`decode:avif:animated_motion_temporal_mv_range_positive_y_128x2048`. The four
+A/B/A sequences use 16-pixel texture runs or bands and translate 600 pixels in
+each signed axis direction. The deterministic generator pins complete AVIF
+hashes and all exact Pillow RGB frame hashes; the independent native observer
+records infinite repetition for each sequence.
+
+The combined selected parity run passed 4/4, with every 786,432-byte RGB frame
+matching its Pillow reference. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261026T143900.923631Z-bec51189f9e34b9aa76a14cd518a81bb/coverage.json`
+(SHA-256
+`6dc06570ffd077bfd47027fe31154e937cd43a2d78071bdf462f085a78a5039b`). Raw
+branch counters at `src/codecs/avif/av1/tile_state.rs:995` record all four
+signed motion-vector boundary false arms: 2,304 hits for `y > -4096`, 2,083
+for `y < 4096`, 2,560 for `x > -4096`, and 2,336 for `x < 4096`.
+
+Coverage MCP's line-specific branch lookup returned no gap at line 995. The
+report had to be copied temporarily from the managed worktree because the MCP
+cannot read that worktree directly; it therefore marked source identity
+unverified and test status unknown. The incremental comparison with the prior
+full AVIF selection was incomparable because the provider lacked complete
+branch detail, so no marginal coverage gain is claimed. In this selected run,
+the `spatial_block` absence and ineligible-reference outcomes in
+`temporal_entry_at` remain unobserved and are pending public-parity discovery.
+No Rust source or unit tests were added.
+
 ## AVIF tall TX_MODE_LARGEST parity — 2026-10-26
 
 Added active row `decode:avif:animated_lossy_inter_420_mode_largest_16x64`. Its
@@ -103,8 +133,8 @@ unverified and test attribution unknown, so this is selected local evidence,
 not a verified aggregate coverage gain. No Rust source changed and no unit
 tests were added.
 
-The current fixture matrix contains 2,633 total rows: 2,105 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,105 decode rows and 497 encode
+The current fixture matrix contains 2,637 total rows: 2,109 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,109 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.
 
 ## JPEG duplicate grayscale SOS selector parity — 2026-10-26
@@ -9710,7 +9740,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `0c2d19b1fe16bbbe929673379b227835245c080c2fa89ecd7d626821dd0ade6e`; matrix `93a0aebfcf2fc09a139693daf6d9a2a1a64226075054af0b2f370bbfdb4b5c9e`.
+- Current fixture integrity only: manifest `8541d4f0e51a728e085616addf3a11053f36f846ab87711f34ec1978645e88c1`; matrix `5f86c4935c60d542d43f06fb574bd3e8bb2e1cde9f3821a0be81401813e0172e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

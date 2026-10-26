@@ -318,6 +318,22 @@ FIXTURES = {
         "animated_motion_temporal_window_right_512x128.avif",
         "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
     ),
+    "motion_temporal_mv_range_2048x128": (
+        "animated_motion_temporal_mv_range_2048x128.avif",
+        "294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a",
+    ),
+    "motion_temporal_mv_range_positive_x_2048x128": (
+        "animated_motion_temporal_mv_range_positive_x_2048x128.avif",
+        "f802a724db9dea26e0d71abb7d123c9338449e77008282874f58580c0b2163d1",
+    ),
+    "motion_temporal_mv_range_negative_y_128x2048": (
+        "animated_motion_temporal_mv_range_negative_y_128x2048.avif",
+        "e32c9ff32e87922be280d26fef6d8c92635e84d2918df7c23f3f8ec3087b051c",
+    ),
+    "motion_temporal_mv_range_positive_y_128x2048": (
+        "animated_motion_temporal_mv_range_positive_y_128x2048.avif",
+        "307a001ecd6e10c4b840a3d0e0b30b24a6a90ac1c8f5f5ea1b8d9e209b1c3333",
+    ),
     "lossy_inter_i444_mode2_b32x32": (
         "animated_lossy_inter_i444_mode2_b32x32.avif",
         "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",

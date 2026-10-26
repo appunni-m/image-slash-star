@@ -150,6 +150,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_i444_frame_header_b64.py --check
 	$(PYTHON) scripts/generate_avif_lossless_qmatrix_sequence.py --check
 	$(PYTHON) scripts/generate_avif_equal_width_superres.py --chroma 420-actual-no-restoration --check
+	$(PYTHON) scripts/generate_avif_temporal_mv_range_fixture.py --check
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py
 

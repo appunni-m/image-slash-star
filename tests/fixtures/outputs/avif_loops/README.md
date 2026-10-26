@@ -264,3 +264,5 @@ visible inputs: one shifts a near-full-frame texture by one pixel, and the other
 moves a 4x4 luma patch. Both retain exact Pillow RGB frames and independent
 native infinite-loop observations. These inputs do not assert a particular
 encoder leaf geometry.
+
+The four three-frame temporal motion-range sequences use 16-pixel texture runs or bands, translated 600 pixels in each signed axis direction and back. Their exact Pillow frame hashes and independent native infinite-loop observations are retained.

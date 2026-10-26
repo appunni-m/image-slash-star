@@ -11107,6 +11107,26 @@ formats:
       test_assets:
       - animated_motion_temporal_window_right_512x128.avif
       status: active
+    - id: animated_motion_temporal_mv_range_2048x128
+      description: Three-frame 2048x128 4:2:0 sequence translates a deterministic texture 600 pixels and back to exercise long-range temporal motion
+      test_assets:
+      - animated_motion_temporal_mv_range_2048x128.avif
+      status: active
+    - id: animated_motion_temporal_mv_range_positive_x_2048x128
+      description: Three-frame 2048x128 4:2:0 sequence moves a deterministic texture left 600 pixels and back
+      test_assets:
+      - animated_motion_temporal_mv_range_positive_x_2048x128.avif
+      status: active
+    - id: animated_motion_temporal_mv_range_negative_y_128x2048
+      description: Three-frame 128x2048 4:2:0 sequence moves a deterministic texture down 600 pixels and back
+      test_assets:
+      - animated_motion_temporal_mv_range_negative_y_128x2048.avif
+      status: active
+    - id: animated_motion_temporal_mv_range_positive_y_128x2048
+      description: Three-frame 128x2048 4:2:0 sequence moves a deterministic texture up 600 pixels and back
+      test_assets:
+      - animated_motion_temporal_mv_range_positive_y_128x2048.avif
+      status: active
     - id: error_animated_compound_reference_context2_tail
       description: AVIF sequence with a same-length final-sample mutation after an unchanged compound-reference prefix
       test_assets:
