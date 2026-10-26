@@ -79,7 +79,7 @@ jobs:
           targets: wasm32-unknown-unknown, wasm32-wasip1
       - name: Install pinned nightly Clippy for coverage-hook lint
         run: rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component clippy
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -116,7 +116,7 @@ jobs:
         run: rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component llvm-tools-preview
       # The shared target root includes dependency artifacts for both
       # architecture-specific target directories while keeping builds isolated.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Lint the x86-64 SSE2 baseline and AVX2 builds
         run: make lint-x86-simd
       - name: Install pinned coverage driver
@@ -266,7 +266,7 @@ jobs:
           $sdkRoot = Join-Path $programFilesX86 'Windows Kits\10\Include'
           $sdkVersions = Get-ChildItem $sdkRoot -Directory | ForEach-Object Name
           Write-Output "Windows SDK versions: $($sdkVersions -join ', ')"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Check all features on Windows MSVC
         run: cargo check --workspace --all-features --locked
       - name: Run strict Clippy on Windows MSVC
