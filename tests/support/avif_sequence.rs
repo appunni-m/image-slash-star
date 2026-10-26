@@ -616,6 +616,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "motion_temporal_window_right_512x128",
         "lossy_inter_i444_mode2_b32x32",
         "lossy_inter_i444_split_b16x32_mode2",
+        "lossy_inter_i444_compound_split_b16x32_mode2",
         "lossy_inter_i444_obmc_mixed_b16x32",
         "motion_large_420",
         "highdepth",
@@ -891,6 +892,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             }
             "lossy_inter_i444_split_b16x32_mode2" => {
                 matrix_sequence_case("animated_lossy_inter_i444_split_b16x32_mode2")
+            }
+            "lossy_inter_i444_compound_split_b16x32_mode2" => {
+                matrix_sequence_case("animated_lossy_inter_i444_compound_split_b16x32_mode2")
             }
             "lossy_inter_i444_obmc_mixed_b16x32" => {
                 matrix_sequence_case("animated_lossy_inter_i444_obmc_mixed_b16x32")

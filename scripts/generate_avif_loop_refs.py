@@ -374,6 +374,10 @@ FIXTURES = {
         "animated_lossy_inter_i444_split_b16x32_mode2.avif",
         "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
     ),
+    "lossy_inter_i444_compound_split_b16x32_mode2": (
+        "animated_lossy_inter_i444_compound_split_b16x32_mode2.avif",
+        "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714",
+    ),
     "lossy_inter_i444_obmc_mixed_b16x32": (
         "animated_lossy_inter_i444_obmc_mixed_b16x32.avif",
         "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
@@ -711,14 +715,23 @@ def main():
             lambda *values: native(library._handle, *values),
             only=args.only,
         )
+        build = {
+            "compiler": text_output(run([str(compiler), "--version"])),
+            "binary_sha256": digest_file(shared),
+            "argv": [
+                value.replace(str(source), "<source>").replace(str(work), "<work>")
+                for value in command
+            ],
+        }
+        for case in cases:
+            case["observer_binary_sha256"] = build["binary_sha256"]
         index = {"schema": "image-slash-star/avif-loop-oracle@1", "cases": cases,
                  "origin": "libavif.avifDecoder.repetitionCount",
                  "source": {"commit": LIBAVIF_COMMIT, "tree_sha256": git_tree_digest(source),
                             "files": [{"path": name, "sha256": digest_file(source / name)} for name in ("include/avif/avif.h", "src/read.c", "LICENSE")]},
                  "oracle": {"pillow": Image.__version__, "libavif": features.version("avif"), "codecs": _avif.codec_versions(),
                             "avif_binary_sha256": digest_file(Path(_avif.__file__)), "imaging_binary_sha256": digest_file(Path(_imaging.__file__))},
-                 "build": {"compiler": text_output(run([str(compiler), "--version"])), "binary_sha256": digest_file(shared),
-                           "argv": [v.replace(str(source), "<source>").replace(str(work), "<work>") for v in command]},
+                 "build": build,
                  "artifacts": artifact_records(bundle), "rust_execution": "deferred"}
         write_json(bundle / "index.json", index)
         shutil.move(bundle, output)
