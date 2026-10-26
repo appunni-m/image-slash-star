@@ -9761,7 +9761,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `beaa8720cc7edb668377e6f2af64cb4a5a752917f7bfbc29515680cca8cc3466`; matrix `6c1843d09f09197636ca01af655cf12e45621d972a4ce635c45a50b61ae7ee77`.
+- Current fixture integrity only: manifest `353b3d3db5b2ce94aaad3ba1525dc738be51509ec70ff06940714ea6fa358013`; matrix `ceaca961595d31eecbb517de056c1c87b1f61fc6f7e19aaea5f5a7fbcb84c069`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11463,6 +11463,38 @@ source identity, and the incremental comparison is incomparable because the
 baseline detail is incomplete; no aggregate coverage gain is claimed. No
 production Rust code or unit tests were added.
 
-The current fixture matrix contains 2,641 total rows: 2,113 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,113 decode rows and 497 encode
+At the monochrome parity row, the fixture matrix contained 2,641 total rows:
+2,113 decode / inspect / verify rows and 528 encode rows. Of those, 2,113
+decode rows and 497 encode rows were active; 31 planned encode rows remained.
+
+## AVIF I422 compound-reference parity — 2026-10-27
+
+Added the active public parity row
+`decode:avif:animated_lossy_inter_422_compound_refs_b64x32`. Its deterministic
+three-frame 64x32 8-bit I422 sequence uses compound prediction from both prior
+references on the final inter frame. The pinned generator verifies repeated
+encoding, AV1 4:2:2 headers, the selectable reference list, and exact Pillow
+12.2.0 RGB frames. The 5,565-byte input SHA-256 is
+`58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350`; frame
+hashes are `aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9`,
+`b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb`, and
+`df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491`. The
+independent pinned libavif observation decodes all three frames and reports
+infinite repetition.
+
+The selected public parity and branch-coverage run passed 1/1, matching all
+6,144 RGB bytes per frame. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-i422-compound-20261027/coverage.json`
+(SHA-256
+`e5abd916ac03cf71c3656647b300abfa1b915b71c5ffcc3e505fdc13392e0bea`). Raw
+branch counters at `src/codecs/avif/av1/block.rs:48348` record eight true-arm
+hits in the `decode_inter_compound_translation` specialization; the saved full
+baseline had zero true-arm hits there. This is branch-specific selected evidence.
+Coverage MCP marks source identity unverified and test attribution unknown; its
+incremental comparison is incomparable because baseline detail is incomplete.
+No aggregate coverage gain is claimed. No production Rust code or unit tests
+were added.
+
+The current fixture matrix contains 2,642 total rows: 2,114 decode / inspect /
+verify rows and 528 encode rows. Of those, 2,114 decode rows and 497 encode
 rows are active; 31 planned encode rows remain.

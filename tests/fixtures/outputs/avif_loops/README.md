@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 132 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 124 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 418 hashed
-artifacts total 22,464,197 bytes, including 132 input files, the compiled
-observer source, and 21,799,676 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 133 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 125 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 422 hashed
+artifacts total 22,488,194 bytes, including 133 input files, the compiled
+observer source, and 21,818,108 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 95 fixture sources are declared in
+The 96 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -58,7 +58,10 @@ The two-frame 32x32 lossy 4:2:2 checker source records the exact Pillow RGB
 pixels and native infinite-loop observation for its translated-patch sequence.
 The two-frame 64x32 lossy 4:2:2 checker companion exercises a subdivided inter
 transform tree beside intra transform syntax; its complete Pillow RGB frames
-and pinned libavif infinite-loop observation are retained. The two-frame
+and pinned libavif infinite-loop observation are retained. The three-frame
+64x32 I422 compound-reference companion exposes both earlier references on
+its final inter frame; all three exact Pillow RGB frames and the native
+infinite-loop observation are retained. The two-frame
 32x64 lossy I422 vertical-split companion reaches the B32x64 TX4 chroma-grid
 path; its complete Pillow RGB frames and pinned libavif infinite-loop
 observation are retained. The two-frame
