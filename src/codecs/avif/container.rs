@@ -1758,11 +1758,11 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"hdlr" => {
-                if handler_seen {
-                    return Err(parse_failure!());
+                if !handler_seen {
+                    // Preserve the first track role; Pillow ignores later handlers.
+                    handler_seen = true;
+                    track.handler = parse_handler(child.payload)?;
                 }
-                handler_seen = true;
-                track.handler = parse_handler(child.payload)?;
             }
             kind if kind == *b"minf" => {
                 if minf_seen {
@@ -1774,7 +1774,7 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
             _ => {}
         }
     }
-    if !handler_seen || !minf_seen {
+    if !minf_seen {
         return Err(parse_failure!());
     }
     Ok(())
@@ -1805,16 +1805,14 @@ fn parse_stbl(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"stsz" => {
-                if stsz_seen {
-                    return Err(parse_failure!());
-                }
+                let sample_count = parse_stsz(child.payload)?;
+                track.sample_count = track
+                    .sample_count
+                    .checked_add(sample_count)
+                    .ok_or_else(|| parse_failure!())?;
                 stsz_seen = true;
-                track.sample_count = parse_stsz(child.payload)?;
             }
             kind if kind == *b"stsd" => {
-                if stsd_seen {
-                    return Err(parse_failure!());
-                }
                 stsd_seen = true;
                 parse_stsd(child.payload, track, budget)?;
             }
@@ -1900,17 +1898,24 @@ fn parse_track_properties(
 
 impl Movie {
     fn details(&self) -> Option<Details> {
-        let main = self.tracks.iter().find(|track| {
-            matches!(
-                track.handler,
-                [b'p', b'i', b'c', b't'] | [b'v', b'i', b'd', b'e']
-            )
-        })?;
-        let has_alpha = self.tracks.iter().any(|track| {
-            track.handler == *b"auxv"
-                && track.aux_for_id == Some(main.id)
-                && track.aux_is_alpha.unwrap_or(true)
-        });
+        let main = self
+            .tracks
+            .iter()
+            .find(|track| {
+                matches!(
+                    track.handler,
+                    [b'p', b'i', b'c', b't'] | [b'v', b'i', b'd', b'e']
+                )
+            })
+            .or_else(|| {
+                self.tracks
+                    .iter()
+                    .find(|track| track.aux_for_id.is_none() && track.depth.is_some())
+            })?;
+        let has_alpha = self
+            .tracks
+            .iter()
+            .any(|track| track.aux_for_id == Some(main.id) && track.aux_is_alpha.unwrap_or(true));
         Some(Details {
             width: main.width,
             height: main.height,

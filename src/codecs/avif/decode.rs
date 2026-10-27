@@ -18,6 +18,9 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
+    if let Some(sequence) = &extracted.sequence {
+        require_sequence_timescale(sequence)?;
+    }
     let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = decode_portable_with_error(&validated)?.ok_or_else(|| {
@@ -194,7 +197,7 @@ pub fn decode_sequence(
     };
     let loop_count = sequence_payload.loop_count;
 
-    validate_sequence_timing(sequence_payload)?;
+    let timescale = validate_sequence_timing(sequence_payload)?;
     // Public policy preflight charged sample zero using inspection. Require
     // that declaration to describe this track before using it to reserve the
     // later output canvases. In particular, a primary item reporting one frame
@@ -273,7 +276,7 @@ pub fn decode_sequence(
             },
             FrameDuration {
                 numerator: u64::from(sample.duration),
-                denominator: u64::from(sequence_payload.timescale.get()),
+                denominator: u64::from(timescale),
             },
             FrameDisposal::Unspecified,
             FrameBlend::Unspecified,
@@ -303,12 +306,8 @@ pub fn decode_sequence(
     ))
 }
 
-fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<()> {
-    if sequence.timescale.get() == 0 {
-        return Err(CodecError::Malformed(
-            "AVIF sequence timescale is zero".to_owned(),
-        ));
-    }
+fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<u32> {
+    let timescale = require_sequence_timescale(sequence)?;
     if let Some(alpha) = &sequence.alpha
         && alpha.samples.len() != sequence.color.samples.len()
     {
@@ -316,7 +315,14 @@ fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> Codec
             "AVIF sequence color and alpha sample counts differ".to_owned(),
         ));
     }
-    Ok(())
+    Ok(timescale)
+}
+
+fn require_sequence_timescale(sequence: &super::samples::SequencePayload) -> CodecResult<u32> {
+    sequence
+        .timescale
+        .map(|timescale| timescale.get())
+        .ok_or_else(|| CodecError::Malformed("AVIF sequence media header is missing".to_owned()))
 }
 
 fn avif_sequence_source_template(

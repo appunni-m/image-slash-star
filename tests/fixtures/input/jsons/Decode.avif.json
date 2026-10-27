@@ -23924,6 +23924,116 @@
       ]
     },
     {
+      "id": "animated_duplicate_media_boxes",
+      "asset": "animated_duplicate_media_boxes.avif",
+      "asset_sha256": "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_duplicate_media_boxes.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "animated_missing_hdlr",
+      "asset": "animated_missing_hdlr.avif",
+      "asset_sha256": "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_missing_hdlr.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_stts_zero_delta",
       "asset": "animated_stts_zero_delta.avif",
       "asset_sha256": "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105",
@@ -30916,6 +31026,330 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/animated_duplicate_stsz.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_duplicate_minf",
+      "asset": "error_animated_duplicate_minf.avif",
+      "asset_sha256": "cfc1d8068dc74494499a8a6edec5d84a95d0d621c0eb5206b5664de872fe0cff",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/error_animated_duplicate_minf.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_duplicate_stco",
+      "asset": "error_animated_duplicate_stco.avif",
+      "asset_sha256": "85f8cc8cc87af8748399bece4a318996ae73c6152d7f4551556ab9be1f7d1c61",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/error_animated_duplicate_stco.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_missing_mdhd",
+      "asset": "error_animated_missing_mdhd.avif",
+      "asset_sha256": "541dd9dceb7270214d1a0d12d2b0a3b9956f1f026798390f865864975941ca2f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.ZeroDivisionError",
+          "pillow_message": "division by zero",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.ZeroDivisionError",
+          "pillow_message": "division by zero",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/error_animated_missing_mdhd.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_missing_minf",
+      "asset": "error_animated_missing_minf.avif",
+      "asset_sha256": "cadba57a37368f95d4deea057f50b55ab7e41ca43babfb02bb1d1e4d39a5b147",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/error_animated_missing_minf.avif",
         "operations": [
           "PIL.Image.open",
           "load",
