@@ -84,6 +84,8 @@ const VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_ALPHA_CHANNEL_CHECKPOINT_PIXELS: usize = 1_024;
 const VP8L_MAX_PALETTE_ENTRIES: usize = 256;
 const VP8L_MAX_HUFFMAN_IMAGE_SIZE: usize = 2_600;
+// Matches MAX_COLOR_CACHE_BITS in the pinned libwebp 1.6.0 encoder.
+const VP8L_MAX_COLOR_CACHE_BITS: u8 = 10;
 const VP8L_MIN_HUFFMAN_BITS: u8 = 2;
 const VP8L_MAX_HUFFMAN_BITS: u8 = 9;
 const VP8L_MAX_TRANSFORM_BITS: u8 = 6;
@@ -1200,7 +1202,7 @@ fn write_image_stream<C: BitWriterCheckpoint>(
         width,
         write_meta_huffman_bit,
         config,
-        11,
+        VP8L_MAX_COLOR_CACHE_BITS,
         output_scratch,
         token_scratch,
         token,
@@ -2401,7 +2403,8 @@ fn apply_palette<C: BitWriterCheckpoint>(
         }
     }
     w.write_bits(0, 1)?;
-    let maximum_cache_bits = (usize::BITS - palette.len().leading_zeros()) as u8;
+    let maximum_cache_bits =
+        ((usize::BITS - palette.len().leading_zeros()) as u8).min(VP8L_MAX_COLOR_CACHE_BITS);
     write_image_stream_configured_with_scratch(
         w,
         &pixels[..packed_len],

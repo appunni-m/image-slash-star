@@ -17394,7 +17394,7 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
             reverse_scan_expected,
             "an ample Huffman-RLE reverse-scan budget preserves bytes"
         );
-        let reverse_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6_710);
+        let reverse_scan_policy = image_slash_star::EncodePolicy::new().with_max_work_units(6_547);
         let reverse_scan_error = match image_slash_star::encode_with_policy(
             &reverse_scan_image,
             ImageFormat::WebP,
@@ -17410,8 +17410,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 6_710,
-                observed: 6_711,
+                maximum: 6_547,
+                observed: 6_548,
             }
         ));
         let mut reverse_scan_sink = vec![0xB2];
@@ -17431,8 +17431,8 @@ fn encode_work_budget_is_a_non_parity_result_contract() -> Result<(), Box<dyn st
                 format: Some(ImageFormat::WebP),
                 operation: image_slash_star::CodecOperation::StillEncode,
                 resource: image_slash_star::ResourceLimit::EncodeWorkUnits,
-                maximum: 6_710,
-                observed: 6_711,
+                maximum: 6_547,
+                observed: 6_548,
             }
         ));
         assert_eq!(reverse_scan_sink, vec![0xB2]);

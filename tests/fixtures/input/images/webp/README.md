@@ -1,5 +1,15 @@
 # WebP fixture provenance
 
+`webp_cost_manager_fragment_stream_1024x1024.png` is a deterministic RGB
+source for both `enc_lossless_cost_manager_fragment_stream` parity rows. Its
+seeded 4,096-color palette is interleaved with copy fragments using varied
+distances and lengths, including overlapping copies. Regenerate it with
+`scripts/generate_webp_cost_manager_fragment_stream_fixture.py`; the pinned
+pixel SHA-256 is
+`5afff9a4bc1b81d0f066a1f75fd2284cb1405cd28abfa0ffa01c17451e83146a` and the
+PNG SHA-256 is
+`a435566d1b22d8405e38ff5588213b5492050a180633586a3d67c673879aef40`.
+
 `lossy_mode_filter_delta.webp` is a four-segment VP8 keyframe whose intra4x4
 macroblocks use a `+5` loop-filter mode delta. It is generated from the
 repository's 128x128 RGB pattern with libwebp 1.6.0. The fixture-only encoder
