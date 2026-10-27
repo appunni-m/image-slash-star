@@ -11205,6 +11205,11 @@ formats:
       test_assets:
       - animated_lossy_inter_422_compound_refs_b64x32.avif
       status: active
+    - id: animated_lossy_inter_422_compound_direct_grid_b64x64
+      description: Three-frame 64x64 8-bit lossy I422 AVIF sequence whose largest-transform final inter block uses compound prediction and the direct chroma-grid path
+      test_assets:
+      - animated_lossy_inter_422_compound_direct_grid_b64x64.avif
+      status: active
     - id: animated_lossy_inter_422_vertical_split_b32x64
       description: Two-frame 32x64 lossy 4:2:2 AVIF sequence reaching vertical B32x64 inter transform splits
       test_assets:

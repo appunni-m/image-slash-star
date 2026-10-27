@@ -9943,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d5c73c24f2b422e27c358ec5776c3edadf45d46a6745d2ab1d4c15102a94e437`; matrix `11879372447eb9e4bfa4d3d5ba8565bdedb25b129fc3813b29e9ad16345c5f6c`.
+- Current fixture integrity only: manifest `fda0248f27bb41013e40f2e50d26f8072616eb8fde216b55583dcf7d508b1b0e`; matrix `da6a21ece0fb6fba6bafa829d022d557d7a9f19bea1460a0dbdeae3b2d948f14`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12135,6 +12135,34 @@ and test status unknown because no MCP source/build receipt is available. The
 incremental comparison with the saved full report remains incomparable because
 that baseline lacks exact branch detail. No aggregate coverage gain is claimed.
 
-The fixture matrix now contains 2,675 total rows: 2,120 decode / inspect /
-verify rows and 555 encode rows. Of those, 2,120 decode rows and 524 encode
+The fixture matrix now contains 2,676 total rows: 2,121 decode / inspect /
+verify rows and 555 encode rows. Of those, 2,121 decode rows and 524 encode
 rows are active; 31 planned encode rows remain.
+
+## AVIF compound I422 direct chroma-grid parity — 2026-10-27
+
+Coverage MCP queried the latest full report,
+`.coverage-mcp/local-evidence/full-20261027-predictor-grid-final/coverage.json`
+(SHA-256 `985db53124f1c6f35102a8908ba2b98aa247750332487bffd7cb051973b01f10`),
+and identified the missing `true` arm at
+`src/codecs/avif/av1/block.rs:48348` in the compound direct-chroma-grid
+instantiation. Added active row
+`decode:avif:animated_lossy_inter_422_compound_direct_grid_b64x64` with a
+pinned three-frame 64x64 I422 AVIF. Its largest-transform final frame uses
+compound prediction and full B64x64 geometry; the fixture generator verifies
+that frame header and exact Pillow output.
+
+The selected command
+`make coverage-selected COVERAGE_CASES='decode:avif:animated_lossy_inter_422_compound_direct_grid_b64x64'`
+passed 1/1 parity rows. Its local LLVM report
+`.coverage-mcp/local-evidence/selected/20261027T122708.591697Z-83f49fcd5bb145d4ad2dc85e698646b0/coverage.json`
+has SHA-256
+`0e921871eceaae79ae7db763299f0ae968d5f1b24d86f7525fa7fce6fa935675`;
+the exact compound direct-chroma monomorph records one `true`-arm hit and zero
+`false`-arm hits at that condition. Coverage MCP's selected report query no
+longer lists that `true` arm as missing. The local run receipt records the row
+passing, while Coverage MCP marks source attribution unverified and test status
+unknown. An incremental comparison against the saved full report is
+incomparable because exact baseline branch detail is unavailable; no aggregate
+coverage gain or regression is claimed. No Rust production code or unit tests
+were added.
