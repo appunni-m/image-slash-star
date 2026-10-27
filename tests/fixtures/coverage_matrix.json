@@ -125811,6 +125811,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_avx2_batch_tail.bin",
           "encoded_ref_bytes": 2543,
           "encoded_ref_sha256": "7d743b7092288c5fb09ad801c0983c4409ee39a10a2981d9f279ec2eb1ad61fe",
@@ -125821,6 +125831,52 @@
           "ref_size": [
             257,
             129
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_sub_420_q10_avx2_batch_edge_fallback",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 113x17 RGB source makes the AVX2 eight-block luma batch replicate the right and bottom image edges in baseline 4:2:0 encoding",
+          "params": {
+            "subsampling": "420",
+            "quality": 10,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_avx2_420_edge_batch_113x17.png",
+          "source_sha256": "fc952ca09c46170552b0a265db8825dc752ddedad70e834724dbfc7d5f03242d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_avx2_batch_edge_fallback.bin",
+          "encoded_ref_bytes": 958,
+          "encoded_ref_sha256": "e565312af40aac458ce1dff16aaaa83b215c78ddc7d0c8c4ec9b70381eedcf24",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_q10_avx2_batch_edge_fallback.bin",
+          "ref_sha256": "ca2bce744b714e52bc87447b6dd3bc5f7c4516147d28280518f8ae424165b423",
+          "ref_bytes": 5763,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            113,
+            17
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -228955,9 +229011,9 @@
     }
   },
   "summary": {
-    "total_rows": 2691,
+    "total_rows": 2692,
     "decode_rows": 2133,
-    "encode_rows": 558,
+    "encode_rows": 559,
     "formats": 8,
     "assets_available": 2129,
     "decode_active": 2133,
