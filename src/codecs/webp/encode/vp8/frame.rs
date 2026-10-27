@@ -251,7 +251,7 @@ pub(super) fn select_frame(
                 matrix.lambda_i16.cast_unsigned(),
                 matrix.texture_lambda.cast_unsigned(),
                 None,
-                method <= 1,
+                method,
                 coefficient_probabilities,
                 trellis,
             );

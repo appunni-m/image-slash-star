@@ -32,6 +32,8 @@ pub(super) mod cross_color;
 mod histogram;
 pub(super) mod predictor;
 
+use super::super::WEBP_MAX_ENCODER_DIMENSION;
+
 /// Color type of the image.
 ///
 /// Note that the WebP format doesn't have a concept of color type. All images are encoded as RGBA
@@ -2759,7 +2761,11 @@ fn encode_frame(
         data.len() as u64
     );
 
-    if width == 0 || width > 16384 || height == 0 || height > 16384 {
+    if width == 0
+        || width > WEBP_MAX_ENCODER_DIMENSION
+        || height == 0
+        || height > WEBP_MAX_ENCODER_DIMENSION
+    {
         return Err(EncodingError::InvalidDimensions);
     }
 

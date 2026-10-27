@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static uint32_t hash32(uint32_t value)
 {
@@ -52,8 +53,15 @@ static void fill_frame(avifImage *image, unsigned frame)
 
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: encode_lossy_inter_i420_b16x64 OUTPUT.avif\n");
+    const int qindex_zero_mode_requested =
+        argc >= 2 && strcmp(argv[1], "--qindex-zero-nonlossless") == 0;
+    const int qindex_zero_nonlossless = qindex_zero_mode_requested && argc == 3;
+    const int output_index = qindex_zero_nonlossless ? 2 : 1;
+    if ((qindex_zero_mode_requested && argc != 3) ||
+        (!qindex_zero_mode_requested && argc != 2)) {
+        fprintf(stderr,
+                "usage: encode_lossy_inter_i420_b16x64 "
+                "[--qindex-zero-nonlossless] OUTPUT.avif\n");
         return 2;
     }
 
@@ -75,8 +83,8 @@ int main(int argc, char **argv)
     image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
     encoder->codecChoice = AVIF_CODEC_CHOICE_AOM;
     encoder->maxThreads = 1;
-    encoder->quality = 70;
-    encoder->qualityAlpha = 70;
+    encoder->quality = qindex_zero_nonlossless ? 100 : 70;
+    encoder->qualityAlpha = qindex_zero_nonlossless ? 100 : 70;
     encoder->speed = 0;
     encoder->autoTiling = AVIF_FALSE;
     encoder->timescale = 1000;
@@ -97,6 +105,15 @@ int main(int argc, char **argv)
         {"loopfilter-control", "0"},
         {"enable-warped-motion", "0"},
     };
+    if (qindex_zero_nonlossless) {
+        const avifResult result =
+            avifEncoderSetCodecSpecificOption(encoder, "enable-chroma-deltaq", "1");
+        if (result != AVIF_RESULT_OK) {
+            fprintf(stderr, "option enable-chroma-deltaq failed: %s\n",
+                    avifResultToString(result));
+            goto cleanup;
+        }
+    }
     for (size_t index = 0; index < sizeof(options) / sizeof(options[0]); ++index) {
         const avifResult result =
             avifEncoderSetCodecSpecificOption(encoder, options[index][0], options[index][1]);
@@ -122,7 +139,7 @@ int main(int argc, char **argv)
                 encoder->diag.error);
         goto cleanup;
     }
-    FILE *const file = fopen(argv[1], "wb");
+    FILE *const file = fopen(argv[output_index], "wb");
     if (file == NULL) {
         fprintf(stderr, "could not open output path\n");
         goto cleanup;

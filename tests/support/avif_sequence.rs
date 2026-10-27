@@ -582,6 +582,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_420_b32x32",
         "lossless_inter_420_b32x32_10bit",
         "lossless_inter_420_b32x32_10bit_64x64",
+        "lossless_inter_420_b128x128_10bit",
         "lossless_inter_420_clipped_b32x32_10bit_28x28",
         "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
         "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
@@ -602,6 +603,8 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossy_split_inter_420_b16x16",
         "lossy_b16_mixed_topology_inter_420_b16x16",
         "lossy_wide_monochrome_b128x128",
+        "lossy_inter_420_b16x64_qindex0_mode_select_64x64",
+        "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
         "lossy_wide_i444_b128x128",
         "lossy_wide_i444_mode2_unsplit_b128x128",
         "lossy_wide_i444_mode2_split32_b128x128",
@@ -797,6 +800,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "lossless_inter_420_b32x32_10bit_64x64" => {
                 matrix_sequence_case("animated_lossless_inter_420_b32x32_10bit_64x64")
             }
+            "lossless_inter_420_b128x128_10bit" => {
+                matrix_sequence_case("animated_lossless_inter_420_b128x128_10bit")
+            }
             "lossless_inter_420_clipped_b32x32_10bit_28x28" => {
                 matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_10bit_28x28")
             }
@@ -860,6 +866,12 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "lossy_wide_monochrome_b128x128" => {
                 matrix_sequence_case("animated_lossy_wide_monochrome_b128x128")
             }
+            "lossy_inter_420_b16x64_qindex0_mode_select_64x64" => {
+                matrix_sequence_case("animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64")
+            }
+            "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64" => matrix_sequence_case(
+                "animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
+            ),
             "lossy_wide_i444_b128x128" => matrix_sequence_case("animated_lossy_wide_i444_b128x128"),
             "lossy_wide_i444_mode2_unsplit_b128x128" => {
                 matrix_sequence_case("animated_lossy_wide_i444_mode2_unsplit_b128x128")

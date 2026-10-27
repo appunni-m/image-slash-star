@@ -672,6 +672,12 @@
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_portable_output_length_mismatch",
       "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_hash_chain_index_overflow_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_hash_chain_index_overflow_rejected",
+      "test": "test_fault_contract_matrix"
     }
   ],
   "categories": [

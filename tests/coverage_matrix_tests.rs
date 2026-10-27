@@ -1164,11 +1164,186 @@ fn execute_bmp_rle_work_budget_contract(
 }
 
 #[cfg(coverage)]
+fn execute_webp_hash_chain_index_overflow_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "encode"
+        || row.format != "webp"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "webp.hash_chain.index_overflow"
+        || row.fault.contract != "encode_invalid_dimensions_then_retry_succeeds"
+    {
+        return Err(format!(
+            "{}: invalid WebP hash-chain overflow contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode || source_key.format != row.format {
+        return Err(format!(
+            "{}: source_case must identify a WebP decode parity row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active" || source.oracle_status.as_deref() != Some("ok") {
+        return Err(format!(
+            "{}: source_case must be an active Pillow parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(&source_key.format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "WebP hash-chain source asset",
+    )?;
+    let expected_pixels = load_pixel_reference(
+        manifest_dir,
+        &source.id,
+        source.ref_path.as_deref(),
+        "Decode",
+        &source_key.format,
+        asset,
+        (source.ref_size.as_deref(), source.ref_mode.as_deref()),
+    )
+    .ok_or_else(|| format!("{}: source Pillow reference is missing", row.id))?;
+    assert_sha256(
+        &expected_pixels.bytes,
+        source.ref_sha256.as_deref(),
+        "WebP hash-chain source Pillow reference",
+    )?;
+    let decoded = img::decode(&bytes)
+        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
+    assert_pixel_parity(&expected_pixels, &decoded.content)
+        .map_err(|error| format!("{}: source differs from Pillow: {error}", row.id))?;
+
+    let encode_row = matrix
+        .formats
+        .get("webp")
+        .and_then(|format| {
+            format
+                .encode
+                .iter()
+                .find(|candidate| candidate.id == "enc_lossless")
+        })
+        .ok_or_else(|| {
+            format!(
+                "{}: Pillow lossless WebP encode parity row is missing",
+                row.id
+            )
+        })?;
+    if encode_row.status != "active"
+        || encode_row.source_asset.as_deref() != Some(asset)
+        || encode_row.source_sha256.as_deref() != source.asset_sha256.as_deref()
+    {
+        return Err(format!(
+            "{}: Pillow encode parity row does not use the selected source",
+            row.id
+        ));
+    }
+    let legacy_options = legacy_encode_options("webp", &encode_row.params)?;
+    let options =
+        img::EncodeOptions::try_from_legacy_pairs(img::ImageFormat::WebP, &legacy_options)
+            .map_err(|error| format!("{}: WebP encode options are invalid: {error}", row.id))?;
+
+    let injected = img::__coverage_with_fault_point(
+        img::CoverageFaultPoint::WebpHashChainIndexOverflow,
+        || img::encode(&decoded.content, img::ImageFormat::WebP, &options),
+    );
+    match injected {
+        Err(img::ImageError::Dimensions {
+            format: Some(img::ImageFormat::WebP),
+            message,
+            stage: Some(img::ImageErrorStage::StillEncode),
+            offset: None,
+            identity: None,
+        }) if message == "encode: WebP lossless dimensions are invalid" => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: injected encode returned the wrong public error: {error:?}",
+                row.id
+            ));
+        }
+        Ok(_) => {
+            return Err(format!(
+                "{}: injected WebP encode unexpectedly succeeded",
+                row.id
+            ));
+        }
+    }
+
+    let encoded_ref_path = encode_row
+        .encoded_ref_path
+        .as_deref()
+        .ok_or_else(|| format!("{}: Pillow encoded-byte reference is missing", row.id))?;
+    let expected_encoded = fs::read(manifest_dir.join(encoded_ref_path)).map_err(|error| {
+        format!(
+            "{}: cannot read Pillow encoded-byte reference: {error}",
+            row.id
+        )
+    })?;
+    if encode_row.encoded_ref_bytes != Some(expected_encoded.len()) {
+        return Err(format!(
+            "{}: Pillow encoded-byte reference length metadata differs",
+            row.id
+        ));
+    }
+    assert_sha256(
+        &expected_encoded,
+        encode_row.encoded_ref_sha256.as_deref(),
+        "WebP lossless encoded-byte reference",
+    )?;
+
+    let retry = img::encode(&decoded.content, img::ImageFormat::WebP, &options)
+        .map_err(|error| format!("{}: uninjected encode retry failed: {error:?}", row.id))?;
+    assert_encoded_byte_parity(&expected_encoded, &retry)
+        .map_err(|error| format!("{}: retry differs from Pillow: {error}", row.id))?;
+    let fresh = img::encode(&decoded.content, img::ImageFormat::WebP, &options)
+        .map_err(|error| format!("{}: fresh encode failed: {error:?}", row.id))?;
+    assert_encoded_byte_parity(&fresh, &retry)
+        .map_err(|error| format!("{}: retry differs from a fresh encode: {error}", row.id))?;
+    let retry_decoded = img::decode(&retry)
+        .map_err(|error| format!("{}: retry output did not decode: {error:?}", row.id))?;
+    assert_pixel_parity(&expected_pixels, &retry_decoded.content)
+        .map_err(|error| format!("{}: retry pixels differ from Pillow: {error}", row.id))?;
+    Ok(())
+}
+
+#[cfg(coverage)]
 fn execute_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    if row.fault.point == "webp.hash_chain.index_overflow" {
+        return execute_webp_hash_chain_index_overflow_contract(manifest_dir, matrix, row);
+    }
     if row.row_type != "fault-contract"
         || !matches!(row.operation.as_str(), "decode" | "inspect")
         || !matches!(

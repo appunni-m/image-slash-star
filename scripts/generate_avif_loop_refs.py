@@ -166,6 +166,10 @@ FIXTURES = {
         "animated_lossless_inter_420_b32x32_10bit_64x64.avif",
         "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
     ),
+    "lossless_inter_420_b128x128_10bit": (
+        "animated_lossless_inter_420_b128x128_10bit.avif",
+        "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851",
+    ),
     "mixed_lossless_inter_b32_i420_64x64": (
         "animated_mixed_lossless_inter_b32_i420_64x64.avif",
         "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
@@ -357,6 +361,14 @@ FIXTURES = {
     "lossy_inter_420_b16x64_mode_select_64x64": (
         "animated_lossy_inter_420_b16x64_mode_select_64x64.avif",
         "6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a",
+    ),
+    "lossy_inter_420_b16x64_qindex0_mode_select_64x64": (
+        "animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64.avif",
+        "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c",
+    ),
+    "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64": (
+        "animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64.avif",
+        "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c",
     ),
     "lossy_inter_420_mode_largest_64x16": (
         "animated_lossy_inter_420_mode_largest_64x16.avif",

@@ -442,6 +442,11 @@ low-frequency residual and the other leaves keep texture, so the frame
 signals `TX_MODE_SELECT` while the first leaf selects the maximum 16x64
 transform. The fixture-only controls are in
 `libaom-lossy-inter-i420-b16x64.patch`; they do not alter the Rust decoder.
+The qindex-zero companion uses the same layout and quality 100. Its key frame
+stays lossless; the additional `libaom-qindex0-nonlossless-inter.patch` applies
+chroma quantizer deltas of 2 only to inter frame 1. That legal AV1 frame has
+base qindex zero but is non-lossless, reaching the decoder's single-terminal
+transform path. Both patches affect only this fixture encoder.
 
 Build a separate pinned libaom copy with that patch:
 
@@ -451,6 +456,8 @@ git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i420
 git -C target/oracle-staging/libaom-i420-b16x64-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
 git -C target/oracle-staging/libaom-i420-b16x64-source apply \
   "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i420-b16x64.patch"
+git -C target/oracle-staging/libaom-i420-b16x64-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-qindex0-nonlossless-inter.patch"
 cmake -S target/oracle-staging/libaom-i420-b16x64-source \
   -B target/oracle-staging/libaom-i420-b16x64-build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
@@ -493,5 +500,64 @@ cc -std=c99 -O2 -Wall -Wextra -Werror \
 The generator checks two byte-identical timestamp-normalized encodes, the AV1
 frame headers, exact Pillow 12.2.0 RGB pixels, and this pinned AVIF SHA-256:
 `6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a`.
+Generate and verify the qindex-zero companion with the same encoder:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b16x64_qindex0_mode_select.py \
+  --encoder target/oracle-staging/encode-avif-inter-i420-b16x64
+```
+
+That generator verifies the lossless key frame, the inter frame's qindex zero,
+nonzero chroma deltas and non-lossless `TX_MODE_SELECT`, byte-identical
+timestamp-normalized encodes, and exact Pillow 12.2.0 pixels. Its retained AVIF
+SHA-256 is `f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c`.
 `make fixtures-check` validates the committed fixture against its generator and
 Pillow observations without rebuilding the native encoder.
+
+The monochrome companion uses the same pinned sources and partition controls.
+The qindex-zero patch sets a luma DC delta of 2 on its inter frame, keeping the
+base qindex at zero while making that frame non-lossless. Compile the
+monochrome-specific encoder and generate the fixture with:
+
+```sh
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i420-b16x64-source/include \
+  -I target/oracle-staging/libavif-i420-b16x64-build/include \
+  -I target/oracle-staging/libaom-i420-b16x64-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_monochrome_b16x64_qindex0.c \
+  target/oracle-staging/libavif-i420-b16x64-build/libavif.a \
+  target/oracle-staging/libaom-i420-b16x64-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-mono-b16x64-qzero
+.oracle-venv/bin/python scripts/generate_avif_inter_monochrome_b16x64_qindex0_mode_select.py \
+  --encoder target/oracle-staging/encode-avif-inter-mono-b16x64-qzero
+```
+
+The generator checks two byte-identical timestamp-normalized encodes, the
+monochrome AV1 sequence header, the lossless key and non-lossless
+`TX_MODE_SELECT` inter header, and exact Pillow RGB frames. The retained AVIF
+SHA-256 is `972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c`.
+
+## Lossless 10-bit I420 B128 sequence
+
+`animated_lossless_inter_420_b128x128_10bit.avif` uses a 128x128 AV1
+superblock, 10-bit full-range I420, and two all-lossless frames. The second
+frame moves an 8x8 luma patch one pixel. Build the encoder against the pinned
+static libavif and libaom artifacts described above:
+
+```sh
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i420-b16x64-source/include \
+  -I target/oracle-staging/libavif-i420-b16x64-build/include \
+  -I target/oracle-staging/libaom-i420-b16x64-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_inter_i420_b128x128_10bit.c \
+  target/oracle-staging/libavif-i420-b16x64-build/libavif.a \
+  target/oracle-staging/libaom-i420-b16x64-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossless-i420-b128x128
+.oracle-venv/bin/python scripts/generate_avif_lossless_inter_i420_b128x128_10bit.py \
+  --encoder target/oracle-staging/encode-avif-lossless-i420-b128x128
+```
+
+The generator requires two encodes to agree after normalizing only BMFF
+creation and modification timestamps. It validates the 128x128 superblock,
+key/inter all-lossless frame headers, and exact Pillow 12.2.0 RGB frames. Its
+`--check` mode runs from `make verify` without rebuilding the native encoder.

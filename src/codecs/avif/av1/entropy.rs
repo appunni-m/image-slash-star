@@ -6644,9 +6644,13 @@ fn decode_inter_transform_type(
     cdfs: &mut FrameCdfs,
     tx_size: TxSize,
     reduced_transform_set: bool,
+    segment_qindex: u32,
     segment_lossless: bool,
 ) -> Av1Result<super::block::Av1TransformType> {
-    if segment_lossless
+    // Quantizer deltas can make a qindex-zero segment non-lossless; the base
+    // qindex still selects the default transform without a coded type symbol.
+    if segment_qindex == 0
+        || segment_lossless
         || tx_size
             .pixel_dimensions()
             .0
@@ -9946,6 +9950,7 @@ fn decode_inter_leaf(
                     cdfs,
                     tx_size,
                     context.frame_tools.reduced_transform_set,
+                    quantization.segment_qindex,
                     quantization.segment_lossless,
                 )?
             };
@@ -9958,6 +9963,7 @@ fn decode_inter_leaf(
                 cdfs,
                 tx_size,
                 context.frame_tools.reduced_transform_set,
+                quantization.segment_qindex,
                 quantization.segment_lossless,
             )
             .map_err(|_| super::block::PortableUnavailable)
@@ -10128,6 +10134,7 @@ fn decode_inter_leaf(
                 cdfs,
                 tx_size,
                 context.frame_tools.reduced_transform_set,
+                quantization.segment_qindex,
                 quantization.segment_lossless,
             )
             .map_err(|_| super::block::PortableUnavailable)

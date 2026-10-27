@@ -930,6 +930,15 @@ FAULT_CONTRACTS = {
         "point": "av1.partition_context.above_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "webp_hash_chain_index_overflow_rejected": {
+        "format": "webp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:webp:webp_hash_chain_index_overflow_rejected",
+        "source_case": "decode:webp:lossless_vp8l",
+        "point": "webp.hash_chain.index_overflow",
+        "contract": "encode_invalid_dimensions_then_retry_succeeds",
+        "operation": "encode",
+    },
 }
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),

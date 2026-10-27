@@ -1,5 +1,95 @@
 # Versioned compatibility evidence
 
+## WebP hash-chain index guard contract — 2026-10-27
+
+Added the target-only contract
+`fault-contract:webp:webp_hash_chain_index_overflow_rejected` for the private
+VP8L hash-chain index bound. Public WebP encoding caps each axis at 16,384
+pixels, so a Pillow parity input cannot exceed the `i32` sample-index range.
+The `cfg(coverage)` fault point drives this defensive guard through the public
+encoder while leaving release builds without fault controls.
+
+The case first decodes the active Pillow `lossless_vp8l` input, injects the
+failure, and checks the structured WebP `Dimensions` error. An uninjected
+retry must match the existing `enc_lossless` Pillow byte reference, produce
+the same bytes as a fresh retry, and decode to the Pillow RGB reference. The
+range check now runs once before the low-effort/high-effort const-generic split.
+In the focused run, both outcomes of the `i32` conversion check were observed;
+Coverage MCP reports no missing branch at that guard. The selected run passed
+1/1. Its report is
+`.coverage-mcp/local-evidence/selected/webp-hash-chain-index-overflow-20261027-attempt-3/coverage.json`
+(SHA-256
+`42919ee848aeab78d179ec885552704279c8a6eb3acde2855b779a84505165bb`).
+
+The refreshed full `make coverage` run passed, including 57/57 coverage-matrix
+tests, 7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate
+tests. Its current report is
+`.coverage-mcp/local-evidence/full-20261027-webp-alpha-raw-token/coverage.json`
+(SHA-256
+`379e6fe31021fce03cf965be6aa903938c93d70df50e226e549b80fc56c98ba3`). Totals
+are 93,817/139,562 lines (67.2225%), 18,626/32,042 branches (58.1300%),
+5,224/8,928 functions (58.5125%), and 143,267/216,612 regions (66.1399%). The
+raw full-report branch counters now record one true and 14 false outcomes at
+the token-aware raw-alpha choice (`encoder.rs:2959`); line, branch, and function
+totals did not increase, while covered regions increased by one. Coverage MCP
+cannot open this managed-worktree report, so no verified aggregate gain or
+regression is claimed. This is target-only fault-contract evidence, not a
+Pillow parity pass. The coverage-only fault hook is absent from release builds;
+no performance speedup is claimed, and no Rust unit tests were added.
+
+## WebP token-aware raw-alpha parity — 2026-10-27
+
+Added active parity row `encode:webp:enc_lossy_rgba_alpha_raw_token`, reusing
+the seeded high-entropy alpha input from `enc_lossy_rgba_alpha_raw` and adding
+the public cancellation-token encode path. The pinned Pillow 12.2.0 reference
+is 4,210 encoded bytes (SHA-256
+`c3fed186ee97cc2418fd1815880646118e73fdaa3fed896bf977118972b13e4d`); decoding
+the result matched all 16,384 RGBA bytes. The selected parity run passed 1/1.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-alpha-raw-token-20261027/coverage.json`
+(SHA-256
+`22bd017a9a5aad3a041ac86326483301ed97ec255b1bc94e2e3a70b319dac0a7`). Its
+raw branch counters record the previously unobserved true arm of
+`encode_alpha_stream` at `src/codecs/webp/native/encoder.rs:2959` once in the
+`TokenBitWriterCheckpoint` specialization; the earlier full report recorded
+zero true-arm hits at that coordinate. Coverage MCP could not open reports
+from the managed worktree, so this remains selected LLVM evidence with no
+verified aggregate gain. No production code changed, and no Rust unit tests
+were added.
+
+## AVIF qindex-zero non-lossless inter parity — 2026-10-27
+
+Added active rows
+`decode:avif:animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64` and
+`decode:avif:animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64`.
+Both deterministic 64×64 sequences use a lossless key frame and a non-lossless
+qindex-zero `TX_MODE_SELECT` inter frame. The I420 inter frame has chroma
+quantizer deltas of 2; the monochrome inter frame has a luma DC delta of 2.
+Their pinned generators verify repeatable timestamp-normalized AVIF output,
+frame headers, and exact Pillow RGB frame hashes.
+
+The decoder now passes the segment qindex to inter transform-type decoding.
+Qindex zero selects the default DCT transform even when quantizer deltas make
+the segment non-lossless. This avoids consuming a transform-type symbol that
+these inputs do not signal. The focused public parity run passed 2/2, with
+12,288 RGB bytes matching Pillow for each case. The full `make test` run also
+passed, including the complete matrix suite and native, WASI, and WASM feature
+lanes. The local LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-q0-final-coverage-20261027/coverage.json`
+(SHA-256
+`72010b8a5d9436661980a8d941c26b2b7f12382109386d40287c3c4236cfc4d0`). Its
+selected counters record seven hits on the new qindex-zero DCT path, two hits
+on the I420 qindex-zero single-terminal guard, and three on the monochrome
+guard. Other generic instantiations remain unobserved in this selected run.
+
+Coverage MCP's saved full report identified missing transform-type branch
+observations, but has no source/build receipt and reports source identity as
+unverified and test attribution as unknown. It cannot read the refreshed
+report from this managed worktree, so the local counters are selected-scope
+evidence only; no full-suite or marginal coverage gain is claimed. No Rust
+unit tests were added.
+
 ## I444 compound split parity — 2026-10-26
 
 Added active row `decode:avif:animated_lossy_inter_i444_compound_split_b16x32_mode2`.
@@ -9761,7 +9851,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `353b3d3db5b2ce94aaad3ba1525dc738be51509ec70ff06940714ea6fa358013`; matrix `ceaca961595d31eecbb517de056c1c87b1f61fc6f7e19aaea5f5a7fbcb84c069`.
+- Current fixture integrity only: manifest `0d2978cd6e119a21c5c2a8c456fe728654bd3892ef9800faf5b5b6b181c46062`; matrix `a5266b229ab559d188cdd2b24184015dece0ee7790838d449547ad99fc732603`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -10142,7 +10232,7 @@ Pillow-backed input.
 | `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
-| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch` | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch`, `fault-contract:webp:webp_hash_chain_index_overflow_rejected` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, bounded native concurrent verification, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |
@@ -11495,6 +11585,318 @@ incremental comparison is incomparable because baseline detail is incomplete.
 No aggregate coverage gain is claimed. No production Rust code or unit tests
 were added.
 
-The current fixture matrix contains 2,642 total rows: 2,114 decode / inspect /
-verify rows and 528 encode rows. Of those, 2,114 decode rows and 497 encode
+The current fixture matrix contains 2,653 total rows: 2,117 decode / inspect /
+verify rows and 536 encode rows. Of those, 2,117 decode rows and 505 encode
 rows are active; 31 planned encode rows remain.
+
+## WebP alpha filter no-win parity — 2026-10-27
+
+Added active encode parity row `encode:webp:enc_lossy_rgba_alpha_filter_no_win`.
+Its deterministic 512x512 RGBA PNG uses a seeded 32-color alpha palette whose
+sampled residuals favor horizontal filtering while the full-plane encoder
+keeps the unfiltered alpha representation. The generator checks the PNG
+bytes; the exact Pillow 12.2.0 encoded reference is 157,078 bytes. The input
+SHA-256 is `343008603074288cbdad755679e6e6f0c78e9cb8b96b73cffcb7b316f7229210`,
+and the encoded reference SHA-256 is
+`715914879a0bcc255e9e736fbe69ce3f395be11bf7d9685cec7406079b7f5bac`.
+
+The selected public parity run passed 1/1 and matched the decoded 512x512 RGBA
+pixels. Its report is
+`.coverage-mcp/local-evidence/selected/webp-alpha-filter-no-win-512-20261027/coverage.json`
+(SHA-256
+`3b123e8d36d2b00410ede33334638ec523e0e00a6d8be9520fa5076c7e1065ef`). Raw
+LLVM branch counters at `src/codecs/webp/native/encoder.rs:3082` record 0 true
+and 3 false outcomes for this row, reaching the full-plane no-win arm.
+Coverage MCP returned `I/O error: No such file or directory` for this report
+path, so this is local selected-run evidence without an MCP source/build
+receipt.
+
+The refreshed full `make coverage` run passed 57/57 coverage-matrix tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+Its retained report is
+`.coverage-mcp/local-evidence/full-20261027-webp-alpha-filter-no-win/coverage.json`
+(SHA-256
+`33574fd55eee1fca407017c16864582f83583eb6e5327de32078e17cfda1982e`). Totals
+are 93,818/139,562 lines (67.2232%), 18,627/32,042 branches (58.1331%),
+5,224/8,928 functions (58.5125%), and 143,268/216,612 regions (66.1404%). At
+line 3082, the full report records 23 true and 3 false outcomes. Relative to
+the preceding retained full report with the same denominators, the local LLVM
+totals add one covered line, branch, and region. Coverage MCP has not verified
+that incremental comparison or source/build identity. All four repository
+floors pass. No Rust implementation change or unit test was added.
+
+## WebP VP8L box-chain max-match parity — 2026-10-27
+
+Added active parity rows `encode:webp:enc_lossless_method_6_box_chain_max_match`
+and `encode:webp:enc_lossless_method_6_box_chain_max_match_token`. Their pinned
+PNG source contains three rows of six colors arranged so palette packing gives
+the box-chain search a match longer than 4,095 packed pixels after a shorter
+hash-chain match. The source SHA-256 is
+`c07464a1965f2fd029193f05cb0f1da90740d046570b30a66bd86dd2d2ea5df3`; its RGB
+pixels hash to
+`809865969461d792ec552fbe8040f3f59abc39fa4f4da222d3b715d058f2dfe6`. Pillow
+12.2.0 produces the same 76-byte encoded reference for both API paths, SHA-256
+`d012caba3e51c61643abd86874b13d55c5a178de871c5469896f01bab7bc46c2`.
+
+The selected public parity run passed 2/2 and re-decoded exact 8,196x3 RGB
+pixels. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-box-chain-max-match-3row-20261027/coverage.json`
+(SHA-256
+`75812713bbe7aaf9fac5e426cf8d037c620837a739d780a0af6fedca0fd62a60`). The
+selected report records both outcomes for the token-aware and ordinary search
+guards in `src/codecs/webp/native/encoder/backward_refs.rs`: line 655 has 4 true
+and 28,677 false outcomes, and line 695 has 24 true and 172,062 false outcomes.
+Coverage MCP returned `I/O error: No such file or directory` for this report,
+so source/build identity and incremental attribution remain unverified. This is
+local selected-case evidence; it does not establish an aggregate coverage gain.
+No Rust implementation change or unit test was added.
+
+The refreshed full `make coverage` run passed 57/57 integration tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+Its report is
+`.coverage-mcp/local-evidence/full-20261027-webp-box-chain-max-match/coverage.json`
+(SHA-256
+`1dbec9f10af5d98aa82689d1af36930c2cc3ae62066689503fdd2d790b0eb500`). Totals
+are 93,818/139,562 lines (67.2232%), 18,629/32,042 branches (58.1393%),
+5,224/8,928 functions (58.5125%), and 143,268/216,612 regions (66.1404%). The
+full report records 4 true / 53,426 false outcomes at line 655 and 24 true /
+4,396,437 false outcomes at line 695. Against the preceding full report with
+the same denominators, two additional branches are covered; the line, function,
+and region totals are unchanged. All four repository floors pass. Coverage MCP
+also returned `I/O error: No such file or directory` for this full report, so
+the new totals remain local LLVM evidence without MCP source/build attribution.
+
+The current matrix contains 2,649 rows: 2,117 active decode rows, 501 active
+encode rows, and 31 planned encode rows.
+
+## WebP token-aware input preparation parity — 2026-10-27
+
+Added active parity rows `encode:webp:enc_lossless_bilevel_token`,
+`encode:webp:enc_lossless_luminance_alpha_partial_token`, and
+`encode:webp:enc_lossy_opaque_rgba_token`, reusing the pinned Pillow source
+assets `1bit.png`, `gray_alpha_partial.png`, and `rgba.png`. The exact
+Pillow 12.2.0 encoded references were generated; all three selected public
+parity rows passed and re-decoded their expected pixels.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-token-adapter-branches-20261027/coverage.json`
+(SHA-256
+`7e9e27eb60d88568a069c048b70c0c7dd11b3a00c7aa98e4fabb578daeeb398f`). It
+records the token arms in `src/codecs/webp/encode/mod.rs`: line 533 has 1 true
+and 3 false outcomes, line 620 has 1 true and 3 false, line 731 has 1 true and
+3 false, and line 738 has 1 true outcome for partial-alpha expansion. Coverage
+MCP returned `I/O error: No such file or directory` for this report, so these
+remain local selected-case observations without MCP source/build attribution.
+No codec implementation change or unit test was added; no aggregate coverage
+gain is claimed from this selected run.
+
+The current matrix contains 2,652 rows: 2,117 active decode rows, 504 active
+encode rows, and 31 planned encode rows.
+
+## WebP token-aware CMYK preparation parity — 2026-10-27
+
+Added active row `encode:webp:enc_lossless_cmyk_token` using the existing
+Pillow CMYK source `baseline_cmyk.jpg`. Its pinned Pillow 12.2.0 output matches
+the ordinary lossless CMYK case exactly: 16,780 encoded bytes with SHA-256
+`6f7509153181e2346a376b97c4b15e00ed5fe1fd0b19f74d25dcf93c5fe3ead1`.
+
+The selected public parity run passed 1/1 and re-decoded 128x128 RGB pixels.
+Its LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-cmyk-token-preparation-20261027/coverage.json`
+(SHA-256
+`4341b9d2378483979a675bbd833fdaa0f811ff9f85ea3264fe2e916184dc1829`). It
+records the token arm in `src/codecs/webp/encode/mod.rs:1090` (1 true and 3
+false outcomes). Coverage MCP still cannot access reports in this managed
+worktree; local selected evidence has no MCP source/build attribution. No
+codec implementation change or unit test was added, and no aggregate coverage
+gain is claimed from this selected run.
+
+The current matrix contains 2,653 rows: 2,117 active decode rows, 505 active
+encode rows, and 31 planned encode rows.
+
+The refreshed full `make coverage` run passed 57/57 integration tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+Its report is
+`.coverage-mcp/local-evidence/full-20261027-webp-token-adapters/coverage.json`
+(SHA-256
+`14c849230bf7f07e8403ed3ce5f3920ec7cec658a2fdb8d1547bc9a2a94f80cc`). Totals
+are 93,858/139,562 lines (67.2518%), 18,633/32,042 branches (58.1518%),
+5,224/8,928 functions (58.5125%), and 143,363/216,612 regions (66.1842%). The
+preceding full report has the same denominators; the four token parity cases
+add 40 covered lines, 4 branches, and 95 regions. All four repository floors
+pass. Coverage MCP still returns `I/O error: No such file or directory` for
+reports under this managed worktree, so the refreshed full totals are local
+LLVM evidence without MCP source/build attribution.
+
+## WebP encoder dimension boundary parity — 2026-10-27
+
+Added five active parity rows at the WebP encoder's maximum side dimension,
+using deterministic one-row RGB PNGs. Both lossless and lossy Pillow 12.2.0
+accept width 16,383 and reject 16,384; lossless also rejects 16,385. The Rust
+encoder had accepted width 16,384 in both modes. A shared maximum of 16,383
+now guards the lossless and lossy paths. The accepted output matches Pillow at
+44 bytes for lossless (SHA-256
+`8a4796055658062fb87856f6d048f1cf9b3944961b9e5b8e1d58357abcf1263f`) and
+542 bytes for lossy (SHA-256
+`e67238025de2835593afe703635fa8c58a220e7818affee2ce8a309b1a37608b`).
+
+The final-source selected parity run passed 5/5 with no panic. Its LLVM report
+is `.coverage-mcp/local-evidence/selected/webp-dimension-boundaries-final2-20261027/coverage.json`
+(SHA-256
+`4fef195cc7a038f679ac5013c39ee2d23326c4bf1b1a2f8db18db9a97ec8fe06`). The
+lossless check at `src/codecs/webp/native/encoder.rs:2765` records 2 true and
+3 false selected outcomes; the lossy check at
+`src/codecs/webp/encode/vp8/encoder.rs:117` records 1 true and 3 false.
+
+The final full `make coverage` run passed 57/57 coverage-matrix tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+Its LLVM report is
+`.coverage-mcp/local-evidence/full-20261027-webp-dimension-boundaries-final/coverage.json`
+(SHA-256
+`0ccc09fbdd03827e4afa312b7373e8558dc5618a4528fe472d235b463fd65025`). Totals
+are 93,875/139,578 lines (67.2563%), 18,639/32,050 branches (58.1560%),
+5,225/8,929 functions (58.5172%), and 143,380/216,629 regions (66.1869%).
+All four repository floors pass. Coverage MCP previously returned
+`I/O error: No such file or directory` for a report under this managed
+worktree, so these totals are local LLVM evidence without MCP source/build
+attribution.
+
+The current fixture matrix contains 2,663 total rows: 2,117 decode / inspect /
+verify rows and 546 encode rows. Of those, 2,117 decode rows and 515 encode
+rows are active; 31 planned encode rows remain.
+
+## WebP lossless EXIF output-reuse parity — 2026-10-27
+
+Added active row `encode:webp:enc_lossless_exif_metadata_reuse` using the
+existing 1x1 PNG and EXIF bytes. The 74-byte output matches Pillow 12.2.0
+(SHA-256
+`10418c63af7178aff19eb7b9f6ebe473621543f4e3dadee3e839b3747814cd35`). The
+selected public parity run passed 1/1, including sink output parity and exact
+re-decode. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-lossless-exif-reuse-20261027/coverage.json`
+(SHA-256
+`53c006d7abb0a28366c24fd8ef38b45a77ffc100275dbf3cea4bcc618cf9069b`). It
+reaches the VP8L base-container fallback in
+`src/codecs/webp/encode/mod.rs:919`; the full report now records both sides of
+that `VP8X` check (3 true, 16 false).
+
+The refreshed full `make coverage` run passed 57/57 coverage-matrix tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+Its report is
+`.coverage-mcp/local-evidence/full-20261027-webp-metadata-reuse/coverage.json`
+(SHA-256
+`2931c9883d1de559c9fea7a00bd32fddf837d7a2f4bd159a2664a2d82563016d`). All
+four repository floors pass. Coverage MCP has returned
+`I/O error: No such file or directory` for worktree-local reports, so this is
+local LLVM evidence without MCP source/build attribution.
+
+## WebP VP8 plane-padding helper cleanup — 2026-10-27
+
+Local LLVM coverage showed an unobserved `height == padded_height` outcome in
+`pad_plane`. Its only caller, `pad_plane_with_token`, returns the input plane
+when both dimensions are already padded and calls `pad_plane` only otherwise.
+Renamed the helper to `pad_plane_unaligned` and removed that redundant guard;
+the aligned direct-return path remains in the caller. The existing aligned
+32x32 and unaligned 17x17 Pillow parity cases passed 2/2, including exact
+encoded-byte parity, re-decode, and sink checks. Their selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-plane-padding-helper-final-20261027/coverage.json`
+(SHA-256
+`d4616e5f21d26ffdf915317e561643c5a783b48e0f2360f4de1e01b462b0b740`); its
+local receipt says the source did not change during the run.
+
+The refreshed full `make coverage` run passed 57/57 coverage-matrix tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+All four repository floors pass. The report is
+`.coverage-mcp/local-evidence/full-20261027-webp-pad-plane-cleanup/coverage.json`
+(SHA-256
+`6f5d837cedc8937e160500758b142bde50e3c2e12f6685b94aa7d52be24355cf`). Totals
+are 93,879/139,581 lines (67.2577%), 18,636/32,046 branches (58.1539%),
+5,225/8,929 functions (58.5172%), and 143,377/216,624 regions (66.1870%).
+Coverage MCP still cannot read reports under this managed worktree, so these
+are local LLVM measurements without MCP source/build attribution. After the
+source change, `make fmt`, `make lint`, and `make lint-x86-simd` passed;
+`make test-feature-matrix` passed every native, wasm32-wasip1, and
+wasm32-unknown feature lane, and the generated capability tables agreed.
+
+An exploratory exact-parity row for quality 80/method 4 on the same 32x32
+source initially exposed a VP8 encoder difference: Rust produced 76 bytes
+while Pillow produced 80 bytes, although both decode to the same RGB pixel
+SHA-256 (`0c1680535c7baa47105185e3f379d36376fd4b3be62cc9e76aceb696829f2d2d`).
+That probe was not retained. An exhaustive public-API sweep over quality 0
+through 100 and method 0 through 6 found no parameter pair matching Pillow's
+output. The follow-up below fixed the mode decision and added two active
+parity rows.
+
+## WebP quality-80 method-4 flat-block parity — 2026-10-27
+
+The mismatch came from libwebp's `PickBestIntra16` scoring rule: for a uniform
+source macroblock, it doubles distortion and spectral distortion while the
+quantized luma AC coefficients remain flat, then stops applying the rule once
+a candidate is no longer flat. The Rust encoder omitted that ordered update
+and could select Intra16 where Pillow/libwebp selected Intra4. The Rust path
+now applies the method-3-or-higher rate-distortion rule in candidate order.
+
+Added active Pillow rows
+`encode:webp:enc_lossy_quality_80_method_4_uniform_rgb_32x32` and
+`encode:webp:enc_lossy_quality_80_method_4_nonuniform_rgb_17x17`. The uniform
+32x32 output is 80 bytes (SHA-256
+`d5b33a6a4452d87928c7956be970a09f66bf33b024f91df67b61222017617f3d`); the
+nonuniform 17x17 edge-padded output is 380 bytes (SHA-256
+`9c01cd551254909ec5028d6470d2f83af7ab936fc0146c9b9738432d40f6df10`). Both
+selected public parity rows passed, including exact reference bytes and
+re-decode pixel parity: 2/2 rows, 8 encode calls, no failures or panics. The
+selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-flat-intra16-q80-m4-final-20261027/coverage.json`
+(SHA-256
+`441c71287eb33384d45ac980f60ab81306037d03c68dff1672e878aabbf595ec`).
+Coverage MCP still returns `I/O error: No such file or directory` for reports
+inside this managed worktree, so the report is local LLVM evidence without
+MCP source/build attribution.
+
+## WebP shifted-row lossless cost-manager parity — 2026-10-27
+
+Added active parity rows
+`encode:webp:enc_lossless_cost_manager_shifted_rows` and
+`encode:webp:enc_lossless_cost_manager_shifted_rows_token`. The deterministic
+2,048x512 RGB input is generated by
+`scripts/generate_webp_cost_manager_shifted_rows_fixture.py`; its PNG SHA-256
+is `c190d493dc2f746a76d1b73be5aa7232ab2fddf4fbd496d54fc7691cc93a303f`.
+Both Pillow 12.2.0 outputs are 5,336 bytes with SHA-256
+`16cbe243b738c77fd6f21ac77157fbb1de47ce129d36d4bec7ef304f40c32240`.
+
+The selected public parity run passed 2/2 rows, with 9 encode calls and no
+panics. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-cost-manager-shifted-rows-20261027/coverage.json`
+(SHA-256
+`ad1166369ea05545d32d9ff20704b0688495712d57bdfa0d0061d3a2f56eb285`). A
+local branch-coordinate comparison against the preceding full report found
+one newly covered token-aware histogram checkpoint outcome at
+`src/codecs/webp/native/encoder.rs:1684`. The input does not reach the
+cost-manager 500-interval fallback at `backward_refs.rs:1604` or
+`backward_refs.rs:1712`; those paths remain open coverage gaps. Coverage MCP
+cannot read reports in this managed worktree, so this selected result has no
+MCP source/build attribution. No unit test or codec implementation change was
+added.
+
+## Full parity coverage refresh — 2026-10-27
+
+The refreshed full `make coverage` run passed 57/57 coverage-matrix tests,
+7/7 decode-policy tests, 1/1 determinism test, and 69/69 feature-gate tests.
+The retained LLVM report is
+`.coverage-mcp/local-evidence/full-20261027-current-wip/coverage.json`
+(SHA-256
+`15c562cab932ce667cb16eb7d7a8bbaa969ba1472b7270e87b2842a28551d574`). Totals
+are 93,912/139,612 lines (67.2664%), 18,647/32,056 branches (58.1701%),
+5,229/8,933 functions (58.5358%), and 143,418/216,662 regions (66.1943%); all
+four repository floors pass.
+
+The full run still records zero hits on the saturated cost-manager fallback
+arms at `src/codecs/webp/native/encoder/backward_refs.rs:1604` and `:1712`.
+Their false arms were observed 814,538 and 162,570 times respectively. The
+current shifted-row parity input does not reach either fallback. This report
+has local LLVM evidence only: Coverage MCP cannot read report files under the
+managed worktree, so no source/build attribution or MCP coverage comparison is
+claimed. The run used the existing manifest-driven parity suite; no unit tests
+were added. `make fmt`, strict stable/nightly `make lint`,
+`make lint-x86-simd`, and `make test-feature-matrix` also passed. The SSE2 and
+AVX2 checks compile their target lanes; no x86 runtime benchmark was run.

@@ -488,7 +488,7 @@
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 47,
+      "guard_count": 48,
       "guards": [
         {
           "index": 1,
@@ -677,6 +677,10 @@
         {
           "index": 47,
           "origin": "defensive_model"
+        },
+        {
+          "index": 48,
+          "origin": "defensive_model"
         }
       ],
       "path": "tests/coverage_matrix_tests.rs"
@@ -685,6 +689,11 @@
       "guard_count": 1,
       "origin": "independent_implementation",
       "path": "tests/support/av1_short_references.rs"
+    },
+    {
+      "guard_count": 1,
+      "origin": "defensive_model",
+      "path": "src/codecs/webp/native/encoder/backward_refs.rs"
     }
   ],
   "format_version": 2,

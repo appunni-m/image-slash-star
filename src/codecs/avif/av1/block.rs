@@ -48415,21 +48415,8 @@ impl Lossy420Decoder {
         ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.transform_mode, 1 | 2)
-            && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
-                || tools.transform_mode == 1
-                || quantization.segment_qindex > 0
-                // qindex zero is valid for a non-lossless I420 root that
-                // remains a single maximum-transform terminal.  Split
-                // plans retain their independent positive-q validation.
-                || (chroma_sampling == ChromaSampling::Subsampled420
-                    && tools.transform_mode == 2
-                    && quantization.segment_qindex == 0)
-                // Monochrome has no chroma ownership, so a qindex-zero
-                // mode-2 thin-64 root can use the existing luma-only single
-                // terminal. Split plans retain their positive-q validation.
-                || (chroma_sampling == ChromaSampling::Monochrome
-                    && tools.transform_mode == 2
-                    && quantization.segment_qindex == 0))
+            // Both admitted layouts allow qindex-zero mode-2 single roots;
+            // split plans keep their quantizer checks in their own paths.
             && !quantization.segment_lossless;
         if matches!(
             transform_plan,

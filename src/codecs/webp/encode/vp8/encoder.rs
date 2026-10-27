@@ -12,7 +12,8 @@
 //! The decoder reads the first partition into the main bool decoder (`self.b`),
 //! and the remaining bytes become `self.partitions[0]` for coefficient decoding.
 
-use crate::codecs::CodecResult;
+use crate::codecs::webp::WEBP_MAX_ENCODER_DIMENSION;
+use crate::codecs::{CodecError, CodecResult};
 
 use super::{
     analysis::{FrameParams, analyze, segment_params},
@@ -63,6 +64,7 @@ pub(crate) fn encode_vp8_lossy(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
+    validate_dimensions(width, height)?;
     let (y_plane, u_plane, v_plane) = rgb_to_yuv_planes_internal(rgb, width, height, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let vp8_data = encode_vp8_planes(
@@ -91,6 +93,7 @@ pub(crate) fn encode_vp8_lossy_rgba(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
+    validate_dimensions(width, height)?;
     let (y_plane, u_plane, v_plane) = rgba_to_yuv_planes_internal(rgba, width, height, token)?;
     crate::codecs::error::check_cancelled(token)?;
     let vp8_data = encode_vp8_planes(
@@ -107,6 +110,19 @@ pub(crate) fn encode_vp8_lossy_rgba(
     )?;
     crate::codecs::error::check_cancelled(token)?;
     build_extended_webp_container(vp8_data, alpha_chunk, width, height, token)
+}
+
+fn validate_dimensions(width: u32, height: u32) -> CodecResult<()> {
+    if width == 0
+        || width > WEBP_MAX_ENCODER_DIMENSION
+        || height == 0
+        || height > WEBP_MAX_ENCODER_DIMENSION
+    {
+        return Err(CodecError::Dimensions(
+            "WebP lossy dimensions are invalid".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn encode_vp8_planes(
@@ -272,16 +288,14 @@ fn simplify_segments(params: &mut FrameParams) -> [u8; 4] {
     map
 }
 
-fn pad_plane(
+/// Edge-replicate a plane after the caller has handled aligned dimensions.
+fn pad_plane_unaligned(
     input: &[u8],
     width: usize,
     height: usize,
     padded_width: usize,
     padded_height: usize,
 ) -> Vec<u8> {
-    if width == padded_width && height == padded_height {
-        return input.to_vec();
-    }
     let mut output = vec![0; padded_width.wrapping_mul(padded_height)];
     for y in 0..padded_height {
         let source_y = y.min(height.saturating_sub(1));
@@ -317,7 +331,13 @@ fn pad_plane_with_token(
     }
     let input = input.as_slice();
     let Some(token) = token else {
-        return Ok(pad_plane(input, width, height, padded_width, padded_height));
+        return Ok(pad_plane_unaligned(
+            input,
+            width,
+            height,
+            padded_width,
+            padded_height,
+        ));
     };
     let mut output = vec![0; padded_width.wrapping_mul(padded_height)];
     for y in 0..padded_height {
