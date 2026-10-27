@@ -128,6 +128,12 @@ workloads, and retains both raw result sets as a CI artifact. Those hosted-runne
 measurements are investigation evidence; they do not publish a speed claim or
 gate changes on noisy timing differences. The original report hashes, source
 revision, environment, measurement policy, and every result remain identifiable.
+For pull requests, that job also compares the base and candidate revisions with
+an interleaved A-B-B-A run on 128×128 Q10, 512×512 Q10, and 128×128 Q85 RGB
+4:2:0 encoding under SSE2 and AVX2. It checks the encoded outputs byte for byte
+before timing and retains the measurements at
+`revision-abba/summary.json`; interpret the ratios as focused evidence, not a
+project-wide speed claim.
 Local paths and hostnames are omitted from the public presentation.
 
 Fixture-harness timing from `benchmark_fixture_workloads.py` measures harness

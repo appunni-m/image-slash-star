@@ -2959,6 +2959,14 @@ formats:
       description: A 33x33 RGB source exercises the low-quality fused-plane 4:2:0 streaming path with partial right and bottom MCU edges
       params: {'subsampling': '420', 'quality': 10, 'progressive': false, 'optimize': false}
       source_asset: 33x33.jpg
+    - id: enc_sub_420_q10_avx2_batch
+      description: A 128x128 RGB source exercises the AVX2 eight-block luma FDCT batch in baseline 4:2:0 encoding
+      params: {'subsampling': '420', 'quality': 10, 'progressive': false, 'optimize': false}
+      source_asset: baseline_444.jpg
+    - id: enc_sub_420_q10_avx2_batch_tail
+      description: A 257x129 RGB source exercises repeated AVX2 luma FDCT batches, the trailing MCU fallback, and right/bottom edge replication in baseline 4:2:0 encoding
+      params: {'subsampling': '420', 'quality': 10, 'progressive': false, 'optimize': false}
+      source_asset: large.jpg
     - id: enc_sub_420_unaligned_even_height
       description: A 17x2 source exercises the even-height fallback with an odd-width chroma tail
       params: {'subsampling': '420', 'quality': 85}

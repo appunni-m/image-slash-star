@@ -23,6 +23,8 @@ use crate::types::{DecodedImage, ImageMode};
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
 use wide::bytemuck::{cast, pod_read_unaligned};
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+use wide::u32x8;
 use wide::{i16x8, i32x4, i32x8, u8x16, u16x8, u32x4};
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
@@ -2797,6 +2799,8 @@ fn encode_baseline_420_mcu_row_streaming(
         Baseline420Source::Planes { .. } => (Vec::new(), Vec::new(), Vec::new()),
     };
     let mut samples = [i32x4::ZERO; 64];
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+    let mut samples_eight = [i32x8::ZERO; 64];
     let luma_ready = huffman::standard_ac_luma_coefficient_ready();
     let chroma_ready = huffman::standard_ac_chroma_coefficient_ready();
     let trim_trailing_zeros = options.quality.unwrap_or(75) <= 25;
@@ -2855,7 +2859,60 @@ fn encode_baseline_420_mcu_row_streaming(
                 mcu_y,
             ),
         };
-        for mcu_x in (0usize..mcu_columns).step_by(2) {
+        #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+        let mut mcu_x = 0usize;
+        #[cfg(not(all(target_arch = "x86_64", target_feature = "avx2")))]
+        let mcu_x = 0usize;
+        #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+        while mcu_x.saturating_add(4) <= mcu_columns {
+            let group_column = mcu_x / 2;
+            let next_group_column = group_column.saturating_add(1);
+            let y_block_x = mcu_x.saturating_mul(2);
+
+            load_fdct_samples_eight_into(
+                y_source,
+                y_source_width,
+                y_source_height,
+                y_block_x,
+                y_block_row,
+                &mut samples_eight,
+            );
+            {
+                let (preceding_groups, following_groups) =
+                    row_groups.split_at_mut(next_group_column);
+                fdct_quantize_eight_coefficient_major(
+                    &mut samples_eight,
+                    y_quantizer,
+                    &mut preceding_groups[group_column],
+                    &mut following_groups[0],
+                );
+            }
+
+            load_fdct_samples_eight_into(
+                y_source,
+                y_source_width,
+                y_source_height,
+                y_block_x,
+                y_block_row.saturating_add(1),
+                &mut samples_eight,
+            );
+            {
+                let bottom_group_column = y_bottom_offset.saturating_add(group_column);
+                let next_bottom_group_column = y_bottom_offset.saturating_add(next_group_column);
+                let (preceding_groups, following_groups) =
+                    row_groups.split_at_mut(next_bottom_group_column);
+                fdct_quantize_eight_coefficient_major(
+                    &mut samples_eight,
+                    y_quantizer,
+                    &mut preceding_groups[bottom_group_column],
+                    &mut following_groups[0],
+                );
+            }
+
+            mcu_x = mcu_x.saturating_add(4);
+        }
+
+        for mcu_x in (mcu_x..mcu_columns).step_by(2) {
             let group_column = mcu_x / 2;
             let y_block_x = mcu_x.saturating_mul(2);
             load_fdct_samples_four_into(
@@ -2990,6 +3047,42 @@ fn store_fdct_sample_row_four(source: &[u8; 32], destination: usize, output: &mu
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated byte samples stay in the signed i16 range after the JPEG level shift"
+)]
+#[inline(always)]
+fn store_fdct_sample_row_eight(source: &[u8; 64], destination: usize, output: &mut [i32x8; 64]) {
+    const LEVEL_SHIFT: i16x8 = i16x8::new([128; 8]);
+    let first = pod_read_unaligned::<u8x16>(&source[..16]);
+    let second = pod_read_unaligned::<u8x16>(&source[16..32]);
+    let third = pod_read_unaligned::<u8x16>(&source[32..48]);
+    let fourth = pod_read_unaligned::<u8x16>(&source[48..]);
+    let blocks = [
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(first)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(first)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(second)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(second)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(third)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(third)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_low(fourth)) - LEVEL_SHIFT).to_array(),
+        i32x8::from(cast::<u16x8, i16x8>(u16x8::from_u8x16_high(fourth)) - LEVEL_SHIFT).to_array(),
+    ];
+    for column in 0usize..8 {
+        output[destination.saturating_add(column)] = i32x8::new([
+            blocks[0][column],
+            blocks[1][column],
+            blocks[2][column],
+            blocks[3][column],
+            blocks[4][column],
+            blocks[5][column],
+            blocks[6][column],
+            blocks[7][column],
+        ]);
+    }
+}
+
 #[inline(always)]
 fn load_fdct_samples_four_into(
     plane: &[u8],
@@ -3027,6 +3120,44 @@ fn load_fdct_samples_four_into(
     }
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline]
+fn load_fdct_samples_eight_into(
+    plane: &[u8],
+    width: usize,
+    height: usize,
+    block_x: usize,
+    block_y: usize,
+    output: &mut [i32x8; 64],
+) {
+    let source_x = block_x.saturating_mul(8);
+    let source_y = block_y.saturating_mul(8);
+    if source_x.saturating_add(64) <= width {
+        for row in 0usize..8 {
+            let source_row = source_y.saturating_add(row).min(height.saturating_sub(1));
+            let source_start = source_row.saturating_mul(width).saturating_add(source_x);
+            let source = &plane[source_start..source_start.saturating_add(64)];
+            let source: &[u8; 64] = source
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("validated FDCT packet row is 64 bytes"));
+            store_fdct_sample_row_eight(source, row.saturating_mul(8), output);
+        }
+        return;
+    }
+
+    for row in 0usize..8 {
+        let sample_y = source_y.saturating_add(row).min(height.saturating_sub(1));
+        let row_start = sample_y.saturating_mul(width);
+        let copy_start = source_x.min(width.saturating_sub(1));
+        let copy_count = width.saturating_sub(copy_start).min(64);
+        let edge = plane[row_start.saturating_add(width.saturating_sub(1))];
+        let mut samples = [edge; 64];
+        samples[..copy_count]
+            .copy_from_slice(&plane[row_start.saturating_add(copy_start)..][..copy_count]);
+        store_fdct_sample_row_eight(&samples, row.saturating_mul(8), output);
+    }
+}
+
 #[expect(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
@@ -3060,6 +3191,49 @@ fn fdct_quantize_four_coefficient_major(
                 magnitude
             };
             output[coefficient * 4 + lane] = signed as i16;
+        }
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[expect(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    reason = "JPEG FDCT bounds keep all eight rounded quotients and signed results in range"
+)]
+#[inline(always)]
+fn fdct_quantize_eight_coefficient_major(
+    samples: &mut [i32x8; 64],
+    quantizer: &FdctQuantizer,
+    first_output: &mut [i16; 256],
+    second_output: &mut [i16; 256],
+) {
+    fdct::fdct_islow_eight_coefficient_major_packed(samples);
+    for (coefficient, values) in samples.iter().copied().enumerate() {
+        let values = values.to_array();
+        let divisor = quantizer.divisors[coefficient];
+        let reciprocal = quantizer.reciprocals[coefficient];
+        let rounding = divisor >> 1;
+        let numerators = values.map(|value| value.unsigned_abs() + rounding);
+        let products = u32x8::new(numerators)
+            .widening_mul(u32x8::splat(reciprocal))
+            .to_array();
+        for lane in 0usize..8 {
+            let mut quotient = (products[lane] >> 32) as u32;
+            quotient -= u32::from(quotient * divisor > numerators[lane]);
+
+            let magnitude = quotient as i32;
+            let signed = if values[lane] < 0 {
+                -magnitude
+            } else {
+                magnitude
+            };
+            if lane < 4 {
+                first_output[coefficient * 4 + lane] = signed as i16;
+            } else {
+                second_output[coefficient * 4 + lane - 4] = signed as i16;
+            }
         }
     }
 }
