@@ -9871,7 +9871,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b5f8211e7f07f28bcf410154e6aeef4211fa537377227dc8c9356c3d4a500420`; matrix `977efed5598177b4a8bc3d1f9c096431d9f863c04df9da1cacad7b197064bf38`.
+- Current fixture integrity only: manifest `4ca4ed338e854b2958b34c2b9f64b73d086ae5e20c4578235fc223e16c78fc9e`; matrix `cf4073de63428237f53dd2987881c8e673527f9bb32927ba786508255eaa1cc1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11781,8 +11781,8 @@ All four repository floors pass. Coverage MCP previously returned
 worktree, so these totals are local LLVM evidence without MCP source/build
 attribution.
 
-The current fixture matrix contains 2,666 total rows: 2,118 decode / inspect /
-verify rows and 548 encode rows. Of those, 2,118 decode rows and 517 encode
+The current fixture matrix contains 2,667 total rows: 2,119 decode / inspect /
+verify rows and 548 encode rows. Of those, 2,119 decode rows and 517 encode
 rows are active; 31 planned encode rows remain.
 
 ## WebP lossless EXIF output-reuse parity — 2026-10-27
@@ -11950,3 +11950,23 @@ libwebp cache limit was corrected. No unit tests were added. `make fmt`, strict
 stable/nightly `make lint`, `make lint-x86-simd`, and the native/WASI/WASM
 `make test-feature-matrix` all passed. The SSE2 and AVX2 checks compile their
 target lanes; no new x86 runtime benchmark was run.
+
+## AVIF zero decoder-model tick parity — 2026-10-27
+
+Coverage-guided inspection identified the AV1 sequence-header branch that
+rejects a zero decoder-model timing tick. Added active row
+`decode:avif:error_sequence_zero_decoder_tick` and a deterministic full-file
+mutation of the pinned `animated.avif` input. The generated AVIF SHA-256 is
+`5287aa51ceac1e2128487a90caf3b5b12fcb30348a866ae700da42ccd4d08b49`.
+Pinned Pillow 12.2.0 and Rust produced matching public decode failures; the
+selected parity run passed 1/1.
+
+The selected local LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-zero-decoder-tick-20261027.json`
+(SHA-256
+`865eefe0a3fb17031a01002584a8914babacf13c2fdc23154f4d907317802d5b`). Its
+branch record for `src/codecs/avif/av1/sequence.rs:169` has 3 hits on the
+zero-tick true arm. This is selected-run evidence: its receipt marks Coverage
+MCP source/build attribution as unverified, and the full coverage suite was
+not rerun. The last full report remains the 2026-10-27 baseline recorded above;
+the 100% four-metric coverage goal remains open.

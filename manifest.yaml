@@ -11425,6 +11425,11 @@ formats:
       test_assets:
       - error_sequence_zero_time_scale.avif
       expect_error: true
+    - id: error_sequence_zero_decoder_tick
+      description: AV1 sequence enables its decoder model with a zero decoding tick
+      test_assets:
+      - error_sequence_zero_decoder_tick.avif
+      expect_error: true
     - id: error_sequence_frame_id_width_exceeds_16
       description: AV1 sequence declares a 17-bit frame ID, exceeding the 16-bit limit
       test_assets:
