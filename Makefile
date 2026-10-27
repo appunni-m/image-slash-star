@@ -144,6 +144,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_iref_v1_alpha_fixture.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_grid_edges.py --check
 	$(PYTHON) scripts/generate_avif_container_edge_fixtures.py --check
+	$(PYTHON) scripts/generate_avif_zero_decoder_tick_fixture.py --check
 	$(PYTHON) scripts/generate_avif_filmgrain_chroma_from_luma_odd.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_select_16x64.py --check

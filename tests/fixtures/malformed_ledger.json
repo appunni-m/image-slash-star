@@ -3166,6 +3166,39 @@
         "verify_status": "ok"
       },
       {
+        "asset": "error_sequence_zero_decoder_tick.avif",
+        "class": "error_sequence_zero_decoder_tick",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "AV1 sequence enables its decoder model with a zero decoding tick",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "error_sequence_zero_time_scale.avif",
         "class": "error_sequence_zero_time_scale",
         "contracts": {
@@ -29788,7 +29821,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 78,
+      "avif": 79,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -29798,17 +29831,17 @@
       "webp": 142
     },
     "by_origin": {
-      "pillow_fixture": 707,
-      "specification_reference": 78
+      "pillow_fixture": 708,
+      "specification_reference": 79
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 430,
+      "spec_violation": 431,
       "tolerated": 0,
       "truncated": 202
     },
-    "classes": 707,
+    "classes": 708,
     "formats": 8
   }
 }

@@ -58361,6 +58361,83 @@
           }
         },
         {
+          "id": "error_sequence_zero_decoder_tick",
+          "type": "decode",
+          "format": "avif",
+          "category": "error",
+          "description": "AV1 sequence enables its decoder model with a zero decoding tick",
+          "asset": "error_sequence_zero_decoder_tick.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5287aa51ceac1e2128487a90caf3b5b12fcb30348a866ae700da42ccd4d08b49",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_sequence_frame_id_width_exceeds_16",
           "type": "decode",
           "format": "avif",
@@ -226323,12 +226400,12 @@
     }
   },
   "summary": {
-    "total_rows": 2666,
-    "decode_rows": 2118,
+    "total_rows": 2667,
+    "decode_rows": 2119,
     "encode_rows": 548,
     "formats": 8,
-    "assets_available": 2114,
-    "decode_active": 2118,
+    "assets_available": 2115,
+    "decode_active": 2119,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
