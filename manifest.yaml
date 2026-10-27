@@ -8891,6 +8891,21 @@ formats:
       - iloc_idat_split_extents.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: iloc_idat_disjoint_extents
+      description: Still AVIF assembles its unchanged primary AV1 item from two indexed idat extents separated by an eight-byte unreferenced gap
+      test_assets:
+      - iloc_idat_disjoint_extents.avif
+      status: active
+      rust_decode_with_metadata_limit: 3131
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_iloc_zero_length_file_extent
+      description: AVIF primary item declares a zero-length file extent; Pillow reports an empty image item and Rust rejects decode after metadata preflight
+      test_assets:
+      - error_iloc_zero_length_file_extent.avif
+      status: active
+      expect_error: true
+      rust_decode_with_metadata_limit: 3077
+      pure_rust_work_item: AVF-STILL-001
     - id: iloc_trailing_payload_ignored
       description: Pillow ignores one trailing byte after the declared meta/iloc records and decodes unchanged pixels
       test_assets:

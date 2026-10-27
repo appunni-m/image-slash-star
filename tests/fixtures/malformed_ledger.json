@@ -1384,6 +1384,55 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_iloc_zero_length_file_extent.avif",
+        "class": "error_iloc_zero_length_file_extent",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Missing or empty image item",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Missing or empty image item",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Missing or empty image item",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode image: Missing or empty image item",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "AVIF primary item declares a zero-length file extent; Pillow reports an empty image item and Rust rejects decode after metadata preflight",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode image: Missing or empty image item",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "error_inconsistent_operating_point_idc.avif",
         "class": "error_inconsistent_operating_point_idc",
         "contracts": {
@@ -29821,7 +29870,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 79,
+      "avif": 80,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -29831,17 +29880,17 @@
       "webp": 142
     },
     "by_origin": {
-      "pillow_fixture": 708,
-      "specification_reference": 79
+      "pillow_fixture": 709,
+      "specification_reference": 80
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 40,
-      "spec_violation": 431,
+      "spec_violation": 432,
       "tolerated": 0,
       "truncated": 202
     },
-    "classes": 708,
+    "classes": 709,
     "formats": 8
   }
 }

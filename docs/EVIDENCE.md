@@ -1,5 +1,41 @@
 # Versioned compatibility evidence
 
+## AVIF `iloc` payload-span parity — 2026-10-28
+
+Coverage MCP's earlier full report listed unobserved outcomes in
+`pixel_payload_bytes` at `src/codecs/avif/samples.rs:2939`, `:2943`, and
+`:2961`. Added active parity row
+`decode:avif:iloc_idat_disjoint_extents`, whose two `iloc` extents have an
+eight-byte unreferenced gap in `idat` while reconstructing the exact original
+AV1 payload. The fixture hash is
+`999b5f5f5fabcc4b8ab75a8fbd85b4997cf5b2a4aa96861038a27e534db5d6e6`. Its
+selected parity run passed with all 49,152 RGB bytes matching Pillow.
+
+Added error parity row
+`decode:avif:error_iloc_zero_length_file_extent` for an empty file extent.
+Pillow rejects the empty image item, and the selected public Rust decode run
+matched that error with the exact metadata preflight limit of 3,077 bytes. The
+fixture hash is
+`e97d452d82637dce3b2a03a514098486d185f03623c3f940c02730a2728c3818`. The
+disjoint-extent case uses a 3,131-byte metadata limit to reach span collection
+while preserving the full pixel payload.
+
+The refreshed full `make coverage` run passed all six test executables
+(4, 1, 57, 7, 1, and 69 tests; zero failures) and all configured coverage
+floors: 94,056/139,653 lines (67.3498%), 18,709/32,072 branches (58.3344%),
+5,235/8,937 functions (58.5767%), and 143,593/216,726 regions (66.2555%). Its
+report is
+`.coverage-mcp/local-evidence/imported-worktree/full-avif-payload-span-parity-20261028/coverage.json`
+(SHA-256
+`493b02dfebd5a1568e881abe25bf1079a053e7a067560e8b6d0b4c61a8bc1ef5`). The
+Coverage MCP comparison reported newly observed outcomes for all three target
+branches in `pixel_payload_bytes`. Both reports lack matching source/build
+receipts, and MCP marks test attribution unknown, so this remains coordinate
+evidence rather than a verified coverage gain. The matrix now has 2,680 rows,
+including 2,124 active decode rows and 624 active AVIF decode rows. No
+production decoder change, performance/SIMD claim, or Rust unit test was
+added.
+
 ## PNG chunk iterator failed-state contract — 2026-10-27
 
 The ordinary PNG decode path returns on its first chunk parse error, so no
@@ -9978,7 +10014,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `703c85f4dc773dafe35ad4de45c9674a0e5213660090d85004ca922d4844fb65`; matrix `0754ee7ea982b405941106537dea33d5aadcb8fe9f4cf8f206135d39e83adbf0`.
+- Current fixture integrity only: manifest `339cd70354b1a40da91a5811ad1071cc22aaf6935107269a4e187cb0e1b5f952`; matrix `08b4ebe0ef9430b1ffe0344cfbec66ff77b63a7a49e750bcf396b906d647bcd8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12274,8 +12310,8 @@ libavif reports one play. The Rust inspector now accepts this valid sequence
 without weakening the requirement for an AVIS movie box. Selected parity
 passed, including exact metadata-limit enforcement.
 
-The current fixture matrix contains 2,678 total rows: 2,122 decode / inspect /
-verify rows and 556 encode rows. Of those, 2,122 decode rows and 525 encode
+The current fixture matrix contains 2,680 total rows: 2,124 decode / inspect /
+verify rows and 556 encode rows. Of those, 2,124 decode rows and 525 encode
 rows are active; 31 planned encode rows remain.
 
 The local all-feature coverage run passed its configured floors: 94,040 / 139,653

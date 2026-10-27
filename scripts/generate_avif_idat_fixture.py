@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate complete AVIFs exercising bounded, indexed idat item locations.
+"""Generate complete AVIFs exercising bounded and indexed iloc item locations.
 
 The deterministic input mutation keeps the AV1 item bytes and properties from
 the pinned still, then selects an idat extent through iloc construction method
@@ -31,9 +31,13 @@ DEFAULT_OUTPUT_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 DEFAULT_SOURCE = DEFAULT_OUTPUT_DIR / "baseline.avif"
 FILENAME = "iloc_idat_primary_item.avif"
 INDEXED_FILENAME = "iloc_idat_indexed_extent.avif"
+ZERO_LENGTH_FILENAME = "error_iloc_zero_length_file_extent.avif"
+DISJOINT_FILENAME = "iloc_idat_disjoint_extents.avif"
 SOURCE_SHA256 = "d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2"
 IDAT_SOURCE_SHA256 = "cc020ae1e91a2cad8c4f66b10165702bf11abc39a462a06b9665664f3c63c337"
 INDEXED_SOURCE_SHA256 = "d90e970b5b9570c5091df64871d58a8f500c72df294c456037fad90cc1d92aac"
+ZERO_LENGTH_SHA256 = "e97d452d82637dce3b2a03a514098486d185f03623c3f940c02730a2728c3818"
+DISJOINT_SHA256 = "999b5f5f5fabcc4b8ab75a8fbd85b4997cf5b2a4aa96861038a27e534db5d6e6"
 EDGE_SHA256 = {
     "error_iloc_truncated_extent_index.avif": "62f5d6dd3b3cfb368030407977a2af434659c178c1412844781e43c03e25d8ed",
     "error_iloc_index_size_three.avif": "53be83151f9031fbc56c0f3bc91fd50f5c2b7b3376ac760fb662b458eadc572b",
@@ -78,6 +82,89 @@ def move_primary_item_to_idat(source: bytes) -> bytes:
     # The original mdat remains unchanged and unreferenced. No absolute file
     # extent remains to rebase when the meta box grows.
     return ftyp + pack_box(b"meta", meta[8:12] + b"".join(rebuilt)) + mdat
+
+
+def zero_length_file_extent(source: bytes) -> bytes:
+    """Declare an empty primary-item extent while retaining the original mdat."""
+    if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
+        raise RuntimeError("baseline AVIF source differs from its pinned hash")
+    top = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in top] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError("baseline AVIF top-level layout changed")
+    ftyp, meta, mdat = (complete for _, complete, _ in top)
+    children = read_boxes(meta, 12, len(meta))
+    locations = [payload for kind, _, payload in children if kind == b"iloc"]
+    coded_item = mdat[8:]
+    expected_location = bytes.fromhex("0000000044000001000100000001") + struct.pack(
+        ">II", len(ftyp) + len(meta) + 8, len(coded_item)
+    )
+    if meta[8:12] != bytes(4) or len(locations) != 1 or locations[0] != expected_location:
+        raise RuntimeError("baseline AVIF primary-item extent changed")
+
+    location = locations[0][:-4] + bytes(4)
+    rebuilt = [
+        pack_box(b"iloc", location) if kind == b"iloc" else complete
+        for kind, complete, _ in children
+    ]
+    candidate = ftyp + pack_box(b"meta", meta[8:12] + b"".join(rebuilt)) + mdat
+    if (
+        len(candidate) != len(source)
+        or hashlib.sha256(candidate).hexdigest() != ZERO_LENGTH_SHA256
+    ):
+        raise RuntimeError("zero-length file-extent mutation differs from its pinned bytes")
+    return candidate
+
+
+def disjoint_idat_extents(source: bytes) -> bytes:
+    """Split the primary item around eight unused bytes in the idat payload."""
+    if hashlib.sha256(source).hexdigest() != INDEXED_SOURCE_SHA256:
+        raise RuntimeError("indexed idat AVIF differs from its pinned input hash")
+    top = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in top] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError("indexed idat AVIF top-level layout changed")
+    ftyp, meta, mdat = (complete for _, complete, _ in top)
+    children = read_boxes(meta, 12, len(meta))
+    locations = [payload for kind, _, payload in children if kind == b"iloc"]
+    idat_payloads = [payload for kind, _, payload in children if kind == b"idat"]
+    expected_location = bytes.fromhex(
+        "0100000044440001000100010000000000080001000000000000000800000aeb"
+    )
+    if meta[8:12] != bytes(4) or len(locations) != 1 or locations[0] != expected_location:
+        raise RuntimeError("indexed idat AVIF primary-item extent changed")
+    if len(idat_payloads) != 1 or len(idat_payloads[0]) != 16 + 2795:
+        raise RuntimeError("indexed idat AVIF payload layout changed")
+
+    coded_item = idat_payloads[0][16:]
+    gap = bytes([0xA5]) * 8
+    separated_payload = (
+        idat_payloads[0][: 16 + 1397] + gap + coded_item[1397:]
+    )
+    separated_location = (
+        locations[0][:18]
+        + struct.pack(">H", 2)
+        + struct.pack(">III", 0, 8, 1397)
+        + struct.pack(">III", 0, 1413, 1398)
+    )
+    rebuilt = []
+    for kind, complete, _ in children:
+        if kind == b"iloc":
+            rebuilt.append(pack_box(b"iloc", separated_location))
+        elif kind == b"idat":
+            rebuilt.append(pack_box(b"idat", separated_payload))
+        else:
+            rebuilt.append(complete)
+    candidate = ftyp + pack_box(b"meta", meta[8:12] + b"".join(rebuilt)) + mdat
+    if (
+        len(candidate) != len(source) + len(gap) + 12
+        or hashlib.sha256(candidate).hexdigest() != DISJOINT_SHA256
+    ):
+        raise RuntimeError("disjoint idat extent mutation differs from its pinned bytes")
+    if (
+        separated_payload[16:1413] != coded_item[:1397]
+        or separated_payload[1421:] != coded_item[1397:]
+    ):
+        raise RuntimeError("disjoint idat extents do not reconstruct the original AV1 item")
+    return candidate
 
 
 def add_unused_extent_index(source: bytes) -> bytes:
@@ -184,6 +271,18 @@ def verify_open_failure(source: bytes, filename: str) -> None:
     raise RuntimeError(f"{filename}: Pillow unexpectedly opened the malformed iloc")
 
 
+def verify_empty_item_failure(source: bytes, filename: str) -> None:
+    """Require Pillow to report the zero-length primary item as malformed."""
+    try:
+        with Image.open(BytesIO(source)):
+            pass
+    except RuntimeError as error:
+        if stable_error_message(error) == "Failed to decode image: Missing or empty image item":
+            return
+        raise RuntimeError(f"{filename}: Pillow empty-item diagnostic changed") from error
+    raise RuntimeError(f"{filename}: Pillow unexpectedly opened the empty primary item")
+
+
 def verify_decode_failure(source: bytes, filename: str, reference_header: tuple) -> None:
     """Require intact public inspection/verify and a malformed frame at load."""
     with Image.open(BytesIO(source)) as image:
@@ -210,25 +309,31 @@ def verify_decode_failure(source: bytes, filename: str, reference_header: tuple)
 def generate(
     output_dir: Path = DEFAULT_OUTPUT_DIR, source_path: Path = DEFAULT_SOURCE
 ) -> Path:
-    """Generate or verify all six idat fixtures, returning the original path."""
+    """Generate or verify all eight iloc fixtures, returning the original path."""
     manifest = yaml.safe_load((ROOT / "manifest.yaml").read_bytes())
     verify_primary_oracle(manifest)
     source = source_path.read_bytes()
     candidate = move_primary_item_to_idat(source)
     indexed_candidate = add_unused_extent_index(candidate)
+    zero_length_candidate = zero_length_file_extent(source)
+    disjoint_candidate = disjoint_idat_extents(indexed_candidate)
     reference = pillow_snapshot(source)
     variants = (
         (FILENAME, candidate, "success"),
         (INDEXED_FILENAME, indexed_candidate, "success"),
         *iloc_edge_variants(indexed_candidate),
+        (ZERO_LENGTH_FILENAME, zero_length_candidate, "empty_item_error"),
+        (DISJOINT_FILENAME, disjoint_candidate, "success"),
     )
     for filename, data, outcome in variants:
         if outcome == "open_error":
             verify_open_failure(data, filename)
         elif outcome == "decode_error":
             verify_decode_failure(data, filename, reference[0])
+        elif outcome == "empty_item_error":
+            verify_empty_item_failure(data, filename)
         elif pillow_snapshot(data) != reference:
-            raise RuntimeError(f"{filename}: idat mutation changed Pillow's public image result")
+            raise RuntimeError(f"{filename}: iloc mutation changed Pillow's public image result")
         path = output_dir / filename
         if path.exists() and path.read_bytes() != data:
             raise RuntimeError(f"refusing to replace a different fixture at {path}")
@@ -237,7 +342,7 @@ def generate(
         path = output_dir / filename
         if not path.exists():
             path.write_bytes(data)
-        print(f"Verified AVIF idat fixture: {path}")
+        print(f"Verified AVIF iloc fixture: {path}")
     return output_dir / FILENAME
 
 
