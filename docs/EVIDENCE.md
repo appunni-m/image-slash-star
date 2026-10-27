@@ -1,5 +1,24 @@
 # Versioned compatibility evidence
 
+## AVIF decoder-model parameter parity — 2026-10-27
+
+Coverage MCP's imported full baseline identified the true arms in
+`SequenceHeader::consistent_with` at `src/codecs/avif/av1/sequence.rs:87` and
+`:96` as missing. Added active row
+`decode:avif:animated_decoder_model_parameters_change` and a deterministic
+mutation of the pinned animated AVIF that changes the decoder-buffer delay in
+a repeated sequence header. Pillow 12.2.0 and Rust matched all five frames;
+the selected parity run passed 1/1 with 67,500 RGB bytes matching.
+
+The selected local LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-decoder-model-parameter-20261027/coverage.json`
+(SHA-256
+`1b4056a457fb9eec1c4901f00a84349ad0cf33a3d69c0681bc8863be4b9f8422`). It
+records one hit on each true arm at lines 87 and 96. Coverage MCP cannot read
+reports in this managed worktree, so the selected result has no MCP
+source/build attribution or MCP incremental comparison. The full coverage
+suite was not rerun. No production codec change or Rust unit test was added.
+
 ## WebP VP8 sharpness-4 parity — 2026-10-27
 
 Added active row
@@ -9871,7 +9890,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4ca4ed338e854b2958b34c2b9f64b73d086ae5e20c4578235fc223e16c78fc9e`; matrix `cf4073de63428237f53dd2987881c8e673527f9bb32927ba786508255eaa1cc1`.
+- Current fixture integrity only: manifest `2be5829c040e025b977124b3b22d0e3d7d073f742456b4598ea81046cceee101`; matrix `217d09bdb9c5d8f1e46c63d553fd4e0ca4a49d505a90ff95d5c8cada2801b2a3`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11781,8 +11800,8 @@ All four repository floors pass. Coverage MCP previously returned
 worktree, so these totals are local LLVM evidence without MCP source/build
 attribution.
 
-The current fixture matrix contains 2,667 total rows: 2,119 decode / inspect /
-verify rows and 548 encode rows. Of those, 2,119 decode rows and 517 encode
+The current fixture matrix contains 2,668 total rows: 2,120 decode / inspect /
+verify rows and 548 encode rows. Of those, 2,120 decode rows and 517 encode
 rows are active; 31 planned encode rows remain.
 
 ## WebP lossless EXIF output-reuse parity — 2026-10-27

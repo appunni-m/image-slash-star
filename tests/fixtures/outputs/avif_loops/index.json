@@ -1169,13 +1169,39 @@
       "collection_index_sha256": "26c3d725216518bf3777a9b4621ce98cc95c3beac6a12980d516b3845665c53f",
       "generator_sha256": "63e6c12c8f01add40d3e9cfacf1e6c0de656ef8ec458840d11dca4884f0907d5",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "c950a787a9ee8f99f19947f231474482af030f2b799f36f88e73337aeb5a7d59",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "animated_decoder_model_parameters_change"
+      ],
+      "collection_index_sha256": "ab2d41506637bd38ade2c3dc1258e49d79a3d102589cc142a7ee450569487a58",
+      "generator_sha256": "ae480e64d9d298e55628506b50b6e4e3c70c83a95a39ebc2dae7ae4fb60d71af",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 19681,
+      "bytes": 20045,
       "path": "README.md",
-      "sha256": "b3e6d62cd67a7b1ba7de325bf55fc8eeb1dab53f305e2080f0dc16387a29c6e1"
+      "sha256": "75143fe082b53a71cb34197dad0d56a3de39f57fca691b4784667d363565cfa9"
     },
     {
       "bytes": 2267,
@@ -1191,6 +1217,11 @@
       "bytes": 1239,
       "path": "inputs/animated_co64_chunk_offsets.avif",
       "sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021"
+    },
+    {
+      "bytes": 1279,
+      "path": "inputs/animated_decoder_model_parameters_change.avif",
+      "sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396"
     },
     {
       "bytes": 1263,
@@ -1910,6 +1941,31 @@
     {
       "bytes": 67500,
       "path": "pixels/animated_co64_chunk_offsets/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_decoder_model_parameters_change/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_decoder_model_parameters_change/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_decoder_model_parameters_change/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_decoder_model_parameters_change/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_decoder_model_parameters_change/frame_4.bin",
       "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
     },
     {
@@ -11650,6 +11706,88 @@
       "repeat_equal": true,
       "source": "lossy_inter_422_compound_refs_b64x32",
       "source_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
+    },
+    {
+      "input_bytes": 1279,
+      "input_path": "inputs/animated_decoder_model_parameters_change.avif",
+      "input_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_decoder_model_parameters_change",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "c950a787a9ee8f99f19947f231474482af030f2b799f36f88e73337aeb5a7d59",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_decoder_model_parameters_change",
+      "source_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396"
     }
   ],
   "incremental_collections": [

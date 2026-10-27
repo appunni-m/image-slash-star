@@ -1,19 +1,24 @@
 # Native AVIF repetition evidence
 
-This bundle records 135 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 127 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 428 hashed
-artifacts total 22,546,068 bytes, including 135 input files, the compiled
-observer source, and 21,867,260 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 137 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 129 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 436 hashed
+artifacts total 22,965,001 bytes, including 137 input files, the compiled
+observer source, and 22,303,064 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 103 fixture sources are declared in
+The 105 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
 33 ms timings, and native repetition observation match `animated.avif`.
+The decoder-model companion repeats the AV1 sequence header in the second
+temporal unit and changes only the allowed decoder-buffer delay from zero to
+one. It adds a false buffer-removal flag to each coded frame header. Its five
+exact Pillow RGB frames and 33 ms timings match `animated.avif`; pinned native
+libavif reports repetition count zero (one total play).
 The duplicate-`stsc` companions append a second sample-to-chunk table to that
 sequence. The identical table retains five Pillow frames; a later four-sample
 mapping yields four. Both match the native repetition observations. The loop

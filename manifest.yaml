@@ -10648,6 +10648,12 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_decoder_model_parameters_change
+      description: Five-frame AVIF repeats its AV1 sequence header with a changed allowed decoder-buffer delay
+      test_assets:
+      - animated_decoder_model_parameters_change.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_co64_chunk_offsets
       description: Five-frame AVIF with 64-bit sample-table chunk offsets and exact frame parity
       test_assets:
