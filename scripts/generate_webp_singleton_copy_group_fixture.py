@@ -51,20 +51,28 @@ def generate_fixture() -> bytes:
     return fixture
 
 
+def verify_fixture() -> None:
+    """Check the committed Pillow PNG without requiring Pillow at runtime."""
+    if not OUTPUT.is_file():
+        raise RuntimeError(f"generated fixture is missing: {OUTPUT.relative_to(ROOT)}")
+    source_pixels()
+    if hashlib.sha256(OUTPUT.read_bytes()).hexdigest() != EXPECTED_SOURCE_SHA256:
+        raise RuntimeError(f"generated fixture is stale: {OUTPUT.relative_to(ROOT)}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group()
     action.add_argument("--check", action="store_true", help="verify without writing")
     action.add_argument("--write", action="store_true", help="write the source PNG")
     arguments = parser.parse_args()
-    fixture = generate_fixture()
 
     if arguments.check:
-        if not OUTPUT.is_file() or OUTPUT.read_bytes() != fixture:
-            raise RuntimeError(f"generated fixture is stale or missing: {OUTPUT.relative_to(ROOT)}")
+        verify_fixture()
         print(f"Verified {OUTPUT.relative_to(ROOT)}")
         return 0
 
+    fixture = generate_fixture()
     if OUTPUT.exists() and OUTPUT.read_bytes() != fixture:
         raise RuntimeError(f"refusing to replace a different fixture at {OUTPUT.relative_to(ROOT)}")
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
