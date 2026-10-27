@@ -5740,9 +5740,9 @@ formats:
       source_asset: animated_rgb_palette_background.webp
       params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': True, 'method': 4, 'kmax': 1}
     - id: enc_sequence_lossy_rgba_keyframes
-      description: Two rendered RGBA canvases encode as exact ALPH plus VP8 keyframes
+      description: Two rendered RGBA canvases encode as exact ALPH plus VP8 keyframes and match token-aware output
       source_asset: animated_sequence_rgba_keyframes.webp
-      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': False, 'quality': 80, 'method': 4, 'loop': 2, 'background': [0, 0, 0, 0], 'kmax': 1}
+      params: {'animated': True, 'frames': 2, 'preserve_duration': True, 'lossless': False, 'quality': 80, 'method': 4, 'loop': 2, 'background': [0, 0, 0, 0], 'kmax': 1, 'rust_encode_sequence_with_token': True}
     - id: enc_sequence_lossless_rgba_keyframes
       description: Two rendered RGBA canvases encode as exact VP8L keyframes
       source_asset: animated_sequence_rgba_keyframes.webp

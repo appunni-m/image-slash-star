@@ -435,7 +435,8 @@
           0,
           0
         ],
-        "kmax": 1
+        "kmax": 1,
+        "rust_encode_sequence_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",

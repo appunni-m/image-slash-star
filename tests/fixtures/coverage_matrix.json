@@ -215808,7 +215808,7 @@
           "type": "encode",
           "format": "webp",
           "category": "sequence",
-          "description": "Two rendered RGBA canvases encode as exact ALPH plus VP8 keyframes",
+          "description": "Two rendered RGBA canvases encode as exact ALPH plus VP8 keyframes and match token-aware output",
           "params": {
             "animated": true,
             "frames": 2,
@@ -215823,7 +215823,8 @@
               0,
               0
             ],
-            "kmax": 1
+            "kmax": 1,
+            "rust_encode_sequence_with_token": true
           },
           "status": "active",
           "source_format": "webp",
@@ -221647,6 +221648,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_copy_checkpoint.bin",
           "encoded_ref_bytes": 135770,
           "encoded_ref_sha256": "cdc2868fcfd8e80e08ba7fa12599aea7134af92510bb37cd4e48830cde139f89",
@@ -221659,17 +221670,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_sampling_row_mismatch_early_stop",
