@@ -2057,49 +2057,65 @@ impl<'a> Iterator for Chunks<'a> {
             return None;
         }
         let chunk_start = self.position as u64;
-        let result = (|| -> CodecResult<Chunk<'a>> {
-            let length_bytes = need_slice(
-                self.data,
-                self.position,
-                codec_add_end(self.position, 4),
-                "PNG chunk length is truncated",
-            )?;
-            let length = u32::from_be_bytes([
-                length_bytes[0],
-                length_bytes[1],
-                length_bytes[2],
-                length_bytes[3],
-            ]) as usize;
-            let kind_bytes = need_slice(
-                self.data,
-                codec_add_end(self.position, 4),
-                codec_add_end(self.position, 8),
-                "PNG chunk type is truncated",
-            )?;
-            let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
-            validate_chunk_type(&kind)?;
-            let start = self.position.saturating_add(8);
-            // Pillow validates construction-critical CRCs before the first
-            // IDAT, then checks image-data and post-IDAT chunks at verification
-            // time. It treats IEND as a terminator without checking its CRC.
-            let verify_crc = if self.verify_crc {
-                kind != *b"IEND" || !self.saw_idat
-            } else {
-                !self.saw_idat && kind != *b"IDAT"
-            };
-            let (payload, crc_end, crc_valid) =
-                chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
-            self.position = crc_end;
-            self.saw_idat |= kind == *b"IDAT";
-            Ok(Chunk {
-                kind,
-                data: payload,
-                offset: chunk_start,
-                crc_valid,
-            })
-        })();
+        #[cfg(coverage)]
+        let inject_failure = crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::PngChunkIteratorFailure,
+        );
+        #[cfg(not(coverage))]
+        let inject_failure = false;
+        let result = if inject_failure {
+            Err(CodecError::Malformed(
+                "PNG chunk iterator injected a parse failure".to_owned(),
+            ))
+        } else {
+            (|| -> CodecResult<Chunk<'a>> {
+                let length_bytes = need_slice(
+                    self.data,
+                    self.position,
+                    codec_add_end(self.position, 4),
+                    "PNG chunk length is truncated",
+                )?;
+                let length = u32::from_be_bytes([
+                    length_bytes[0],
+                    length_bytes[1],
+                    length_bytes[2],
+                    length_bytes[3],
+                ]) as usize;
+                let kind_bytes = need_slice(
+                    self.data,
+                    codec_add_end(self.position, 4),
+                    codec_add_end(self.position, 8),
+                    "PNG chunk type is truncated",
+                )?;
+                let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
+                validate_chunk_type(&kind)?;
+                let start = self.position.saturating_add(8);
+                // Pillow validates construction-critical CRCs before the first
+                // IDAT, then checks image-data and post-IDAT chunks at verification
+                // time. It treats IEND as a terminator without checking its CRC.
+                let verify_crc = if self.verify_crc {
+                    kind != *b"IEND" || !self.saw_idat
+                } else {
+                    !self.saw_idat && kind != *b"IDAT"
+                };
+                let (payload, crc_end, crc_valid) =
+                    chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
+                self.position = crc_end;
+                self.saw_idat |= kind == *b"IDAT";
+                Ok(Chunk {
+                    kind,
+                    data: payload,
+                    offset: chunk_start,
+                    crc_valid,
+                })
+            })()
+        };
         if result.is_err() {
             self.failed = true;
+            #[cfg(coverage)]
+            if inject_failure {
+                let _ = self.next();
+            }
         }
         Some(result.map_err(|error| error.at(chunk_start, "png_chunk")))
     }

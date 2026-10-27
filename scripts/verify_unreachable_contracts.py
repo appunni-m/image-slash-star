@@ -769,6 +769,14 @@ FAULT_CONTRACTS = {
         "point": "png.scanline.sample_buffer_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "png_chunk_iterator_failure_stops_iteration": {
+        "format": "png",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:png:png_chunk_iterator_failure_stops_iteration",
+        "source_case": "decode:png:size_1x1",
+        "point": "png.chunk_iterator.failure_stops_iteration",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "png_apng_sequence_counter_exhaustion": {
         "format": "png",
         "category": "structured-diagnostics",
