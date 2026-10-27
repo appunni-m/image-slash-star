@@ -5987,6 +5987,11 @@ formats:
       source_format: webp
       source_asset: lossless_palette16.webp
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_0_palette32
+      description: VP8L method zero packs a 32-color palette with one index per byte
+      source_format: webp
+      source_asset: lossless_palette32.webp
+      params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
     - id: enc_lossless_method_0_partial_alpha
       description: VP8L method zero uses its fixed predictor path with partial-alpha RGBA input
       source_format: png

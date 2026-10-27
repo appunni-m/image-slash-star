@@ -1,5 +1,30 @@
 # Versioned compatibility evidence
 
+## WebP method-zero 32-color palette parity — 2026-10-27
+
+Coverage MCP's filtered older full report listed missing branch outcomes in
+`apply_palette`. Its source/build identity and test attribution were unknown,
+so the report was used to choose a candidate, not to claim a current suite gap.
+Added active parity row `encode:webp:enc_lossless_method_0_palette32` using
+the existing 32-color WebP input. The method-zero path exercises the palette
+size-over-17 encoding branch and its one-index-per-byte packing case.
+
+The selected parity run passed 1/1: Pillow and Rust encoded the input to the
+same 126 bytes, token and ordinary Rust encodes matched, and re-decoding
+matched all 64x64 RGB pixels. Its selected LLVM report is
+`.coverage-mcp/local-evidence/selected/webp-method0-palette32-20261027/coverage.json`
+(SHA-256
+`66f592f30727490741d38b0b5a543e214444bdbcb26aa4524581b0fdb3e6b84d`). The
+Coverage MCP selected-report comparison against the existing 16-color case
+returned `limited`, with six newly observed and six not-observed outcomes
+across the token and ordinary `apply_palette` paths. The report records the
+true outcome for `palette.len() > 17` and the false outcome for the transparent
+tail check at `src/codecs/webp/native/encoder.rs:2315`. Because MCP source/build
+identity and test attribution are unverified for these local reports, this is
+selected-row coordinate evidence, not a verified full-suite coverage gain.
+No production codec code or Rust unit tests were added, and no aggregate
+coverage or performance claim is made.
+
 ## AVIF decoder-model parameter parity — 2026-10-27
 
 Coverage MCP's imported full baseline identified the true arms in
@@ -9918,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3759fa5b10400613e3a4419682dfcfe32745ed2658b886b551cdb3d0c7414360`; matrix `7d84152ce10ef1d7cafab76f58c4459b5056ffdb2a3fc49b6032209321ef82ef`.
+- Current fixture integrity only: manifest `b9b940c803023de5372946800ab452a87f27c19621ab6c30f71309a123e60cbf`; matrix `2e6c38513fc831079d48c4127b22918fa4ce2a3b512d8b2ba07202397519784d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11828,8 +11853,8 @@ All four repository floors pass. Coverage MCP previously returned
 worktree, so these totals are local LLVM evidence without MCP source/build
 attribution.
 
-The current fixture matrix contains 2,668 total rows: 2,120 decode / inspect /
-verify rows and 548 encode rows. Of those, 2,120 decode rows and 517 encode
+The current fixture matrix contains 2,669 total rows: 2,120 decode / inspect /
+verify rows and 549 encode rows. Of those, 2,120 decode rows and 518 encode
 rows are active; 31 planned encode rows remain.
 
 ## WebP lossless EXIF output-reuse parity — 2026-10-27
