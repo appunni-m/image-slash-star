@@ -9943,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fda0248f27bb41013e40f2e50d26f8072616eb8fde216b55583dcf7d508b1b0e`; matrix `da6a21ece0fb6fba6bafa829d022d557d7a9f19bea1460a0dbdeae3b2d948f14`.
+- Current fixture integrity only: manifest `cb7f6d864ca40969b37eb63882ccbe9b747b28918418441fc70ab4147c0d5a9f`; matrix `f2cb6b4f4ce0943b5f539f8566b6bdedb050bb7a48cd9ad15c2950083b6bfeb4`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12166,3 +12166,31 @@ unknown. An incremental comparison against the saved full report is
 incomparable because exact baseline branch detail is unavailable; no aggregate
 coverage gain or regression is claimed. No Rust production code or unit tests
 were added.
+
+## WebP token-aware lossy RGBA sequence parity — 2026-10-27
+
+Extended active row `encode:webp:enc_sequence_lossy_rgba_keyframes` to invoke
+`encode_sequence_with_token` and compare its bytes with the ordinary public
+sequence encoder. The selected Pillow parity case passed 1/1: both APIs produce
+the same 224-byte WebP, and the decoded two 9×7 RGBA frames match the pinned
+Pillow pixels. No Rust production code or unit tests were added.
+
+The selected LLVM report
+`.coverage-mcp/local-evidence/selected-20261027-webp-lossy-sequence-token-parity2/coverage.json`
+(SHA-256
+`2a02bd8fda59310e79190475255378b7a21a1e1230ae8dd5ca9a6e531fc019e7`)
+records two hits on the `VP8X` true arm at
+`src/codecs/webp/encode/mod.rs:376`. The fresh full report
+`.coverage-mcp/local-evidence/full-20261027-after-webp-token-sequence/coverage.json`
+(SHA-256
+`5f880d21417505dd2a2a5cedd5406c3e17986cc966a5b606f3d2556058fff383`)
+passed all 57 coverage-matrix tests and the full all-features campaign. Coverage
+MCP reports no missing arms at line 376 and one newly observed true arm versus
+the previous full report. Overall branches moved from 18,677/32,068 to
+18,678/32,068; lines moved from 93,970/139,636 to 93,973/139,636; regions
+moved from 143,484/216,699 to 143,490/216,699; functions remained
+5,230/8,934.
+
+Coverage MCP marks source/build attribution unverified and test status unknown,
+so its comparison is limited to report coordinates. The local selected receipt
+records the parity test passing and fixture inputs unchanged during execution.
