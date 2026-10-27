@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 138 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 130 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 440 hashed
-artifacts total 23,012,117 bytes, including 138 input files, the compiled
-observer source, and 22,339,928 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 139 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 131 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 446 hashed
+artifacts total 23,350,852 bytes, including 139 input files, the compiled
+observer source, and 22,677,428 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 106 fixture sources are declared in
+The 107 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -236,6 +236,10 @@ The `sequence_alpha_duration_mismatch` input changes only the auxiliary alpha
 track's five-sample delta from one to two. Pinned libavif and Pillow still decode
 all five RGBA frames; Pillow reports the color track's 1,000 ms duration and
 the exact frame pixels remain unchanged.
+The `animated_sequence_only_no_meta` input has AVIS as both its major and sole
+compatible brand, with no top-level still-image `meta` box. It retains the five
+exact RGB frames and 33 ms timing values from `animated.avif`; Pillow and pinned
+libavif both decode all frames, and libavif reports one total play.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is

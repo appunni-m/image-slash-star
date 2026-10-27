@@ -9978,7 +9978,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `232948c3cdd05b11061c6d973c1f423fb1d8c6dca60958a3f7ff4ac486f9bea4`; matrix `e7473a3cf2febac75f5209eb0086ff7f0466601012f6d66998e12a3b65bc5510`.
+- Current fixture integrity only: manifest `703c85f4dc773dafe35ad4de45c9674a0e5213660090d85004ca922d4844fb65`; matrix `0754ee7ea982b405941106537dea33d5aadcb8fe9f4cf8f206135d39e83adbf0`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12262,3 +12262,25 @@ no Rust production code or unit tests were added.
 The fixture matrix now contains 2,677 total rows: 2,121 decode / inspect /
 verify rows and 556 encode rows. Of those, 2,121 decode rows and 525 encode
 rows are active; 31 planned encode rows remain.
+
+## AVIS-only animated sequence without top-level metadata — 2026-10-28
+
+Added active decode row `decode:avif:animated_sequence_only_no_meta` for a
+five-frame AVIS sequence with no top-level still-image `meta` box. The fixture
+is derived deterministically from the existing animated track-only input and
+retains its pinned SHA-256. Pillow and pinned libavif 1.4.1 both decode all
+five 150×150 RGB frames with matching pixels and 33 ms durations; native
+libavif reports one play. The Rust inspector now accepts this valid sequence
+without weakening the requirement for an AVIS movie box. Selected parity
+passed, including exact metadata-limit enforcement.
+
+The current fixture matrix contains 2,678 total rows: 2,122 decode / inspect /
+verify rows and 556 encode rows. Of those, 2,122 decode rows and 525 encode
+rows are active; 31 planned encode rows remain.
+
+The local all-feature coverage run passed its configured floors: 94,040 / 139,653
+lines (67.34%), 18,705 / 32,072 branches (58.32%), 5,235 / 8,937 functions
+(58.58%), and 143,580 / 216,726 regions (66.25%). Coverage MCP's report
+comparison is limited because source/build attribution is unverified; its
+coordinate query shows the newly exercised no-still-metadata branch and three
+remaining missing branches in `pixel_payload_bytes`.

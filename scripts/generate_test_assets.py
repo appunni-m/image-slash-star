@@ -12562,6 +12562,66 @@ def generate_avif_sequence_alpha_sample_count_mismatch_fixture():
     return fixture
 
 
+def generate_avif_sequence_only_no_meta_fixture():
+    """Retain an AVIS-only track sequence with no still-image metadata."""
+    directory = OUT / "avif"
+    source_path = directory / "animated_track_only.avif"
+    source = source_path.read_bytes()
+    if hashlib.sha256(source).hexdigest() != (
+        "45c85bd7d08261cfcb1a4563150e993d606b5e309b4767d922988ce700587fe4"
+    ):
+        raise RuntimeError("track-only AVIF source differs from its pinned fixture")
+    if source[4:8] != b"ftyp" or source[8:12] != b"avis":
+        raise RuntimeError("track-only AVIF has an unexpected file type box")
+
+    ftyp_size = struct.unpack_from(">I", source)[0]
+    if ftyp_size < 16 or ftyp_size > len(source) or (ftyp_size - 16) % 4:
+        raise RuntimeError("track-only AVIF has an invalid file type box")
+    compatible_brands = [
+        source[offset : offset + 4]
+        for offset in range(16, ftyp_size, 4)
+    ]
+    if compatible_brands.count(b"avif") != 1:
+        raise RuntimeError("track-only AVIF must have one compatible avif brand")
+
+    brand_offset = 16 + compatible_brands.index(b"avif") * 4
+    candidate = bytearray(source)
+    candidate[brand_offset : brand_offset + 4] = b"avis"
+    candidate = bytes(candidate)
+    if hashlib.sha256(candidate).hexdigest() != (
+        "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb"
+    ):
+        raise RuntimeError("sequence-only AVIF mutation differs from its pinned hash")
+    if (
+        len(candidate) != len(source)
+        or candidate[:brand_offset] != source[:brand_offset]
+        or candidate[brand_offset + 4 :] != source[brand_offset + 4 :]
+    ):
+        raise RuntimeError("sequence-only AVIF mutation changed unexpected bytes")
+
+    reference_path = directory / "animated.avif"
+    if hashlib.sha256(reference_path.read_bytes()).hexdigest() != (
+        "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+    ):
+        raise RuntimeError("animated AVIF reference differs from its pinned fixture")
+
+    def pillow_frames(image_source):
+        with Image.open(image_source) as image:
+            observed_frames = []
+            for frame_index in range(image.n_frames):
+                image.seek(frame_index)
+                pixels = image.convert("RGBA").tobytes()
+                observed_frames.append((image.info.get("duration"), pixels))
+            return observed_frames
+
+    if pillow_frames(BytesIO(candidate)) != pillow_frames(reference_path):
+        raise RuntimeError("sequence-only AVIF mutation changed Pillow pixels or timing")
+
+    fixture = directory / "animated_sequence_only_no_meta.avif"
+    fixture.write_bytes(candidate)
+    return fixture
+
+
 def gen_avif():
     d = OUT / "avif"
     d.mkdir(parents=True, exist_ok=True)
@@ -19873,6 +19933,11 @@ def main():
         help="generate only the AVIF alpha-track sample-count parity fixture",
     )
     parser.add_argument(
+        "--avif-sequence-only-no-meta",
+        action="store_true",
+        help="generate only the AVIS-only sequence without still-image metadata",
+    )
+    parser.add_argument(
         "--tiff-lzw-midstream-clear-width-reset",
         action="store_true",
         help="generate only the TIFF LZW mid-stream CLEAR parity fixture",
@@ -19893,6 +19958,7 @@ def main():
         args.avif_h16x8_following_chroma,
         args.avif_sequence_alpha_duration_mismatch,
         args.avif_sequence_alpha_sample_count_mismatch,
+        args.avif_sequence_only_no_meta,
     )
     selected_avif_fixture = any(selected_avif_fixtures)
     selected_tiff_fixture = (
@@ -19950,6 +20016,9 @@ def main():
         elif args.avif_sequence_alpha_sample_count_mismatch:
             fixture = generate_avif_sequence_alpha_sample_count_mismatch_fixture()
             print(f"Generated AVIF alpha sample-count fixture: {fixture}")
+        elif args.avif_sequence_only_no_meta:
+            fixture = generate_avif_sequence_only_no_meta_fixture()
+            print(f"Generated AVIF sequence-only fixture: {fixture}")
         else:
             fixture = generate_avif_sequence_alpha_duration_mismatch_fixture()
             print(f"Generated AVIF alpha timing fixture: {fixture}")

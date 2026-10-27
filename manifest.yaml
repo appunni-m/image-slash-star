@@ -10762,6 +10762,13 @@ formats:
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
       rust_decode_with_metadata_limit: 1023
+    - id: animated_sequence_only_no_meta
+      description: Five-frame AVIS-only track sequence without still-image metadata, preserving exact frame pixels and timing
+      test_assets:
+      - animated_sequence_only_no_meta.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+      rust_decode_with_metadata_limit: 1023
     - id: animated_decoder_model_parameters_change
       description: Five-frame AVIF repeats its AV1 sequence header with a changed allowed decoder-buffer delay
       test_assets:
