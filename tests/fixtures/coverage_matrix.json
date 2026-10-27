@@ -221426,6 +221426,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_sampling_copy_checkpoint",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Paired high-entropy VP8L tile groups retain distinct histograms while token-aware sampling compacts 1,024 symbols",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 4,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_sampling_copy_checkpoint.png",
+          "source_sha256": "cded007438a8422352d2ff0caa0032487c139d0e594347af511409884cea32b6",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_copy_checkpoint.bin",
+          "encoded_ref_bytes": 135770,
+          "encoded_ref_sha256": "cdc2868fcfd8e80e08ba7fa12599aea7134af92510bb37cd4e48830cde139f89",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_sampling_copy_checkpoint.bin",
+          "ref_sha256": "2c822213624cc469f4c094b0af742641e9912630e8e5a0167ec925b58dd5b79a",
+          "ref_bytes": 393024,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16376,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_sampling_row_mismatch_early_stop",
           "type": "encode",
           "format": "webp",
@@ -221457,6 +221513,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_sampling_row_mismatch_early_stop.bin",
           "encoded_ref_bytes": 41090,
           "encoded_ref_sha256": "f91ec80375b010a120f28d8323cffd27c90913094b70aaff10481193defb8541",
@@ -221469,17 +221535,7 @@
             16383
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_cost_manager_shifted_rows",
@@ -226984,9 +227040,9 @@
     }
   },
   "summary": {
-    "total_rows": 2674,
+    "total_rows": 2675,
     "decode_rows": 2120,
-    "encode_rows": 554,
+    "encode_rows": 555,
     "formats": 8,
     "assets_available": 2116,
     "decode_active": 2120,

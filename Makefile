@@ -67,6 +67,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_tiny_predictor_grid_fixture.py --check
 	$(PYTHON) scripts/generate_webp_sampling_row_mismatch_fixture.py --check
 	$(PYTHON) scripts/generate_webp_dimension_limit_fixture.py --check
+	$(PYTHON) scripts/generate_webp_sampling_copy_checkpoint_fixture.py --check
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
