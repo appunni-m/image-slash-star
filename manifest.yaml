@@ -6084,6 +6084,11 @@ formats:
       source_format: png
       source_asset: webp_cost_manager_fragment_stream_1024x1024.png
       params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossless_cost_manager_deep_fragment_stream_token
+      description: Token-aware lossless VP8L method-six encoding checks a larger stream with dense, varied copied-fragment matches
+      source_format: png
+      source_asset: webp_cost_manager_deep_fragment_stream_2048x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_singleton_copy_group
       description: Method-six lossless encoding exercises a repeated high-cardinality block with a singleton copy-symbol tree
       source_format: png

@@ -9943,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `cb7f6d864ca40969b37eb63882ccbe9b747b28918418441fc70ab4147c0d5a9f`; matrix `f2cb6b4f4ce0943b5f539f8566b6bdedb050bb7a48cd9ad15c2950083b6bfeb4`.
+- Current fixture integrity only: manifest `d4032e627c0efdb40d0cff0f1ba077d85a87daed7befcad8940a522805d2d61c`; matrix `612ac0f0d5ebd1890abfedb9d0b3ef4c672244f9cc73c1525297d37afb4a9ac0`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12194,3 +12194,31 @@ moved from 143,484/216,699 to 143,490/216,699; functions remained
 Coverage MCP marks source/build attribution unverified and test status unknown,
 so its comparison is limited to report coordinates. The local selected receipt
 records the parity test passing and fixture inputs unchanged during execution.
+
+## WebP dense-fragment cost-manager parity — 2026-10-27
+
+Added active row
+`encode:webp:enc_lossless_cost_manager_deep_fragment_stream_token` over a
+deterministic 2,048×1,024 RGB input with a high-cardinality literal palette and
+overlapping copy fragments. The PNG SHA-256 is
+`c3b7842b11dd2e67ce401cb095a354fd49cdb15ea1c934ca90bddca022995d16`.
+Selected parity passed 1/1; Pillow and Rust produced matching WebP output, and
+Rust re-decoded the 2,048×1,024 RGB pixels. The local LLVM report
+`.coverage-mcp/local-evidence/selected-20261027-cost-manager-deep-fragment/coverage.json`
+has SHA-256
+`0d83782cd4a57ef67df85aee73c12b795bd9bf1a4240d6cac9f40b5b4169dada`.
+
+The line-targeted Coverage MCP query still reports the `true` arm of
+`checkpoint_cost_manager_work` at
+`src/codecs/webp/native/encoder/backward_refs.rs:72` as missing. A selected-run
+comparison with the existing fragment-stream row observed four branch arms in
+the deep-fragment report that were absent from that row, while two arms seen by
+the existing row were absent from the candidate report. Coverage MCP marks
+source/build identity unverified and test status unknown, so this comparison is
+limited to report coordinates and does not establish a verified coverage gain.
+The larger input remains useful as a method-six token-aware parity stress case;
+no Rust production code or unit tests were added.
+
+The fixture matrix now contains 2,677 total rows: 2,121 decode / inspect /
+verify rows and 556 encode rows. Of those, 2,121 decode rows and 525 encode
+rows are active; 31 planned encode rows remain.

@@ -10,6 +10,16 @@ pixel SHA-256 is
 PNG SHA-256 is
 `a435566d1b22d8405e38ff5588213b5492050a180633586a3d67c673879aef40`.
 
+`webp_cost_manager_deep_fragment_stream_2048x1024.png` is a larger RGB source
+for `enc_lossless_cost_manager_deep_fragment_stream_token`. Its seeded
+2,048-color palette alternates sparse literal runs with densely varied,
+overlapping copies up to 4,095 pixels. Regenerate it with
+`scripts/generate_webp_cost_manager_deep_fragment_fixture.py`; the pinned pixel
+SHA-256 is
+`2b64a163aab6f678e14c5ba405b6109bcb36abe37897b8cadd0bc1b1b9932c3b` and the
+PNG SHA-256 is
+`c3b7842b11dd2e67ce401cb095a354fd49cdb15ea1c934ca90bddca022995d16`.
+
 `lossy_mode_filter_delta.webp` is a four-segment VP8 keyframe whose intra4x4
 macroblocks use a `+5` loop-filter mode delta. It is generated from the
 repository's 128x128 RGB pattern with libwebp 1.6.0. The fixture-only encoder
