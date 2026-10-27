@@ -21886,6 +21886,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 1852,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/sequence_alpha_duration_mismatch.avif",
         "operations": [
@@ -22103,6 +22104,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 430,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/high_bitdepth_still_10bit_420_alpha_lossless_16x16.avif",
         "operations": [

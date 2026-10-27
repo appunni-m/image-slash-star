@@ -32435,7 +32435,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 1852,
           "status": "active",
           "asset_sha256": "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d",
           "execution": {
@@ -32994,7 +32994,7 @@
           },
           "error_contracts": {},
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": 430
         },
         {
           "id": "high_bitdepth_still_10bit_422_alpha_lossless_16x16",
