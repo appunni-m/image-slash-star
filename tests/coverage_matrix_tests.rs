@@ -1164,6 +1164,207 @@ fn execute_bmp_rle_work_budget_contract(
 }
 
 #[cfg(coverage)]
+fn execute_webp_riff_header_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    let fault_point = match row.fault.point.as_str() {
+        "webp.riff_sink.short_header" => img::CoverageFaultPoint::WebpRiffHeaderTooShort,
+        "webp.riff_sink.riff_signature_mismatch" => {
+            img::CoverageFaultPoint::WebpRiffSignatureMismatch
+        }
+        "webp.riff_sink.webp_form_type_mismatch" => {
+            img::CoverageFaultPoint::WebpRiffFormTypeMismatch
+        }
+        _ => {
+            return Err(format!("{}: unknown WebP RIFF sink fault point", row.id));
+        }
+    };
+    if row.row_type != "fault-contract"
+        || row.operation != "encode"
+        || row.format != "webp"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.contract != "encode_invalid_riff_header_then_retry_matches_reference"
+    {
+        return Err(format!(
+            "{}: invalid WebP RIFF sink validation contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Encode || source_key.format != row.format {
+        return Err(format!(
+            "{}: source_case must identify a WebP encode parity row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .encode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active"
+        || source.operations.get("encode").map(String::as_str) != Some("ok")
+        || source.assertion_origins.get("encode").map(String::as_str) != Some("pillow_fixture")
+        || source.format != row.format
+    {
+        return Err(format!(
+            "{}: source_case must be an active Pillow encode parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .source_asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let source_format = source
+        .source_format
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no source format", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(source_format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.source_sha256.as_deref(),
+        "WebP RIFF sink source asset",
+    )?;
+    let expected_pixels = load_pixel_reference(
+        manifest_dir,
+        &source.id,
+        source.ref_path.as_deref(),
+        "Encode",
+        source_format,
+        asset,
+        (
+            source.ref_size.as_deref(),
+            Some(source.source_mode.as_str()),
+        ),
+    )
+    .ok_or_else(|| format!("{}: source Pillow pixel reference is missing", row.id))?;
+    assert_sha256(
+        &expected_pixels.bytes,
+        source.ref_sha256.as_deref(),
+        "WebP RIFF sink source Pillow pixels",
+    )?;
+    let decoded = img::decode(&bytes)
+        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
+    assert_pixel_parity(&expected_pixels, &decoded.content)
+        .map_err(|error| format!("{}: source pixels differ from Pillow: {error}", row.id))?;
+
+    let legacy_options = legacy_encode_options("webp", &source.params)?;
+    let options =
+        img::EncodeOptions::try_from_legacy_pairs(img::ImageFormat::WebP, &legacy_options)
+            .map_err(|error| format!("{}: WebP encode options are invalid: {error}", row.id))?;
+    let encoded_ref_path = source
+        .encoded_ref_path
+        .as_deref()
+        .ok_or_else(|| format!("{}: Pillow encoded-byte reference is missing", row.id))?;
+    let expected_encoded = fs::read(manifest_dir.join(encoded_ref_path)).map_err(|error| {
+        format!(
+            "{}: cannot read Pillow encoded-byte reference: {error}",
+            row.id
+        )
+    })?;
+    if source.encoded_ref_bytes != Some(expected_encoded.len()) {
+        return Err(format!(
+            "{}: Pillow encoded-byte reference length metadata differs",
+            row.id
+        ));
+    }
+    assert_sha256(
+        &expected_encoded,
+        source.encoded_ref_sha256.as_deref(),
+        "WebP RIFF sink Pillow encoded bytes",
+    )?;
+
+    let mut injected_sink = vec![0x53, 0x4b];
+    let original_sink = injected_sink.clone();
+    let injected = img::__coverage_with_fault_point(fault_point, || {
+        img::encode_to_sink(
+            &decoded.content,
+            img::ImageFormat::WebP,
+            &options,
+            &mut injected_sink,
+        )
+    });
+    match injected {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::WebP,
+            message,
+            stage: Some(img::ImageErrorStage::StillEncode),
+            offset: None,
+            identity: None,
+        }) if message == "encode: WebP encoder produced an invalid RIFF header" => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: injected sink encode returned the wrong public error: {error:?}",
+                row.id
+            ));
+        }
+        Ok(_) => {
+            return Err(format!(
+                "{}: injected WebP sink encode unexpectedly succeeded",
+                row.id
+            ));
+        }
+    }
+    if injected_sink != original_sink {
+        return Err(format!(
+            "{}: malformed RIFF output changed the caller sink",
+            row.id
+        ));
+    }
+
+    let mut retry_sink = Vec::new();
+    let retry_written = img::encode_to_sink(
+        &decoded.content,
+        img::ImageFormat::WebP,
+        &options,
+        &mut retry_sink,
+    )
+    .map_err(|error| format!("{}: uninjected sink retry failed: {error:?}", row.id))?;
+    if retry_written != retry_sink.len() {
+        return Err(format!(
+            "{}: sink retry reported {retry_written} bytes but wrote {}",
+            row.id,
+            retry_sink.len()
+        ));
+    }
+    assert_encoded_byte_parity(&expected_encoded, &retry_sink)
+        .map_err(|error| format!("{}: retry differs from Pillow: {error}", row.id))?;
+
+    let mut fresh_sink = Vec::new();
+    img::encode_to_sink(
+        &decoded.content,
+        img::ImageFormat::WebP,
+        &options,
+        &mut fresh_sink,
+    )
+    .map_err(|error| format!("{}: fresh sink encode failed: {error:?}", row.id))?;
+    assert_encoded_byte_parity(&fresh_sink, &retry_sink)
+        .map_err(|error| format!("{}: retry differs from a fresh encode: {error}", row.id))?;
+    let retry_decoded = img::decode(&retry_sink)
+        .map_err(|error| format!("{}: retry output did not decode: {error:?}", row.id))?;
+    assert_pixel_parity(&expected_pixels, &retry_decoded.content)
+        .map_err(|error| format!("{}: retry pixels differ from Pillow: {error}", row.id))?;
+    Ok(())
+}
+
+#[cfg(coverage)]
 fn execute_webp_hash_chain_index_overflow_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
@@ -1341,6 +1542,9 @@ fn execute_fault_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    if row.fault.point.starts_with("webp.riff_sink.") {
+        return execute_webp_riff_header_contract(manifest_dir, matrix, row);
+    }
     if row.fault.point == "webp.hash_chain.index_overflow" {
         return execute_webp_hash_chain_index_overflow_contract(manifest_dir, matrix, row);
     }

@@ -939,6 +939,33 @@ FAULT_CONTRACTS = {
         "contract": "encode_invalid_dimensions_then_retry_succeeds",
         "operation": "encode",
     },
+    "webp_riff_header_too_short_rejected": {
+        "format": "webp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:webp:webp_riff_header_too_short_rejected",
+        "source_case": "encode:webp:enc_lossless",
+        "point": "webp.riff_sink.short_header",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference",
+        "operation": "encode",
+    },
+    "webp_riff_signature_mismatch_rejected": {
+        "format": "webp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:webp:webp_riff_signature_mismatch_rejected",
+        "source_case": "encode:webp:enc_lossless",
+        "point": "webp.riff_sink.riff_signature_mismatch",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference",
+        "operation": "encode",
+    },
+    "webp_form_type_mismatch_rejected": {
+        "format": "webp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:webp:webp_form_type_mismatch_rejected",
+        "source_case": "encode:webp:enc_lossless",
+        "point": "webp.riff_sink.webp_form_type_mismatch",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference",
+        "operation": "encode",
+    },
 }
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),
@@ -1130,15 +1157,33 @@ def verify_fault_contract_case_index(entries: object) -> None:
             or fault.get("contract") != expected["contract"]
         ):
             fail(f"{case_id}: shared matrix row violates the target-only fault contract")
+        source_operation, source_format, source_id = expected["source_case"].split(":", 2)
         parity_rows = (
-            coverage.get("formats", {}).get(expected["format"], {}).get("decode", [])
+            coverage.get("formats", {}).get(source_format, {}).get(source_operation, [])
         )
-        if not any(
-            candidate.get("id") == expected["source_case"].split(":", 2)[2]
-            and candidate.get("status") == "active"
-            and candidate.get("oracle_status") == "ok"
+        source_is_parity = any(
+            candidate.get("id") == source_id and candidate.get("status") == "active"
             for candidate in parity_rows
-        ):
+        )
+        if source_operation == "decode":
+            source_is_parity = source_is_parity and any(
+                candidate.get("id") == source_id
+                and candidate.get("status") == "active"
+                and candidate.get("oracle_status") == "ok"
+                for candidate in parity_rows
+            )
+        elif source_operation == "encode":
+            source_is_parity = source_is_parity and any(
+                candidate.get("id") == source_id
+                and candidate.get("status") == "active"
+                and candidate.get("operations", {}).get("encode") == "ok"
+                and candidate.get("assertion_origins", {}).get("encode") == "pillow_fixture"
+                and candidate.get("encoded_ref_path")
+                for candidate in parity_rows
+            )
+        else:
+            source_is_parity = False
+        if not source_is_parity:
             fail(f"{case_id}: source_case is not a live Pillow parity row")
 
     if set(entry_ids) != set(FAULT_CONTRACTS):
