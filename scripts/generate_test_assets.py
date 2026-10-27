@@ -6216,6 +6216,9 @@ def gen_webp():
         "lossy_strong_sharp7.webp": [
             "-q", "75", "-m", "4", "-strong", "-f", "100", "-sharpness", "7"
         ],
+        "lossy_strong_sharp4.webp": [
+            "-q", "75", "-m", "4", "-strong", "-f", "100", "-sharpness", "4"
+        ],
         "lossy_filter_off.webp": ["-q", "75", "-m", "4", "-f", "0"],
         "lossy_segment_one.webp": [
             "-q", "75", "-m", "4", "-segments", "1", "-sns", "0"

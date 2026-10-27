@@ -5228,10 +5228,11 @@ formats:
       test_assets:
       - lossy_intra_chroma_vertical_32x32_q100_m4.webp
     - id: lossy_vp8_filter_variants
-      description: libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters
+      description: libwebp 1.6.0 VP8 filter modes, sharpness 4 and 7, and segmentation variants
       test_assets:
       - lossy_simple_filter.webp
       - lossy_strong_sharp7.webp
+      - lossy_strong_sharp4.webp
       - lossy_filter_off.webp
       - lossy_segment_one.webp
       - lossy_partitions_eight.webp

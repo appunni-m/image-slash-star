@@ -49,6 +49,15 @@ Pillow 12.2.0 decoded pixels to
 `6b2c202c55d0bf70d9f32b74c1b8705232ae41e0ed24203ea2b1b138dfd914fe`.
 Pillow opens, verifies, and loads the fixture as 128x128 RGB.
 
+`lossy_strong_sharp4.webp` uses the repository's deterministic 128x128 RGB
+pattern and pinned libwebp 1.6.0 `cwebp` settings `-q 75 -m 4 -strong -f 100
+-sharpness 4`. It complements `lossy_strong_sharp7.webp` by exercising the
+nonzero sharpness path at the VP8 filter's `sharpness <= 4` boundary. The
+fixture SHA-256 is
+`8bb797eb21b0f379ee541d0fc1802d1738144bb06557dae5b2792b059a3e9765`; Pillow
+12.2.0 decodes it to 128x128 RGB with pixel SHA-256
+`8008579a12fb6dad3447514e828ff29b2453971e80f3e2ad0a6c1ba36d4f1972`.
+
 `vp8x_reserved_flag_0x01.webp`, `vp8x_reserved_flag_0x40.webp`, and
 `vp8x_reserved_flag_0x80.webp` are complete RIFF WebP files derived
 independently from the pinned `icc.webp` source. The generator validates the

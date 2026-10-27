@@ -897,6 +897,58 @@
       ]
     },
     {
+      "id": "lossy_vp8_filter_variants_lossy_strong_sharp4",
+      "asset": "lossy_strong_sharp4.webp",
+      "asset_sha256": "8bb797eb21b0f379ee541d0fc1802d1738144bb06557dae5b2792b059a3e9765",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossy_strong_sharp4.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "lossy_vp8_filter_variants_lossy_filter_off",
       "asset": "lossy_filter_off.webp",
       "asset_sha256": "72c8b88dd820cb65a3c14242bcd53b31c079de1d12bae19ec097865aa1f6f00b",
