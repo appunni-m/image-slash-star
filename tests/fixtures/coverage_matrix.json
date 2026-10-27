@@ -78,7 +78,7 @@
           "verify_status": "ok",
           "decoded_source_color": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": 282
         },
         {
           "id": "mixed_lossless_clipped_b32_i420_60x60",
@@ -34934,7 +34934,7 @@
           },
           "decoded_source_color": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": 1023
         },
         {
           "id": "animated_decoder_model_parameters_change",

@@ -51,6 +51,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 282,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/baseline.avif",
         "operations": [
@@ -23438,6 +23439,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 1023,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/animated.avif",
         "operations": [

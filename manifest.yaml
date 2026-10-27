@@ -8751,6 +8751,7 @@ formats:
       test_assets:
       - baseline.avif
       status: active
+      rust_decode_with_metadata_limit: 282
     - id: mixed_lossless_clipped_b32_i420_60x60
       description: Still AVIF key frame enables segmentation and exercises clipped 32x32 segment-map edges
       test_assets:
@@ -10760,6 +10761,7 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+      rust_decode_with_metadata_limit: 1023
     - id: animated_decoder_model_parameters_change
       description: Five-frame AVIF repeats its AV1 sequence header with a changed allowed decoder-buffer delay
       test_assets:
