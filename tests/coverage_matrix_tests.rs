@@ -2165,6 +2165,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Png,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("png.chunk_iterator.failure_stops_iteration", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::PngChunkIteratorFailure,
+                false,
+                img::ImageFormat::Png,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "png.apng.sequence_counter_exhaustion",
                 "sequence_decode_error_then_retry_succeeds",
@@ -2444,6 +2450,9 @@ fn execute_fault_contract(
         "png.scanline.sample_buffer_reservation" => {
             Some("decode: unable to reserve PNG decoded sample buffer")
         }
+        "png.chunk_iterator.failure_stops_iteration" => {
+            Some("decode: PNG chunk iterator injected a parse failure")
+        }
         "png.apng.sequence_counter_exhaustion" if row.operation == "inspect" => {
             Some("inspect: PNG animation sequence number overflows")
         }
@@ -2541,6 +2550,7 @@ fn execute_fault_contract(
         }) if matches!(
             row.fault.point.as_str(),
             "png.apng.sequence_counter_exhaustion"
+                | "png.chunk_iterator.failure_stops_iteration"
                 | "av1.film_grain.points_reservation"
                 | "av1.superres.header_geometry_mismatch"
                 | "jpeg.upsample.h1v2_empty_geometry"

@@ -142,6 +142,8 @@ pub enum CoverageFaultPoint {
     BmpDecodedPixelsReservation,
     /// Force PNG decoded-sample reservation to fail before scanline unpacking.
     PngDecodedSampleBufferReservation,
+    /// Inject a PNG chunk-iteration failure and exercise the iterator's failed state.
+    PngChunkIteratorFailure,
     /// Model APNG sequence-counter exhaustion during coverage builds.
     ApngSequenceCounterExhaustion,
     /// Model an oversized WebP hash-chain index during coverage builds.

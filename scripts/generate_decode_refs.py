@@ -3403,6 +3403,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "png.scanline.sample_buffer_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "png.chunk_iterator.failure_stops_iteration": {
+            "decode_error_then_retry_succeeds"
+        },
         "png.apng.sequence_counter_exhaustion": {
             "sequence_decode_error_then_retry_succeeds",
             "inspection_error_then_retry_succeeds",

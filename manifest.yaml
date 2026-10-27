@@ -698,6 +698,20 @@ fault_contracts:
       point: png.scanline.sample_buffer_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: png_chunk_iterator_failure_stops_iteration
+    type: fault-contract
+    operation: decode
+    format: png
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:png:size_1x1
+    fault:
+      point: png.chunk_iterator.failure_stops_iteration
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: png_apng_sequence_counter_exhaustion
     type: fault-contract
     operation: decode
