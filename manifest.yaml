@@ -6054,6 +6054,11 @@ formats:
       source_format: png
       source_asset: webp_lossless_sampling_rows_checkpoint.png
       params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_sampling_row_mismatch_early_stop
+      description: Quality-zero tall narrow VP8L input exercises token-aware histogram sampling with matching and mismatching tile rows
+      source_format: png
+      source_asset: webp_lossless_sampling_row_mismatch_8x16383.png
+      params: {'lossless': True, 'quality': 0, 'method': 4, 'rust_encode_with_token': true}
     - id: enc_lossless_cost_manager_shifted_rows
       description: Lossless VP8L method-six encoding preserves Pillow bytes across high-cardinality repeated rows with changing match offsets
       source_format: png
