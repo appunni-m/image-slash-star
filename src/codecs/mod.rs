@@ -378,6 +378,15 @@ pub(crate) fn inspect_format(_data: &[u8], format: ImageFormat) -> ImageResult<I
     )
 }
 
+/// Invoke PNG inspection directly for coverage-only contracts that cannot
+/// reach the codec after public signature detection.
+#[cfg(coverage)]
+#[cfg(feature = "png")]
+pub(crate) fn inspect_png_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected = png::inspect::inspect(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Png, ImageErrorStage::Inspection)
+}
+
 /// Invoke the format's header-only inspector below the public dispatcher.
 fn inspect_basic_codec(_data: &[u8], format: ImageFormat) -> error::CodecResult<ImageInfo> {
     let inspected: CodecResult<ImageInfo> = match format {
