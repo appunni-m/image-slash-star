@@ -9943,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ed74bdfaeab7a39f45c884cc3f321632f3b2a938a39734d6b09a7b5cde61cb0b`; matrix `68d758ffc35f156b16b4aba0c37c795327dd8923c9f9fce224177e55669e6953`.
+- Current fixture integrity only: manifest `94ff9e2db79279ca40a92b8afedff3fd7d8c07983ec09ce13a47710564e27e52`; matrix `c4d559500ad94c2739e8c5dae830c7857a8cb8e9a424f8f66853b97587c97389`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -12088,3 +12088,27 @@ zero-tick true arm. This is selected-run evidence: its receipt marks Coverage
 MCP source/build attribution as unverified, and the full coverage suite was
 not rerun. The last full report remains the 2026-10-27 baseline recorded above;
 the 100% four-metric coverage goal remains open.
+
+## WebP token-aware sampling row-mismatch parity — 2026-10-27
+
+Added active row `encode:webp:enc_lossless_sampling_row_mismatch_early_stop`
+with a deterministic 8×16,383 PNG source (SHA-256
+`262b8efe57c954caf1068ea6e63969fbc205b667e85ce4788cc34aa5a75098d6`). The
+selected parity run passed 1/1; Pillow and Rust agree on the 41,090-byte WebP
+output and decoded pixels. The token-aware encoder enters `optimize_sampling`
+and exercises both outcomes of the row-equality check before stopping on a
+mismatch. It does not reach the 1,024-symbol compaction checkpoint; that
+checkpoint remains an open coverage gap.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected-20261027-webp-sampling-row-mismatch-final/coverage.json`.
+Coverage MCP identifies the remaining `optimize_sampling` branch gaps, but
+reports source attribution as unverified and test status as unknown. These
+selected-run observations do not establish a full-suite coverage gain or
+regression. An incremental comparison against the last full report was
+incomparable because that baseline lacks exact branch detail. No Rust
+production code or unit tests were added.
+
+The current fixture matrix contains 2,674 total rows: 2,120 decode / inspect /
+verify rows and 554 encode rows. Of those, 2,120 decode rows and 523 encode
+rows are active; 31 planned encode rows remain.
