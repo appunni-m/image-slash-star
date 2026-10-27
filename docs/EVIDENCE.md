@@ -55,8 +55,8 @@ and no Rust unit tests were added. `make lint`, `make lint-x86-simd`, and
 `make test-feature-matrix` passed, including strict Clippy for debug, release,
 coverage, SSE2, and AVX2 targets, plus the native, WASI, and WASM feature lanes.
 
-The current fixture matrix contains 2,689 total rows: 2,133 decode / inspect /
-verify rows and 556 encode rows. Of those, 2,133 decode rows and 525 encode
+The current fixture matrix contains 2,691 total rows: 2,133 decode / inspect /
+verify rows and 558 encode rows. Of those, 2,133 decode rows and 527 encode
 rows are active; 31 encode rows remain planned. The roadmap and generated
 capability counts now reflect this matrix.
 
@@ -10074,7 +10074,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `a310e28492c4efe41dc4203dd53359f72e63fc6efa3b1d3a12494bede96355d6`; matrix `28f85327a4b10ae1eea251b16297b4f87b8657333c156012c16bb9fe3312d243`.
+- Current fixture integrity only: manifest `699e42d158802fd8d2f60dbe40ce5b682be1594d4ff1a82bfef6b067b71409ba`; matrix `98d594e6776ec81bedffd5dc4df06cfffe5577c497be7f026f073076703f618c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -125724,6 +125724,118 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_sub_420_q10_avx2_batch",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 128x128 RGB source exercises the AVX2 eight-block luma FDCT batch in baseline 4:2:0 encoding",
+          "params": {
+            "subsampling": "420",
+            "quality": 10,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_444.jpg",
+          "source_sha256": "60dc8ca9db232378a58f6c45321303775dc0b0a8762dd5bfad553cefe390621a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_avx2_batch.bin",
+          "encoded_ref_bytes": 1677,
+          "encoded_ref_sha256": "df1f1f85fe478d958158915455b21948e7cba57adb173852efd6cd5304525b33",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_q10_avx2_batch.bin",
+          "ref_sha256": "35168fa47bc4d8365a593c22b7b459876354ee2e7105665d1eb6fa8f8c550989",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_sub_420_q10_avx2_batch_tail",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 257x129 RGB source exercises repeated AVX2 luma FDCT batches, the trailing MCU fallback, and right/bottom edge replication in baseline 4:2:0 encoding",
+          "params": {
+            "subsampling": "420",
+            "quality": 10,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "large.jpg",
+          "source_sha256": "1ba94c668be44599571690517f1a32e059cf6c3e666514664532def5e9686b8f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_420_q10_avx2_batch_tail.bin",
+          "encoded_ref_bytes": 2543,
+          "encoded_ref_sha256": "7d743b7092288c5fb09ad801c0983c4409ee39a10a2981d9f279ec2eb1ad61fe",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_420_q10_avx2_batch_tail.bin",
+          "ref_sha256": "187dc7139f727d4cf1fdc1b0e56e8862fdcc714bd6b718858ef92041912b679a",
+          "ref_bytes": 99459,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            257,
+            129
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_sub_420_unaligned_even_height",
           "type": "encode",
           "format": "jpeg",
@@ -228843,9 +228955,9 @@
     }
   },
   "summary": {
-    "total_rows": 2689,
+    "total_rows": 2691,
     "decode_rows": 2133,
-    "encode_rows": 556,
+    "encode_rows": 558,
     "formats": 8,
     "assets_available": 2129,
     "decode_active": 2133,
