@@ -126,6 +126,15 @@ pub fn __coverage_with_fault_point<T>(
     coverage_support::with_fault_point(point, operation)
 }
 
+/// Inspect PNG bytes below public format detection for a target-only coverage
+/// contract. This hook is absent from non-coverage builds.
+#[cfg(coverage)]
+#[cfg(feature = "png")]
+#[doc(hidden)]
+pub fn __coverage_inspect_png(data: &[u8]) -> ImageResult<ImageInfo> {
+    codecs::inspect_png_for_coverage(data)
+}
+
 fn work_budget_token(
     maximum: Option<u64>,
     resource: ResourceLimit,

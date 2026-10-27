@@ -3189,7 +3189,7 @@ def sync_encode_rows(manifest, matrix, target_format=None):
 
 
 def sync_fault_contract_rows(manifest, matrix):
-    """Keep target-only injected-fault cases in the shared case index."""
+    """Keep target-only fault and defensive-branch contracts in the shared index."""
     allowed_faults = {
         "av1.segment_map.reservation": {
             "decode_error_then_retry_succeeds"
@@ -3410,6 +3410,9 @@ def sync_fault_contract_rows(manifest, matrix):
             "sequence_decode_error_then_retry_succeeds",
             "inspection_error_then_retry_succeeds",
         },
+        "png.inspect.signature_mismatch": {
+            "inspection_invalid_signature_rejected"
+        },
         "webp.hash_chain.index_overflow": {
             "encode_invalid_dimensions_then_retry_succeeds"
         },
@@ -3589,11 +3592,15 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(f"{case_id}: fault point or public contract is not allow-listed")
         if row["operation"] == "inspect" and (
             row["format"] != "png"
-            or point != "png.apng.sequence_counter_exhaustion"
-            or contract != "inspection_error_then_retry_succeeds"
+            or not (
+                point == "png.apng.sequence_counter_exhaustion"
+                and contract == "inspection_error_then_retry_succeeds"
+                or point == "png.inspect.signature_mismatch"
+                and contract == "inspection_invalid_signature_rejected"
+            )
         ):
             raise RuntimeError(
-                f"{case_id}: inspect fault contracts must use the APNG inspection exhaustion contract"
+                f"{case_id}: inspect fault contracts must use a supported PNG inspection contract"
             )
         if row["operation"] == "encode":
             if row["format"] != "webp":

@@ -228229,6 +228229,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "png_inspect_invalid_signature_rejected",
+      "type": "fault-contract",
+      "operation": "inspect",
+      "format": "png",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:png:size_1x1"
+      },
+      "fault": {
+        "point": "png.inspect.signature_mismatch",
+        "contract": "inspection_invalid_signature_rejected"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_retained_temporal_sample_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

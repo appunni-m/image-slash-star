@@ -372,6 +372,11 @@
       "path": "src/codecs/jpeg/decode/upsample.rs"
     },
     {
+      "guard_count": 1,
+      "origin": "defensive_model",
+      "path": "src/codecs/mod.rs"
+    },
+    {
       "guard_count": 4,
       "origin": "defensive_model",
       "path": "src/codecs/png/decode.rs"
@@ -470,7 +475,7 @@
       "path": "src/encode_options.rs"
     },
     {
-      "guard_count": 3,
+      "guard_count": 4,
       "guards": [
         {
           "index": 1,
@@ -483,12 +488,16 @@
         {
           "index": 3,
           "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
         }
       ],
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 49,
+      "guard_count": 50,
       "guards": [
         {
           "index": 1,
@@ -684,6 +693,10 @@
         },
         {
           "index": 49,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 50,
           "origin": "defensive_model"
         }
       ],

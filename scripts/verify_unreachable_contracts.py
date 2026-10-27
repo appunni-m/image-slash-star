@@ -794,6 +794,15 @@ FAULT_CONTRACTS = {
         "contract": "inspection_error_then_retry_succeeds",
         "operation": "inspect",
     },
+    "png_inspect_invalid_signature_rejected": {
+        "format": "png",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:png:png_inspect_invalid_signature_rejected",
+        "source_case": "decode:png:size_1x1",
+        "point": "png.inspect.signature_mismatch",
+        "contract": "inspection_invalid_signature_rejected",
+        "operation": "inspect",
+    },
     "avif_monochrome_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

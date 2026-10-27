@@ -1537,11 +1537,117 @@ fn execute_webp_hash_chain_index_overflow_contract(
 }
 
 #[cfg(coverage)]
+fn execute_png_inspect_signature_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "inspect"
+        || row.format != "png"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "png.inspect.signature_mismatch"
+        || row.fault.contract != "inspection_invalid_signature_rejected"
+    {
+        return Err(format!(
+            "{}: invalid PNG signature-inspection contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode || source_key.format != "png" {
+        return Err(format!(
+            "{}: source_case must identify a PNG decode parity row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active" || source.oracle_status.as_deref() != Some("ok") {
+        return Err(format!(
+            "{}: source_case must be an active Pillow parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(&source_key.format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "PNG inspection source asset",
+    )?;
+    let expected = load_pixel_reference(
+        manifest_dir,
+        &source.id,
+        source.ref_path.as_deref(),
+        "Decode",
+        &source_key.format,
+        asset,
+        (source.ref_size.as_deref(), source.ref_mode.as_deref()),
+    )
+    .ok_or_else(|| format!("{}: source Pillow reference is missing", row.id))?;
+    assert_sha256(
+        &expected.bytes,
+        source.ref_sha256.as_deref(),
+        "PNG inspection source Pillow reference",
+    )?;
+    let decoded = img::decode(&bytes)
+        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
+    assert_pixel_parity(&expected, &decoded.content)
+        .map_err(|error| format!("{}: source differs from Pillow: {error}", row.id))?;
+
+    if bytes.len() < 8 {
+        return Err(format!(
+            "{}: PNG source is shorter than its signature",
+            row.id
+        ));
+    }
+    let mut invalid_signature = bytes;
+    invalid_signature[0] ^= 1;
+    match img::__coverage_inspect_png(&invalid_signature) {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Png,
+            message,
+            stage: Some(img::ImageErrorStage::Inspection),
+            offset: None,
+            identity: None,
+        }) if message == "inspect: invalid PNG signature" => Ok(()),
+        result => Err(format!(
+            "{}: direct PNG inspection returned the wrong signature result: {result:?}",
+            row.id
+        )),
+    }
+}
+
+#[cfg(coverage)]
 fn execute_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    if row.fault.point == "png.inspect.signature_mismatch" {
+        return execute_png_inspect_signature_contract(manifest_dir, matrix, row);
+    }
     if row.fault.point.starts_with("webp.riff_sink.") {
         return execute_webp_riff_header_contract(manifest_dir, matrix, row);
     }
