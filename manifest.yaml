@@ -6024,6 +6024,16 @@ formats:
     - id: enc_lossless_method_6_quality_100_token
       description: VP8L method six at quality 100 uses exhaustive transform search with token-aware output parity
       params: {'lossless': True, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossless_tiny_predictor_grid
+      description: Method-six lossless encoding preserves Pillow parity while refining a one-cell RGBA predictor grid
+      source_format: png
+      source_asset: webp_tiny_predictor_grid_8x3.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_tiny_predictor_grid_token
+      description: Token-aware method-six lossless encoding preserves Pillow parity while refining a one-cell RGBA predictor grid
+      source_format: png
+      source_asset: webp_tiny_predictor_grid_8x3.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_sampling_checkpoint
       description: A wide high-entropy RGB source checks token-aware lossless byte parity
       source_format: png
@@ -6063,6 +6073,16 @@ formats:
       description: Token-aware lossless VP8L method-six encoding checks the same varied copied-fragment stream
       source_format: png
       source_asset: webp_cost_manager_fragment_stream_1024x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossless_singleton_copy_group
+      description: Method-six lossless encoding exercises a repeated high-cardinality block with a singleton copy-symbol tree
+      source_format: png
+      source_asset: webp_singleton_copy_group_1024x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_singleton_copy_group_token
+      description: Token-aware method-six lossless encoding exercises a repeated high-cardinality block with a singleton copy-symbol tree
+      source_format: png
+      source_asset: webp_singleton_copy_group_1024x1024.png
       params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_predictor_sampling_limit
       description: Method-five VP8L expands its initial predictor grid when a 2-bit grid exceeds 16,384 cells

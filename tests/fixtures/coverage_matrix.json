@@ -220621,6 +220621,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_palette32.bin",
           "encoded_ref_bytes": 126,
           "encoded_ref_sha256": "208edc9abb50be9004a7dfe0d39fafb3632879ab34f9f32057fe1bef48a5682b",
@@ -220633,17 +220643,7 @@
             64
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_method_0_partial_alpha",
@@ -221091,6 +221091,117 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_tiny_predictor_grid",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-six lossless encoding preserves Pillow parity while refining a one-cell RGBA predictor grid",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_tiny_predictor_grid_8x3.png",
+          "source_sha256": "6dd52bc01af49b9cf5949e83094117653646a442d323e45b52d2b086ea528e8d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_tiny_predictor_grid.bin",
+          "encoded_ref_bytes": 74,
+          "encoded_ref_sha256": "41abb2707924eef6d55a319caa4d902385670edd93df1f2898ed38ce24de9f71",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_tiny_predictor_grid.bin",
+          "ref_sha256": "580e7bc47e167835f14407e6fddc86eef7579f15841df488b1698c7f91232609",
+          "ref_bytes": 96,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            8,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_tiny_predictor_grid_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware method-six lossless encoding preserves Pillow parity while refining a one-cell RGBA predictor grid",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_tiny_predictor_grid_8x3.png",
+          "source_sha256": "6dd52bc01af49b9cf5949e83094117653646a442d323e45b52d2b086ea528e8d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_tiny_predictor_grid_token.bin",
+          "encoded_ref_bytes": 74,
+          "encoded_ref_sha256": "41abb2707924eef6d55a319caa4d902385670edd93df1f2898ed38ce24de9f71",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_tiny_predictor_grid_token.bin",
+          "ref_sha256": "580e7bc47e167835f14407e6fddc86eef7579f15841df488b1698c7f91232609",
+          "ref_bytes": 96,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            8,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossless_sampling_checkpoint",
           "type": "encode",
           "format": "webp",
@@ -221527,6 +221638,117 @@
           "encoded_ref_sha256": "466d1a901e783a9fda34b3af56767991c2fc2be0d4cfc055403bf594d7b6c9a8",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_fragment_stream_token.bin",
           "ref_sha256": "5afff9a4bc1b81d0f066a1f75fd2284cb1405cd28abfa0ffa01c17451e83146a",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_singleton_copy_group",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-six lossless encoding exercises a repeated high-cardinality block with a singleton copy-symbol tree",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_singleton_copy_group_1024x1024.png",
+          "source_sha256": "f23d13f12432aa352e89f2be02398a25ef3870ff4e185ac12b3932b5f7e197ba",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_singleton_copy_group.bin",
+          "encoded_ref_bytes": 12878,
+          "encoded_ref_sha256": "362b10681e2744e6bb6be7785427d3e58658157ded95a8b11aabfc441beb2b9b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_singleton_copy_group.bin",
+          "ref_sha256": "a29bae79270897e1a851e3a69c84a3dc125b0b2170c583cc9775fa94d6a7d36f",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_singleton_copy_group_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware method-six lossless encoding exercises a repeated high-cardinality block with a singleton copy-symbol tree",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_singleton_copy_group_1024x1024.png",
+          "source_sha256": "f23d13f12432aa352e89f2be02398a25ef3870ff4e185ac12b3932b5f7e197ba",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_singleton_copy_group_token.bin",
+          "encoded_ref_bytes": 12878,
+          "encoded_ref_sha256": "362b10681e2744e6bb6be7785427d3e58658157ded95a8b11aabfc441beb2b9b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_singleton_copy_group_token.bin",
+          "ref_sha256": "a29bae79270897e1a851e3a69c84a3dc125b0b2170c583cc9775fa94d6a7d36f",
           "ref_bytes": 3145728,
           "ref_mode": "Rgb8",
           "ref_size": [
@@ -226706,9 +226928,9 @@
     }
   },
   "summary": {
-    "total_rows": 2669,
+    "total_rows": 2673,
     "decode_rows": 2120,
-    "encode_rows": 549,
+    "encode_rows": 553,
     "formats": 8,
     "assets_available": 2116,
     "decode_active": 2120,

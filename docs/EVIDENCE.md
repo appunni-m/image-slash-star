@@ -9943,7 +9943,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b9b940c803023de5372946800ab452a87f27c19621ab6c30f71309a123e60cbf`; matrix `2e6c38513fc831079d48c4127b22918fa4ce2a3b512d8b2ba07202397519784d`.
+- Current fixture integrity only: manifest `ed74bdfaeab7a39f45c884cc3f321632f3b2a938a39734d6b09a7b5cde61cb0b`; matrix `68d758ffc35f156b16b4aba0c37c795327dd8923c9f9fce224177e55669e6953`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11853,8 +11853,8 @@ All four repository floors pass. Coverage MCP previously returned
 worktree, so these totals are local LLVM evidence without MCP source/build
 attribution.
 
-The current fixture matrix contains 2,669 total rows: 2,120 decode / inspect /
-verify rows and 549 encode rows. Of those, 2,120 decode rows and 518 encode
+The current fixture matrix contains 2,673 total rows: 2,120 decode / inspect /
+verify rows and 553 encode rows. Of those, 2,120 decode rows and 522 encode
 rows are active; 31 planned encode rows remain.
 
 ## WebP lossless EXIF output-reuse parity — 2026-10-27
@@ -11965,9 +11965,9 @@ local branch-coordinate comparison against the preceding full report found
 one newly covered token-aware histogram checkpoint outcome at
 `src/codecs/webp/native/encoder.rs:1684`. The input does not reach the
 cost-manager 500-interval fallback at `backward_refs.rs:1604` or
-`backward_refs.rs:1712`; the separate fragmented-stream run below covers both
-fallback arms. Coverage MCP cannot read reports in this managed worktree, so
-this selected result has no MCP source/build attribution. No unit test or
+`backward_refs.rs:1712`; the separate fragmented-stream run below also stays
+below saturation. Coverage MCP cannot read reports in this managed worktree,
+so this selected result has no MCP source/build attribution. No unit test or
 codec implementation change was added.
 
 ## WebP fragmented-stream lossless cost-manager parity — 2026-10-27
@@ -11983,9 +11983,10 @@ Pillow 12.2.0 outputs are 46,436 bytes with SHA-256
 `466d1a901e783a9fda34b3af56767991c2fc2be0d4cfc055403bf594d7b6c9a8`.
 
 The selected public parity run passed 2/2 rows, with 9 encode calls and no
-panics. Both the ordinary and token-aware 500-interval fallback true arms were
-reached: 175,224 updates at `backward_refs.rs:1604` and 29,204 at
-`backward_refs.rs:1712`. The selected LLVM report is
+panics. These cases do not reach the ordinary or token-aware 500-interval
+fallback true arms. The counts previously reported at
+`backward_refs.rs:1604` and `:1712` were executions of the below-saturation
+false arms, not fallback hits. The selected LLVM report is
 `.coverage-mcp/local-evidence/selected/webp-cost-manager-fragment-stream-final/coverage.json`
 (SHA-256
 `8166475636b977c51ddd13195d8914cebda29767b5240f0f380128f022dd461e`). Coverage
@@ -12011,17 +12012,62 @@ are 93,914/139,613 lines (67.2674%), 18,647/32,056 branches (58.1701%),
 5,229/8,933 functions (58.5358%), and 143,413/216,663 regions (66.1917%). All
 four repository floors pass; the 100% coverage goal remains open.
 
-The selected WebP fragmented-stream parity run reaches both saturated
-cost-manager fallback arms at
-`src/codecs/webp/native/encoder/backward_refs.rs:1604` and `:1712`. Coverage
-MCP returns `I/O error: No such file or directory` for the new report in this
-managed worktree, so these remain local LLVM totals without MCP source/build
-attribution or an MCP comparison. The existing Rust feature-gate work-budget
-contract was rebased to the lower 6,547/6,548 boundary after the pinned
-libwebp cache limit was corrected. No unit tests were added. `make fmt`, strict
-stable/nightly `make lint`, `make lint-x86-simd`, and the native/WASI/WASM
-`make test-feature-matrix` all passed. The SSE2 and AVX2 checks compile their
-target lanes; no new x86 runtime benchmark was run.
+The selected WebP fragmented-stream parity run does not reach either
+cost-manager saturation arm at
+`src/codecs/webp/native/encoder/backward_refs.rs:1604` or `:1712`; it reaches
+only the below-saturation arms. The earlier claim that its 175,224 and 29,204
+branch counts represented saturated fallback hits was incorrect. The existing
+Rust feature-gate work-budget contract was rebased to the lower 6,547/6,548
+boundary after the pinned libwebp cache limit was corrected. No unit tests
+were added. `make fmt`, strict stable/nightly `make lint`,
+`make lint-x86-simd`, and the native/WASI/WASM `make test-feature-matrix` all
+passed. The SSE2 and AVX2 checks compile their target lanes; no new x86 runtime
+benchmark was run.
+
+## WebP Huffman, predictor-grid, and full coverage recheck — 2026-10-27
+
+After adding the WebP singleton copy-symbol and one-cell predictor-grid parity
+rows, the full `make coverage` run passed 57/57 coverage-matrix tests, 7/7 decode-policy
+tests, 1/1 determinism test, 69/69 feature-gate tests, and all four repository
+coverage floors. The report
+`.coverage-mcp/local-evidence/full-20261027-predictor-grid-final/coverage.json`
+has SHA-256
+`985db53124f1c6f35102a8908ba2b98aa247750332487bffd7cb051973b01f10` and totals
+93,966/139,636 lines (67.293535%), 18,674/32,068 branches (58.232506%),
+5,230/8,934 functions (58.540407%), and 143,479/216,699 regions (66.211196%).
+This report is local LLVM evidence; it has no Coverage MCP source/build
+receipt.
+
+The fragmented-stream pair was rerun with the exact selected-coverage command.
+Both parity rows passed with 9 encode calls and no panics. Its report
+`.coverage-mcp/local-evidence/selected/webp-cost-manager-fragment-stream-current-check/coverage.json`
+has SHA-256
+`26833aaf106f46d219020a6aa4260b4da989c3226a27140ca3f63e4a0207ce56`. Raw
+LLVM branch counters show zero true-arm hits and 175,224 false-arm hits for the
+ordinary saturation condition, and zero true-arm hits and 29,204 false-arm
+hits for the token-aware condition. The full report likewise records zero
+true-arm hits for both conditions. Coverage MCP identifies the token-aware
+true arm as missing; source and test attribution remain unverified because no
+MCP receipt is available. The 500-interval fallback therefore remains an
+open coverage gap, and 100% coverage is not achieved.
+
+The new `enc_lossless_tiny_predictor_grid` pair uses a pinned 8×3 RGBA PNG
+with 24 colors to reach the one-cell predictor-grid case. Its selected parity
+run passed 2/2 rows with 9 encode calls and no panics; both encoded references
+are 74 bytes and decode to the expected RGBA pixels. Its local report
+`.coverage-mcp/local-evidence/selected/webp-tiny-predictor-grid-final-20261027/coverage.json`
+has SHA-256
+`66e3ba306b74eb39836b9bd790f30dbab3dc3698878d1f6253d0662d72133369`.
+Coverage MCP's branch query on the refreshed full report now shows the
+one-cell `clamp_transform_bits` arm at line 497 as covered. The remaining
+missing arms at lines 493 and 501 are defensive under the public method-five
+and method-six configurations: they cap the initial bits at four and step
+histogram bits down while the next finer grid would still contain one cell.
+Under the parity-only test policy, these remain documented coverage gaps
+rather than being relabeled as Pillow-reachable behavior. Coverage MCP still identifies
+the ordinary and token-aware 500-interval saturation true arms at
+`backward_refs.rs:1604` and `:1712` as missing. These reports have no MCP
+source/build receipt; MCP results are limited to branch coordinates.
 
 ## AVIF zero decoder-model tick parity — 2026-10-27
 

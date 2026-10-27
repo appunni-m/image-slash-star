@@ -1140,6 +1140,13 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
         };
         w.write_bits(u64::from(huffman_token.extra), bits)?;
     }
+    // The VP8L decoder represents a normal one-symbol tree as a zero-bit
+    // lookup. Keep the serialized tree's one-bit code length above, but omit
+    // the symbol bit from the image data that follows it.
+    if symbol_count == 1 {
+        lengths[symbols[0]] = 0;
+        codes[symbols[0]] = 0;
+    }
     Ok(())
 }
 
