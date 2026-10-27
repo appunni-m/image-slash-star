@@ -220884,6 +220884,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_shifted_rows.bin",
           "encoded_ref_bytes": 5336,
           "encoded_ref_sha256": "16cbe243b738c77fd6f21ac77157fbb1de47ce129d36d4bec7ef304f40c32240",
@@ -220896,17 +220906,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_cost_manager_shifted_rows_token",
@@ -220940,6 +220940,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_shifted_rows_token.bin",
           "encoded_ref_bytes": 5336,
           "encoded_ref_sha256": "16cbe243b738c77fd6f21ac77157fbb1de47ce129d36d4bec7ef304f40c32240",
@@ -220952,7 +220962,39 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_cost_manager_fragment_stream",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless VP8L method-six encoding checks a high-cardinality stream with varied copied-fragment lengths and match distances",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_cost_manager_fragment_stream_1024x1024.png",
+          "source_sha256": "a435566d1b22d8405e38ff5588213b5492050a180633586a3d67c673879aef40",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
@@ -220962,7 +221004,76 @@
             "encode": "ok",
             "encode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_fragment_stream.bin",
+          "encoded_ref_bytes": 46436,
+          "encoded_ref_sha256": "466d1a901e783a9fda34b3af56767991c2fc2be0d4cfc055403bf594d7b6c9a8",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_fragment_stream.bin",
+          "ref_sha256": "5afff9a4bc1b81d0f066a1f75fd2284cb1405cd28abfa0ffa01c17451e83146a",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_cost_manager_fragment_stream_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless VP8L method-six encoding checks the same varied copied-fragment stream",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_cost_manager_fragment_stream_1024x1024.png",
+          "source_sha256": "a435566d1b22d8405e38ff5588213b5492050a180633586a3d67c673879aef40",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_fragment_stream_token.bin",
+          "encoded_ref_bytes": 46436,
+          "encoded_ref_sha256": "466d1a901e783a9fda34b3af56767991c2fc2be0d4cfc055403bf594d7b6c9a8",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_fragment_stream_token.bin",
+          "ref_sha256": "5afff9a4bc1b81d0f066a1f75fd2284cb1405cd28abfa0ffa01c17451e83146a",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossless_predictor_sampling_limit",
@@ -226134,9 +226245,9 @@
     }
   },
   "summary": {
-    "total_rows": 2663,
+    "total_rows": 2665,
     "decode_rows": 2117,
-    "encode_rows": 546,
+    "encode_rows": 548,
     "formats": 8,
     "assets_available": 2113,
     "decode_active": 2117,

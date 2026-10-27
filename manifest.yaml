@@ -6006,6 +6006,16 @@ formats:
       source_format: png
       source_asset: webp_cost_manager_shifted_rows_2048x512.png
       params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossless_cost_manager_fragment_stream
+      description: Lossless VP8L method-six encoding checks a high-cardinality stream with varied copied-fragment lengths and match distances
+      source_format: png
+      source_asset: webp_cost_manager_fragment_stream_1024x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_cost_manager_fragment_stream_token
+      description: Token-aware lossless VP8L method-six encoding checks the same varied copied-fragment stream
+      source_format: png
+      source_asset: webp_cost_manager_fragment_stream_1024x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_predictor_sampling_limit
       description: Method-five VP8L expands its initial predictor grid when a 2-bit grid exceeds 16,384 cells
       source_format: png

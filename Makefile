@@ -62,6 +62,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_alpha_filter_no_win_fixture.py --check
 	$(PYTHON) scripts/generate_webp_box_chain_max_match_fixture.py --check
 	$(PYTHON) scripts/generate_webp_cost_manager_shifted_rows_fixture.py --check
+	$(PYTHON) scripts/generate_webp_cost_manager_fragment_stream_fixture.py --check
 	$(PYTHON) scripts/generate_webp_dimension_limit_fixture.py --check
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
