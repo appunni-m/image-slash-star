@@ -368,14 +368,15 @@ fn inspect_inner_with_grid(
         }
     }
 
-    let Some(meta) = meta.as_ref() else {
-        return Err(parse_need_more!(reader.offset.saturating_add(8)));
-    };
     if brands.has_avis && movie.is_none() {
         return Err(parse_need_more!(reader.offset.saturating_add(8)));
     }
 
-    let meta_details = meta.details_with_grid(grid_properties)?;
+    let meta_details = match meta.as_ref() {
+        Some(meta) => meta.details_with_grid(grid_properties)?,
+        None if brands.has_avis => None,
+        None => return Err(parse_need_more!(reader.offset.saturating_add(8))),
+    };
     let track_details = movie.as_ref().and_then(Movie::details);
     let prefer_tracks =
         brands.major == *b"avis" || (brands.major != *b"avif" && track_details.is_some());

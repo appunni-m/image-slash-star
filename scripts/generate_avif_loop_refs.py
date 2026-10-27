@@ -48,6 +48,10 @@ FIXTURES = {
         "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
     ),
     "animated": ("animated.avif", "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"),
+    "animated_sequence_only_no_meta": (
+        "animated_sequence_only_no_meta.avif",
+        "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb",
+    ),
     "animated_decoder_model_parameters_change": (
         "animated_decoder_model_parameters_change.avif",
         "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396",
