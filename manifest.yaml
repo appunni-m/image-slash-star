@@ -11482,6 +11482,21 @@ formats:
       test_assets:
       - animated_missing_stsz.avif
       expect_error: true
+    - id: error_animated_missing_chunk_offsets
+      description: Animated avis track whose chunk-offset table is replaced by a same-size free box
+      test_assets:
+      - animated_missing_stco.avif
+      expect_error: true
+    - id: error_animated_missing_sample_to_chunk
+      description: Animated avis track whose sample-to-chunk table is replaced by a same-size free box
+      test_assets:
+      - animated_missing_stsc.avif
+      expect_error: true
+    - id: error_animated_missing_sample_description
+      description: Animated avis track whose sample-description table is replaced by a same-size free box
+      test_assets:
+      - animated_missing_stsd.avif
+      expect_error: true
     - id: error_animated_duplicate_sample_size
       description: Animated AVIF tolerates a duplicate sample-size box but rejects its invalid chunk offset
       test_assets:
