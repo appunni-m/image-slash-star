@@ -1519,6 +1519,59 @@
       }
     },
     {
+      "id": "enc_sub_420_q10_avx2_batch_edge_fallback",
+      "source_asset": "jpeg_avx2_420_edge_batch_113x17.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "fc952ca09c46170552b0a265db8825dc752ddedad70e834724dbfc7d5f03242d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "subsampling": "420",
+        "quality": 10,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_avx2_420_edge_batch_113x17.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 10,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_sub_420_unaligned_even_height",
       "source_asset": "rgb_17x2.jpg",
       "source_format": "jpeg",
