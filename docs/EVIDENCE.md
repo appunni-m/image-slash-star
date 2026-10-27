@@ -1,5 +1,38 @@
 # Versioned compatibility evidence
 
+## AVIF duplicate media-box parity — 2026-10-28
+
+Added an animated AVIF success row combining repeated `mdhd`, `hdlr`, `stts`,
+`stsz`, `stss`, and `stsd` boxes with an unknown `free` child. Pinned Pillow
+accepts it with five RGB frames matching the source pixels. Pillow also accepts
+the missing-`hdlr` variant with matching pixels. Duplicate `minf`, duplicate
+`stco`, duplicate sample-size, missing-`mdhd`, and missing-`minf` error fixtures
+match Pillow's rejection behavior. The selected parity run passed all seven
+rows. The focused cases are generated and checked by
+`scripts/generate_avif_media_box_edges.py`; its checks rebase and verify the
+container offsets.
+
+The fresh full `make coverage` run passed all six existing integration test
+executables (4, 1, 57, 7, 1, and 69 tests; zero failures) and the configured
+coverage floors: 94,102/139,678 lines (67.3707%), 18,709/32,056 branches
+(58.3635%), 5,246/8,947 functions (58.6342%), and 143,642/216,753 regions
+(66.2699%). Its report is
+`.coverage-mcp/local-evidence/imported-worktree/full-avif-media-box-edges-20261028/coverage.json`
+(SHA-256
+`1bc3c1d6fd16b78f4715e04d5fb3b009adea880b97de872429d4339b70e5e240`). Coverage
+MCP marks report source identity unverified and test attribution unknown. Its
+coordinate queries list additional outcomes in AVIF `parse_mdia`, `parse_stbl`,
+and `sequence_payload`; these require source and test inspection before they
+can be treated as verified gaps. No SIMD path or performance claim was added,
+and no Rust unit tests were added. `make lint`, `make lint-x86-simd`, and
+`make test-feature-matrix` passed, including strict Clippy for debug, release,
+coverage, SSE2, and AVX2 targets, plus the native, WASI, and WASM feature lanes.
+
+The current fixture matrix contains 2,686 total rows: 2,130 decode / inspect /
+verify rows and 556 encode rows. Of those, 2,130 decode rows and 525 encode
+rows are active; 31 encode rows remain planned. The roadmap and generated
+capability counts now reflect this matrix.
+
 ## AVIF `iloc` payload-span parity — 2026-10-28
 
 Coverage MCP's earlier full report listed unobserved outcomes in
@@ -10014,7 +10047,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `339cd70354b1a40da91a5811ad1071cc22aaf6935107269a4e187cb0e1b5f952`; matrix `08b4ebe0ef9430b1ffe0344cfbec66ff77b63a7a49e750bcf396b906d647bcd8`.
+- Current fixture integrity only: manifest `79ffaeef321973f9a9d68e22e4fc69941c96dab4483f602ac76a0a32ba517356`; matrix `534c483cbd0549d184f71b527af6026e344b8feb9b396b8d62828fa529f52ac8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

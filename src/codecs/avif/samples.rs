@@ -1793,7 +1793,7 @@ pub(super) struct StillPayload {
 pub(super) struct SequencePayload {
     pub(super) color: EncodedPlane,
     pub(super) alpha: Option<EncodedPlane>,
-    pub(super) timescale: NonZeroU32,
+    pub(super) timescale: Option<NonZeroU32>,
     pub(super) loop_count: AnimationLoop,
 }
 
@@ -2236,24 +2236,20 @@ fn parse_mdia(
     budget: &mut Budget,
 ) -> ParseResult<()> {
     let mut reader = Reader::new(input, payload);
-    let mut mdhd_seen = false;
     let mut handler_seen = false;
     let mut minf_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"mdhd" => {
-                if mdhd_seen {
-                    return Err(parse_failure!());
-                }
-                mdhd_seen = true;
+                // Repeated media headers are processed in order; the last timescale applies.
                 track.timescale = Some(parse_mdhd(input, child.payload)?);
             }
             kind if kind == *b"hdlr" => {
-                if handler_seen {
-                    return Err(parse_failure!());
+                if !handler_seen {
+                    // Retain the first role; Pillow ignores later handler boxes.
+                    handler_seen = true;
+                    track.handler = parse_handler(input, child.payload)?;
                 }
-                handler_seen = true;
-                track.handler = parse_handler(input, child.payload)?;
             }
             kind if kind == *b"minf" => {
                 if minf_seen {
@@ -2265,7 +2261,7 @@ fn parse_mdia(
             _ => {}
         }
     }
-    if !mdhd_seen || !handler_seen || !minf_seen {
+    if !minf_seen {
         return Err(parse_failure!());
     }
     Ok(())
@@ -2297,6 +2293,16 @@ fn parse_minf(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     table.ok_or_else(|| parse_failure!())
 }
 
+// Move the first parsed table into place; later tables append as libavif does.
+fn replace_or_append<T>(target: &mut Vec<T>, values: Vec<T>, seen: &mut bool) {
+    if *seen {
+        target.extend(values);
+    } else {
+        *target = values;
+        *seen = true;
+    }
+}
+
 fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<SampleTable> {
     let mut reader = Reader::new(input, payload);
     let mut table = SampleTable::default();
@@ -2321,32 +2327,32 @@ fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
                 table.mappings = parse_stsc(input, child.payload, budget)?;
             }
             kind if kind == *b"stsz" => {
-                if stsz_seen {
-                    return Err(parse_failure!());
-                }
-                stsz_seen = true;
-                table.sample_sizes = parse_stsz(input, child.payload, budget)?;
+                replace_or_append(
+                    &mut table.sample_sizes,
+                    parse_stsz(input, child.payload, budget)?,
+                    &mut stsz_seen,
+                );
             }
             kind if kind == *b"stss" => {
-                if stss_seen {
-                    return Err(parse_failure!());
-                }
-                stss_seen = true;
-                table.sync_samples = parse_u32_records(input, child.payload, budget)?;
+                replace_or_append(
+                    &mut table.sync_samples,
+                    parse_u32_records(input, child.payload, budget)?,
+                    &mut stss_seen,
+                );
             }
             kind if kind == *b"stts" => {
-                if stts_seen {
-                    return Err(parse_failure!());
-                }
-                stts_seen = true;
-                table.timings = parse_stts(input, child.payload, budget)?;
+                replace_or_append(
+                    &mut table.timings,
+                    parse_stts(input, child.payload, budget)?,
+                    &mut stts_seen,
+                );
             }
             kind if kind == *b"stsd" => {
-                if stsd_seen {
-                    return Err(parse_failure!());
-                }
-                stsd_seen = true;
-                table.descriptions = parse_stsd(input, child.payload, budget)?;
+                replace_or_append(
+                    &mut table.descriptions,
+                    parse_stsd(input, child.payload, budget)?,
+                    &mut stsd_seen,
+                );
             }
             _ => {}
         }
@@ -2664,12 +2670,24 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
                 [b'p', b'i', b'c', b't'] | [b'v', b'i', b'd', b'e']
             )
         })
+        .or_else(|| {
+            movie.tracks.iter().find(|track| {
+                track.aux_for_id.is_none()
+                    && track.table.as_ref().is_some_and(|table| {
+                        table
+                            .descriptions
+                            .iter()
+                            .any(|description| description.config.is_some())
+                    })
+            })
+        })
         .ok_or_else(|| parse_failure!())?;
-    let timescale = color_track.timescale.ok_or_else(|| parse_failure!())?;
+    let timescale = color_track.timescale;
     let color = track_plane(input, color_track)?;
+    // libavif selects alpha tracks by reference and auxiliary properties; older
+    // writers may omit or mislabel the track handler.
     let mut alpha_tracks = movie.tracks.iter().filter(|track| {
-        track.handler == *b"auxv"
-            && track.aux_for_id == Some(color_track.id)
+        track.aux_for_id == Some(color_track.id)
             && track
                 .table
                 .as_ref()
@@ -2686,7 +2704,7 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
         return Err(parse_failure!());
     }
     let alpha = if let Some(track) = alpha_track {
-        if track.timescale != Some(timescale) {
+        if timescale.is_some() && track.timescale != timescale {
             return Err(parse_failure!());
         }
         // Keep all mapped alpha samples for inspection and the independent

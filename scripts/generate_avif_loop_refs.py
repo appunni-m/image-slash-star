@@ -72,6 +72,14 @@ FIXTURES = {
         "animated_duplicate_stsc_override_four.avif",
         "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
     ),
+    "animated_duplicate_media_boxes": (
+        "animated_duplicate_media_boxes.avif",
+        "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87",
+    ),
+    "animated_missing_hdlr": (
+        "animated_missing_hdlr.avif",
+        "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891",
+    ),
     "animated_primary_item_irot": (
         "animated_primary_item_irot.avif",
         "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",

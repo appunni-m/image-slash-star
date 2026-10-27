@@ -1605,8 +1605,10 @@ mod tests {
                 .map(|plane| super::super::samples::EncodedPlane {
                     samples: plane.samples.clone(),
                 }),
-            timescale: NonZeroU32::new(1)
-                .ok_or_else(|| malformed("test timescale unexpectedly became zero"))?,
+            timescale: Some(
+                NonZeroU32::new(1)
+                    .ok_or_else(|| malformed("test timescale unexpectedly became zero"))?,
+            ),
             loop_count: crate::types::AnimationLoop::Unspecified,
         };
         extracted.still = Some(still);

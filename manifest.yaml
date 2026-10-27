@@ -10810,6 +10810,16 @@ formats:
       test_assets:
       - animated_duplicate_stsc_override_four.avif
       status: active
+    - id: animated_duplicate_media_boxes
+      description: Five-frame AVIF retains exact pixels and timing across duplicate mdia and stbl boxes
+      test_assets:
+      - animated_duplicate_media_boxes.avif
+      status: active
+    - id: animated_missing_hdlr
+      description: Five-frame AVIF retains exact pixels and timing when its sequence-track handler is absent
+      test_assets:
+      - animated_missing_hdlr.avif
+      status: active
     - id: animated_stts_zero_delta
       description: Five-frame AVIF with zero stts sample_delta preserves exact pixels and zero-duration timing
       test_assets:
@@ -11473,9 +11483,29 @@ formats:
       - animated_missing_stsz.avif
       expect_error: true
     - id: error_animated_duplicate_sample_size
-      description: Animated AVIF has a duplicate sample-size box before an invalid chunk-offset table
+      description: Animated AVIF tolerates a duplicate sample-size box but rejects its invalid chunk offset
       test_assets:
       - animated_duplicate_stsz.avif
+      expect_error: true
+    - id: error_animated_duplicate_minf
+      description: Animated AVIF with duplicate media-information boxes is rejected by Pillow
+      test_assets:
+      - error_animated_duplicate_minf.avif
+      expect_error: true
+    - id: error_animated_duplicate_stco
+      description: Animated AVIF with duplicate chunk-offset tables is rejected by Pillow
+      test_assets:
+      - error_animated_duplicate_stco.avif
+      expect_error: true
+    - id: error_animated_missing_mdhd
+      description: Animated AVIF without the required media header fails during Pillow frame decoding
+      test_assets:
+      - error_animated_missing_mdhd.avif
+      expect_error: true
+    - id: error_animated_missing_minf
+      description: Animated AVIF without its sample-table container is rejected by Pillow
+      test_assets:
+      - error_animated_missing_minf.avif
       expect_error: true
     - id: error_animated_missing_sample_table
       description: Animated avis track whose complete sample-table box is replaced by a same-size free box
