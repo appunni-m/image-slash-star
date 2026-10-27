@@ -6737,13 +6737,13 @@
       "status": "open_until_all_four_metrics_are_100_percent"
     },
     "matrix": {
-      "decode_active": 2117,
+      "decode_active": 2118,
       "decode_planned": 0,
-      "decode_rows": 2117,
+      "decode_rows": 2118,
       "encode_active": 517,
       "encode_planned": 31,
       "encode_rows": 548,
-      "total_rows": 2665
+      "total_rows": 2666
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

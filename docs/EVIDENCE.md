@@ -1,5 +1,25 @@
 # Versioned compatibility evidence
 
+## WebP VP8 sharpness-4 parity — 2026-10-27
+
+Added active row
+`decode:webp:lossy_vp8_filter_variants_lossy_strong_sharp4`, generated with
+pinned libwebp 1.6.0 strong filtering and sharpness 4. Pillow 12.2.0 expects a
+128x128 RGB result; the selected parity run passed 1/1 with all 49,152 bytes
+matching.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261027T035807.061420Z-4b00478634e347d2ac4abf91f352db84/coverage.json`
+(SHA-256
+`22d39a55d0400d2cd2e565187ab27aba13478723df12f79678a88a697cc46b7d`). It
+records 192 visits to the nonzero sharpness path and 192 false outcomes for
+`sharpness_level > 4` at `src/codecs/webp/native/vp8.rs:1926`. The previous
+full report recorded no false outcomes there, and Coverage MCP's baseline gap
+lookup identified that missing arm. Its incremental comparison was
+incomparable because the baseline lacked complete exact branch detail; source
+identity and test attribution remain unverified, so no aggregate coverage gain
+is claimed. No production code or Rust unit tests were added.
+
 ## WebP hash-chain index guard contract — 2026-10-27
 
 Added the target-only contract
@@ -9851,7 +9871,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `de1a371395547663dc13d55af7743a84aa3e43fb9330b1804177fe1113efccab`; matrix `fc73113bacdaa82e06792a83f02d2907963fb4a622d83ea1fbd8e473207f53c7`.
+- Current fixture integrity only: manifest `b5f8211e7f07f28bcf410154e6aeef4211fa537377227dc8c9356c3d4a500420`; matrix `977efed5598177b4a8bc3d1f9c096431d9f863c04df9da1cacad7b197064bf38`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -11761,8 +11781,8 @@ All four repository floors pass. Coverage MCP previously returned
 worktree, so these totals are local LLVM evidence without MCP source/build
 attribution.
 
-The current fixture matrix contains 2,665 total rows: 2,117 decode / inspect /
-verify rows and 548 encode rows. Of those, 2,117 decode rows and 517 encode
+The current fixture matrix contains 2,666 total rows: 2,118 decode / inspect /
+verify rows and 548 encode rows. Of those, 2,118 decode rows and 517 encode
 rows are active; 31 planned encode rows remain.
 
 ## WebP lossless EXIF output-reuse parity — 2026-10-27
