@@ -9,9 +9,6 @@ import random
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, __version__ as PILLOW_VERSION
-
-
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = (
     ROOT
@@ -50,8 +47,10 @@ def source_pixels() -> bytes:
 
 def generate_fixture() -> bytes:
     """Encode the deterministic RGB pixels as the pinned PNG source asset."""
-    if PILLOW_VERSION != "12.2.0":
-        raise RuntimeError(f"expected Pillow 12.2.0, found {PILLOW_VERSION}")
+    from PIL import Image, __version__ as pillow_version
+
+    if pillow_version != "12.2.0":
+        raise RuntimeError(f"expected Pillow 12.2.0, found {pillow_version}")
     image = Image.frombytes("RGB", (WIDTH, HEIGHT), source_pixels())
     output = BytesIO()
     image.save(output, format="PNG", compress_level=6)
@@ -67,16 +66,21 @@ def main() -> int:
     action.add_argument("--check", action="store_true", help="verify without writing")
     action.add_argument("--write", action="store_true", help="write the source PNG")
     arguments = parser.parse_args()
-    fixture = generate_fixture()
 
     if arguments.check:
-        if not OUTPUT.is_file() or OUTPUT.read_bytes() != fixture:
+        if not OUTPUT.is_file():
+            raise RuntimeError(
+                f"generated fixture is stale or missing: {OUTPUT.relative_to(ROOT)}"
+            )
+        actual_sha256 = hashlib.sha256(OUTPUT.read_bytes()).hexdigest()
+        if actual_sha256 != EXPECTED_SOURCE_SHA256:
             raise RuntimeError(
                 f"generated fixture is stale or missing: {OUTPUT.relative_to(ROOT)}"
             )
         print(f"Verified {OUTPUT.relative_to(ROOT)}")
         return 0
 
+    fixture = generate_fixture()
     if OUTPUT.exists() and OUTPUT.read_bytes() != fixture:
         raise RuntimeError(
             f"refusing to replace a different fixture at {OUTPUT.relative_to(ROOT)}"
