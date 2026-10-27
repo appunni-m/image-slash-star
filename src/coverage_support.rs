@@ -144,6 +144,8 @@ pub enum CoverageFaultPoint {
     PngDecodedSampleBufferReservation,
     /// Model APNG sequence-counter exhaustion during coverage builds.
     ApngSequenceCounterExhaustion,
+    /// Model an oversized WebP hash-chain index during coverage builds.
+    WebpHashChainIndexOverflow,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.

@@ -7103,7 +7103,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "filmgrain_inactive_reference_reuse_i444_64x64",
               "input_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
               "repetition_count": -1
@@ -7341,7 +7341,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "filmgrain_reference_reuse_i444_64x64",
               "input_sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
               "repetition_count": -1
@@ -32411,7 +32411,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "highdepth",
               "input_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
               "repetition_count": -1
@@ -32646,7 +32646,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "sequence_alpha_duration_mismatch",
               "input_sha256": "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d",
               "repetition_count": -1
@@ -34926,7 +34926,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated",
               "input_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
               "repetition_count": 0
@@ -35161,7 +35161,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_co64_chunk_offsets",
               "input_sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021",
               "repetition_count": 0
@@ -35411,7 +35411,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_stsc_two_chunk_mapping",
               "input_sha256": "117a8b2d61e01d9e9a5d911313524509c4b99d527b108e552a0b6e27d2a8500c",
               "repetition_count": 0
@@ -35661,7 +35661,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_duplicate_stsc",
               "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
               "repetition_count": 0
@@ -35881,7 +35881,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_duplicate_stsc_override_four",
               "input_sha256": "3343bc98df777765f8c79b1c180832af10262503a187af3a4206894547949589",
               "repetition_count": 0
@@ -36131,7 +36131,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_zero_delta",
               "input_sha256": "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105",
               "repetition_count": 0
@@ -36381,7 +36381,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_empty",
               "input_sha256": "c23b9d465406ba51f46d5fd6c3cf8d7a71dde68110bb0ccc7512d48977208b30",
               "repetition_count": 0
@@ -36631,7 +36631,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_zero_sample_count",
               "input_sha256": "2e7fb956b121ced30abf59cc70a30fd7dc2dd8146484252883553651a86107d6",
               "repetition_count": 0
@@ -36881,7 +36881,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_underfilled",
               "input_sha256": "0c8b7e231c455711581f0eed1272f2be2b32a764fc9eb782c955678ba64e9738",
               "repetition_count": 0
@@ -37131,7 +37131,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_overfilled",
               "input_sha256": "fecedb638aaad110abfa0234edad9850ffaee9452b1633703b2426653d6e0bba",
               "repetition_count": 0
@@ -37381,7 +37381,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "stts_wrapped_sample_count",
               "input_sha256": "877d9aa62c8d5ad750d6f4c60a293a2025fbe6ade96f4b8957301a73c37a4e1b",
               "repetition_count": 0
@@ -37631,7 +37631,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_primary_item_irot",
               "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
               "repetition_count": 0
@@ -37879,7 +37879,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "opidc_0x101",
               "input_sha256": "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be",
               "repetition_count": 0
@@ -38056,7 +38056,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "error_resilient",
               "input_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
               "repetition_count": -1
@@ -38199,7 +38199,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b16x16",
               "input_sha256": "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
               "repetition_count": -1
@@ -38361,7 +38361,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b8x16",
               "input_sha256": "9e3fbac5e42c61413ec8c1f7f4f72bc1338fb7cfd21587e30826855732e369c0",
               "repetition_count": -1
@@ -38519,7 +38519,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_intra_i444_b8x8_20x20",
               "input_sha256": "7636f2de4078d5271941e6cf7de85f9c77205acce155c75e529e43fbc1d0acbf",
               "repetition_count": -1
@@ -38679,7 +38679,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "odd_dimensions_inter_intra_boundary_420",
               "input_sha256": "736914091e00473af577a12de9910ce6abe2b038c84d2f580c5f528b0618c422",
               "repetition_count": -1
@@ -38869,7 +38869,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_interintra_420_nowedge_b16x16_64x64",
               "input_sha256": "adc58d72626865406be3d0a048ecf0b9a1670d16a68f48babe4b9167a2dc2dea",
               "repetition_count": -1
@@ -39059,7 +39059,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_interintra_420_nowedge_mode1_b16x16_64x64",
               "input_sha256": "dd4e06e559d83cc0863d65878799d2f7496c8f5d378eaeb639704fe3ac539f2f",
               "repetition_count": -1
@@ -39249,7 +39249,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
               "input_sha256": "08f616c2e14f9abadb6157c425653b5a7fd703f2797f3db04e23b58bc519eda8",
               "repetition_count": -1
@@ -39439,7 +39439,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
               "input_sha256": "7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7",
               "repetition_count": -1
@@ -39629,7 +39629,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_interintra_420_wedge_b16x16_64x64",
               "input_sha256": "1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791",
               "repetition_count": -1
@@ -39819,7 +39819,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_split_inter_420_b16x16",
               "input_sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
               "repetition_count": -1
@@ -40011,7 +40011,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_b16_mixed_topology_inter_420_b16x16",
               "input_sha256": "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74",
               "repetition_count": -1
@@ -40229,7 +40229,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_monochrome_b128x128",
               "input_sha256": "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
               "repetition_count": -1
@@ -40391,7 +40391,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_i422_b128x64",
               "input_sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc",
               "repetition_count": 0
@@ -40549,7 +40549,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_i444_b128x128",
               "input_sha256": "b4693fd2fb43d1c9406fe4ac8d782d74709bf8eed1b2d36771c0bd80763d84e8",
               "repetition_count": -1
@@ -40709,7 +40709,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_i444_mode2_unsplit_b128x128",
               "input_sha256": "ea87cfc19c427135396b44ea6b287b24e5301437abb5bd6769666d9a24144565",
               "repetition_count": -1
@@ -40871,7 +40871,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_i444_mode2_split32_b128x128",
               "input_sha256": "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
               "repetition_count": -1
@@ -41031,7 +41031,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_wide_i444_mode2_mixed_b128x128",
               "input_sha256": "0e72f7d47e8e83e0a6e13a76a816cb98974cdb2976fff72857901712e2633d61",
               "repetition_count": -1
@@ -41191,7 +41191,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_i420_mode2_variable_tx_loopfilter_b128x128",
               "input_sha256": "7be16326561aa3e67340b787cecfe9c5917ea282b312a28f665a03549fd62e31",
               "repetition_count": -1
@@ -41409,7 +41409,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_global_rotzoom_compound_i444_b128x128",
               "input_sha256": "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
               "repetition_count": -1
@@ -41629,7 +41629,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_global_halfblend_spatial_i444_b256x256",
               "input_sha256": "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
               "repetition_count": -1
@@ -41821,7 +41821,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_i444_tx_largest_64x64",
               "input_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
               "repetition_count": -1
@@ -41979,7 +41979,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b32x32",
               "input_sha256": "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
               "repetition_count": -1
@@ -42141,7 +42141,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "mixed_lossless_inter_b32_i420_64x64",
               "input_sha256": "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257",
               "repetition_count": -1
@@ -42301,7 +42301,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "mixed_lossless_inter_b32_i420_60x60",
               "input_sha256": "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce",
               "repetition_count": -1
@@ -42461,7 +42461,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "mixed_lossless_inter_b32_i420_residual_64x64",
               "input_sha256": "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36",
               "repetition_count": -1
@@ -42621,7 +42621,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_qmatrix_level15_qindex0_16x64",
               "input_sha256": "b76924ec8cf9fa01ad27e48dec5990332b089d75460fa7bf37d9fa00108100de",
               "repetition_count": -1
@@ -42779,7 +42779,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b32x32_10bit",
               "input_sha256": "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
               "repetition_count": -1
@@ -42941,7 +42941,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_monochrome_b32x32_10bit",
               "input_sha256": "28427120f6a0e9de71d0abcfe36bbeaae4d701dacefb62f852dfd71eeb82d624",
               "repetition_count": -1
@@ -43101,7 +43101,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b32x32_10bit_partition32_full_texture",
               "input_sha256": "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257",
               "repetition_count": -1
@@ -43261,7 +43261,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b16x16_10bit",
               "input_sha256": "8eb14ad3c57916b9e7fdded28b08a9254302cfc76f0cb5a934b41f11dc4184b6",
               "repetition_count": -1
@@ -43421,7 +43421,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b16x16_10bit_small_patch",
               "input_sha256": "99dd72e3dc39af9f7d9bcb89d5e3bb0553f7cc04db021c0107fe2f4dcd06ae7b",
               "repetition_count": -1
@@ -43581,9 +43581,169 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_b32x32_10bit_64x64",
               "input_sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
+              "repetition_count": -1
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "animated_lossless_inter_420_b128x128_10bit",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Two-frame 128x128 10-bit full-range 4:2:0 all-lossless AVIF sequence using one 128x128 superblock and a translating 8x8 luma patch",
+          "asset": "animated_lossless_inter_420_b128x128_10bit.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 10,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_b128x128_10bit_avif.bin",
+          "ref_sha256": "f5272a49a30f79b7cfc18b388fb26bd1e2a153718bb196df5880c2bc7da852b9",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              128,
+              128
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 0,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_b128x128_10bit_avif_frame_0.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "ref_sha256": "f5272a49a30f79b7cfc18b388fb26bd1e2a153718bb196df5880c2bc7da852b9",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  128,
+                  128
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_b128x128_10bit_avif_frame_1.bin",
+                "ref_bytes": 49152,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  128,
+                  128
+                ],
+                "ref_sha256": "9c2fd1e299098be30bc4664475977dbf13d9f870c30830cc5bb9314de762d3f8",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
+              "case": "lossless_inter_420_b128x128_10bit",
+              "input_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851",
               "repetition_count": -1
             }
           },
@@ -43741,7 +43901,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_10bit_28x28",
               "input_sha256": "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
               "repetition_count": -1
@@ -43901,7 +44061,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
               "input_sha256": "8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f",
               "repetition_count": -1
@@ -44061,7 +44221,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
               "input_sha256": "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
               "repetition_count": -1
@@ -44221,7 +44381,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
               "input_sha256": "cec5a564546c2ef8893c3f4e44c7f46c49ea9daa89d1f782a06717f11d183c87",
               "repetition_count": -1
@@ -44379,7 +44539,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_17x17",
               "input_sha256": "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
               "repetition_count": -1
@@ -44541,7 +44701,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i422_clipped_b32x32_49x64",
               "input_sha256": "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1",
               "repetition_count": -1
@@ -44711,7 +44871,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i444_clipped_b32x32_49x64",
               "input_sha256": "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae",
               "repetition_count": -1
@@ -44871,7 +45031,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i422_clipped_b32x32_52x64",
               "input_sha256": "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05",
               "repetition_count": -1
@@ -45031,7 +45191,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i444_clipped_b32x32_64x56",
               "input_sha256": "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23",
               "repetition_count": -1
@@ -45191,7 +45351,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i422_clipped_b32x32_52x60",
               "input_sha256": "53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50",
               "repetition_count": -1
@@ -45351,7 +45511,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i444_clipped_b32x32_52x60",
               "input_sha256": "9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a",
               "repetition_count": -1
@@ -45509,7 +45669,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_60x64",
               "input_sha256": "a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc",
               "repetition_count": -1
@@ -45669,7 +45829,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_64x60",
               "input_sha256": "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6",
               "repetition_count": -1
@@ -45829,7 +45989,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_184x64",
               "input_sha256": "0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d",
               "repetition_count": -1
@@ -45989,7 +46149,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b32x32_185x64",
               "input_sha256": "701d247ebbe2666b1f28f447fa1a086573e7dc6d88b0b29405f9f7a6f9460b59",
               "repetition_count": -1
@@ -46149,7 +46309,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_clipped_b16x16_60x64",
               "input_sha256": "7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f",
               "repetition_count": -1
@@ -46309,7 +46469,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_monochrome_b16x16",
               "input_sha256": "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
               "repetition_count": -1
@@ -46717,7 +46877,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "tkhd_version_zero",
               "input_sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
               "repetition_count": 0
@@ -46967,7 +47127,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "tkhd_version_zero_unknown_duration",
               "input_sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09",
               "repetition_count": 0
@@ -47793,7 +47953,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
               "input_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
               "repetition_count": -1
@@ -48043,7 +48203,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64",
               "input_sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5",
               "repetition_count": -1
@@ -48293,7 +48453,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
               "input_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
               "repetition_count": -1
@@ -48543,7 +48703,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
               "input_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
               "repetition_count": -1
@@ -48763,7 +48923,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_motion_multitile",
               "input_sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b",
               "repetition_count": -1
@@ -48983,7 +49143,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossless_motion_multitile_split_groups",
               "input_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596",
               "repetition_count": -1
@@ -49203,7 +49363,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_multitile",
               "input_sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f",
               "repetition_count": -1
@@ -49423,7 +49583,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_multitile_split_groups",
               "input_sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89",
               "repetition_count": -1
@@ -49640,7 +49800,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_chroma",
               "input_sha256": "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535",
               "repetition_count": -1
@@ -49830,7 +49990,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "has_chroma_4x4",
               "input_sha256": "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b",
               "repetition_count": -1
@@ -50050,7 +50210,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_chroma_422",
               "input_sha256": "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a",
               "repetition_count": -1
@@ -50211,7 +50371,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_422_checker_random_b32x32",
               "input_sha256": "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
               "repetition_count": -1
@@ -50373,7 +50533,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_422_tx_context_checker_b64x32",
               "input_sha256": "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56",
               "repetition_count": -1
@@ -50403,7 +50563,7 @@
           "type": "decode",
           "format": "avif",
           "category": "animated",
-          "description": "Three-frame 64x32 8-bit lossy 4:2:2 AVIF sequence whose final inter frame exposes both earlier references for compound selection",
+          "description": "Three-frame 64x32 8-bit lossy I422 AVIF sequence whose final inter frame uses compound prediction from both earlier references",
           "asset": "animated_lossy_inter_422_compound_refs_b64x32.avif",
           "expect_error": false,
           "expect_sequence_error": false,
@@ -50563,7 +50723,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_422_compound_refs_b64x32",
               "input_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350",
               "repetition_count": -1
@@ -50723,7 +50883,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_422_vertical_split_b32x64",
               "input_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798",
               "repetition_count": -1
@@ -50883,7 +51043,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lo8_superres_sgr_inter_160x56",
               "input_sha256": "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7",
               "repetition_count": -1
@@ -51667,7 +51827,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "hi10_superres_sgr_inter_160x56",
               "input_sha256": "016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11",
               "repetition_count": -1
@@ -51827,7 +51987,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "hi10_superres_select_inter_160x56",
               "input_sha256": "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
               "repetition_count": -1
@@ -52044,7 +52204,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_chroma_wide",
               "input_sha256": "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311",
               "repetition_count": -1
@@ -52235,7 +52395,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_i444_mode2_b32x32",
               "input_sha256": "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
               "repetition_count": -1
@@ -52397,7 +52557,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_mode_largest_16x64",
               "input_sha256": "4e2eba0851921d8629b8c3d1d1660652bf9b5d01e279737cbe7594e2e0a9ec40",
               "repetition_count": -1
@@ -52557,7 +52717,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_mode_select_16x64",
               "input_sha256": "6de7ecf1d5ed5eab61c60fab3899cdc328cf3416ddcc1338bc7823412e64ddd2",
               "repetition_count": -1
@@ -52717,9 +52877,329 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_b16x64_mode_select_64x64",
               "input_sha256": "6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a",
+              "repetition_count": 0
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Two-frame 64x64 8-bit 4:2:0 AVIF sequence with a lossless key frame and TX_MODE_SELECT B16x64 inter leaves at non-lossless base qindex zero with nonzero chroma deltas",
+          "asset": "animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64_avif.bin",
+          "ref_sha256": "0fef7d891b1d45352f6ce605f19c0c762d43112a830447379c696b1f58cf8553",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              64,
+              64
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 1,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64_avif_frame_0.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "0fef7d891b1d45352f6ce605f19c0c762d43112a830447379c696b1f58cf8553",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64_avif_frame_1.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "e5ecba2d8416275ac5acba7b168f1b612bf12394274c7d1096983ed88fbc35cf",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
+              "case": "lossy_inter_420_b16x64_qindex0_mode_select_64x64",
+              "input_sha256": "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c",
+              "repetition_count": 0
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Two-frame 64x64 8-bit monochrome AVIF sequence with a lossless key frame and TX_MODE_SELECT B16x64 inter leaves at non-lossless base qindex zero with a nonzero luma delta",
+          "asset": "animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64_avif.bin",
+          "ref_sha256": "e7b00031b2a3ae66798ba32c8b803100073cba5b4d1b36dcbcc60fe1ae322bee",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              64,
+              64
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 1,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64_avif_frame_0.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "e7b00031b2a3ae66798ba32c8b803100073cba5b4d1b36dcbcc60fe1ae322bee",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64_avif_frame_1.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "4dd1322b796175c60b7ad53a5901d9b2955aea0af871d697992e000e7659b7c6",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
+              "case": "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
+              "input_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c",
               "repetition_count": 0
             }
           },
@@ -52877,7 +53357,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_mode_largest_64x16",
               "input_sha256": "74d3b5b9b06e208175d4ac533c05de73eb37f46fce8cfc2de581116689d59468",
               "repetition_count": -1
@@ -53037,7 +53517,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_b64x16_mode_largest_64x64",
               "input_sha256": "35f16973d0bda15b2a2038102b3f646f2b04d6e07157933bd03b8b32a6452daf",
               "repetition_count": 0
@@ -53197,7 +53677,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_b64x16_mode_select_64x64",
               "input_sha256": "84eab6d96f97deb02fca49e66602f9cb507d2281cde5d4b52b2a50c54cb0433a",
               "repetition_count": 0
@@ -53357,7 +53837,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_b64x16_10bit_mode_select_64x64",
               "input_sha256": "0d85dc1e3e8958e7375c3dcddd048f93cc5bd7ad12f50f82f1299f1c482c1880",
               "repetition_count": 0
@@ -53517,7 +53997,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_420_b64x16_12bit_mode_select_64x64",
               "input_sha256": "8583340a327c7feffa803fa3b0a80267a49b6fa21c062f9b19799e2a82bf1dcc",
               "repetition_count": 0
@@ -53675,7 +54155,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_i444_split_b16x32_mode2",
               "input_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
               "repetition_count": -1
@@ -53867,7 +54347,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_i444_compound_split_b16x32_mode2",
               "input_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714",
               "repetition_count": -1
@@ -54055,7 +54535,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "lossy_inter_i444_obmc_mixed_b16x32",
               "input_sha256": "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
               "repetition_count": -1
@@ -54275,7 +54755,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_large_420",
               "input_sha256": "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f",
               "repetition_count": -1
@@ -54465,7 +54945,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "tx64_root_split_inter_420_64x64",
               "input_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c",
               "repetition_count": -1
@@ -54685,7 +55165,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_window_left_512x128",
               "input_sha256": "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399",
               "repetition_count": -1
@@ -54905,7 +55385,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_window_right_512x128",
               "input_sha256": "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
               "repetition_count": -1
@@ -55097,7 +55577,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_mv_range_2048x128",
               "input_sha256": "294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a",
               "repetition_count": -1
@@ -55287,7 +55767,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_mv_range_positive_x_2048x128",
               "input_sha256": "f802a724db9dea26e0d71abb7d123c9338449e77008282874f58580c0b2163d1",
               "repetition_count": -1
@@ -55477,7 +55957,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_mv_range_negative_y_128x2048",
               "input_sha256": "e32c9ff32e87922be280d26fef6d8c92635e84d2918df7c23f3f8ec3087b051c",
               "repetition_count": -1
@@ -55667,7 +56147,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "e876fd2a38f4e2a5e0957c715dc2b8cf5106ce37653a39c84c17a6fd2d1118bc",
+              "index_sha256": "11347282be634982820483750af970ff6cc4e981fcd7f5a5c0314de13f2a297e",
               "case": "motion_temporal_mv_range_positive_y_128x2048",
               "input_sha256": "307a001ecd6e10c4b840a3d0e0b30b24a6a90ac1c8f5f5ea1b8d9e209b1c3333",
               "repetition_count": -1
@@ -219483,6 +219963,117 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_method_6_box_chain_max_match",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Three six-color palette rows force VP8L's box-chain matcher past the 4,095-pixel limit after a shorter hash-chain match",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_box_chain_max_match_8196x3.png",
+          "source_sha256": "c07464a1965f2fd029193f05cb0f1da90740d046570b30a66bd86dd2d2ea5df3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_box_chain_max_match.bin",
+          "encoded_ref_bytes": 76,
+          "encoded_ref_sha256": "d012caba3e51c61643abd86874b13d55c5a178de871c5469896f01bab7bc46c2",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_box_chain_max_match.bin",
+          "ref_sha256": "809865969461d792ec552fbe8040f3f59abc39fa4f4da222d3b715d058f2dfe6",
+          "ref_bytes": 73764,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8196,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_method_6_box_chain_max_match_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware VP8L box-chain search bounds a long packed-palette match after a shorter hash-chain candidate",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_box_chain_max_match_8196x3.png",
+          "source_sha256": "c07464a1965f2fd029193f05cb0f1da90740d046570b30a66bd86dd2d2ea5df3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_box_chain_max_match_token.bin",
+          "encoded_ref_bytes": 76,
+          "encoded_ref_sha256": "d012caba3e51c61643abd86874b13d55c5a178de871c5469896f01bab7bc46c2",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_box_chain_max_match_token.bin",
+          "ref_sha256": "809865969461d792ec552fbe8040f3f59abc39fa4f4da222d3b715d058f2dfe6",
+          "ref_bytes": 73764,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8196,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossless_method_6_run_cap",
           "type": "encode",
           "format": "webp",
@@ -220263,6 +220854,117 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_cost_manager_shifted_rows",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless VP8L method-six encoding preserves Pillow bytes across high-cardinality repeated rows with changing match offsets",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_cost_manager_shifted_rows_2048x512.png",
+          "source_sha256": "c190d493dc2f746a76d1b73be5aa7232ab2fddf4fbd496d54fc7691cc93a303f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_shifted_rows.bin",
+          "encoded_ref_bytes": 5336,
+          "encoded_ref_sha256": "16cbe243b738c77fd6f21ac77157fbb1de47ce129d36d4bec7ef304f40c32240",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_shifted_rows.bin",
+          "ref_sha256": "36bb2d35f0575d6c684883f834f7aabb5f39cedf5edeb9f0eacc4e5b1bed7cac",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2048,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_lossless_cost_manager_shifted_rows_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless VP8L method-six encoding preserves Pillow bytes across changing repeated-row match offsets",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_cost_manager_shifted_rows_2048x512.png",
+          "source_sha256": "c190d493dc2f746a76d1b73be5aa7232ab2fddf4fbd496d54fc7691cc93a303f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_shifted_rows_token.bin",
+          "encoded_ref_bytes": 5336,
+          "encoded_ref_sha256": "16cbe243b738c77fd6f21ac77157fbb1de47ce129d36d4bec7ef304f40c32240",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_shifted_rows_token.bin",
+          "ref_sha256": "36bb2d35f0575d6c684883f834f7aabb5f39cedf5edeb9f0eacc4e5b1bed7cac",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2048,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_predictor_sampling_limit",
           "type": "encode",
           "format": "webp",
@@ -220864,6 +221566,61 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_bilevel_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless bilevel WebP conversion follows Pillow's RGB output path",
+          "params": {
+            "lossless": true,
+            "color_type": "1",
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1bit.png",
+          "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "1",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_bilevel_token.bin",
+          "encoded_ref_bytes": 1726,
+          "encoded_ref_sha256": "a33e659e47baa4a4e5b877cbae049a7116867edf16d884dd9e37333df350c351",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_bilevel_token.bin",
+          "ref_sha256": "ec08e5b66f47c87deb39f8639694b351c73f31a53e6ffd87200d8962fab669ce",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_indexed",
           "type": "encode",
           "format": "webp",
@@ -221287,6 +222044,61 @@
           "encoded_ref_bytes": 38,
           "encoded_ref_sha256": "b2a2905016596773cf793ff88e8e0bb37fde0da29217c5c407e5acab90e38c84",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_luminance_alpha_partial.bin",
+          "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
+          "ref_bytes": 4,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_luminance_alpha_partial_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless partial-alpha luminance-alpha input expands through Pillow's RGBA path",
+          "params": {
+            "lossless": true,
+            "color_type": "LA",
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gray_alpha_partial.png",
+          "source_sha256": "19f15fdf921977bffe2ef6e6323ee08e685402f89cf2114961ac3572d6f9a25b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "La8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_luminance_alpha_partial_token.bin",
+          "encoded_ref_bytes": 38,
+          "encoded_ref_sha256": "b2a2905016596773cf793ff88e8e0bb37fde0da29217c5c407e5acab90e38c84",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_luminance_alpha_partial_token.bin",
           "ref_sha256": "117f2bdec16c3fbb3dc5c6515261c96d348f586aee71e6bcc06d5b169a85353c",
           "ref_bytes": 4,
           "ref_mode": "Rgba8",
@@ -221737,6 +222549,61 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossy_rgba_alpha_filter_no_win",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy RGBA WebP keeps unfiltered alpha when the sampled filter estimate does not reduce full-plane output",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_filter_no_win_512x512.png",
+          "source_sha256": "343008603074288cbdad755679e6e6f0c78e9cb8b96b73cffcb7b316f7229210",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_filter_no_win.bin",
+          "encoded_ref_bytes": 157078,
+          "encoded_ref_sha256": "715914879a0bcc255e9e736fbe69ce3f395be11bf7d9685cec7406079b7f5bac",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filter_no_win.bin",
+          "ref_sha256": "aadd93e3ec89786d42c0cfe137892bfd079e6d4c0a9e7b1f3462a8b0b7318ef9",
+          "ref_bytes": 1048576,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_rgba_alpha_filtered_linear_ramp_token",
           "type": "encode",
           "format": "webp",
@@ -221848,6 +222715,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossy_rgba_alpha_raw_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Cooperative lossy RGBA WebP encoding matches Pillow's raw high-entropy alpha output",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_rgba_alpha_noisy_seeded.png",
+          "source_sha256": "e1105dfac182e64e01ef20cd87bbe44ffa4a187666161e1d54858afaf947ed36",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_raw_token.bin",
+          "encoded_ref_bytes": 4210,
+          "encoded_ref_sha256": "c3fed186ee97cc2418fd1815880646118e73fdaa3fed896bf977118972b13e4d",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_raw_token.bin",
+          "ref_sha256": "6d1fcd1bc197f3a196ca06828f2bae3a97d22f7902c85f5685ecfe354a019f92",
+          "ref_bytes": 16384,
+          "ref_mode": "Rgba8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_rgba_alpha_size_tie",
           "type": "encode",
           "format": "webp",
@@ -221947,6 +222870,61 @@
           "encoded_ref_bytes": 3634,
           "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_opaque_rgba.bin",
+          "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_opaque_rgba_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Token-aware lossy WebP strips an all-opaque alpha channel before VP8 encoding",
+          "params": {
+            "lossless": false,
+            "alpha": true,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgba.png",
+          "source_sha256": "0f2614c72297fe89d09979d4413d9ea24e71b8b2874242a906acc7f125f3506b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_opaque_rgba_token.bin",
+          "encoded_ref_bytes": 3634,
+          "encoded_ref_sha256": "352c7d601335ace77ca55471983b7b25279d0134bc58b20011dff52b452f9c4f",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_opaque_rgba_token.bin",
           "ref_sha256": "86eb6142b01678c86a17aafa864c4c9a496c9d77dc2479df5f76652825adab2a",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
@@ -223091,6 +224069,60 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_exif_metadata_reuse",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless VP8L output receives exact EXIF metadata through the reusable-output path",
+          "params": {
+            "lossless": true,
+            "exif_hex": "45786966000049492a000800000000000000"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1x1.png",
+          "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_exif_metadata_reuse.bin",
+          "encoded_ref_bytes": 74,
+          "encoded_ref_sha256": "10418c63af7178aff19eb7b9f6ebe473621543f4e3dadee3e839b3747814cd35",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_exif_metadata_reuse.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "description": "",
           "format": "webp",
           "id": "enc_xmp",
@@ -223564,6 +224596,60 @@
           "encoded_ref_bytes": 16780,
           "encoded_ref_sha256": "6f7509153181e2346a376b97c4b15e00ed5fe1fd0b19f74d25dcf93c5fe3ead1",
           "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cmyk.bin",
+          "ref_sha256": "6f2096b7fbd9282af3df7e5b61dd69cdeffc55a7281378f3125002a8adfac6d3",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_cmyk_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless WebP converts CMYK input to Pillow's RGB output path",
+          "params": {
+            "lossless": true,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "baseline_cmyk.jpg",
+          "source_sha256": "d4ad71649e3252d9dfeb0007de25ed7d7b4b8afe1e73548bd4023b47b6deefa4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "CMYK",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cmyk_token.bin",
+          "encoded_ref_bytes": 16780,
+          "encoded_ref_sha256": "6f7509153181e2346a376b97c4b15e00ed5fe1fd0b19f74d25dcf93c5fe3ead1",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cmyk_token.bin",
           "ref_sha256": "6f2096b7fbd9282af3df7e5b61dd69cdeffc55a7281378f3125002a8adfac6d3",
           "ref_bytes": 49152,
           "ref_mode": "Rgb8",
@@ -224221,6 +225307,284 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_dimension_limit_max_16383",
+          "type": "encode",
+          "format": "webp",
+          "category": "dimension",
+          "description": "Pillow accepts the inclusive 16,383-pixel WebP side limit",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_dimension_limit_16383x1.png",
+          "source_sha256": "30e9bba7e4b84b2f016b8cb76958ff136f74340ea2005a1838c85c1c8faef0df",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_dimension_limit_max_16383.bin",
+          "encoded_ref_bytes": 44,
+          "encoded_ref_sha256": "8a4796055658062fb87856f6d048f1cf9b3944961b9e5b8e1d58357abcf1263f",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_dimension_limit_max_16383.bin",
+          "ref_sha256": "dd59e1bb7d408faf6c5061560ba04b66966e63c3da901e9304d86bdf1c6e71d7",
+          "ref_bytes": 49149,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16383,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_dimension_limit_max_16383",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Pillow accepts the inclusive 16,383-pixel WebP side limit for lossy output",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_dimension_limit_16383x1.png",
+          "source_sha256": "30e9bba7e4b84b2f016b8cb76958ff136f74340ea2005a1838c85c1c8faef0df",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_dimension_limit_max_16383.bin",
+          "encoded_ref_bytes": 542,
+          "encoded_ref_sha256": "e67238025de2835593afe703635fa8c58a220e7818affee2ce8a309b1a37608b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_dimension_limit_max_16383.bin",
+          "ref_sha256": "3d63b4921841ee316f8e82718fcd994e8fe5b543d1f113c67e6dcf3d1389596a",
+          "ref_bytes": 49149,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16383,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_error_dimension_limit",
+          "type": "encode",
+          "format": "webp",
+          "category": "error",
+          "description": "Pillow and the Rust encoder reject a valid RGB source wider than WebP's 16,383-pixel side limit",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 4
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_dimension_limit_16385x1.png",
+          "source_sha256": "bc4c5e90ed145ef72aa6c5d16e697381a00ab02e8e6c3f5d9c78480db6c23ab9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+              "rust_kind": "dimensions",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "oracle_error_kind": "dimensions"
+        },
+        {
+          "id": "enc_error_dimension_limit_16384",
+          "type": "encode",
+          "format": "webp",
+          "category": "error",
+          "description": "Pillow's WebP encoder rejects the first width beyond its inclusive 16,383-pixel side limit",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 4
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_dimension_limit_16384x1.png",
+          "source_sha256": "d5799faf97d0e3798b1716bb413e0dd76796b85c03dce0b5329690280e31471b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+              "rust_kind": "dimensions",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "oracle_error_kind": "dimensions"
+        },
+        {
+          "id": "enc_error_dimension_limit_lossy_16384",
+          "type": "encode",
+          "format": "webp",
+          "category": "error",
+          "description": "Pillow's lossy WebP encoder rejects the first width beyond its inclusive 16,383-pixel side limit",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_dimension_limit_16384x1.png",
+          "source_sha256": "d5799faf97d0e3798b1716bb413e0dd76796b85c03dce0b5329690280e31471b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+              "rust_kind": "dimensions",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "oracle_error_kind": "dimensions"
+        },
+        {
           "description": "Lossy WebP",
           "format": "webp",
           "id": "enc_lossy",
@@ -224432,6 +225796,116 @@
           "ref_size": [
             32,
             32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_quality_80_method_4_uniform_rgb_32x32",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy quality-80 method-four encoding of a uniform 32x32 RGB image exercising flat intra16 scoring",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossy_q0_solid_rgb_32x32.png",
+          "source_sha256": "36b92d4ae57c946bc9187336ceb0c25f65c06648db6789fce914b67b03691c8f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_80_method_4_uniform_rgb_32x32.bin",
+          "encoded_ref_bytes": 80,
+          "encoded_ref_sha256": "d5b33a6a4452d87928c7956be970a09f66bf33b024f91df67b61222017617f3d",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_80_method_4_uniform_rgb_32x32.bin",
+          "ref_sha256": "0c1680535c7baa47105185e3f379d36376fd4b3be62cc9e76aceb696829f2d2d",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_quality_80_method_4_nonuniform_rgb_17x17",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Lossy quality-80 method-four encoding of a nonuniform 17x17 RGB image exercising the flat-source fast rejection",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_subtract_green.png",
+          "source_sha256": "f60a0ce6bf4ce6baefba2b5e698f44a537ddec25a989c8ca48057b1d981402c7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_80_method_4_nonuniform_rgb_17x17.bin",
+          "encoded_ref_bytes": 380,
+          "encoded_ref_sha256": "9c01cd551254909ec5028d6470d2f83af7ab936fc0146c9b9738432d40f6df10",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_80_method_4_nonuniform_rgb_17x17.bin",
+          "ref_sha256": "45fe3ab3f39cf7e9fdd265f8522f336e357cd374d3223a78c1bd7fe8e970a79b",
+          "ref_bytes": 867,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            17,
+            17
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
@@ -224660,12 +226134,12 @@
     }
   },
   "summary": {
-    "total_rows": 2642,
-    "decode_rows": 2114,
-    "encode_rows": 528,
+    "total_rows": 2663,
+    "decode_rows": 2117,
+    "encode_rows": 546,
     "formats": 8,
-    "assets_available": 2110,
-    "decode_active": 2114,
+    "assets_available": 2113,
+    "decode_active": 2117,
     "decode_planned": 0,
     "encode_not_wired": 31
   },
@@ -226776,6 +228250,25 @@
       "fault": {
         "point": "avif.monochrome_portable.output_length_mismatch",
         "contract": "decode_unsupported_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "webp_hash_chain_index_overflow_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "webp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:webp:lossless_vp8l"
+      },
+      "fault": {
+        "point": "webp.hash_chain.index_overflow",
+        "contract": "encode_invalid_dimensions_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
     }

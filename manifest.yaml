@@ -1608,6 +1608,20 @@ fault_contracts:
       point: avif.monochrome_portable.output_length_mismatch
       contract: decode_unsupported_then_retry_succeeds
     oracle_status: not_applicable
+  - id: webp_hash_chain_index_overflow_rejected
+    type: fault-contract
+    operation: encode
+    format: webp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:webp:lossless_vp8l
+    fault:
+      point: webp.hash_chain.index_overflow
+      contract: encode_invalid_dimensions_then_retry_succeeds
+    oracle_status: not_applicable
 
 formats:
   jpeg:
@@ -5910,6 +5924,16 @@ formats:
       source_format: png
       source_asset: webp_lossless_distance2_max_match_tail_8451x1.png
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_6_box_chain_max_match
+      description: Three six-color palette rows force VP8L's box-chain matcher past the 4,095-pixel limit after a shorter hash-chain match
+      source_format: png
+      source_asset: webp_box_chain_max_match_8196x3.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_method_6_box_chain_max_match_token
+      description: Token-aware VP8L box-chain search bounds a long packed-palette match after a shorter hash-chain candidate
+      source_format: png
+      source_asset: webp_box_chain_max_match_8196x3.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_method_6_run_cap
       description: VP8L method six exercises the hash-chain run checkpoint and 4,095-pixel cap in the exhaustive search specialization
       source_format: png
@@ -5972,6 +5996,16 @@ formats:
       source_format: png
       source_asset: webp_lossless_sampling_rows_checkpoint.png
       params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_cost_manager_shifted_rows
+      description: Lossless VP8L method-six encoding preserves Pillow bytes across high-cardinality repeated rows with changing match offsets
+      source_format: png
+      source_asset: webp_cost_manager_shifted_rows_2048x512.png
+      params: {'lossless': True, 'quality': 80, 'method': 6}
+    - id: enc_lossless_cost_manager_shifted_rows_token
+      description: Token-aware lossless VP8L method-six encoding preserves Pillow bytes across changing repeated-row match offsets
+      source_format: png
+      source_asset: webp_cost_manager_shifted_rows_2048x512.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossless_predictor_sampling_limit
       description: Method-five VP8L expands its initial predictor grid when a 2-bit grid exceeds 16,384 cells
       source_format: png
@@ -6027,6 +6061,11 @@ formats:
       source_format: png
       source_asset: 1bit.png
       params: {'lossless': True, 'color_type': '1'}
+    - id: enc_lossless_bilevel_token
+      description: Token-aware lossless bilevel WebP conversion follows Pillow's RGB output path
+      source_format: png
+      source_asset: 1bit.png
+      params: {'lossless': True, 'color_type': '1', 'rust_encode_with_token': true}
     - id: enc_lossy_indexed
       description: Lossy indexed WebP expanded through Pillow's opaque palette path
       source_format: png
@@ -6067,6 +6106,11 @@ formats:
       source_format: png
       source_asset: gray_alpha_partial.png
       params: {'lossless': True, 'color_type': 'LA'}
+    - id: enc_lossless_luminance_alpha_partial_token
+      description: Token-aware lossless partial-alpha luminance-alpha input expands through Pillow's RGBA path
+      source_format: png
+      source_asset: gray_alpha_partial.png
+      params: {'lossless': True, 'color_type': 'LA', 'rust_encode_with_token': true}
     - id: enc_lossy_alpha
       description: 
       source_format: png
@@ -6107,6 +6151,11 @@ formats:
       source_format: png
       source_asset: webp_rgba_alpha_gradient_plane_512x512.png
       params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_filter_no_win
+      description: Lossy RGBA WebP keeps unfiltered alpha when the sampled filter estimate does not reduce full-plane output
+      source_format: png
+      source_asset: webp_rgba_alpha_filter_no_win_512x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
     - id: enc_lossy_rgba_alpha_filtered_linear_ramp_token
       description: Cooperative lossy RGBA WebP encoding matches Pillow's filtered high-cardinality alpha output
       source_format: png
@@ -6117,6 +6166,11 @@ formats:
       source_format: png
       source_asset: webp_rgba_alpha_noisy_seeded.png
       params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_raw_token
+      description: Cooperative lossy RGBA WebP encoding matches Pillow's raw high-entropy alpha output
+      source_format: png
+      source_asset: webp_rgba_alpha_noisy_seeded.png
+      params: {'lossless': False, 'quality': 80, 'method': 4, 'rust_encode_with_token': True}
     - id: enc_lossy_rgba_alpha_size_tie
       description: Lossy RGBA WebP prefers compressed alpha when raw and compressed sizes tie
       source_format: png
@@ -6127,6 +6181,11 @@ formats:
       source_format: png
       source_asset: rgba.png
       params: {'lossless': False, 'alpha': True}
+    - id: enc_lossy_opaque_rgba_token
+      description: Token-aware lossy WebP strips an all-opaque alpha channel before VP8 encoding
+      source_format: png
+      source_asset: rgba.png
+      params: {'lossless': False, 'alpha': True, 'rust_encode_with_token': true}
     - id: enc_lossy_odd_alpha
       description: Lossy transparent smoothing on partial edge macroblocks
       source_format: png
@@ -6212,6 +6271,11 @@ formats:
     - id: enc_exif_mixed_hex_case
       description: Upper- and lower-case metadata nibbles produce exact EXIF bytes
       params: {'exif_hex': '45786966000049492A000800000000000000abCD'}
+    - id: enc_lossless_exif_metadata_reuse
+      description: Lossless VP8L output receives exact EXIF metadata through the reusable-output path
+      source_format: png
+      source_asset: 1x1.png
+      params: {'lossless': True, 'exif_hex': '45786966000049492a000800000000000000'}
     - id: enc_xmp
       description: 
       params: {'xmp_hex': '3c783a786d706d6574612f3e', 'rust_encode_with_token': true}
@@ -6248,6 +6312,11 @@ formats:
       source_format: jpeg
       source_asset: baseline_cmyk.jpg
       params: {'lossless': True}
+    - id: enc_lossless_cmyk_token
+      description: Token-aware lossless WebP converts CMYK input to Pillow's RGB output path
+      source_format: jpeg
+      source_asset: baseline_cmyk.jpg
+      params: {'lossless': True, 'rust_encode_with_token': true}
     - id: enc_lossless_noise
       description: Re-encode high-entropy lossless pixels with Pillow's spatial Huffman clustering
       source_format: webp
@@ -6309,6 +6378,39 @@ formats:
       source_asset: 1x1.png
       params: {'size': [1, 1]}
 
+    - id: enc_dimension_limit_max_16383
+      description: Pillow accepts the inclusive 16,383-pixel WebP side limit
+      source_format: png
+      source_asset: webp_dimension_limit_16383x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 4}
+
+    - id: enc_lossy_dimension_limit_max_16383
+      description: Pillow accepts the inclusive 16,383-pixel WebP side limit for lossy output
+      source_format: png
+      source_asset: webp_dimension_limit_16383x1.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+
+    - id: enc_error_dimension_limit
+      description: Pillow and the Rust encoder reject a valid RGB source wider than WebP's 16,383-pixel side limit
+      source_format: png
+      source_asset: webp_dimension_limit_16385x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 4}
+      expect_error: true
+
+    - id: enc_error_dimension_limit_16384
+      description: Pillow's WebP encoder rejects the first width beyond its inclusive 16,383-pixel side limit
+      source_format: png
+      source_asset: webp_dimension_limit_16384x1.png
+      params: {'lossless': True, 'quality': 80, 'method': 4}
+      expect_error: true
+
+    - id: enc_error_dimension_limit_lossy_16384
+      description: Pillow's lossy WebP encoder rejects the first width beyond its inclusive 16,383-pixel side limit
+      source_format: png
+      source_asset: webp_dimension_limit_16384x1.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+      expect_error: true
+
     - id: enc_lossy
       description: Lossy WebP
       params:
@@ -6331,6 +6433,22 @@ formats:
         lossless: false
         quality: 0
         method: 0
+    - id: enc_lossy_quality_80_method_4_uniform_rgb_32x32
+      description: Lossy quality-80 method-four encoding of a uniform 32x32 RGB image exercising flat intra16 scoring
+      source_format: png
+      source_asset: webp_lossy_q0_solid_rgb_32x32.png
+      params:
+        lossless: false
+        quality: 80
+        method: 4
+    - id: enc_lossy_quality_80_method_4_nonuniform_rgb_17x17
+      description: Lossy quality-80 method-four encoding of a nonuniform 17x17 RGB image exercising the flat-source fast rejection
+      source_format: png
+      source_asset: webp_subtract_green.png
+      params:
+        lossless: false
+        quality: 80
+        method: 4
     - id: enc_lossy_quality_0_method_0_nonuniform_rgb_17x17
       description: Lossy quality-zero method-zero encoding of a nonuniform 17x17 RGB image
       source_format: png
@@ -10758,6 +10876,12 @@ formats:
       - animated_lossless_inter_420_b32x32_10bit_64x64.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_420_b128x128_10bit
+      description: Two-frame 128x128 10-bit full-range 4:2:0 all-lossless AVIF sequence using one 128x128 superblock and a translating 8x8 luma patch
+      test_assets:
+      - animated_lossless_inter_420_b128x128_10bit.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: animated_lossless_inter_420_clipped_b32x32_10bit_28x28
       description: Two-frame 28x28 10-bit full-range 4:2:0 all-lossless AVIF sequence with edge-clipped B8x8 inter leaves
       test_assets:
@@ -11071,6 +11195,16 @@ formats:
       description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_VERT_4 to create four coded B16x64 leaves at positive qindex and TX_MODE_SELECT
       test_assets:
       - animated_lossy_inter_420_b16x64_mode_select_64x64.avif
+      status: active
+    - id: animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 AVIF sequence with a lossless key frame and TX_MODE_SELECT B16x64 inter leaves at non-lossless base qindex zero with nonzero chroma deltas
+      test_assets:
+      - animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64.avif
+      status: active
+    - id: animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit monochrome AVIF sequence with a lossless key frame and TX_MODE_SELECT B16x64 inter leaves at non-lossless base qindex zero with a nonzero luma delta
+      test_assets:
+      - animated_lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64.avif
       status: active
     - id: animated_lossy_inter_420_mode_largest_64x16
       description: Two-frame 64x16 8-bit 4:2:0 lossy AVIF sequence whose inter frame signals TX_MODE_LARGEST at positive qindex

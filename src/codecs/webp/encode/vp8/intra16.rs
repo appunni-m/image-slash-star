@@ -33,6 +33,16 @@ fn flat_border_mode(source: &[u8; 256], has_top: bool, has_left: bool) -> Option
     })
 }
 
+fn has_uniform_samples(source: &[u8; 256]) -> bool {
+    source.iter().all(|&sample| sample == source[0])
+}
+
+fn has_zero_ac_coefficients(levels: &[[i16; 16]; 16]) -> bool {
+    levels
+        .iter()
+        .all(|block| block[1..].iter().all(|&level| level == 0))
+}
+
 const FIXED_MODE_COSTS: [u32; 4] = [663, 919, 872, 919];
 
 fn predict(
@@ -287,10 +297,11 @@ pub(super) fn select(
     lambda_i16: u32,
     texture_lambda: u32,
     fixed_mode: Option<Intra16Mode>,
-    distortion_only: bool,
+    method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Intra16Candidate {
+    let distortion_only = method <= 1;
     let flat_border_mode = distortion_only
         .then(|| flat_border_mode(source, has_top, has_left))
         .flatten();
@@ -312,36 +323,59 @@ pub(super) fn select(
                 .expect("VP8 always has intra16 candidates")
         })
     });
+    // libwebp strengthens distortion while a uniform source and quantized
+    // coefficients remain flat. Preserve its mode-order-dependent cutoff.
+    let mut is_flat = method >= 3 && has_uniform_samples(source);
+    let mut best = None;
+    for mode in Intra16Mode::ALL {
+        if fixed_mode.is_some_and(|fixed| fixed != mode)
+            || selected_mode.is_some_and(|selected| selected != mode)
+        {
+            continue;
+        }
+        let mut candidate = evaluate(
+            mode,
+            source,
+            top,
+            left,
+            top_left,
+            has_top,
+            has_left,
+            top_nonzero,
+            left_nonzero,
+            y2_context,
+            matrices,
+            lambda_i16,
+            texture_lambda,
+            coefficient_probabilities,
+            trellis,
+        );
+        if is_flat {
+            is_flat = has_zero_ac_coefficients(&candidate.y1_levels);
+            if is_flat {
+                candidate.distortion = candidate.distortion.wrapping_mul(2);
+                candidate.spectral_distortion = candidate.spectral_distortion.wrapping_mul(2);
+                candidate.score = rd_score(
+                    candidate.rate_cost,
+                    candidate.header_cost,
+                    candidate
+                        .distortion
+                        .wrapping_add(candidate.spectral_distortion),
+                    lambda_i16,
+                );
+            }
+        }
+        if best
+            .as_ref()
+            .is_none_or(|best: &Intra16Candidate| candidate.score < best.score)
+        {
+            best = Some(candidate);
+        }
+    }
     // `fixed_mode`, when present, is itself a member of this non-empty enum set.
     #[allow(
         clippy::expect_used,
         reason = "Intra16Mode::ALL statically contains the complete non-empty prediction set."
     )]
-    Intra16Mode::ALL
-        .into_iter()
-        .filter(|&mode| {
-            fixed_mode.is_none_or(|fixed| fixed == mode)
-                && selected_mode.is_none_or(|selected| selected == mode)
-        })
-        .map(|mode| {
-            evaluate(
-                mode,
-                source,
-                top,
-                left,
-                top_left,
-                has_top,
-                has_left,
-                top_nonzero,
-                left_nonzero,
-                y2_context,
-                matrices,
-                lambda_i16,
-                texture_lambda,
-                coefficient_probabilities,
-                trellis,
-            )
-        })
-        .min_by_key(|candidate| candidate.score)
-        .expect("VP8 always has intra16 candidates")
+    best.expect("VP8 always has intra16 candidates")
 }

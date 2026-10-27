@@ -173,6 +173,8 @@ def encode_error_kind(row, error):
     """Map a Pillow save failure using its manifest-declared caller input."""
     params = row.get("params", {})
     message = stable_error_message(error)
+    if "Image size exceeds WebP limit" in message:
+        return "dimensions"
     if "source_dimensions" in params:
         return "dimensions"
     if params.get("truncate_pixels"):
@@ -3405,6 +3407,9 @@ def sync_fault_contract_rows(manifest, matrix):
             "sequence_decode_error_then_retry_succeeds",
             "inspection_error_then_retry_succeeds",
         },
+        "webp.hash_chain.index_overflow": {
+            "encode_invalid_dimensions_then_retry_succeeds"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3505,13 +3510,13 @@ def sync_fault_contract_rows(manifest, matrix):
             row.get("type") != "fault-contract"
             or row.get("verification") != "fault-contract"
             or row.get("oracle_status") != "not_applicable"
-            or row.get("operation") not in {"decode", "inspect"}
+            or row.get("operation") not in {"decode", "inspect", "encode"}
             or row.get("status") != "active"
         ):
             raise RuntimeError(
-                f"{case_id}: fault contract must be active decode or inspect with a not_applicable oracle"
+                f"{case_id}: fault contract must be active decode, inspect, or encode with a not_applicable oracle"
             )
-        if row.get("format") not in {"avif", "bmp", "jpeg", "png", "tiff"}:
+        if row.get("format") not in {"avif", "bmp", "jpeg", "png", "tiff", "webp"}:
             raise RuntimeError(f"{case_id}: unsupported fault-contract format")
         requirements = row.get("requirements")
         if (
@@ -3571,6 +3576,14 @@ def sync_fault_contract_rows(manifest, matrix):
         ):
             raise RuntimeError(
                 f"{case_id}: inspect fault contracts must use the APNG inspection exhaustion contract"
+            )
+        if row["operation"] == "encode" and (
+            row["format"] != "webp"
+            or point != "webp.hash_chain.index_overflow"
+            or contract != "encode_invalid_dimensions_then_retry_succeeds"
+        ):
+            raise RuntimeError(
+                f"{case_id}: encode fault contracts must use the WebP hash-chain overflow contract"
             )
         if contract == "inspection_error_then_retry_succeeds" and row["operation"] != "inspect":
             raise RuntimeError(

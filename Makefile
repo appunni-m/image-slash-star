@@ -59,6 +59,10 @@ fmt:
 .PHONY: verify-fixture-integrity
 verify-fixture-integrity:
 	$(PYTHON) scripts/verify_claim_ledger.py
+	$(PYTHON) scripts/generate_webp_alpha_filter_no_win_fixture.py --check
+	$(PYTHON) scripts/generate_webp_box_chain_max_match_fixture.py --check
+	$(PYTHON) scripts/generate_webp_cost_manager_shifted_rows_fixture.py --check
+	$(PYTHON) scripts/generate_webp_dimension_limit_fixture.py --check
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
@@ -143,6 +147,9 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_select_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_qindex0_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_inter_monochrome_b16x64_qindex0_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_lossless_inter_i420_b128x128_10bit.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_64x16.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode largest --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --check
@@ -189,7 +196,7 @@ supply-chain:
 
 .PHONY: coverage
 coverage:
-	mkdir -p target/release-evidence
+	mkdir -p "$(dir $(COVERAGE_REPORT))"
 	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --locked --json \
 		--output-path "$(COVERAGE_REPORT)" --no-fail-fast
 	$(MAKE) coverage-check

@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 133 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 125 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 422 hashed
-artifacts total 22,488,194 bytes, including 133 input files, the compiled
-observer source, and 21,818,108 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 135 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 127 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 428 hashed
+artifacts total 22,546,068 bytes, including 135 input files, the compiled
+observer source, and 21,867,260 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 96 fixture sources are declared in
+The 103 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -69,6 +69,14 @@ full-range 8-bit I420 companion forces `PARTITION_VERT_4`, producing four
 B16x64 leaves with a low-frequency residual in the first leaf so the inter
 frame retains TX_MODE_SELECT. Its exact Pillow frames and native loop
 observation are recorded.
+The qindex-zero companion retains that `PARTITION_VERT_4` layout and keeps its
+key frame lossless. Its inter frame has base qindex zero with nonzero chroma
+quantizer deltas; exact Pillow RGB frames and the native one-play sequence
+observation are retained for this single-terminal `TX_MODE_SELECT` path.
+The monochrome companion keeps the same partition and transform profile, with
+a nonzero luma delta making its base-qindex-zero inter frame non-lossless. Its
+exact Pillow RGB frames and native one-play sequence observation cover the
+luma-only qindex-zero branch.
 The full-range 10-bit I420 source starts with a flat key frame and changes to
 an 8x8 tiled inter frame. Its inter picture uses 128x56 coded dimensions,
 160x56 upscaled dimensions, and SGR restoration on Y, U, and V. Both exact
@@ -277,3 +285,7 @@ native infinite-loop observations. These inputs do not assert a particular
 encoder leaf geometry.
 
 The four three-frame temporal motion-range sequences use 16-pixel texture runs or bands, translated 600 pixels in each signed axis direction and back. Their exact Pillow frame hashes and independent native infinite-loop observations are retained.
+
+The two-frame 128x128 10-bit I420 lossless sequence also has an independent
+native infinite-loop observation. Its public decode parity case checks both
+complete RGB frames against Pillow.

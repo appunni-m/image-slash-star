@@ -1,0 +1,37 @@
+diff --git a/av1/av1_cx_iface.c b/av1/av1_cx_iface.c
+index 07820d640b..25b8feb3d7 100644
+--- a/av1/av1_cx_iface.c
++++ b/av1/av1_cx_iface.c
+@@ -876,6 +876,6 @@ static aom_codec_err_t validate_config(aom_codec_alg_priv_t *ctx,
+   if (extra_cfg->lossless) {
+     if (extra_cfg->aq_mode != 0)
+       ERROR("Only --aq_mode=0 can be used with --lossless=1.");
+-    if (extra_cfg->enable_chroma_deltaq)
+-      ERROR("Only --enable_chroma_deltaq=0 can be used with --lossless=1.");
++    // Fixture-only: AV1 permits nonzero quantizer deltas at base qindex zero.
++    // These fixtures exercise non-lossless qindex-zero decoder handling.
+   }
+diff --git a/av1/encoder/av1_quantize.c b/av1/encoder/av1_quantize.c
+index 1673d5324d..e51083883f 100644
+--- a/av1/encoder/av1_quantize.c
++++ b/av1/encoder/av1_quantize.c
+@@ -883,2 +883,8 @@ void av1_set_quantizer(AV1_COMMON *const cm, int min_qmlevel, int max_qmlevel,
+   quant_params->base_qindex = AOMMAX(cm->delta_q_info.delta_q_present_flag, q);
+   quant_params->y_dc_delta_q = 0;
++  if (cm->seq_params->monochrome &&
++      cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1) {
++    // Fixture-only: keep monochrome qindex-zero inter data non-lossless.
++    quant_params->y_dc_delta_q = 2;
++  }
+@@ -886,5 +892,8 @@ void av1_set_quantizer(AV1_COMMON *const cm, int min_qmlevel, int max_qmlevel,
+-  // Disable deltaq in lossless mode.
+-  if (enable_chroma_deltaq && q) {
++  // Fixture-only: preserve nonzero chroma deltas at base qindex zero so
++  // the encoded frame is non-lossless while exercising that decoder edge case.
++  if (enable_chroma_deltaq &&
++      (q || (cm->current_frame.frame_type == INTER_FRAME &&
++             cm->current_frame.frame_number == 1))) {
+     if (is_allintra &&
+         (tuning == AOM_TUNE_IQ || tuning == AOM_TUNE_SSIMULACRA2)) {
+       int chroma_dc_delta_q = 0;

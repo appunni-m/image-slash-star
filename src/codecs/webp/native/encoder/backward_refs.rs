@@ -191,6 +191,22 @@ fn fill_hash_chain(
     first: &mut Vec<i32>,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
+    let size_for_index_check = pixels.len();
+    // Check once before the const-generic hash-chain implementations split.
+    // Public encoder dimensions are capped at 16,384 per axis, but keep the
+    // private helper safe if it receives a larger pixel slice.
+    #[cfg(coverage)]
+    let size_for_index_check = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::WebpHashChainIndexOverflow,
+    ) {
+        usize::try_from(i64::from(i32::MAX) + 1).unwrap_or(size_for_index_check)
+    } else {
+        size_for_index_check
+    };
+    if i32::try_from(size_for_index_check).is_err() {
+        return Err(super::EncodingError::InvalidDimensions);
+    }
+
     if low_effort {
         fill_hash_chain_impl::<true>(pixels, width, quality, chain, first, token)
     } else {
@@ -208,12 +224,6 @@ fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
     let size = pixels.len();
-    // `first` stores positions in an `i32` so it can use `-1` as the empty
-    // sentinel. Public encoder dimensions are capped at 16,384 per axis, but
-    // keep this private helper safe if it is called with a larger pixel slice.
-    if i32::try_from(size).is_err() {
-        return Err(super::EncodingError::InvalidDimensions);
-    }
     chain.resize(size, (0, 0));
     chain.fill((0, 0));
     if size <= 2 {

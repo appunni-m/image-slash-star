@@ -1955,7 +1955,6 @@ impl<R: Read> Vp8Decoder<R> {
 
     fn decode_frame_(mut self) -> Result<Frame, DecodingError> {
         self.read_frame_header()?;
-
         for mby in 0..self.mbheight as usize {
             let p = mby % self.num_partitions as usize;
             self.left = MacroBlock::default();
