@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 137 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 129 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 436 hashed
-artifacts total 22,965,001 bytes, including 137 input files, the compiled
-observer source, and 22,303,064 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 138 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 130 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 440 hashed
+artifacts total 23,012,117 bytes, including 138 input files, the compiled
+observer source, and 22,339,928 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 105 fixture sources are declared in
+The 106 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -66,6 +66,9 @@ transform tree beside intra transform syntax; its complete Pillow RGB frames
 and pinned libavif infinite-loop observation are retained. The three-frame
 64x32 I422 compound-reference companion exposes both earlier references on
 its final inter frame; all three exact Pillow RGB frames and the native
+infinite-loop observation are retained. The three-frame 64x64 lossy I422
+compound-reference companion uses largest-transform mode and a full-frame
+B64x64 inter block; all exact Pillow RGB frames and the pinned native
 infinite-loop observation are retained. The two-frame
 32x64 lossy I422 vertical-split companion reaches the B32x64 TX4 chroma-grid
 path; its complete Pillow RGB frames and pinned libavif infinite-loop

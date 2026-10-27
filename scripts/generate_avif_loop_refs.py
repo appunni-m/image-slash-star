@@ -406,6 +406,10 @@ FIXTURES = {
         "animated_lossy_inter_422_compound_refs_b64x32.avif",
         "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350",
     ),
+    "lossy_inter_422_compound_direct_grid_b64x64": (
+        "animated_lossy_inter_422_compound_direct_grid_b64x64.avif",
+        "5eef65a8499170972eb9edf607844b39292721f4e53ebbcdc4d61e78f2d7c51e",
+    ),
     "lossy_inter_i444_obmc_mixed_b16x32": (
         "animated_lossy_inter_i444_obmc_mixed_b16x32.avif",
         "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
