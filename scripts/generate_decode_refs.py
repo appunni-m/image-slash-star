@@ -3410,6 +3410,15 @@ def sync_fault_contract_rows(manifest, matrix):
         "webp.hash_chain.index_overflow": {
             "encode_invalid_dimensions_then_retry_succeeds"
         },
+        "webp.riff_sink.short_header": {
+            "encode_invalid_riff_header_then_retry_matches_reference"
+        },
+        "webp.riff_sink.riff_signature_mismatch": {
+            "encode_invalid_riff_header_then_retry_matches_reference"
+        },
+        "webp.riff_sink.webp_form_type_mismatch": {
+            "encode_invalid_riff_header_then_retry_matches_reference"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3537,14 +3546,14 @@ def sync_fault_contract_rows(manifest, matrix):
         if not isinstance(source_case, str):
             raise RuntimeError(f"{case_id}: source_case must be a qualified case key")
         source_fields = source_case.split(":")
-        if len(source_fields) != 3 or source_fields[0] != "decode":
-            raise RuntimeError(f"{case_id}: source_case must be decode:format:id")
-        source_format, source_id = source_fields[1:]
+        if len(source_fields) != 3 or source_fields[0] not in {"decode", "encode"}:
+            raise RuntimeError(f"{case_id}: source_case must be decode:format:id or encode:format:id")
+        source_operation, source_format, source_id = source_fields
         if source_format != row["format"] or not source_id:
             raise RuntimeError(
                 f"{case_id}: source_case format must match the fault contract"
             )
-        source_rows = matrix.get("formats", {}).get(source_format, {}).get("decode", [])
+        source_rows = matrix.get("formats", {}).get(source_format, {}).get(source_operation, [])
         source_row = next(
             (
                 candidate
@@ -3553,12 +3562,18 @@ def sync_fault_contract_rows(manifest, matrix):
             ),
             None,
         )
-        if (
-            source_row is None
-            or source_row.get("status") != "active"
-            or source_row.get("oracle_status") != "ok"
-        ):
-            raise RuntimeError(f"{case_id}: source_case must reference an active decode row")
+        source_is_parity = source_row is not None and source_row.get("status") == "active"
+        if source_operation == "decode":
+            source_is_parity = source_is_parity and source_row.get("oracle_status") == "ok"
+        else:
+            source_is_parity = (
+                source_is_parity
+                and source_row.get("operations", {}).get("encode") == "ok"
+                and source_row.get("assertion_origins", {}).get("encode") == "pillow_fixture"
+                and bool(source_row.get("encoded_ref_path"))
+            )
+        if not source_is_parity:
+            raise RuntimeError(f"{case_id}: source_case must reference an active Pillow parity row")
 
         fault = row.get("fault")
         if not isinstance(fault, dict) or set(fault) != {"point", "contract"}:
@@ -3577,14 +3592,25 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(
                 f"{case_id}: inspect fault contracts must use the APNG inspection exhaustion contract"
             )
-        if row["operation"] == "encode" and (
-            row["format"] != "webp"
-            or point != "webp.hash_chain.index_overflow"
-            or contract != "encode_invalid_dimensions_then_retry_succeeds"
-        ):
-            raise RuntimeError(
-                f"{case_id}: encode fault contracts must use the WebP hash-chain overflow contract"
+        if row["operation"] == "encode":
+            if row["format"] != "webp":
+                raise RuntimeError(f"{case_id}: encode fault contracts must use WebP")
+            expected_source_operation = (
+                "encode" if point.startswith("webp.riff_sink.") else "decode"
             )
+            if source_operation != expected_source_operation:
+                raise RuntimeError(
+                    f"{case_id}: source_case operation must be {expected_source_operation}"
+                )
+            if point == "webp.hash_chain.index_overflow":
+                valid_encode_contract = contract == "encode_invalid_dimensions_then_retry_succeeds"
+            else:
+                valid_encode_contract = (
+                    point.startswith("webp.riff_sink.")
+                    and contract == "encode_invalid_riff_header_then_retry_matches_reference"
+                )
+            if not valid_encode_contract:
+                raise RuntimeError(f"{case_id}: encode fault point has an invalid retry contract")
         if contract == "inspection_error_then_retry_succeeds" and row["operation"] != "inspect":
             raise RuntimeError(
                 f"{case_id}: inspection retry contract requires operation: inspect"

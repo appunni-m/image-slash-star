@@ -131,6 +131,8 @@ pub(crate) fn encode_to_sink(
     policy
         .check_output_len(encoded.len(), ImageFormat::WebP, operation)
         .map_err(CodecError::from_image_error)?;
+    #[cfg(coverage)]
+    let encoded = corrupt_riff_header_for_coverage(encoded);
     write_riff_to_sink(&encoded, token, sink)
 }
 
@@ -150,7 +152,33 @@ pub(crate) fn encode_sequence_to_sink(
     policy
         .check_output_len(encoded.len(), ImageFormat::WebP, operation)
         .map_err(CodecError::from_image_error)?;
+    #[cfg(coverage)]
+    let encoded = corrupt_riff_header_for_coverage(encoded);
     write_riff_to_sink(&encoded, token, sink)
+}
+
+#[cfg(coverage)]
+fn corrupt_riff_header_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
+    use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+    let byte_to_corrupt = if take_fault_point(CoverageFaultPoint::WebpRiffHeaderTooShort) {
+        encoded.truncate(11);
+        None
+    } else if take_fault_point(CoverageFaultPoint::WebpRiffSignatureMismatch) {
+        Some(0)
+    } else if take_fault_point(CoverageFaultPoint::WebpRiffFormTypeMismatch) {
+        Some(8)
+    } else {
+        None
+    };
+    if let Some(byte_to_corrupt) = byte_to_corrupt {
+        for (index, byte) in encoded.iter_mut().take(12).enumerate() {
+            if index == byte_to_corrupt {
+                *byte ^= 1;
+            }
+        }
+    }
+    encoded
 }
 
 fn write_riff_to_sink(

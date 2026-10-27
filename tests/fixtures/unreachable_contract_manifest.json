@@ -678,6 +678,24 @@
       "category": "structured-diagnostics",
       "selector": "fault-contract:webp:webp_hash_chain_index_overflow_rejected",
       "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_riff_header_too_short_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_riff_header_too_short_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_riff_signature_mismatch_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_riff_signature_mismatch_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_form_type_mismatch_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_form_type_mismatch_rejected",
+      "test": "test_fault_contract_matrix"
     }
   ],
   "categories": [

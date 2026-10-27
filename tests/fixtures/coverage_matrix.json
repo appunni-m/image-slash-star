@@ -228787,6 +228787,63 @@
         "contract": "encode_invalid_dimensions_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
+    },
+    {
+      "id": "webp_riff_header_too_short_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "webp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:webp:enc_lossless"
+      },
+      "fault": {
+        "point": "webp.riff_sink.short_header",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "webp_riff_signature_mismatch_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "webp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:webp:enc_lossless"
+      },
+      "fault": {
+        "point": "webp.riff_sink.riff_signature_mismatch",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "webp_form_type_mismatch_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "webp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:webp:enc_lossless"
+      },
+      "fault": {
+        "point": "webp.riff_sink.webp_form_type_mismatch",
+        "contract": "encode_invalid_riff_header_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
     }
   ]
 }

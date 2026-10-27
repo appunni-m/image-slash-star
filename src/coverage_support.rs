@@ -146,6 +146,12 @@ pub enum CoverageFaultPoint {
     ApngSequenceCounterExhaustion,
     /// Model an oversized WebP hash-chain index during coverage builds.
     WebpHashChainIndexOverflow,
+    /// Shorten a valid WebP RIFF output before sink header validation.
+    WebpRiffHeaderTooShort,
+    /// Corrupt the RIFF signature before WebP sink header validation.
+    WebpRiffSignatureMismatch,
+    /// Corrupt the WEBP form type before WebP sink header validation.
+    WebpRiffFormTypeMismatch,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.
