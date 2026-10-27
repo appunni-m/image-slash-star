@@ -1,5 +1,32 @@
 # Versioned compatibility evidence
 
+## AVIF required sample-table parity — 2026-10-28
+
+Coverage MCP identified the missing-offset, missing-`stsc`, and missing-`stsd`
+outcomes in `samples::parse_stbl`. Added three public AVIF parity rows whose
+fixtures replace exactly one required table with a same-size `free` box. The
+pinned Pillow oracle rejects each full file with
+`UnidentifiedImageError: cannot identify image file <bytes>`. The selected run
+passed all three rows, and the fixture generator is part of
+`make verify-fixture-integrity`.
+
+The refreshed full `make coverage` run passed all six integration test
+executables (4, 1, 57, 7, 1, and 69 tests; zero failures) and the configured
+coverage floors: 94,102/139,678 lines (67.3707%), 18,712/32,056 branches
+(58.3728%), 5,246/8,947 functions (58.6342%), and 143,642/216,753 regions
+(66.2699%). Its report is
+`.coverage-mcp/local-evidence/imported-worktree/full-avif-required-sample-tables-20261028/coverage.json`
+(SHA-256
+`9578878af400a9200a1564101c73d28417ddcfab3dd92e5dfe17647cce2cce13`). The
+Coverage MCP comparison reports three newly observed branch coordinates in
+`samples::parse_stbl` at `samples.rs:2360`; its remaining two branch outcomes
+are in `container::parse_stbl`. Both reports lack matching source/build
+receipts and MCP marks test attribution unknown, so the comparison is limited
+coordinate evidence. Public AVIF inspection parses the sample tables before
+the container tables, making those remaining missing-`stsz`/`stsd` container
+branches unreachable through the current public parity path. No Rust unit
+tests or production-code changes were added.
+
 ## AVIF duplicate media-box parity — 2026-10-28
 
 Added an animated AVIF success row combining repeated `mdhd`, `hdlr`, `stts`,
@@ -28,8 +55,8 @@ and no Rust unit tests were added. `make lint`, `make lint-x86-simd`, and
 `make test-feature-matrix` passed, including strict Clippy for debug, release,
 coverage, SSE2, and AVX2 targets, plus the native, WASI, and WASM feature lanes.
 
-The current fixture matrix contains 2,686 total rows: 2,130 decode / inspect /
-verify rows and 556 encode rows. Of those, 2,130 decode rows and 525 encode
+The current fixture matrix contains 2,689 total rows: 2,133 decode / inspect /
+verify rows and 556 encode rows. Of those, 2,133 decode rows and 525 encode
 rows are active; 31 encode rows remain planned. The roadmap and generated
 capability counts now reflect this matrix.
 
@@ -10047,7 +10074,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `79ffaeef321973f9a9d68e22e4fc69941c96dab4483f602ac76a0a32ba517356`; matrix `534c483cbd0549d184f71b527af6026e344b8feb9b396b8d62828fa529f52ac8`.
+- Current fixture integrity only: manifest `a310e28492c4efe41dc4203dd53359f72e63fc6efa3b1d3a12494bede96355d6`; matrix `28f85327a4b10ae1eea251b16297b4f87b8657333c156012c16bb9fe3312d243`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

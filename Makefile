@@ -146,6 +146,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_iloc_trailing_payload_fixture.py --check
 	$(PYTHON) scripts/generate_avif_multi_entry_stsc_fixture.py --check
 	$(PYTHON) scripts/generate_avif_media_box_edges.py --check
+	$(PYTHON) scripts/generate_avif_missing_sample_table_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_imir_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_iref_v1_alpha_fixture.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_grid_edges.py --check
