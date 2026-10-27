@@ -221951,6 +221951,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_cost_manager_deep_fragment_stream_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless VP8L method-six encoding checks a larger stream with dense, varied copied-fragment matches",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_cost_manager_deep_fragment_stream_2048x1024.png",
+          "source_sha256": "c3b7842b11dd2e67ce401cb095a354fd49cdb15ea1c934ca90bddca022995d16",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_cost_manager_deep_fragment_stream_token.bin",
+          "encoded_ref_bytes": 88750,
+          "encoded_ref_sha256": "4ea882dd1c7244883aaa36df3d473181261f8b6e82ed5b708d75fc015fa9ad13",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_cost_manager_deep_fragment_stream_token.bin",
+          "ref_sha256": "2b64a163aab6f678e14c5ba405b6109bcb36abe37897b8cadd0bc1b1b9932c3b",
+          "ref_bytes": 6291456,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            2048,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossless_singleton_copy_group",
           "type": "encode",
           "format": "webp",
@@ -227231,9 +227287,9 @@
     }
   },
   "summary": {
-    "total_rows": 2676,
+    "total_rows": 2677,
     "decode_rows": 2121,
-    "encode_rows": 555,
+    "encode_rows": 556,
     "formats": 8,
     "assets_available": 2117,
     "decode_active": 2121,
