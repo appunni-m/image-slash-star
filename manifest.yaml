@@ -6038,6 +6038,11 @@ formats:
       source_format: webp
       source_asset: lossless_palette16.webp
       params: {'lossless': True, 'quality': 80, 'method': 0, 'rust_encode_with_token': true}
+    - id: enc_lossless_method_0_palette_no_token
+      description: VP8L method zero encodes the same 16-color palette input without a cancellation token
+      source_format: webp
+      source_asset: lossless_palette16.webp
+      params: {'lossless': True, 'quality': 80, 'method': 0}
     - id: enc_lossless_method_0_palette32
       description: VP8L method zero packs a 32-color palette with one index per byte
       source_format: webp
@@ -6521,6 +6526,24 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params: {'size': [1, 1]}
+
+    - id: enc_lossless_1x1
+      description: Lossless WebP roundtrip for a one-pixel black RGB input
+      source_format: png
+      source_asset: zlib_minimal_dynamic.png
+      params: {'lossless': True}
+
+    - id: enc_lossless_method_0_black_singleton
+      description: VP8L method zero palette coding for a one-pixel black input
+      source_format: png
+      source_asset: zlib_minimal_dynamic.png
+      params: {'lossless': True, 'quality': 80, 'method': 0}
+
+    - id: enc_lossless_1x1_transparent
+      description: Lossless WebP roundtrip for one fully transparent RGBA pixel
+      source_format: png
+      source_asset: gif_rgba.png
+      params: {'lossless': True}
 
     - id: enc_dimension_limit_max_16383
       description: Pillow accepts the inclusive 16,383-pixel WebP side limit
@@ -11066,6 +11089,18 @@ formats:
       description: Two-frame 128x128 10-bit full-range 4:2:0 all-lossless AVIF sequence using one 128x128 superblock and a translating 8x8 luma patch
       test_assets:
       - animated_lossless_inter_420_b128x128_10bit.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_420_wide_grid_b128x128
+      description: Two-frame 128x128 8-bit 4:2:0 all-lossless AVIF sequence with a one-pixel horizontal texture shift and 128-pixel partition controls
+      test_assets:
+      - animated_lossless_inter_420_wide_grid_b128x128.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_420_vertical_b64x128
+      description: Two-frame 128x128 8-bit 4:2:0 all-lossless AVIF sequence whose inter B128x128 root is forced to two B64x128 leaves
+      test_assets:
+      - animated_lossless_inter_420_vertical_b64x128.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
     - id: animated_lossless_inter_420_clipped_b32x32_10bit_28x28

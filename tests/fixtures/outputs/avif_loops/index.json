@@ -1299,13 +1299,65 @@
       "collection_index_sha256": "e1cecf69e90f67ee7c5c56b7f7c8e0396b6332f05b3dbb0e74dfdb7651ae2aab",
       "generator_sha256": "2eedd776af253002aed5076e131a7241045ae830aaaa6a331990622e93cd3138",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "87917d8d6bacb3197ab840eed2bfe86a4e278dc5317170bda2fdcaae87e33073",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "animated_lossless_inter_420_wide_grid_b128x128"
+      ],
+      "collection_index_sha256": "1fa912ca49105a95b238c1c08a88cab7f5addf1bc976ec05d3b57c5345567c04",
+      "generator_sha256": "3efe686a9cd5968df20621ce40c2ee5480f972730b23143a9ace010d37de6cd1",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "4f347239e06e7090168ca803a3908ff74a4b2cff1839c3f4c98de61ba9151901",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "animated_lossless_inter_420_vertical_b64x128"
+      ],
+      "collection_index_sha256": "0babc4acb1cb13e3a90f5851392426e10e4a6d7aaef8b015bc409b29fdefdcd4",
+      "generator_sha256": "2ece69e41b826ddbb0a5bd608bae0189a0acb63456cb1a84b11bb3c91ae5ce5f",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 20570,
+      "bytes": 21006,
       "path": "README.md",
-      "sha256": "c438790409b27eda227c691f50f7ef46f01abeaeaf4aaaae627a47716f360891"
+      "sha256": "254626a530afce407cd351eb203f8fb6fd6ac493951047bcedd6f2c4e970070c"
     },
     {
       "bytes": 2267,
@@ -1346,6 +1398,16 @@
       "bytes": 6111,
       "path": "inputs/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
       "sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5"
+    },
+    {
+      "bytes": 44282,
+      "path": "inputs/animated_lossless_inter_420_vertical_b64x128.avif",
+      "sha256": "9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650"
+    },
+    {
+      "bytes": 37090,
+      "path": "inputs/animated_lossless_inter_420_wide_grid_b128x128.avif",
+      "sha256": "e44c5a53a1cf185a29b4a6570836c82078d1cd2e1d0d0963e69ebf1028f7d47f"
     },
     {
       "bytes": 1195,
@@ -2186,6 +2248,26 @@
       "bytes": 10752,
       "path": "pixels/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64/frame_4.bin",
       "sha256": "2b260968eef0dd34ae44ef5299694cb144f552e628833a024c341e2ab07310d3"
+    },
+    {
+      "bytes": 49152,
+      "path": "pixels/animated_lossless_inter_420_vertical_b64x128/frame_0.bin",
+      "sha256": "184f26a78f3ccd248c492097a9efda76e13e755c6f83eeb5ec8c063ba845f0ac"
+    },
+    {
+      "bytes": 49152,
+      "path": "pixels/animated_lossless_inter_420_vertical_b64x128/frame_1.bin",
+      "sha256": "017090fd5800195e619cccee1cc806952d7d57c395865a0ae6bd2e8e89bf29c4"
+    },
+    {
+      "bytes": 49152,
+      "path": "pixels/animated_lossless_inter_420_wide_grid_b128x128/frame_0.bin",
+      "sha256": "ea586891ce5f68415430eb8eff7bde1c4b9a676fdc5f42430a437d84d73e050c"
+    },
+    {
+      "bytes": 49152,
+      "path": "pixels/animated_lossless_inter_420_wide_grid_b128x128/frame_1.bin",
+      "sha256": "49d23c28e069e0b5c3e3e02648cda1ae2ae802ab83271a2e590a3ec4f105a9c9"
     },
     {
       "bytes": 67500,
@@ -3867,6 +3949,170 @@
       "source_sha256": "589f8836e3e1fbe9f8524353b5bc56cc615927dc15848c1e4fb671c467c04021"
     },
     {
+      "input_bytes": 1279,
+      "input_path": "inputs/animated_decoder_model_parameters_change.avif",
+      "input_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_decoder_model_parameters_change",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "c950a787a9ee8f99f19947f231474482af030f2b799f36f88e73337aeb5a7d59",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_decoder_model_parameters_change",
+      "source_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396"
+    },
+    {
+      "input_bytes": 1560,
+      "input_path": "inputs/animated_duplicate_media_boxes.avif",
+      "input_sha256": "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_duplicate_media_boxes",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "7640e4f4281c0ee7bf1645847d641be7940288004089821a36204dbadf498e87",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_duplicate_media_boxes",
+      "source_sha256": "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87"
+    },
+    {
       "input_bytes": 1263,
       "input_path": "inputs/animated_duplicate_stsc.avif",
       "input_sha256": "56b417e69e63d2d56be80d3e58a71b8043a4134c7e8f283b2ed5e088357e43d0",
@@ -4028,88 +4274,6 @@
       "source_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
     },
     {
-      "input_bytes": 1560,
-      "input_path": "inputs/animated_duplicate_media_boxes.avif",
-      "input_sha256": "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "animated_duplicate_media_boxes",
-      "native": {
-        "decoded_frames": 5,
-        "diagnostic": "",
-        "frame_count": 5,
-        "parse_result": 0,
-        "repetition_count": 0,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "7640e4f4281c0ee7bf1645847d641be7940288004089821a36204dbadf498e87",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 3,
-            "mode": "RGB",
-            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 4,
-            "mode": "RGB",
-            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-            "size": [
-              150,
-              150
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "animated_duplicate_media_boxes",
-      "source_sha256": "340adc83f1288ad23d5efe2511a8b100381d862108210c7b3d4b5ef57a5def87"
-    },
-    {
       "input_bytes": 6111,
       "input_path": "inputs/animated_lossless_inter_420_derived_skip_refs_clipped_b32x32_56x64.avif",
       "input_sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5",
@@ -4192,6 +4356,186 @@
       "source_sha256": "b801ab1e84328dfe552543858fad84a59c7edeb7ac7497972c2499b0736d6eb5"
     },
     {
+      "input_bytes": 44282,
+      "input_path": "inputs/animated_lossless_inter_420_vertical_b64x128.avif",
+      "input_sha256": "9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_lossless_inter_420_vertical_b64x128",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "4f347239e06e7090168ca803a3908ff74a4b2cff1839c3f4c98de61ba9151901",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "184f26a78f3ccd248c492097a9efda76e13e755c6f83eeb5ec8c063ba845f0ac",
+            "size": [
+              128,
+              128
+            ]
+          },
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "017090fd5800195e619cccee1cc806952d7d57c395865a0ae6bd2e8e89bf29c4",
+            "size": [
+              128,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_lossless_inter_420_vertical_b64x128",
+      "source_sha256": "9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650"
+    },
+    {
+      "input_bytes": 37090,
+      "input_path": "inputs/animated_lossless_inter_420_wide_grid_b128x128.avif",
+      "input_sha256": "e44c5a53a1cf185a29b4a6570836c82078d1cd2e1d0d0963e69ebf1028f7d47f",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_lossless_inter_420_wide_grid_b128x128",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "87917d8d6bacb3197ab840eed2bfe86a4e278dc5317170bda2fdcaae87e33073",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "ea586891ce5f68415430eb8eff7bde1c4b9a676fdc5f42430a437d84d73e050c",
+            "size": [
+              128,
+              128
+            ]
+          },
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "49d23c28e069e0b5c3e3e02648cda1ae2ae802ab83271a2e590a3ec4f105a9c9",
+            "size": [
+              128,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_lossless_inter_420_wide_grid_b128x128",
+      "source_sha256": "e44c5a53a1cf185a29b4a6570836c82078d1cd2e1d0d0963e69ebf1028f7d47f"
+    },
+    {
+      "input_bytes": 1195,
+      "input_path": "inputs/animated_missing_hdlr.avif",
+      "input_sha256": "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_missing_hdlr",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "d6a67257f14761f0e1d3700d486ddb59859ebe822d07fea97106f368c668305e",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_missing_hdlr",
+      "source_sha256": "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891"
+    },
+    {
       "input_bytes": 1245,
       "input_path": "inputs/animated_primary_item_irot.avif",
       "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
@@ -4272,6 +4616,88 @@
       "repeat_equal": true,
       "source": "animated_primary_item_irot",
       "source_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe"
+    },
+    {
+      "input_bytes": 1235,
+      "input_path": "inputs/animated_sequence_only_no_meta.avif",
+      "input_sha256": "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_sequence_only_no_meta",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "a9f937e4eadb80e4d154116d795c1b041c7e476c542c000dfd39b1c6ad69ca72",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_sequence_only_no_meta",
+      "source_sha256": "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb"
     },
     {
       "input_bytes": 1251,
@@ -5355,6 +5781,55 @@
       "source_sha256": "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7"
     },
     {
+      "input_bytes": 1342,
+      "input_path": "inputs/lossless_inter_420_b128x128_10bit.avif",
+      "input_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_420_b128x128_10bit",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "bd16632cf3edeab48375a0be5c04f541e2a0b893151bb30db599f4e7fbbea0ab",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "f5272a49a30f79b7cfc18b388fb26bd1e2a153718bb196df5880c2bc7da852b9",
+            "size": [
+              128,
+              128
+            ]
+          },
+          {
+            "bytes": 49152,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "9c2fd1e299098be30bc4664475977dbf13d9f870c30830cc5bb9314de762d3f8",
+            "size": [
+              128,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_420_b128x128_10bit",
+      "source_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851"
+    },
+    {
       "input_bytes": 1112,
       "input_path": "inputs/lossless_inter_420_b16x16.avif",
       "input_sha256": "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
@@ -5647,55 +6122,6 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_b32x32_10bit_64x64",
       "source_sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448"
-    },
-    {
-      "input_bytes": 1342,
-      "input_path": "inputs/lossless_inter_420_b128x128_10bit.avif",
-      "input_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossless_inter_420_b128x128_10bit",
-      "native": {
-        "decoded_frames": 2,
-        "diagnostic": "",
-        "frame_count": 2,
-        "parse_result": 0,
-        "repetition_count": -1,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "bd16632cf3edeab48375a0be5c04f541e2a0b893151bb30db599f4e7fbbea0ab",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 49152,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "f5272a49a30f79b7cfc18b388fb26bd1e2a153718bb196df5880c2bc7da852b9",
-            "size": [
-              128,
-              128
-            ]
-          },
-          {
-            "bytes": 49152,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "9c2fd1e299098be30bc4664475977dbf13d9f870c30830cc5bb9314de762d3f8",
-            "size": [
-              128,
-              128
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossless_inter_420_b128x128_10bit",
-      "source_sha256": "a1056a8b40154eab74c1571cce2c39832e18a37de4b8bd1a3f808c6df231e851"
     },
     {
       "input_bytes": 4676,
@@ -7513,55 +7939,6 @@
       "source_sha256": "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c"
     },
     {
-      "input_bytes": 2102,
-      "input_path": "inputs/lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64.avif",
-      "input_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
-      "native": {
-        "decoded_frames": 2,
-        "diagnostic": "",
-        "frame_count": 2,
-        "parse_result": 0,
-        "repetition_count": 0,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "dde05efc6f46f26bc17e3605cdbd07bad350795b14626fd961c6c37f1e9113d2",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 12288,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "e7b00031b2a3ae66798ba32c8b803100073cba5b4d1b36dcbcc60fe1ae322bee",
-            "size": [
-              64,
-              64
-            ]
-          },
-          {
-            "bytes": 12288,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "4dd1322b796175c60b7ad53a5901d9b2955aea0af871d697992e000e7659b7c6",
-            "size": [
-              64,
-              64
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
-      "source_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c"
-    },
-    {
       "input_bytes": 2589,
       "input_path": "inputs/lossy_inter_420_b64x16_10bit_mode_select_64x64.avif",
       "input_sha256": "0d85dc1e3e8958e7375c3dcddd048f93cc5bd7ad12f50f82f1299f1c482c1880",
@@ -7954,6 +8331,126 @@
       "source_sha256": "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134"
     },
     {
+      "input_bytes": 10252,
+      "input_path": "inputs/lossy_inter_422_compound_direct_grid_b64x64.avif",
+      "input_sha256": "5eef65a8499170972eb9edf607844b39292721f4e53ebbcdc4d61e78f2d7c51e",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_422_compound_direct_grid_b64x64",
+      "native": {
+        "decoded_frames": 3,
+        "diagnostic": "",
+        "frame_count": 3,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "8e72e00e42242a878aa6ef6c2e2f15de2185bd8d8bce481e1b84b739fc3e024c",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "d76bd94bf21860dbc544ab16baa0331d8b9ccafaa71e5a25157c4aebe4abc792",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "e57adc48bcd4957a13dce5c57c22c890362a9b64ab8c9d2566c152d18d991248",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "3f73b16723e66215f7f265d635095ff763cccca27fcb977e70d93076b8107d65",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_422_compound_direct_grid_b64x64",
+      "source_sha256": "5eef65a8499170972eb9edf607844b39292721f4e53ebbcdc4d61e78f2d7c51e"
+    },
+    {
+      "input_bytes": 5565,
+      "input_path": "inputs/lossy_inter_422_compound_refs_b64x32.avif",
+      "input_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_422_compound_refs_b64x32",
+      "native": {
+        "decoded_frames": 3,
+        "diagnostic": "",
+        "frame_count": 3,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "c3740c8acf412bb5c205d9854021ff5e261a24f1957945c4d995b2512372aad5",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9",
+            "size": [
+              64,
+              32
+            ]
+          },
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb",
+            "size": [
+              64,
+              32
+            ]
+          },
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491",
+            "size": [
+              64,
+              32
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_422_compound_refs_b64x32",
+      "source_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
+    },
+    {
       "input_bytes": 7726,
       "input_path": "inputs/lossy_inter_422_tx_context_checker_b64x32.avif",
       "input_sha256": "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56",
@@ -8001,6 +8498,115 @@
       "repeat_equal": true,
       "source": "lossy_inter_422_tx_context_checker_b64x32",
       "source_sha256": "38c94eed681628437dd11423d62573fee3b1325a749ffc9f74dda1301c6acd56"
+    },
+    {
+      "input_bytes": 7053,
+      "input_path": "inputs/lossy_inter_422_vertical_split_b32x64.avif",
+      "input_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_422_vertical_split_b32x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "b299bd816e523900cd077c20fe8c51b56eb5072efd5937c3245b60e565b0e65b",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "f1aab4fdf740e5726556337b0287ec940079cc48a4f1995d5f2b8fb5fbc9348c",
+            "size": [
+              32,
+              64
+            ]
+          },
+          {
+            "bytes": 6144,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "c72b8082dac958d7aeda2637782f8226e7238711a7e967959100d25ad270e39d",
+            "size": [
+              32,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_422_vertical_split_b32x64",
+      "source_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798"
+    },
+    {
+      "input_bytes": 1457,
+      "input_path": "inputs/lossy_inter_i444_compound_split_b16x32_mode2.avif",
+      "input_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_i444_compound_split_b16x32_mode2",
+      "native": {
+        "decoded_frames": 3,
+        "diagnostic": "",
+        "frame_count": 3,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "13d63be7f031e86ebae8c5ab8bff3446e9020b2077a08271e78741377818cedf",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "d3826d80137dc7de8d45f708eef5135912063502f90918884b53e80531e2e5e9",
+            "size": [
+              32,
+              32
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "f6211237ef43734ec8fd3ade696c45138242d106e22ab501e3f7379efc7d5227",
+            "size": [
+              32,
+              32
+            ]
+          },
+          {
+            "bytes": 3072,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "69ee4d446b34653b7f5bcabd8aae04785a0876f71973ac2ed06ba5310f256975",
+            "size": [
+              32,
+              32
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_i444_compound_split_b16x32_mode2",
+      "source_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714"
     },
     {
       "input_bytes": 1107,
@@ -8172,66 +8778,6 @@
       "source_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0"
     },
     {
-      "input_bytes": 1457,
-      "input_path": "inputs/lossy_inter_i444_compound_split_b16x32_mode2.avif",
-      "input_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossy_inter_i444_compound_split_b16x32_mode2",
-      "native": {
-        "decoded_frames": 3,
-        "diagnostic": "",
-        "frame_count": 3,
-        "parse_result": 0,
-        "repetition_count": -1,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "13d63be7f031e86ebae8c5ab8bff3446e9020b2077a08271e78741377818cedf",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 3072,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "d3826d80137dc7de8d45f708eef5135912063502f90918884b53e80531e2e5e9",
-            "size": [
-              32,
-              32
-            ]
-          },
-          {
-            "bytes": 3072,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "f6211237ef43734ec8fd3ade696c45138242d106e22ab501e3f7379efc7d5227",
-            "size": [
-              32,
-              32
-            ]
-          },
-          {
-            "bytes": 3072,
-            "duration_ms": 100,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "69ee4d446b34653b7f5bcabd8aae04785a0876f71973ac2ed06ba5310f256975",
-            "size": [
-              32,
-              32
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossy_inter_i444_compound_split_b16x32_mode2",
-      "source_sha256": "bb43388411119ac10f7990ecb8523e8b62f85227b501e3402b962b5c2b624714"
-    },
-    {
       "input_bytes": 1525,
       "input_path": "inputs/lossy_inter_i444_tx_largest_64x64.avif",
       "input_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea",
@@ -8290,6 +8836,55 @@
       "repeat_equal": true,
       "source": "lossy_inter_i444_tx_largest_64x64",
       "source_sha256": "270ab1fb4f9e066d6898c52bdd8d94911502684d13eb7cdc62d1c034a57148ea"
+    },
+    {
+      "input_bytes": 2102,
+      "input_path": "inputs/lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64.avif",
+      "input_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "dde05efc6f46f26bc17e3605cdbd07bad350795b14626fd961c6c37f1e9113d2",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "e7b00031b2a3ae66798ba32c8b803100073cba5b4d1b36dcbcc60fe1ae322bee",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "4dd1322b796175c60b7ad53a5901d9b2955aea0af871d697992e000e7659b7c6",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_monochrome_b16x64_qindex0_mode_select_64x64",
+      "source_sha256": "972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c"
     },
     {
       "input_bytes": 1107,
@@ -11893,421 +12488,6 @@
       "repeat_equal": true,
       "source": "tx64_root_split_inter_420_64x64",
       "source_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c"
-    },
-    {
-      "input_bytes": 7053,
-      "input_path": "inputs/lossy_inter_422_vertical_split_b32x64.avif",
-      "input_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossy_inter_422_vertical_split_b32x64",
-      "native": {
-        "decoded_frames": 2,
-        "diagnostic": "",
-        "frame_count": 2,
-        "parse_result": 0,
-        "repetition_count": -1,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "b299bd816e523900cd077c20fe8c51b56eb5072efd5937c3245b60e565b0e65b",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 6144,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "f1aab4fdf740e5726556337b0287ec940079cc48a4f1995d5f2b8fb5fbc9348c",
-            "size": [
-              32,
-              64
-            ]
-          },
-          {
-            "bytes": 6144,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "c72b8082dac958d7aeda2637782f8226e7238711a7e967959100d25ad270e39d",
-            "size": [
-              32,
-              64
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossy_inter_422_vertical_split_b32x64",
-      "source_sha256": "0eb45159064b3f1c30919d0062afa19056415f76be203278cd3ddd7174e8a798"
-    },
-    {
-      "input_bytes": 5565,
-      "input_path": "inputs/lossy_inter_422_compound_refs_b64x32.avif",
-      "input_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossy_inter_422_compound_refs_b64x32",
-      "native": {
-        "decoded_frames": 3,
-        "diagnostic": "",
-        "frame_count": 3,
-        "parse_result": 0,
-        "repetition_count": -1,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "c3740c8acf412bb5c205d9854021ff5e261a24f1957945c4d995b2512372aad5",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 6144,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "aff58d48982f1c9f12bc4e1161fed09f6128f2f786b5d2c43c9f50f0fa0ec7b9",
-            "size": [
-              64,
-              32
-            ]
-          },
-          {
-            "bytes": 6144,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "b971221eb15826e56645181490b7db5eb89625680368ea7d9453809714e30ecb",
-            "size": [
-              64,
-              32
-            ]
-          },
-          {
-            "bytes": 6144,
-            "duration_ms": 100,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "df257674ce899a4c3fba6125261fd00827a9d1b551d4f8e1c55cc86f34b34491",
-            "size": [
-              64,
-              32
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossy_inter_422_compound_refs_b64x32",
-      "source_sha256": "58179bf4eec6cd6a78dc575646dc3db0fa30b0d8c844f74a1dbf02694c785350"
-    },
-    {
-      "input_bytes": 10252,
-      "input_path": "inputs/lossy_inter_422_compound_direct_grid_b64x64.avif",
-      "input_sha256": "5eef65a8499170972eb9edf607844b39292721f4e53ebbcdc4d61e78f2d7c51e",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "lossy_inter_422_compound_direct_grid_b64x64",
-      "native": {
-        "decoded_frames": 3,
-        "diagnostic": "",
-        "frame_count": 3,
-        "parse_result": 0,
-        "repetition_count": -1,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "8e72e00e42242a878aa6ef6c2e2f15de2185bd8d8bce481e1b84b739fc3e024c",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 12288,
-            "duration_ms": 100,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "d76bd94bf21860dbc544ab16baa0331d8b9ccafaa71e5a25157c4aebe4abc792",
-            "size": [
-              64,
-              64
-            ]
-          },
-          {
-            "bytes": 12288,
-            "duration_ms": 100,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "e57adc48bcd4957a13dce5c57c22c890362a9b64ab8c9d2566c152d18d991248",
-            "size": [
-              64,
-              64
-            ]
-          },
-          {
-            "bytes": 12288,
-            "duration_ms": 100,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "3f73b16723e66215f7f265d635095ff763cccca27fcb977e70d93076b8107d65",
-            "size": [
-              64,
-              64
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "lossy_inter_422_compound_direct_grid_b64x64",
-      "source_sha256": "5eef65a8499170972eb9edf607844b39292721f4e53ebbcdc4d61e78f2d7c51e"
-    },
-    {
-      "input_bytes": 1279,
-      "input_path": "inputs/animated_decoder_model_parameters_change.avif",
-      "input_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "animated_decoder_model_parameters_change",
-      "native": {
-        "decoded_frames": 5,
-        "diagnostic": "",
-        "frame_count": 5,
-        "parse_result": 0,
-        "repetition_count": 0,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "c950a787a9ee8f99f19947f231474482af030f2b799f36f88e73337aeb5a7d59",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 3,
-            "mode": "RGB",
-            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 4,
-            "mode": "RGB",
-            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-            "size": [
-              150,
-              150
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "animated_decoder_model_parameters_change",
-      "source_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396"
-    },
-    {
-      "input_bytes": 1235,
-      "input_path": "inputs/animated_sequence_only_no_meta.avif",
-      "input_sha256": "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "animated_sequence_only_no_meta",
-      "native": {
-        "decoded_frames": 5,
-        "diagnostic": "",
-        "frame_count": 5,
-        "parse_result": 0,
-        "repetition_count": 0,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "a9f937e4eadb80e4d154116d795c1b041c7e476c542c000dfd39b1c6ad69ca72",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 3,
-            "mode": "RGB",
-            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 4,
-            "mode": "RGB",
-            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-            "size": [
-              150,
-              150
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "animated_sequence_only_no_meta",
-      "source_sha256": "c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb"
-    },
-    {
-      "input_bytes": 1195,
-      "input_path": "inputs/animated_missing_hdlr.avif",
-      "input_sha256": "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891",
-      "media_payloads_equal": true,
-      "mutation": {},
-      "name": "animated_missing_hdlr",
-      "native": {
-        "decoded_frames": 5,
-        "diagnostic": "",
-        "frame_count": 5,
-        "parse_result": 0,
-        "repetition_count": 0,
-        "sequence_track_present": 1,
-        "terminal_result": 16
-      },
-      "observer_binary_sha256": "d6a67257f14761f0e1d3700d486ddb59859ebe822d07fea97106f368c668305e",
-      "pillow": {
-        "frames": [
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 0,
-            "mode": "RGB",
-            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 1,
-            "mode": "RGB",
-            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 2,
-            "mode": "RGB",
-            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 3,
-            "mode": "RGB",
-            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-            "size": [
-              150,
-              150
-            ]
-          },
-          {
-            "bytes": 67500,
-            "duration_ms": 33,
-            "index": 4,
-            "mode": "RGB",
-            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-            "size": [
-              150,
-              150
-            ]
-          }
-        ],
-        "loop_key": null,
-        "status": "ok"
-      },
-      "repeat_equal": true,
-      "source": "animated_missing_hdlr",
-      "source_sha256": "eb3369448430e7ad13614ee1e7c9caea16cb885667297114ca2a21747326f891"
     }
   ],
   "incremental_collections": [

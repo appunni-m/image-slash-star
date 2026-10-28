@@ -1,5 +1,32 @@
 # Versioned compatibility evidence
 
+## AVIF lossless B128 inter-grid parity — 2026-10-28
+
+Coverage MCP's latest full report identified missing outcomes at
+`src/codecs/avif/av1/block.rs:48440` in the lossless wide-grid predicate. Added
+two active public Pillow parity rows: the existing wide-grid witness and a new
+vertical B64x128 witness. The vertical fixture uses a fixture-only pinned
+libaom partition override to split the 128x128 inter I420 root into two valid
+B64x128 leaves; runtime code is unchanged by the encoder patch.
+
+The selected parity run passed both rows (2/2), comparing 49,152 RGB bytes per
+frame with Pillow 12.2.0. Its LLVM counters show the tall predicate
+`luma_height > 64` true twice in one decoder specialization. Coverage MCP still
+reports other branch outcomes at this source line across generic
+specializations. The selected/full incremental comparison is incomparable
+because the baseline branch detail does not match its reported totals; both
+reports also have unverified source identity and unknown test attribution, so
+no aggregate coverage gain is claimed. The selected report is
+`.coverage-mcp/local-evidence/imported-worktree/selected-b128-both-20261028/coverage.json`.
+
+The last full coverage report before this selected run measured 94,404/140,013
+lines (67.4252%), 18,766/32,158 branches (58.3556%), 5,252/8,953 functions
+(58.6619%), and 144,120/217,320 regions (66.3170%). It is retained at
+`.coverage-mcp/local-evidence/imported-worktree/full-coverage-next-edge-20261028/coverage.json`;
+the four-metric 100% gate remains open. `make verify`, `make lint`, and
+`make lint-x86-simd` passed. No Rust unit tests or SIMD implementation were
+added.
+
 ## AVIF required sample-table parity — 2026-10-28
 
 Coverage MCP identified the missing-offset, missing-`stsc`, and missing-`stsd`
@@ -55,8 +82,8 @@ and no Rust unit tests were added. `make lint`, `make lint-x86-simd`, and
 `make test-feature-matrix` passed, including strict Clippy for debug, release,
 coverage, SSE2, and AVX2 targets, plus the native, WASI, and WASM feature lanes.
 
-The current fixture matrix contains 2,694 total rows: 2,133 decode / inspect /
-verify rows and 561 encode rows. Of those, 2,133 decode rows and 530 encode
+The current fixture matrix contains 2,700 total rows: 2,135 decode / inspect /
+verify rows and 565 encode rows. Of those, 2,135 decode rows and 534 encode
 rows are active; 31 encode rows remain planned. The roadmap and generated
 capability counts now reflect this matrix.
 
@@ -10074,7 +10101,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `abf232794926dad57df7cb9f33ecc022f5fe8382a6bfa489a1b3ecc3011cb5d6`; matrix `8eb0d3da29f1729c85e23979631488266fbb5419c34cc238450e7603691380ea`.
+- Current fixture integrity only: manifest `5d3fbf5d9d0dacb6fa394c5a777e8e8bf33ba544bdca1b24c5f391acecf5f3d6`; matrix `5820cebcc0c7beabe4c170005c6df1437c2dda468f006d375ddfb26fac8d77f1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
