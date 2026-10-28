@@ -5997,6 +5997,16 @@ formats:
     - id: enc_lossless_method_0_quality_25
       description: VP8L method zero at quality twenty-five selects the width-scaled 16-pixel search window
       params: {'lossless': True, 'quality': 25, 'method': 0}
+    - id: enc_lossless_method_0_hash_chain_window_cutoff_token
+      description: A token-aware VP8L method-zero pair hash points 8,193 pixels back, just beyond the 8,192-pixel quality-twenty-five window
+      source_format: png
+      source_asset: webp_lossless_hash_chain_window_cutoff_512x32.png
+      params: {'lossless': True, 'quality': 25, 'method': 0, 'rust_encode_with_token': True}
+    - id: enc_lossless_method_0_hash_chain_base_zero_token
+      description: Method-zero predictor residual pairs overlap at a shared VP8L hash and reach the token-aware base-zero exit
+      source_format: png
+      source_asset: webp_lossless_hash_chain_base_zero_300x1.png
+      params: {'lossless': True, 'quality': 25, 'method': 0, 'rust_encode_with_token': True}
     - id: enc_lossless_method_0_quality_40
       description: VP8L method zero at quality forty selects the width-scaled 64-pixel search window
       params: {'lossless': True, 'quality': 40, 'method': 0}

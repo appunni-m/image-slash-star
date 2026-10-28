@@ -222439,6 +222439,118 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_method_0_hash_chain_window_cutoff_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "A token-aware VP8L method-zero pair hash points 8,193 pixels back, just beyond the 8,192-pixel quality-twenty-five window",
+          "params": {
+            "lossless": true,
+            "quality": 25,
+            "method": 0,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_hash_chain_window_cutoff_512x32.png",
+          "source_sha256": "1e5c6be227246e38464ba17396ec6fe1d3a305fbbbd71dbc4b39f54025d7e9b0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_hash_chain_window_cutoff_token.bin",
+          "encoded_ref_bytes": 1596,
+          "encoded_ref_sha256": "628377cfa14376ea40032f868d814801b95d46b22b6bec31f3068ca8c59ab122",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_hash_chain_window_cutoff_token.bin",
+          "ref_sha256": "bc702acdd3795ca917a47945d886cc49a7fe21cc1ca0e1529d449ceb1b274e8c",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            512,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_method_0_hash_chain_base_zero_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Method-zero predictor residual pairs overlap at a shared VP8L hash and reach the token-aware base-zero exit",
+          "params": {
+            "lossless": true,
+            "quality": 25,
+            "method": 0,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_hash_chain_base_zero_300x1.png",
+          "source_sha256": "28dd1994d851eab95406c6c9bde9b04169e8fc96ac42af84a200c9593c45bbfd",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_0_hash_chain_base_zero_token.bin",
+          "encoded_ref_bytes": 160,
+          "encoded_ref_sha256": "3c60adede630c3b3da59b3202a63296b043b12ce0d6f949497734600cea74098",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_0_hash_chain_base_zero_token.bin",
+          "ref_sha256": "b2f504f4bbd8cb4e284a5e0bf6f7179092c2ae7476769b2394eca0558f993769",
+          "ref_bytes": 900,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            300,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossless_method_0_quality_40",
           "type": "encode",
           "format": "webp",
@@ -228808,6 +228920,16 @@
           },
           "source_mode": "Rgba8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_1x1_transparent.bin",
           "encoded_ref_bytes": 34,
           "encoded_ref_sha256": "86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
@@ -228820,17 +228942,7 @@
             1
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_dimension_limit_max_16383",
@@ -229660,9 +229772,9 @@
     }
   },
   "summary": {
-    "total_rows": 2700,
+    "total_rows": 2702,
     "decode_rows": 2135,
-    "encode_rows": 565,
+    "encode_rows": 567,
     "formats": 8,
     "assets_available": 2131,
     "decode_active": 2135,
