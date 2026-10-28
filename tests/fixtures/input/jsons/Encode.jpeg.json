@@ -1670,6 +1670,59 @@
       }
     },
     {
+      "id": "enc_sub_422_streaming_odd_luma_block_tail",
+      "source_asset": "rgb_49x32.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "4fd872330c7b42184725c6b2afb22952c490f1ffa046ac5a6f5762718d095a85",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "subsampling": "422",
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/rgb_49x32.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_sub_422_repeated_full_batches",
       "source_asset": "jpeg_422_batch_source_32x16.png",
       "source_format": "png",
