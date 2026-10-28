@@ -1850,6 +1850,11 @@
       "sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323"
     },
     {
+      "bytes": 38075,
+      "path": "inputs/lossy_wide_i420_b128x128.avif",
+      "sha256": "a8cdebb85ccc240bbab9adde924e13b13d82e76d22600beb8511e62b58ae8bdd"
+    },
+    {
       "bytes": 11137,
       "path": "inputs/lossy_wide_i422_b128x64.avif",
       "sha256": "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc"
@@ -3258,6 +3263,16 @@
       "bytes": 768,
       "path": "pixels/lossy_split_inter_420_b16x16/frame_2.bin",
       "sha256": "81fba2f4edd55b82c84972232fa8edbb6ad51906e91c947aa4b6ae5fd23aafcf"
+    },
+    {
+      "bytes": 196608,
+      "path": "pixels/lossy_wide_i420_b128x128/frame_0.bin",
+      "sha256": "749f2b8d76d244d35532b235f536cddaa6d8d5f2e3da48576c1604cfb6af40c6"
+    },
+    {
+      "bytes": 196608,
+      "path": "pixels/lossy_wide_i420_b128x128/frame_1.bin",
+      "sha256": "1d55a4266d45ef6171dd1753c1033c04c190b5e11bf66ee84dac2f56cbaab7bc"
     },
     {
       "bytes": 49152,
@@ -9245,6 +9260,55 @@
       "repeat_equal": true,
       "source": "lossy_split_inter_420_b16x16",
       "source_sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323"
+    },
+    {
+      "input_bytes": 38075,
+      "input_path": "inputs/lossy_wide_i420_b128x128.avif",
+      "input_sha256": "a8cdebb85ccc240bbab9adde924e13b13d82e76d22600beb8511e62b58ae8bdd",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_wide_i420_b128x128",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "62d067f7427d1070d9ea1c05139821cca461552eb7df01e5a8b75e01de68bf7c",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 196608,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "749f2b8d76d244d35532b235f536cddaa6d8d5f2e3da48576c1604cfb6af40c6",
+            "size": [
+              256,
+              256
+            ]
+          },
+          {
+            "bytes": 196608,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "1d55a4266d45ef6171dd1753c1033c04c190b5e11bf66ee84dac2f56cbaab7bc",
+            "size": [
+              256,
+              256
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_wide_i420_b128x128",
+      "source_sha256": "a8cdebb85ccc240bbab9adde924e13b13d82e76d22600beb8511e62b58ae8bdd"
     },
     {
       "input_bytes": 11137,

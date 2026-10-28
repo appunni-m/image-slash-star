@@ -290,6 +290,10 @@ FIXTURES = {
         "animated_lossy_wide_monochrome_b128x128.avif",
         "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
     ),
+    "lossy_wide_i420_b128x128": (
+        "animated_lossy_wide_i420_b128x128.avif",
+        "a8cdebb85ccc240bbab9adde924e13b13d82e76d22600beb8511e62b58ae8bdd",
+    ),
     "lossy_wide_i422_b128x64": (
         "animated_lossy_wide_i422_b128x64.avif",
         "dbfb8c364abaddaeab4894511ff28f42fa9512226a27af097da35975a4ee5dbc",
