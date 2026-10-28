@@ -214,6 +214,43 @@ fn fill_hash_chain(
     }
 }
 
+// Keep the two encoder profiles' direct-match branches together for coverage.
+// Release builds inline this helper and fold the compile-time profile flag.
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn seed_direct_matches(
+    pixels: &[u32],
+    width: usize,
+    base: usize,
+    max_length: usize,
+    iterations: u32,
+    low_effort: bool,
+    token: CheckpointToken<'_>,
+) -> CheckpointResult<(u32, usize, usize)> {
+    let mut remaining = iterations;
+    let mut best_length = 0;
+    let mut best_distance = 0;
+
+    if !low_effort && base >= width {
+        let current = match_length(pixels, base - width, base, max_length, token)?;
+        if current > best_length {
+            best_length = current;
+            best_distance = width;
+        }
+        remaining -= 1;
+    }
+    if !low_effort {
+        let current = match_length(pixels, base - 1, base, max_length, token)?;
+        if current > best_length {
+            best_length = current;
+            best_distance = 1;
+        }
+        remaining -= 1;
+    }
+
+    Ok((remaining, best_length, best_distance))
+}
+
 #[cfg_attr(coverage, inline(never))]
 fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
     pixels: &[u32],
@@ -331,27 +368,10 @@ fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
             checkpoint(token)?;
         }
         let max_length = MAX_LENGTH.min(size - 1 - base);
-        let mut remaining = iterations;
-        let mut best_length = 0;
-        let mut best_distance = 0;
+        let (mut remaining, mut best_length, mut best_distance) = seed_direct_matches(
+            pixels, width, base, max_length, iterations, LOW_EFFORT, token,
+        )?;
         let minimum = base.saturating_sub(window_size);
-
-        if !LOW_EFFORT && base >= width {
-            let current = match_length(pixels, base - width, base, max_length, token)?;
-            if current > best_length {
-                best_length = current;
-                best_distance = width;
-            }
-            remaining -= 1;
-        }
-        if !LOW_EFFORT {
-            let current = match_length(pixels, base - 1, base, max_length, token)?;
-            if current > best_length {
-                best_length = current;
-                best_distance = 1;
-            }
-            remaining -= 1;
-        }
 
         let mut candidate = chain[base].0;
         let good_enough = max_length.min(256);
