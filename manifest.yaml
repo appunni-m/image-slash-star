@@ -2980,6 +2980,16 @@ formats:
       description: A small odd-width 4:2:2 source exercises the generic RGB conversion batch and scalar tail
       params: {'subsampling': '422', 'quality': 85}
       source_asset: 17x17.jpg
+    - id: enc_sub_422_streaming_odd_luma_block_tail
+      description: A 49x32 RGB source exercises baseline 4:2:2 streaming with an unmatched final luma block at the right edge
+      params: {'subsampling': '422', 'quality': 85, 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: rgb_49x32.png
+    - id: enc_sub_422_streaming_odd_luma_block_tail_restart
+      description: A 49x32 RGB source exercises 4:2:2 streaming restart markers with an unmatched final luma block at the right edge
+      params: {'subsampling': '422', 'quality': 85, 'progressive': false, 'optimize': false, 'restart_interval': 1}
+      source_format: png
+      source_asset: rgb_49x32.png
     - id: enc_sub_422_repeated_full_batches
       description: A 32x16 RGB PNG exercises two full eight-pixel 4:2:2 chroma downsampling batches without a scalar tail
       params: {'subsampling': '422', 'quality': 85, 'progressive': false, 'optimize': false}
