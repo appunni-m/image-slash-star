@@ -961,18 +961,18 @@ fn compressed_huffman_tokens_with_checkpoint(
     Ok(())
 }
 
+// Keep token-aware and ordinary scans in non-generic bodies so public parity
+// cases exercise both branches instead of splitting them across writer
+// checkpoint monomorphizations. Inline these helpers in non-coverage builds
+// to keep the encoder hot path unchanged.
 #[cfg_attr(coverage, inline(never))]
-fn write_huffman_tree<C: BitWriterCheckpoint>(
-    w: &mut BitWriter<'_, C>,
-    frequencies: &[u32],
-    lengths: &mut [u8],
-    codes: &mut [u16],
-    scratch: &mut HuffmanTreeScratch<'_>,
+#[cfg_attr(not(coverage), inline(always))]
+fn collect_huffman_symbols(
+    lengths: &[u8],
+    symbols: &mut [usize; 3],
     token: Option<&crate::CancellationToken>,
-) -> Result<(), EncodingError> {
-    build_huffman_tree(frequencies, lengths, codes, scratch, 15, token)?;
-    let mut symbols = [0_usize; 3];
-    let symbol_count = if let Some(token) = token {
+) -> Result<usize, EncodingError> {
+    if let Some(token) = token {
         let mut count = 0;
         for (index, &length) in lengths.iter().enumerate() {
             if length != 0 {
@@ -986,7 +986,7 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
                 check_token(Some(token))?;
             }
         }
-        count
+        Ok(count)
     } else {
         let mut count = 0;
         for (index, &length) in lengths.iter().enumerate() {
@@ -998,8 +998,44 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
                 }
             }
         }
-        count
-    };
+        Ok(count)
+    }
+}
+
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn accumulate_code_length_frequencies(
+    tokens: &[HuffmanToken],
+    frequencies: &mut [u32; 19],
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    if let Some(token) = token {
+        for (index, huffman_token) in tokens.iter().enumerate() {
+            frequencies[usize::from(huffman_token.code)] += 1;
+            if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
+                check_token(Some(token))?;
+            }
+        }
+    } else {
+        for huffman_token in tokens {
+            frequencies[usize::from(huffman_token.code)] += 1;
+        }
+    }
+    Ok(())
+}
+
+#[cfg_attr(coverage, inline(never))]
+fn write_huffman_tree<C: BitWriterCheckpoint>(
+    w: &mut BitWriter<'_, C>,
+    frequencies: &[u32],
+    lengths: &mut [u8],
+    codes: &mut [u16],
+    scratch: &mut HuffmanTreeScratch<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    build_huffman_tree(frequencies, lengths, codes, scratch, 15, token)?;
+    let mut symbols = [0_usize; 3];
+    let symbol_count = collect_huffman_symbols(lengths, &mut symbols, token)?;
     if symbol_count <= 2 && symbols[..symbol_count].iter().all(|&symbol| symbol < 256) {
         let first = symbols[0];
         w.write_bits(1, 1)?;
@@ -1027,18 +1063,11 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     let mut code_length_lengths = [0u8; 19];
     let mut code_length_codes = [0u16; 19];
     let mut code_length_frequencies = [0u32; 19];
-    if let Some(token) = token {
-        for (index, huffman_token) in scratch.huffman_tokens.iter().enumerate() {
-            code_length_frequencies[usize::from(huffman_token.code)] += 1;
-            if (index + 1).is_multiple_of(VP8L_HUFFMAN_TOKEN_CHECKPOINTS) {
-                check_token(Some(token))?;
-            }
-        }
-    } else {
-        for huffman_token in scratch.huffman_tokens.iter() {
-            code_length_frequencies[usize::from(huffman_token.code)] += 1;
-        }
-    }
+    accumulate_code_length_frequencies(
+        scratch.huffman_tokens,
+        &mut code_length_frequencies,
+        token,
+    )?;
     build_huffman_tree(
         &code_length_frequencies,
         &mut code_length_lengths,
@@ -1076,34 +1105,18 @@ fn write_huffman_tree<C: BitWriterCheckpoint>(
     let mut trailing_zero_bits = 0;
     // The normal-tree path always emits at least one non-zero code-length
     // token before trailing zero-repeat tokens.
-    if token.is_some() {
-        loop {
-            let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
-            if !matches!(huffman_token.code, 0 | 17 | 18) {
-                break;
-            }
-            trimmed_length -= 1;
-            trailing_zero_bits += usize::from(code_length_lengths[usize::from(huffman_token.code)]);
-            trailing_zero_bits += match huffman_token.code {
-                17 => 3,
-                18 => 7,
-                _ => 0,
-            };
+    loop {
+        let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
+        if !matches!(huffman_token.code, 0 | 17 | 18) {
+            break;
         }
-    } else {
-        loop {
-            let huffman_token = scratch.huffman_tokens[trimmed_length - 1];
-            if !matches!(huffman_token.code, 0 | 17 | 18) {
-                break;
-            }
-            trimmed_length -= 1;
-            trailing_zero_bits += usize::from(code_length_lengths[usize::from(huffman_token.code)]);
-            trailing_zero_bits += match huffman_token.code {
-                17 => 3,
-                18 => 7,
-                _ => 0,
-            };
-        }
+        trimmed_length -= 1;
+        trailing_zero_bits += usize::from(code_length_lengths[usize::from(huffman_token.code)]);
+        trailing_zero_bits += match huffman_token.code {
+            17 => 3,
+            18 => 7,
+            _ => 0,
+        };
     }
     let write_trimmed = trailing_zero_bits > 12;
     w.write_bits(u64::from(write_trimmed), 1)?;
