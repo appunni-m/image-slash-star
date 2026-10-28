@@ -72,6 +72,8 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
+	$(PYTHON) scripts/generate_webp_hash_chain_window_cutoff_fixture.py --check
+	$(PYTHON) scripts/generate_webp_hash_chain_base_zero_fixture.py --check
 	$(PYTHON) scripts/verify_roadmap.py
 	$(PYTHON) scripts/generate_capability_docs.py --check
 
