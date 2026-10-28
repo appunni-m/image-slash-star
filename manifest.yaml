@@ -11462,6 +11462,11 @@ formats:
       test_assets:
       - animated_lossy_inter_420_b64x16_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_420_b8x8_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF sequence whose inter partition tree is forced down to B8x8 and signals TX_MODE_SELECT at positive qindex
+      test_assets:
+      - animated_lossy_inter_420_b8x8_mode_select_64x64.avif
+      status: active
     - id: animated_lossy_inter_420_b64x16_10bit_mode_select_64x64
       description: Two-frame 64x64 10-bit 4:2:0 lossy AVIF sequence whose inter root uses PARTITION_HORZ_4 to create four coded B64x16 leaves at positive qindex and TX_MODE_SELECT
       test_assets:

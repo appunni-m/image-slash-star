@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 143 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 135 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 465 hashed
-artifacts total 24,327,372 bytes, including 143 input files, the compiled
-observer source, and 23,549,036 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 145 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 137 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 471 hashed
+artifacts total 24,786,304 bytes, including 145 input files, the compiled
+observer source, and 23,966,828 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 110 fixture sources are declared in
+The 111 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -307,3 +307,8 @@ independent native infinite-loop observation are retained.
 The vertical-partition companion forces the 128x128 I420 inter root into two
 B64x128 leaves. Its two all-lossless frames match exact Pillow RGB references,
 and the independent native observer records infinite repetition.
+The B8x8 companion uses a flat key frame and a textured lossy I420 inter
+frame. A fixture-only libaom patch forces inter square partitions down to
+8x8 while the frame retains TX_MODE_SELECT and a positive qindex. Its two
+exact Pillow RGB frames and independent native one-play observation are
+retained.

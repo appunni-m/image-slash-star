@@ -1351,13 +1351,39 @@
       "collection_index_sha256": "0babc4acb1cb13e3a90f5851392426e10e4a6d7aaef8b015bc409b29fdefdcd4",
       "generator_sha256": "2ece69e41b826ddbb0a5bd608bae0189a0acb63456cb1a84b11bb3c91ae5ce5f",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "29add98e27a764ad90fc73f618daf533b7b6b81fd55224ae835409d9842b0b6f",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossy_inter_420_b8x8_mode_select_64x64"
+      ],
+      "collection_index_sha256": "48548a9736a2a7f4ea605c3c57e562e9a5e86aa592d1e53e05fe6cbb62a900b8",
+      "generator_sha256": "ff41208cbba7dbca95cd54084c92c2db56a9cced1358c6361efbfd9b95bbe329",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
     {
-      "bytes": 21006,
+      "bytes": 21309,
       "path": "README.md",
-      "sha256": "254626a530afce407cd351eb203f8fb6fd6ac493951047bcedd6f2c4e970070c"
+      "sha256": "517cd9e6f2b391488440784a7925f7d3d5ff47cb889bb4bd8ed58eedae7a2faf"
     },
     {
       "bytes": 2267,
@@ -1748,6 +1774,11 @@
       "bytes": 2508,
       "path": "inputs/lossy_inter_420_b64x16_mode_select_64x64.avif",
       "sha256": "84eab6d96f97deb02fca49e66602f9cb507d2281cde5d4b52b2a50c54cb0433a"
+    },
+    {
+      "bytes": 2541,
+      "path": "inputs/lossy_inter_420_b8x8_mode_select_64x64.avif",
+      "sha256": "a4963f38d42c857cbacd6306ab5585c0e42455fd6c3725dfdffda27b7553e6f1"
     },
     {
       "bytes": 1752,
@@ -3003,6 +3034,16 @@
       "bytes": 12288,
       "path": "pixels/lossy_inter_420_b64x16_mode_select_64x64/frame_1.bin",
       "sha256": "2b11147cafdba4c5e030333f4c73ce8ae9ed29a50e3e03a5221c6fd785c6c80d"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b8x8_mode_select_64x64/frame_0.bin",
+      "sha256": "547f53c99d9fc578e69c7cf37a55ef187ca316ce792d1641127de6f9c7ef58fa"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b8x8_mode_select_64x64/frame_1.bin",
+      "sha256": "eec41a0b35aefcb11f78418d9e1fbd3617ae6dcadb7182de12ca4293f1794487"
     },
     {
       "bytes": 3072,
@@ -12552,6 +12593,55 @@
       "repeat_equal": true,
       "source": "tx64_root_split_inter_420_64x64",
       "source_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c"
+    },
+    {
+      "input_bytes": 2541,
+      "input_path": "inputs/lossy_inter_420_b8x8_mode_select_64x64.avif",
+      "input_sha256": "a4963f38d42c857cbacd6306ab5585c0e42455fd6c3725dfdffda27b7553e6f1",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_420_b8x8_mode_select_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "29add98e27a764ad90fc73f618daf533b7b6b81fd55224ae835409d9842b0b6f",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "547f53c99d9fc578e69c7cf37a55ef187ca316ce792d1641127de6f9c7ef58fa",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "eec41a0b35aefcb11f78418d9e1fbd3617ae6dcadb7182de12ca4293f1794487",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_420_b8x8_mode_select_64x64",
+      "source_sha256": "a4963f38d42c857cbacd6306ab5585c0e42455fd6c3725dfdffda27b7553e6f1"
     }
   ],
   "incremental_collections": [

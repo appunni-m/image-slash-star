@@ -418,6 +418,10 @@ FIXTURES = {
         "animated_lossy_inter_420_b64x16_12bit_mode_select_64x64.avif",
         "8583340a327c7feffa803fa3b0a80267a49b6fa21c062f9b19799e2a82bf1dcc",
     ),
+    "lossy_inter_420_b8x8_mode_select_64x64": (
+        "animated_lossy_inter_420_b8x8_mode_select_64x64.avif",
+        "a4963f38d42c857cbacd6306ab5585c0e42455fd6c3725dfdffda27b7553e6f1",
+    ),
     "lossy_inter_i444_split_b16x32_mode2": (
         "animated_lossy_inter_i444_split_b16x32_mode2.avif",
         "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
