@@ -41,6 +41,13 @@ const MAX_PREDICTOR_IMAGE_SIZE: usize = 1 << 14;
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
+#[derive(Clone, Copy)]
+struct PixelPosition {
+    x: usize,
+    y: usize,
+    row_width: usize,
+}
+
 /// Reusable storage for the predictor transform's tile and row work.
 ///
 /// Predictor selection evaluates every mode for every tile, so retaining the
@@ -353,18 +360,19 @@ fn apply_modes<const LOW_EFFORT: bool>(
                 } else {
                     predict(mode, current[x - 1], upper[x - 1], upper[x], upper[x + 1])
                 };
-                let mut residual = subtract_pixels(current[x], prediction);
-                // libwebp's low-effort path uses `PredictBatch` directly and
-                // does not run the hidden-RGB cleanup performed by
-                // `GetResidual`. Keep this compile-time selected so the
-                // method-four pixel loop has no added runtime branch.
-                if !LOW_EFFORT && current[x] >> 24 == 0 {
-                    residual &= 0xff00_0000;
-                    current[x] = prediction & 0x00ff_ffff;
-                    if x == 0 && y != 0 {
-                        upper[width] = current[0];
-                    }
-                }
+                let source_residual = subtract_pixels(current[x], prediction);
+                let residual = clean_hidden_rgb(
+                    LOW_EFFORT,
+                    PixelPosition {
+                        x,
+                        y,
+                        row_width: width,
+                    },
+                    prediction,
+                    &mut current[x],
+                    upper,
+                    source_residual,
+                );
                 source[y * width + x] = residual;
             }
             let processed = end.saturating_sub(x);
@@ -378,6 +386,30 @@ fn apply_modes<const LOW_EFFORT: bool>(
         std::mem::swap(upper, current);
     }
     Ok(())
+}
+
+// Keep this mode branch shared across const-generic predictor specializations.
+// Release builds inline it and fold `low_effort`, preserving the original loop.
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn clean_hidden_rgb(
+    low_effort: bool,
+    position: PixelPosition,
+    prediction: u32,
+    current_pixel: &mut u32,
+    upper: &mut [u32],
+    mut residual: u32,
+) -> u32 {
+    // libwebp's low-effort path uses `PredictBatch` directly and skips the
+    // hidden-RGB cleanup performed by `GetResidual`.
+    if !low_effort && *current_pixel >> 24 == 0 {
+        residual &= 0xff00_0000;
+        *current_pixel = prediction & 0x00ff_ffff;
+        if position.x == 0 && position.y != 0 {
+            upper[position.row_width] = *current_pixel;
+        }
+    }
+    residual
 }
 
 /// Selects and applies libwebp's predictor transform for Pillow's method-four
