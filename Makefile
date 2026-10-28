@@ -171,6 +171,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --bit-depth 10 --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode select --bit-depth 12 --check
 	$(PYTHON) scripts/generate_avif_inter_i444_frame_header_b64.py --check
+	$(PYTHON) scripts/generate_avif_lossy_wide_i420_b128x128.py --check
 	$(PYTHON) scripts/generate_avif_lossless_qmatrix_sequence.py --check
 	$(PYTHON) scripts/generate_avif_equal_width_superres.py --chroma 420-actual-no-restoration --check
 	$(PYTHON) scripts/generate_avif_temporal_mv_range_fixture.py --check
