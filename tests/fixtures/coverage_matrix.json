@@ -126031,10 +126031,67 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_streaming_odd_luma_block_tail.bin",
           "encoded_ref_bytes": 1750,
           "encoded_ref_sha256": "dcff641b3a25c55813c1356075810800afb3e637bc65a854e54c502110aa7b13",
           "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_streaming_odd_luma_block_tail.bin",
+          "ref_sha256": "43e1983128d3511b70bec99b694130764fffdef7ab41d3b51b866e7ed6e8d40b",
+          "ref_bytes": 4704,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            49,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_sub_422_streaming_odd_luma_block_tail_restart",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "sub",
+          "description": "A 49x32 RGB source exercises 4:2:2 streaming restart markers with an unmatched final luma block at the right edge",
+          "params": {
+            "subsampling": "422",
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "restart_interval": 1
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "rgb_49x32.png",
+          "source_sha256": "4fd872330c7b42184725c6b2afb22952c490f1ffa046ac5a6f5762718d095a85",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_sub_422_streaming_odd_luma_block_tail_restart.bin",
+          "encoded_ref_bytes": 1763,
+          "encoded_ref_sha256": "fc71c28afe93eff132996d932e7234291d647fd5d1139033f33dd7abee229cb2",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_sub_422_streaming_odd_luma_block_tail_restart.bin",
           "ref_sha256": "43e1983128d3511b70bec99b694130764fffdef7ab41d3b51b866e7ed6e8d40b",
           "ref_bytes": 4704,
           "ref_mode": "Rgb8",
@@ -229067,9 +229124,9 @@
     }
   },
   "summary": {
-    "total_rows": 2693,
+    "total_rows": 2694,
     "decode_rows": 2133,
-    "encode_rows": 560,
+    "encode_rows": 561,
     "formats": 8,
     "assets_available": 2129,
     "decode_active": 2133,

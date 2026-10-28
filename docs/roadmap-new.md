@@ -34,7 +34,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 633 rows total, 633 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, 1 active parity case and 31 explicit planned gaps.
-- Whole matrix: 2,693 rows total, 2,133 active decode rows, 529 active encode rows, 0 planned decode rows, and 31 planned encode rows.
+- Whole matrix: 2,694 rows total, 2,133 active decode rows, 530 active encode rows, 0 planned decode rows, and 31 planned encode rows.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
