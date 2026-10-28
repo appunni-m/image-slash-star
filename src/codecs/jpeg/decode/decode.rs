@@ -2649,7 +2649,8 @@ fn reconstruct_baseline_multi_scan(
 }
 
 /// Use the direct grayscale path for a complete singleton baseline scan whose
-/// component sampling factors make it enter the general scan decoder.
+/// component sampling factors make it enter the general scan decoder. The sole
+/// caller selects only non-progressive scans with non-1×1 sampling.
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 fn reconstruct_single_scan_grayscale_direct_safe(
     info: &JpegInfo,
@@ -2670,13 +2671,10 @@ fn reconstruct_single_scan_grayscale_direct_safe(
         return Ok(None);
     };
 
-    if info.progressive
-        || (component.h_samp == 1 && component.v_samp == 1)
-        || info.first_scan_restart_interval != 0
-        || scan.restart_interval != 0
+    // The parser derives these summary fields from this single scan. With one
+    // frame component, its scan component index is also necessarily zero.
+    if info.first_scan_restart_interval != 0
         || scan.huff_tables_snapshotted
-        || scan_component.comp_index != 0
-        || info.scan_components.len() != 1
         || scan.ss != 0
         || scan.se != 63
         || scan.ah != 0

@@ -561,3 +561,74 @@ The generator requires two encodes to agree after normalizing only BMFF
 creation and modification timestamps. It validates the 128x128 superblock,
 key/inter all-lossless frame headers, and exact Pillow 12.2.0 RGB frames. Its
 `--check` mode runs from `make verify` without rebuilding the native encoder.
+
+## Lossless 8-bit I420 B128 partition witnesses
+
+The wide-grid witness
+`animated_lossless_inter_420_wide_grid_b128x128.avif` is generated directly
+with the pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 stack:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_lossless_wide_inter_grid_fixture.py
+```
+
+The generator checks the 128x128 superblock, all-lossless key/inter frames,
+the fixed AVIF digest, and exact Pillow RGB frame hashes. Its `--check` mode is
+included in `make verify` and needs no fixture-only native build.
+
+The vertical witness
+`animated_lossless_inter_420_vertical_b64x128.avif` requires a fixture-only
+libaom override because the stock encoder does not select this tall partition.
+The override at `libaom-lossless-wide-i420-b64x128.patch` forces the inter
+4:2:0 128x128 root to `PARTITION_VERT`, producing two valid B64x128 leaves.
+It changes only the fixture encoder; the Rust decoder and runtime are not
+patched. Build from pinned libaom commit
+`ad44980d7f3c7a2605c25d51ea96946949000841` and libavif commit
+`6543b22b5bc706c53f038a16fe515f921556d9b3`:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-b64x128-source
+git -C target/oracle-staging/libaom-b64x128-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-b64x128-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossless-wide-i420-b64x128.patch"
+cmake -S target/oracle-staging/libaom-b64x128-source \
+  -B target/oracle-staging/libaom-b64x128-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-b64x128-prefix"
+cmake --build target/oracle-staging/libaom-b64x128-build -j 4
+cmake --install target/oracle-staging/libaom-b64x128-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-b64x128-source
+git -C target/oracle-staging/libavif-b64x128-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-b64x128-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-b64x128-source \
+  -B target/oracle-staging/libavif-b64x128-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-b64x128-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-b64x128-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-b64x128-prefix/include"
+cmake --build target/oracle-staging/libavif-b64x128-build --target avif_static -j 4
+
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-b64x128-source/include \
+  -I target/oracle-staging/libavif-b64x128-build/include \
+  -I target/oracle-staging/libaom-b64x128-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_inter_i420_b64x128.c \
+  target/oracle-staging/libavif-b64x128-build/libavif.a \
+  target/oracle-staging/libaom-b64x128-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossless-i420-b64x128
+.oracle-venv/bin/python scripts/generate_avif_lossless_inter_i420_b64x128.py \
+  --encoder target/oracle-staging/encode-avif-lossless-i420-b64x128
+```
+
+The generator requires two normalized encodes to match, validates the AV1
+superblock and all-lossless key/inter headers, and checks both exact Pillow
+RGB frames. `make verify` runs its `--check` mode without rebuilding the
+fixture encoder. The retained AVIF SHA-256 is
+`9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650`.

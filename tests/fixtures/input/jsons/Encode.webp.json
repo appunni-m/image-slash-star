@@ -5519,6 +5519,57 @@
       }
     },
     {
+      "id": "enc_lossless_method_0_palette_no_token",
+      "source_asset": "lossless_palette16.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "b5f54a2e71428ab10f145e77ee142e6736a59e184cd728b5c3278a43b7a7d4e2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless_palette16.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossless_method_0_palette32",
       "source_asset": "lossless_palette32.webp",
       "source_format": "webp",
@@ -10953,6 +11004,151 @@
         "method": "PIL.Image.Image.save",
         "format": "WEBP",
         "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_1x1",
+      "source_asset": "zlib_minimal_dynamic.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "931a580a7662244ea2f396a3b678cfce769e92c24511da1a786dea450100b8ab",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_minimal_dynamic.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_method_0_black_singleton",
+      "source_asset": "zlib_minimal_dynamic.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "931a580a7662244ea2f396a3b678cfce769e92c24511da1a786dea450100b8ab",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 0
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/zlib_minimal_dynamic.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossless_1x1_transparent",
+      "source_asset": "gif_rgba.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "2902ffa167dafa78e2809be38fb072ae4a62b6fd7aa44ac415227d626531a81a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "lossless": true
+        },
         "roundtrip": [
           "PIL.Image.open",
           "load",

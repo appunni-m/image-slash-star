@@ -1,15 +1,15 @@
 # Native AVIF repetition evidence
 
-This bundle records 139 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 131 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 446 hashed
-artifacts total 23,350,852 bytes, including 139 input files, the compiled
-observer source, and 22,677,428 bytes of Pillow-decoded frame outputs. Mutation
+This bundle records 143 input observations made with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Of these, 135 accepted files decode completely;
+8 malformed files fail native parsing and Pillow opening. The 465 hashed
+artifacts total 24,327,372 bytes, including 143 input files, the compiled
+observer source, and 23,549,036 bytes of Pillow-decoded frame outputs. Mutation
 cases share original frame artifacts; each observation records complete per-frame
 pixel hashes and durations. Each case also records the exact observer binary
 digest used for its native repetition observation.
 
-The 107 fixture sources are declared in
+The 110 fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
@@ -301,3 +301,9 @@ The four three-frame temporal motion-range sequences use 16-pixel texture runs o
 The two-frame 128x128 10-bit I420 lossless sequence also has an independent
 native infinite-loop observation. Its public decode parity case checks both
 complete RGB frames against Pillow.
+The new 128x128 8-bit I420 all-lossless sequence shifts a deterministic texture
+one pixel horizontally between frames. Both exact Pillow RGB frames and the
+independent native infinite-loop observation are retained.
+The vertical-partition companion forces the 128x128 I420 inter root into two
+B64x128 leaves. Its two all-lossless frames match exact Pillow RGB references,
+and the independent native observer records infinite repetition.

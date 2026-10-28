@@ -50364,7 +50364,7 @@ impl Lossy420Decoder {
                     obmc,
                 )?;
             }
-            if lossy_wide {
+            if lossy_wide || lossless_wide {
                 *wide_predictions.get_mut(plane).portable()? = Some(prediction);
                 continue;
             }
@@ -51599,6 +51599,41 @@ impl Lossy420Decoder {
             if plane != 0 {
                 chroma_right_contexts[plane - 1] = [contexts[plane]; LOSSLESS_GRID_EDGE_CAPACITY];
                 chroma_bottom_contexts[plane - 1] = [contexts[plane]; LOSSLESS_GRID_EDGE_CAPACITY];
+            }
+        }
+        if lossless_wide {
+            let y_prediction = wide_predictions[0].as_deref().ok_or(PortableUnavailable)?;
+            let u_prediction = if plane_count == 1 {
+                &[][..]
+            } else {
+                wide_predictions[1].as_deref().ok_or(PortableUnavailable)?
+            };
+            let v_prediction = if plane_count == 1 {
+                &[][..]
+            } else {
+                wide_predictions[2].as_deref().ok_or(PortableUnavailable)?
+            };
+            let grid_contexts = self.decode_inter_lossless_wide_grid(
+                decoder,
+                [y_prediction, u_prediction, v_prediction],
+                &mut rasters,
+                plane_count,
+                lossless_partial_grid,
+                predecoded_skip,
+                quantization,
+                tools,
+                coefficient_contexts,
+            )?;
+            luma_transform_split = true;
+            for plane in 0..plane_count {
+                contexts[plane] = grid_contexts[plane].bottom_right;
+                if plane == 0 {
+                    luma_right_contexts = grid_contexts[plane].right;
+                    luma_bottom_contexts = grid_contexts[plane].bottom;
+                } else {
+                    chroma_right_contexts[plane - 1] = grid_contexts[plane].right;
+                    chroma_bottom_contexts[plane - 1] = grid_contexts[plane].bottom;
+                }
             }
         }
         if lossy_wide {
@@ -56483,6 +56518,355 @@ impl Lossy420Decoder {
             right,
             bottom,
         })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "a lossless region keeps its plane origin, active extent, prediction, and entropy edges explicit"
+    )]
+    fn decode_inter_lossless_plane_grid_region(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        plane: usize,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        origin_x: usize,
+        origin_y: usize,
+        active_width: usize,
+        active_height: usize,
+        above: &[u8],
+        left: &[u8],
+    ) -> PortableResult<LosslessGridContexts> {
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        (prediction.len() == coded_width.checked_mul(coded_height).portable()?
+            && coded_width.is_multiple_of(4)
+            && coded_height.is_multiple_of(4)
+            && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_width / 4))
+            && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_height / 4))
+            && active_width != 0
+            && active_height != 0
+            && active_width.is_multiple_of(4)
+            && active_height.is_multiple_of(4)
+            && origin_x.is_multiple_of(4)
+            && origin_y.is_multiple_of(4)
+            && origin_x.checked_add(active_width).portable()? <= raster.active_width
+            && origin_y.checked_add(active_height).portable()? <= raster.active_height
+            && matches!(plane, 0..=2)
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.transform_mode == 0
+            && quantization.qindex == 0
+            && quantization.segment_qindex == 0
+            && quantization.y_dc_delta == 0
+            && quantization.y_ac_delta == 0
+            && quantization.u_dc_delta == 0
+            && quantization.u_ac_delta == 0
+            && quantization.v_dc_delta == 0
+            && quantization.v_ac_delta == 0)
+            .then_some(())
+            .portable()?;
+        let grid_width = active_width / 4;
+        let grid_height = active_height / 4;
+        (above.len() == grid_width && left.len() == grid_height)
+            .then_some(())
+            .portable()?;
+        let mut residual_contexts =
+            [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
+        for row in 0..grid_height {
+            for column in 0..grid_width {
+                let above_context = if row == 0 {
+                    [*above.get(column).portable()?]
+                } else {
+                    [residual_contexts[row - 1][column]]
+                };
+                let left_context = if column == 0 {
+                    [*left.get(row).portable()?]
+                } else {
+                    [residual_contexts[row][column - 1]]
+                };
+                let terminal = decode_generic_lossless_terminal(
+                    decoder,
+                    plane,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx4x4,
+                    coded_width,
+                    coded_height,
+                    &above_context,
+                    &left_context,
+                    block_skipped,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
+                let offset_x = origin_x
+                    .checked_add(column.checked_mul(4).portable()?)
+                    .portable()?;
+                let offset_y = origin_y
+                    .checked_add(row.checked_mul(4).portable()?)
+                    .portable()?;
+                let mut child_prediction = [0_u16; 16];
+                for child_row in 0..4 {
+                    let start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(coded_width))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let end = start.checked_add(4).portable()?;
+                    let source = prediction.get(start..end).portable()?;
+                    let destination = child_row.checked_mul(4).portable()?;
+                    child_prediction
+                        .get_mut(destination..destination.checked_add(4).portable()?)
+                        .portable()?
+                        .copy_from_slice(source);
+                }
+                if let Some(coefficients) = coefficients {
+                    reconstruct_lossless_wht_prediction_in_place(
+                        &mut child_prediction,
+                        coefficients,
+                        tools.sample_depth,
+                    )?;
+                }
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    4,
+                    4,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                residual_contexts[row][column] = terminal.residual_context;
+            }
+        }
+        let last_column = grid_width.saturating_sub(1);
+        let last_row = grid_height.saturating_sub(1);
+        let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        for (row, row_contexts) in residual_contexts[..grid_height].iter().enumerate() {
+            right[row] = row_contexts[last_column];
+        }
+        bottom[..grid_width].copy_from_slice(&residual_contexts[last_row][..grid_width]);
+        Ok(LosslessGridContexts {
+            bottom_right: residual_contexts[last_row][last_column],
+            right,
+            bottom,
+        })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "wide lossless reconstruction carries each plane's prediction, coded raster, edges, and frame state"
+    )]
+    fn decode_inter_lossless_wide_grid(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        predictions: [&[u16]; 3],
+        rasters: &mut [PrivatePlaneRaster; 3],
+        plane_count: usize,
+        allow_clipped: bool,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<[LosslessGridContexts; 3]> {
+        let luma_width = rasters[0].coded_width;
+        let luma_height = rasters[0].coded_height;
+        let chunk_count_x = luma_width / 64;
+        let chunk_count_y = luma_height / 64;
+        (matches!(
+            (luma_width, luma_height),
+            (64, 128) | (128, 64) | (128, 128)
+        ) && matches!(plane_count, 1 | 3)
+            && chunk_count_x <= 2
+            && chunk_count_y <= 2
+            && chunk_count_x != 0
+            && chunk_count_y != 0
+            && rasters[0].active_width <= luma_width
+            && rasters[0].active_height <= luma_height
+            && (allow_clipped
+                || (rasters[0].active_width == luma_width
+                    && rasters[0].active_height == luma_height)))
+            .then_some(())
+            .portable()?;
+
+        let active_chunk_count_x = rasters[0].active_width.div_ceil(64);
+        let active_chunk_count_y = rasters[0].active_height.div_ceil(64);
+        (active_chunk_count_x <= chunk_count_x
+            && active_chunk_count_y <= chunk_count_y
+            && active_chunk_count_x != 0
+            && active_chunk_count_y != 0)
+            .then_some(())
+            .portable()?;
+        for raster in rasters.iter().take(plane_count) {
+            (raster.active_width <= raster.coded_width
+                && raster.active_height <= raster.coded_height
+                && (allow_clipped
+                    || (raster.active_width == raster.coded_width
+                        && raster.active_height == raster.coded_height)))
+                .then_some(())
+                .portable()?;
+        }
+
+        let mut chunk_contexts = [[[LosslessGridContexts {
+            bottom_right: 0x40,
+            right: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+            bottom: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+        }; 2]; 2]; 3];
+        let mut outputs = [LosslessGridContexts {
+            bottom_right: 0x40,
+            right: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+            bottom: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+        }; 3];
+
+        // AV1 implicitly divides blocks wider or taller than 64 luma pixels
+        // into 64x64 regions. Coefficients are coded region by region: luma,
+        // then U and V for each region. Keep this chunk-major order so each
+        // chroma skip symbol follows the matching luma region in the stream.
+        for chunk_y in 0..active_chunk_count_y {
+            for chunk_x in 0..active_chunk_count_x {
+                for plane in 0..plane_count {
+                    let (subsampling_x, subsampling_y) =
+                        self.chroma_sampling.plane_subsampling(plane);
+                    let chunk_width = 64 / subsampling_x;
+                    let chunk_height = 64 / subsampling_y;
+                    let origin_x = chunk_x.checked_mul(chunk_width).portable()?;
+                    let origin_y = chunk_y.checked_mul(chunk_height).portable()?;
+                    let active_width = rasters[plane]
+                        .active_width
+                        .saturating_sub(origin_x)
+                        .min(chunk_width);
+                    let active_height = rasters[plane]
+                        .active_height
+                        .saturating_sub(origin_y)
+                        .min(chunk_height);
+                    (active_width != 0
+                        && active_height != 0
+                        && active_width.is_multiple_of(4)
+                        && active_height.is_multiple_of(4))
+                    .then_some(())
+                    .portable()?;
+                    let grid_width = active_width / 4;
+                    let grid_height = active_height / 4;
+                    let mut above = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+                    let mut left = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+
+                    if chunk_y == 0 {
+                        let start = origin_x / 4;
+                        let end = start.checked_add(grid_width).portable()?;
+                        above[..grid_width].copy_from_slice(
+                            coefficient_contexts.above[plane]
+                                .get(start..end)
+                                .portable()?,
+                        );
+                    } else {
+                        above[..grid_width].copy_from_slice(
+                            chunk_contexts[plane][chunk_y - 1][chunk_x]
+                                .bottom
+                                .get(..grid_width)
+                                .portable()?,
+                        );
+                    }
+                    if chunk_x == 0 {
+                        let start = origin_y / 4;
+                        let end = start.checked_add(grid_height).portable()?;
+                        left[..grid_height].copy_from_slice(
+                            coefficient_contexts.left[plane]
+                                .get(start..end)
+                                .portable()?,
+                        );
+                    } else {
+                        left[..grid_height].copy_from_slice(
+                            chunk_contexts[plane][chunk_y][chunk_x - 1]
+                                .right
+                                .get(..grid_height)
+                                .portable()?,
+                        );
+                    }
+
+                    chunk_contexts[plane][chunk_y][chunk_x] = self
+                        .decode_inter_lossless_plane_grid_region(
+                            decoder,
+                            predictions[plane],
+                            &mut rasters[plane],
+                            plane,
+                            block_skipped,
+                            quantization,
+                            tools,
+                            origin_x,
+                            origin_y,
+                            active_width,
+                            active_height,
+                            &above[..grid_width],
+                            &left[..grid_height],
+                        )?;
+                }
+            }
+        }
+
+        for plane in 0..plane_count {
+            let (subsampling_x, subsampling_y) = self.chroma_sampling.plane_subsampling(plane);
+            let chunk_width = 64 / subsampling_x;
+            let chunk_height = 64 / subsampling_y;
+            let chunk_count_x = rasters[plane].active_width.div_ceil(chunk_width);
+            let chunk_count_y = rasters[plane].active_height.div_ceil(chunk_height);
+            let last_chunk_x = chunk_count_x.saturating_sub(1);
+            let last_chunk_y = chunk_count_y.saturating_sub(1);
+            outputs[plane].bottom_right =
+                chunk_contexts[plane][last_chunk_y][last_chunk_x].bottom_right;
+
+            for (chunk_y, chunk_row) in chunk_contexts[plane].iter().take(chunk_count_y).enumerate()
+            {
+                let origin_y = chunk_y.checked_mul(chunk_height).portable()?;
+                let active_height = rasters[plane]
+                    .active_height
+                    .saturating_sub(origin_y)
+                    .min(chunk_height);
+                let grid_height = active_height / 4;
+                let target_start = origin_y / 4;
+                let target_end = target_start.checked_add(grid_height).portable()?;
+                outputs[plane]
+                    .right
+                    .get_mut(target_start..target_end)
+                    .portable()?
+                    .copy_from_slice(
+                        chunk_row[last_chunk_x]
+                            .right
+                            .get(..grid_height)
+                            .portable()?,
+                    );
+            }
+            for (chunk_x, chunk) in chunk_contexts[plane][last_chunk_y]
+                .iter()
+                .take(chunk_count_x)
+                .enumerate()
+            {
+                let origin_x = chunk_x.checked_mul(chunk_width).portable()?;
+                let active_width = rasters[plane]
+                    .active_width
+                    .saturating_sub(origin_x)
+                    .min(chunk_width);
+                let grid_width = active_width / 4;
+                let target_start = origin_x / 4;
+                let target_end = target_start.checked_add(grid_width).portable()?;
+                outputs[plane]
+                    .bottom
+                    .get_mut(target_start..target_end)
+                    .portable()?
+                    .copy_from_slice(chunk.bottom.get(..grid_width).portable()?);
+            }
+        }
+        Ok(outputs)
     }
 
     #[expect(
