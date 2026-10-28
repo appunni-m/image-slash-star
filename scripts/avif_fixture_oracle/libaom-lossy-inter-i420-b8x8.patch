@@ -1,0 +1,22 @@
+diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
+index 81ac00be2a..6405d6ed30 100644
+--- a/av1/encoder/partition_search.c
++++ b/av1/encoder/partition_search.c
+@@ -5642,5 +5642,17 @@ BEGIN_PARTITION_SEARCH:
+       part_search_state.intra_part_info->cnn_output_valid = 0;
+     }
+   }
++  // Fixture-only: keep the key frame's supported search, then force inter
++  // square blocks down to 8x8 so the public decoder sees lossy B8 leaves.
++  if (!frame_is_intra_only(cm)) {
++    x->sb_enc.min_partition_size = BLOCK_8X8;
++    if (bsize == BLOCK_64X64 || bsize == BLOCK_32X32 ||
++        bsize == BLOCK_16X16) {
++      part_search_state.partition_none_allowed = 0;
++      part_search_state.do_square_split = 1;
++      part_search_state.do_rectangular_split = 0;
++      part_search_state.terminate_partition_search = 0;
++    }
++  }
+   // Partition block source pixel variance.
+   unsigned int pb_source_variance = UINT_MAX;
