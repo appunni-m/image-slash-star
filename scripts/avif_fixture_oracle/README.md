@@ -854,6 +854,25 @@ SHA-256 is `f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c`.
 `make fixtures-check` validates the committed fixture against its generator and
 Pillow observations without rebuilding the native encoder.
 
+The reduced-transform-set companion uses quality 70 and the same B16x64
+encoder with its `--reduced-transform-set` option. It passes the ordinary AOM
+`reduced-tx-type-set=1` control; both picture headers carry the reduced set,
+and the inter frame retains TX_MODE_SELECT and positive qindex. Generate and
+check its two exact Pillow frames with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_inter_reduced_transform_set.py \
+  --encoder target/oracle-staging/encode-avif-inter-i420-b16x64
+.oracle-venv/bin/python scripts/generate_avif_inter_reduced_transform_set.py --check
+```
+
+The normalized input SHA-256 is
+`3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e`.
+The native repetition collector uses
+`--only lossy_inter_420_b16x64_reduced_transform_set_64x64` with its separate
+clean pinned libavif checkout and a fresh output directory. `make verify`
+checks the committed fixture without rebuilding the encoder.
+
 The monochrome companion uses the same pinned sources and partition controls.
 The qindex-zero patch sets a luma DC delta of 2 on its inter frame, keeping the
 base qindex at zero while making that frame non-lossless. Compile the

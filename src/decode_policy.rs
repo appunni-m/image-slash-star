@@ -597,19 +597,8 @@ pub(crate) struct SequenceDecodeBudget {
 }
 
 impl SequenceDecodeBudget {
-    /// Create the unlimited budget used by convenience and still paths.
-    #[cfg(any(
-        feature = "gif",
-        feature = "avif",
-        all(coverage, any(feature = "png", feature = "tiff", feature = "webp"))
-    ))]
-    #[cfg_attr(
-        all(feature = "avif", not(feature = "gif"), not(coverage)),
-        allow(
-            dead_code,
-            reason = "The default sequence budget constructor is used by the feature-gated GIF decoder."
-        )
-    )]
+    /// Create the unlimited budget used by the GIF convenience decoder.
+    #[cfg(feature = "gif")]
     pub(crate) fn default_for(format: ImageFormat) -> Self {
         Self {
             format,

@@ -16215,6 +16215,11 @@ formats:
       test_assets:
       - animated_lossy_inter_420_b16x64_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_420_b16x64_reduced_transform_set_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 lossy AVIF animation whose B16x64 inter leaves use TX_MODE_SELECT and the reduced DCT/identity transform alphabet
+      test_assets:
+      - animated_lossy_inter_420_b16x64_reduced_transform_set_64x64.avif
+      status: active
     - id: animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64
       description: Two-frame 64x64 8-bit 4:2:0 AVIF sequence with a lossless key frame and TX_MODE_SELECT B16x64 inter leaves at non-lossless base qindex zero with nonzero chroma deltas
       test_assets:

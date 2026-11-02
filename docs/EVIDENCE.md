@@ -1,8 +1,37 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,689 total rows: 3,021 decode /
-inspect / verify rows and 668 encode rows. Of those, 3,021 decode rows are
+The current public evidence matrix contains 3,690 total rows: 3,022 decode /
+inspect / verify rows and 668 encode rows. Of those, 3,022 decode rows are
 active and 641 encode rows are active; 27 encode rows remain planned.
+
+## Reduced AV1 inter transform alphabet — 2026-11-02
+
+`decode:avif:animated_lossy_inter_420_b16x64_reduced_transform_set_64x64`
+adds a 2,550-byte I420 animation with two 64x64 RGB frames. Both picture
+headers signal the reduced transform set; the inter frame uses
+TX_MODE_SELECT at positive qindex with B16x64 leaves. The fixture encoder
+uses the ordinary AOM `reduced-tx-type-set` option and its existing pinned
+partition controls. Its input SHA-256 is
+`3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e`.
+
+Pinned Pillow 12.2.0 provides both exact 12,288-byte RGB frames and 100 ms
+durations. A separate clean-source libavif 1.4.1 observer decodes both
+frames, reports repetition count zero (one total play), and repeats the
+observation. Two normalized native encodes agree byte for byte. The existing
+normal and qindex-zero B16x64 fixtures retain their exact input and frame
+hashes after the encoder gains the new option.
+
+The targeted public probe reaches the true reduced-set branch in
+`decode_inter_transform_type`; that outcome has count zero in the retained
+full report against the identical entropy source. This is selected-case
+evidence, not a refreshed full-suite percentage. The canonical selected run
+passes the normal and reduced-set rows (2/2), with unchanged source and input
+guards throughout execution. The reduced-set branch records four true
+observations; the normal alphabet remains exercised in the same run. Raw
+coverage, producer identity, native observations, and receipts are retained in
+`.coverage-mcp/local-evidence/parity/avif-reduced-transform-set-20261102/`.
+Codec arithmetic, runtime dependencies, coverage exclusions, and release
+floors are unchanged.
 
 ## Incomplete TIFF integer subsampling pairs — 2026-11-02
 
@@ -16163,7 +16192,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `34b49a94156c8f0b4746503e192bc3be3e06fe8433c1ead72a735ee0ee8319a5`; matrix `7a0933f5c5d090e8d05aa423b8dca83504d758da9c089c15816bc357c439b3f7`.
+- Current fixture integrity only: manifest `4ae52290abff26fd7aeff96192efc4fb211448706db59fbb4a1f89d2fd510c6e`; matrix `5db167183e95c695e53aa2a481266b1ace28ec902ed87be2fbbdfaffd1cbc4c8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

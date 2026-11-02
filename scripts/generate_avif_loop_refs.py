@@ -774,6 +774,10 @@ FIXTURES = {
         "animated_lossy_inter_420_b16x64_mode_select_64x64.avif",
         "6241cd581ea930154ddf66554966a069d03ebf06c8d2a4880a4a0008398e1a4a",
     ),
+    "lossy_inter_420_b16x64_reduced_transform_set_64x64": (
+        "animated_lossy_inter_420_b16x64_reduced_transform_set_64x64.avif",
+        "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e",
+    ),
     "lossy_inter_420_b16x64_qindex0_mode_select_64x64": (
         "animated_lossy_inter_420_b16x64_qindex0_mode_select_64x64.avif",
         "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c",
