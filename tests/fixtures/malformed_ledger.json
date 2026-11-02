@@ -7281,6 +7281,42 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_padding_8192_obus_truncated_frame.avif",
+        "class": "error_padding_8192_obus_truncated_frame",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Padding-heavy AVIF with a bounded item extent and a one-byte-short final frame passes header verification but rejects frame and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "error_pitm_zero_item_id.avif",
         "class": "error_pitm_zero_item_id",
         "contracts": {
@@ -38020,7 +38056,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 184,
+      "avif": 185,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -38032,17 +38068,17 @@
     "by_origin": {
       "defensive_model": 5,
       "independent_implementation": 1,
-      "pillow_fixture": 848,
-      "specification_reference": 184
+      "pillow_fixture": 849,
+      "specification_reference": 185
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 41,
       "spec_violation": 539,
       "tolerated": 1,
-      "truncated": 232
+      "truncated": 233
     },
-    "classes": 848,
+    "classes": 849,
     "formats": 8
   }
 }
