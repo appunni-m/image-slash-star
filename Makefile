@@ -306,6 +306,8 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_select_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_inter_i420_deep_rect.py --shape b16x64 --check
+	$(PYTHON) scripts/generate_avif_inter_i420_deep_rect.py --shape b64x16 --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_qindex0_mode_select.py --check
 	$(PYTHON) scripts/generate_avif_inter_monochrome_b16x64_qindex0_mode_select.py --check
 	$(PYTHON) scripts/generate_avif_lossless_inter_i420_b128x128_10bit.py --check
@@ -355,6 +357,8 @@ lint: fmt
 	cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 	cargo clippy --release --workspace --all-targets --all-features --locked -- -D warnings
 	CARGO_TARGET_DIR=target/cfg-coverage-clippy cargo +"$(COVERAGE_TOOLCHAIN)" clippy --workspace --all-targets --all-features --locked -- -D warnings --cfg coverage --cfg coverage_nightly
+	# AVIF-only coverage must also compile with the GIF constructor disabled.
+	CARGO_TARGET_DIR=target/cfg-coverage-clippy cargo +"$(COVERAGE_TOOLCHAIN)" clippy --workspace --all-targets --no-default-features --features avif --locked -- -D warnings --cfg coverage --cfg coverage_nightly
 	cargo clippy --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked -- -D warnings
 
 .PHONY: lint-x86-simd

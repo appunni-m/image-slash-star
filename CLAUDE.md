@@ -88,9 +88,10 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
   directories. These compile checks do not replace runtime parity or benchmarks
   on matching hardware.
 - `make lint` also runs nightly Clippy with `cfg(coverage)` and
-  `cfg(coverage_nightly)` so coverage-only hooks and integration-test code
-  receive the same strict gate. This is compile-time validation and does not
-  affect release code or runtime performance.
+  `cfg(coverage_nightly)` for all features and AVIF alone so coverage-only
+  hooks, integration-test code, and independent AVIF feature gates receive
+  the same strict gate. This is compile-time validation and does not affect
+  release code or runtime performance.
 - `make test-feature-matrix` runs strict library Clippy and rustdoc for every
   `wasm32-unknown-unknown` feature lane, plus one strict all-target/all-feature
   Clippy pass for `wasm32-wasip1`. Its native and WASI lanes run the
