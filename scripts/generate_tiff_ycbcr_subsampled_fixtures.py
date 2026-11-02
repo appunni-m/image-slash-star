@@ -1624,6 +1624,24 @@ def fixtures() -> dict[
     short_count_three_subsampling = set_ifd_subsampling_values(
         REFERENCE_CANDIDATE, 3, (1, 2, 2)
     )
+    # An incomplete pair is ignored for every integer field type. Using 1
+    # makes the fallback observable: the stored strip still uses 2-by-2 clumps.
+    incomplete_subsampling = {
+        f"ycbcr_subsampling_{name}_count_one_lzw_2x2.tiff": (
+            set_ifd_subsampling_values(REFERENCE_CANDIDATE, field_type, (1,)),
+            (4, 4),
+            REFERENCE_PIXEL_SHA256,
+            {530: b"\x01" if field_type == 1 else (1,), 531: 1},
+            REFERENCE_PIXELS,
+        )
+        for field_type, name in (
+            (1, "byte"),
+            (4, "long"),
+            (6, "signed_byte"),
+            (8, "signed_short"),
+            (9, "signed_long"),
+        )
+    }
 
     return {
         "ycbcr_subsampled_lzw_2x2.tiff": (
@@ -1743,6 +1761,7 @@ def fixtures() -> dict[
             {530: (2,), 531: 1},
             REFERENCE_PIXELS,
         ),
+        **incomplete_subsampling,
         "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff": (
             unsupported_pair_subsampling,
             (4, 4),
@@ -2683,6 +2702,11 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
             "ycbcr_subsampling_byte_type_lzw_2x2.tiff": "be68207f391e87874d5b40af16571c888d588424db45cc06e693387cf6ca89ab",
             "ycbcr_subsampling_long_type_lzw_2x2.tiff": "a3bc8d6110c272f34180e6e6231f88aa229ce5c87ee026464e6996a4523631cd",
             "ycbcr_subsampling_short_count_lzw_2x2.tiff": "f46aa199d9253f5dda799917e7223cab8005858df402ff8f5dc3916ecb254f5b",
+            "ycbcr_subsampling_byte_count_one_lzw_2x2.tiff": "e6d0707aef9322e6fb70eb5600677475a3f84cf6b19d421751936c8a2b9d146a",
+            "ycbcr_subsampling_long_count_one_lzw_2x2.tiff": "06a231e04c74f53cf2ee6e6f743319e5f434b0b591ba37d63e70f664e571e52a",
+            "ycbcr_subsampling_signed_byte_count_one_lzw_2x2.tiff": "e6caa07daf253e9a926678e0474c81b46a13a5fe0e7429a915eff2fdce152029",
+            "ycbcr_subsampling_signed_short_count_one_lzw_2x2.tiff": "5338401515324c7d59e2833601b1d5c0909f4ba23be3aeb3109c213cb0512a83",
+            "ycbcr_subsampling_signed_long_count_one_lzw_2x2.tiff": "30808793c119f7b1f735f499577f4842dea8f73c28cef6e3a2164f9a3b148709",
             "ycbcr_subsampling_unsupported_pair_lzw_2x2.tiff": "afc8480db4452d713f4e5d10198c3bb0e35a981c9e8b2689456cff9eff5aeee8",
             "ycbcr_subsampling_zero_pair_lzw_2x2.tiff": "0c4d64f3d62266d6ba9fccbac32f4e2189991e8c211ac65998c2e33663a74fc8",
             "ycbcr_subsampling_signed_byte_type_lzw_1x2.tiff": "c080016f25b312985ac17df0c313806b6126c227ff6d2e56ea95994c5908dead",
