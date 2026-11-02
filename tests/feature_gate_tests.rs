@@ -9,7 +9,7 @@ use image_slash_star::{
     AnimationLoop, Capability, CapabilityRestriction, CapabilityTarget,
     CapabilityUnavailableReason, ColorType, DecodedImage, DecodedSequence, DiagnosticKind,
     EncodeOptions, EncodedImage, ImageDiagnostic, ImageError, ImageErrorStage, ImageFormat,
-    ImageMode, ImagePalette, SequenceKind, SourceColor, UnsupportedReason,
+    ImageMode, ImagePalette, Mode, SequenceKind, SourceColor, UnsupportedReason,
 };
 #[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
@@ -24,6 +24,16 @@ mod support;
 mod capability_table;
 
 use support::json::{self, FromJson, Object, Value};
+
+#[test]
+fn raster_mode_pillow_names_round_trip_and_internal_modes_stay_unspelled() {
+    for mode in Mode::ALL {
+        match mode.pillow_name() {
+            Some(name) => assert_eq!(Mode::from_pillow_name(name), Some(mode)),
+            None => assert_eq!(mode.pillow_band_count(), 0),
+        }
+    }
+}
 
 struct CoverageMatrix {
     formats: HashMap<String, FormatRows>,

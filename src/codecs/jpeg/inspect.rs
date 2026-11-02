@@ -1,7 +1,7 @@
 //! JPEG frame-header inspection without entropy decoding.
 
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
-use crate::types::{ImageFormat, ImageInfo, ImageMode};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, Mode};
 
 const SOI: u8 = 0xd8;
 const APP0: u8 = 0xe0;
@@ -118,11 +118,13 @@ fn inspect_frame(frame: &[u8]) -> CodecResult<ImageInfo> {
     // Pillow exposes width, height, and mode once these fixed SOF fields are
     // present. A truncated per-component table is rejected only when the
     // image is materialized, so inspection must not validate it here.
+    let raster_mode = Mode::from_header(mode, ImageFormat::Jpeg, None, None);
     Ok(ImageInfo {
         format: ImageFormat::Jpeg,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth: 8,
         palette: None,
         is_animated: false,

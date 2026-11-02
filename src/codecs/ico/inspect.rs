@@ -1,7 +1,7 @@
 //! ICO/CUR directory and embedded-image inspection without pixel decoding.
 
 use crate::codecs::{CodecError, CodecResult, codec_add_end, need_slice, terminalize};
-use crate::types::{CursorHotspot, ImageFormat, ImageInfo, ImageMode};
+use crate::types::{CursorHotspot, ImageFormat, ImageInfo, ImageMode, Mode};
 
 const HEADER_SIZE: usize = 6;
 const ENTRY_SIZE: usize = 16;
@@ -214,11 +214,14 @@ fn inspect_icon_dib(data: &[u8]) -> CodecResult<ImageInfo> {
             palette_entries,
         )?;
     }
+    let mode = ImageMode::Rgba8;
+    let raster_mode = Mode::from_header(mode, ImageFormat::Ico, None, None);
     Ok(ImageInfo {
         format: ImageFormat::Ico,
         width,
         height,
-        mode: ImageMode::Rgba8,
+        mode,
+        raster_mode,
         bit_depth: bits.to_le_bytes()[0],
         palette: None,
         is_animated: false,

@@ -2,7 +2,7 @@
 
 use super::decode::{Directory, Endian};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, SourceDescriptor};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode, SourceDescriptor};
 
 const COMPRESSION_NONE: usize = 1;
 const COMPRESSION_JPEG: usize = 7;
@@ -81,12 +81,16 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     if let Some(alpha) = alpha {
         source = source.with_alpha(alpha);
     }
+    let mode = layout.mode();
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::Tiff, source.alpha(), source.byte_order());
 
     Ok(ImageInfo {
         format: ImageFormat::Tiff,
         width,
         height,
-        mode: layout.mode(),
+        mode,
+        raster_mode,
         bit_depth: bit_depth.to_le_bytes()[0],
         palette,
         is_animated: frame_count > 1,

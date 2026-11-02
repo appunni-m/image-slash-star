@@ -1,7 +1,7 @@
 //! PNG header and palette inspection without IDAT decompression.
 
 use crate::codecs::{CodecError, CodecResult, codec_add_end, need_slice};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode};
 
 const SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
@@ -156,11 +156,14 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         None
     };
     let is_animated = frame_count > 1;
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::Png, source.alpha(), source.byte_order());
     Ok(ImageInfo {
         format: ImageFormat::Png,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth,
         palette,
         is_animated,

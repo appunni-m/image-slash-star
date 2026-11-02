@@ -11,7 +11,7 @@ use crate::types::{
     AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile, AvifItemLocation,
     AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
     AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, RawIccProfile, SourceAlpha,
+    AvifTransformProperties, ImageFormat, ImageInfo, ImageMode, Mode, RawIccProfile, SourceAlpha,
     SourceColor, SourceDescriptor,
 };
 
@@ -376,15 +376,23 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
         return Err(parse_failure!());
     }
 
+    let mode = if details.has_alpha {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
+    let raster_mode = Mode::from_header(
+        mode,
+        ImageFormat::Avif,
+        details.source.alpha(),
+        details.source.byte_order(),
+    );
     Ok(ImageInfo {
         format: ImageFormat::Avif,
         width: details.width,
         height: details.height,
-        mode: if details.has_alpha {
-            ImageMode::Rgba8
-        } else {
-            ImageMode::Rgb8
-        },
+        mode,
+        raster_mode,
         bit_depth: details.depth,
         palette: None,
         is_animated: details.frame_count > 1,
