@@ -15185,6 +15185,41 @@ formats:
       - padding_4096_obus.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_no_size_field
+      description: Complete baseline AVIF omits the final frame OBU size field; the remaining bounded sample preserves exact baseline pixels
+      test_assets:
+      - obu_frame_no_size_field.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_07_no_size_field
+      description: Complete baseline AVIF adds a zero-layer-ID frame extension with reserved bits 0x07 and omits its size field; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_07_no_size_field.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_temporal_delimiter_no_size_field
+      description: An unsized temporal delimiter consumes the remaining bounded AVIF sample; Pillow verifies the container but rejects pixel decoding without a frame
+      test_assets:
+      - error_obu_temporal_delimiter_no_size_field.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_sequence_header_no_size_field
+      description: An unsized sequence header consumes the remaining bounded AVIF sample; Pillow verifies the container but rejects pixel decoding without a frame
+      test_assets:
+      - error_obu_sequence_header_no_size_field.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_frame_no_size_field_truncated
+      description: Complete AVIF omits the final frame size field and removes its final payload byte with a bounded item extent; Pillow still rejects pixel decoding
+      test_assets:
+      - error_obu_frame_no_size_field_truncated.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: padding_4097_obus
       description: RGB AVIF with 4097 total OBUs remains valid and preserves exact baseline pixels beyond the former arbitrary count limit
       test_assets:

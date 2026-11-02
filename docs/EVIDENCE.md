@@ -1,8 +1,39 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,737 total rows: 3,063 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,063 decode rows are
+The current public evidence matrix contains 3,742 total rows: 3,068 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,068 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF final OBU without a size field — 2026-11-02
+
+Pinned Pillow accepts a complete baseline AVIF whose final frame OBU omits
+its ULEB128 size field. It also accepts that frame with a zero-layer-ID
+extension header whose reserved bits are set. Both inputs produce the same
+complete 49,152-byte RGB buffer as the baseline. The previous Rust parser
+rejected both at its mandatory-size-field check.
+
+The parser now gives an unsized OBU the remaining bytes of its bounded
+sample, matching Pillow/dav1d. It never searches those payload bytes for
+another OBU. Explicit sizes retain their existing bounds checks, and every
+iteration still consumes at least a header byte. This adds no allocation,
+dependency, unsafe code, lint exception, or coverage exclusion.
+
+Five ordinary public manifest rows cover the two complete accepted inputs
+and three malformed neighbors. Unsized temporal-delimiter and sequence-header
+OBUs consume the rest of their samples without producing a frame. Removing
+the final byte of the unsized frame also remains malformed. All three
+containers pass Pillow header verification but fail pixel decoding. The
+producer repairs the BMFF lengths and item extent and independently checks
+live pinned Pillow pixels or failures before sharing baseline pixel data.
+
+Before/after public executables, complete input files, live Pillow pixels,
+source and fixture snapshots, selected coverage receipts, raw profiles, and
+Coverage MCP queries belong under
+`.coverage-mcp/local-evidence/parity/avif-obu-implicit-size-20261102/`.
+Validation uses the canonical selected workflow for the baseline and five
+new rows, followed by the complete AVIF matrix on its retained executable.
+These are local parity receipts; no refreshed full-suite percentage or
+managed Coverage MCP run is claimed. Historical measurements remain intact.
 
 ## AVIF tolerated OBU headers — 2026-11-02
 
@@ -16310,7 +16341,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5d3886b26e26072b326575c7dcc9adfbefc253a06ac67d3f575a4e7d6a9d9334`; matrix `6d913c5eda5ec0b529e5d704ba2f2a6ec6c3c1ce5ab0de7ffaa311c9b43db930`.
+- Current fixture integrity only: manifest `9cc2324722e31a85750d44d72ce84b2349fbf1bac62afa81c5dd4339f9fbabec`; matrix `25f90270fbe1244e382598270c8f9cc6ece73078a23e290e37c508177e3d3357`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

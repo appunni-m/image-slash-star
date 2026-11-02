@@ -115,7 +115,7 @@ fn validate_sample_and_return_temporal_unit(
     let data = SegmentedData::new(input, &sample.spans)?;
     let mut offset = 0_usize;
     let mut frame_bearing = false;
-    // Each accepted OBU consumes at least its header and size byte. The
+    // Each accepted OBU consumes at least its header byte. The
     // bounded sample therefore limits this loop, including empty padding
     // OBUs; an extra count cap would reject otherwise valid Pillow inputs.
     while offset < data.len() {
@@ -136,10 +136,13 @@ fn validate_sample_and_return_temporal_unit(
             temporal_id = u32::from(extension >> 5);
             spatial_id = u32::from((extension >> 3) & 3);
         }
-        if !has_size_field {
-            return Err(malformed("OBU omits its payload-size field"));
-        }
-        let payload_size = read_uleb128(&data, &mut offset)? as usize;
+        let payload_size = if has_size_field {
+            read_uleb128(&data, &mut offset)? as usize
+        } else {
+            // Pillow/dav1d treats an unsized OBU as the rest of this sample,
+            // including any bytes that could otherwise resemble more OBUs.
+            data.len().saturating_sub(offset)
+        };
         let payload_start = offset;
         let remaining = data.len().saturating_sub(payload_start);
         if payload_size > remaining {

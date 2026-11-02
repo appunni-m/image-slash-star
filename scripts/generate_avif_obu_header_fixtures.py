@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate complete AVIF OBU-header compatibility inputs and malformed neighbors."""
+"""Generate complete AVIF OBU header/size compatibility inputs and malformed neighbors."""
 
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ class Recipe:
     flag_bits: int = 0
     extension: int | None = None
     truncate: bool = False
+    no_size_field: bool = False
 
 
 RECIPES = (
@@ -107,6 +108,18 @@ RECIPES = (
            "0f088ed053b3ed4851940b1973e1c8869c99c095a61d917c280322af1eb5995f", extension=0x07),
     Recipe("error_obu_frame_flags_81_truncated_frame.avif", 6,
            "64ebe3741e9be3d37df3b698546b89a5cf5bcabb3e3c2b1ca58f77afd372fdf1", flag_bits=0x81, truncate=True),
+    Recipe("obu_frame_no_size_field.avif", 6,
+           "fe0f38313aa7f9f05fc90e93cf4c3cb8881883cb3f9387163d71c776ce7c50e8", no_size_field=True),
+    Recipe("obu_frame_extension_07_no_size_field.avif", 6,
+           "2379355e31f4518647cfb7628bc4cd3a6f054eed9acb64814738970a7795d325", extension=0x07,
+           no_size_field=True),
+    Recipe("error_obu_temporal_delimiter_no_size_field.avif", 2,
+           "832e32de38c8782ed3d23046de837c8b3f7eb585e57aa5b09cc03a22e9099770", no_size_field=True),
+    Recipe("error_obu_sequence_header_no_size_field.avif", 1,
+           "991abefd7560c88799b07083c26b6d213e72157253a3d5183a74c4186b43ac2e", no_size_field=True),
+    Recipe("error_obu_frame_no_size_field_truncated.avif", 6,
+           "60c59c50675bd6bb1b2248dc962a34e159d0ac2ee1dab54c8b59a44580ab3add", truncate=True,
+           no_size_field=True),
 )
 
 
@@ -139,6 +152,13 @@ def fixture_bytes(source: bytes, recipe: Recipe) -> bytes:
         raise RuntimeError("recipe changes a field other than the declared header bits")
     candidate = bytearray(source)
     candidate[offset] |= recipe.flag_bits
+    if recipe.no_size_field:
+        size_end = offset + 1
+        while source[size_end] & 0x80:
+            size_end += 1
+        size_end += 1
+        del candidate[offset + 1:size_end]
+        candidate[offset] &= ~2
     if recipe.extension is not None:
         candidate[offset] |= 4
         candidate[offset + 1:offset + 1] = bytes((recipe.extension,))
@@ -156,21 +176,21 @@ def fixture_bytes(source: bytes, recipe: Recipe) -> bytes:
     return result
 
 
-def verify_pillow(candidate: bytes, truncate: bool) -> None:
+def verify_pillow(candidate: bytes, malformed: bool) -> None:
     """Observe complete live Pillow pixels or the malformed-frame failure."""
     with Image.open(BytesIO(candidate)) as image:
         image.verify()
     with Image.open(BytesIO(candidate)) as image:
         if (image.format, image.mode, image.size, image.n_frames) != ("AVIF", "RGB", (128, 128), 1):
             raise RuntimeError("header mutation changed the image header observations")
-        if truncate:
+        if malformed:
             try:
                 image.load()
             except RuntimeError as error:
                 if str(error) != "Failed to decode frame 0: Decoding of color planes failed":
-                    raise RuntimeError("truncated frame's Pillow failure changed") from error
+                    raise RuntimeError("malformed frame's Pillow failure changed") from error
             else:
-                raise RuntimeError("Pillow accepted the truncated frame")
+                raise RuntimeError("Pillow accepted the malformed frame")
         else:
             image.load()
             pixels = image.tobytes()
@@ -190,7 +210,8 @@ def main() -> None:
         candidate = fixture_bytes(source, recipe)
         if sha256(candidate) != recipe.digest:
             raise RuntimeError(f"generated fixture differs from its pin: {recipe.filename}")
-        verify_pillow(candidate, recipe.truncate)
+        malformed = recipe.truncate or recipe.no_size_field and recipe.obu_type != 6
+        verify_pillow(candidate, malformed)
         output = ASSETS / recipe.filename
         if args.check:
             if not output.is_file() or output.read_bytes() != candidate:
