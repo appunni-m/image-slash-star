@@ -630,6 +630,10 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
             "source_new" => match img::EncodedImage::new_with_policy(bytes.clone(), &policy) {
                 Ok(source) if case.status == "ok" => {
                     assert_info(source.info(), manifest.expected_size);
+                    assert_eq!(source.mode(), source.info().mode);
+                    assert!(!source.is_decoded());
+                    let view = img::EncodedImageView::new_with_policy(&bytes, &policy)?;
+                    assert_eq!(view.mode(), view.info().mode);
                     assert!(!source.is_decoded());
                 }
                 Err(error) if case.status == "error" => assert_limit_error(
