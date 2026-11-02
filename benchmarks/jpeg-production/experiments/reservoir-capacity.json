@@ -1,0 +1,46 @@
+{
+  "schema": "image-slash-star/jpeg-patch-experiment@1",
+  "status": "diagnostic_only_shipping_rust_unchanged",
+  "hypothesis": "The actual source-mapped native SSE2/AVX2 profile shows repeated reservoir availability saturation in the dominant streaming entropy chain. Store remaining RawBlockWriter capacity directly and derive occupied width once per block. This is a native x86 hypothesis, not an accepted portable optimization.",
+  "patch": "benchmarks/jpeg-production/experiments/reservoir-capacity.patch",
+  "patch_sha256": "f9b6f0137040cf3276a564dfb472f3358e3d87b5d677886568a2463428facfb8",
+  "source_guards": {
+    "src/codecs/jpeg/encode/mod.rs": "aa908c5b924b185423fed3caaeedfd2f1248a7ac83764d50de32cb9680dd07c5"
+  },
+  "variants": [
+    "sse2",
+    "avx2"
+  ],
+  "primary": "rgb-512-q85-420",
+  "guards": [
+    "rgb-1024-q85-420",
+    "rgb-128-q85-420",
+    "rgb-128-q10-420",
+    "rgb-512-q10-420",
+    "rgb-128-q100-420",
+    "rgb-63x65-q85-420"
+  ],
+  "cohorts": 6,
+  "admission": {
+    "primary_gain_minimum_percent": 3,
+    "all_primary_cohorts_must_be_faster": true,
+    "guard_slowdown_limit_percent": 2,
+    "complete_output_bytes_must_match": true,
+    "exact_pillow_parity_required_before_adoption": true,
+    "arm64_shipping_code_must_remain_unchanged_on_adoption": true
+  },
+  "preceding_arm64_result": {
+    "accepted": false,
+    "primary_paired_gain_percent": -0.5721680026536835,
+    "note": "Preserved failed ARM64 screening. It does not establish native x86 latency and does not justify changing the ARM64 implementation."
+  },
+  "native_profile_evidence": {
+    "run_id": 41516832226,
+    "committed_source": "c56db560bcd45d93187b783b5abf6ca270282c78",
+    "artifact_sha256": "64b571c680a4d4037a14f6e279743965d2d98705864265d2b83f4234ccc781ca"
+  },
+  "candidate_guards": {
+    "src/codecs/jpeg/encode/mod.rs": "85b1ba63e992def3f939fa8632854e1df28b5e360741dbe857720d2147f2e7f2"
+  },
+  "patch_format": "Zero-context unified diff; exact preimage and compiled-candidate file digests are both required."
+}

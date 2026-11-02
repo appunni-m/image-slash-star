@@ -103,6 +103,84 @@ def prepare_revision_source(revision: str, destination: Path, archive_path: Path
     }
 
 
+def read_candidate_patch(path: Path, revision: str) -> dict:
+    """Bind an experiment to patch bytes committed with its producer."""
+    resolved = resolve_path(path)
+    if not resolved.is_relative_to(ROOT):
+        raise RuntimeError("candidate patch must stay inside the repository")
+    relative = resolved.relative_to(ROOT).as_posix()
+    committed = subprocess.check_output(["git", "show", f"{revision}:{relative}"], cwd=ROOT)
+    if resolved.read_bytes() != committed:
+        raise RuntimeError("candidate patch differs from its committed producer input")
+    return {
+        "path": relative,
+        "producer_revision": revision,
+        "sha256": hashlib.sha256(committed).hexdigest(),
+        "bytes": len(committed),
+    }
+
+
+def apply_candidate_patch(source: Path, receipt: dict, patch: dict, output: Path) -> None:
+    """Apply a retained patch only to existing files in the private Git archive."""
+    original = ROOT / patch["path"]
+    data = original.read_bytes()
+    if hashlib.sha256(data).hexdigest() != patch["sha256"]:
+        raise RuntimeError("candidate patch changed during the experiment")
+    retained = output / "candidate.patch"
+    if retained.exists() and retained.read_bytes() != data:
+        raise RuntimeError("retained candidate patch differs between variants")
+    retained.write_bytes(data)
+    statistics_output = subprocess.check_output(
+        ["git", "apply", "--unidiff-zero", "--numstat", "-z", str(retained)], cwd=ROOT,
+    )
+    paths = set()
+    for record in statistics_output.split(b"\0"):
+        if not record:
+            continue
+        fields = record.decode().split("\t", 2)
+        if len(fields) != 3:
+            raise RuntimeError("candidate patch has unsupported file statistics")
+        relative = Path(fields[2])
+        if relative.is_absolute() or ".." in relative.parts:
+            raise RuntimeError("candidate patch contains an unsafe file path")
+        if relative.as_posix() not in receipt["files"]:
+            raise RuntimeError("candidate patch must modify existing archived build inputs")
+        paths.add(relative.as_posix())
+    if not paths:
+        raise RuntimeError("candidate patch does not modify archived build inputs")
+    command = [
+        "git", "apply", "--unidiff-zero", "--whitespace=error-all",
+        "--directory", source.relative_to(ROOT).as_posix(),
+    ]
+    subprocess.run([*command, "--check", str(retained)], cwd=ROOT, check=True)
+    subprocess.run([*command, str(retained)], cwd=ROOT, check=True)
+    compiled_files = {
+        path.relative_to(source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(source.rglob("*")) if path.is_file()
+    }
+    if compiled_files.keys() != receipt["files"].keys():
+        raise RuntimeError("candidate patch changed the archived file inventory")
+    changed = {
+        path for path, digest in compiled_files.items() if digest != receipt["files"][path]
+    }
+    if changed != paths:
+        raise RuntimeError("applied candidate changes differ from the retained patch")
+    # Preserve the committed archive inventory. Patched implementation bytes
+    # have separate identities and must never be represented as Git blobs.
+    receipt["kind"] = "git_archive_with_explicit_experimental_patch"
+    receipt["candidate_patch"] = patch
+    receipt["compiled_files"] = compiled_files
+    receipt["patched_files"] = sorted(changed)
+    for name in sorted(changed):
+        retained_source = output / "patched-source" / name
+        retained_source.parent.mkdir(parents=True, exist_ok=True)
+        existing = retained_source.read_bytes() if retained_source.exists() else None
+        content = (source / name).read_bytes()
+        if existing is not None and existing != content:
+            raise RuntimeError("patched source differs between variants")
+        retained_source.write_bytes(content)
+
+
 def build_revision(
     source: Path, target_dir: Path, rustflags: str, log_path: Path
 ) -> tuple[Path, dict]:
@@ -160,6 +238,7 @@ def build_revision_pair(
     rustflags: str,
     temporary_root: Path,
     output: Path,
+    candidate_patch: dict | None = None,
 ) -> dict:
     """Build both immutable revisions at one source path, retaining timed binaries."""
     source = temporary_root / "source"
@@ -171,6 +250,8 @@ def build_revision_pair(
         if source.exists():
             shutil.rmtree(source)
         receipt = prepare_revision_source(revision, source, output / f"{subject}-source.tar")
+        if subject == "candidate" and candidate_patch is not None:
+            apply_candidate_patch(source, receipt, candidate_patch, output)
         binary, build = build_revision(
             source, temporary_root / "targets" / variant / subject, rustflags,
             output / "build-logs" / variant / f"{subject}.log",
@@ -184,7 +265,9 @@ def build_revision_pair(
             "binary": str(retained),
             "binary_sha256": hashlib.sha256(retained.read_bytes()).hexdigest(),
         }
-    source_identical = pair["control"]["source"]["files"] == pair["candidate"]["source"]["files"]
+    candidate_source = pair["candidate"]["source"]
+    candidate_files = candidate_source.get("compiled_files", candidate_source["files"])
+    source_identical = pair["control"]["source"]["files"] == candidate_files
     binary_identical = pair["control"]["binary_sha256"] == pair["candidate"]["binary_sha256"]
     if source_identical and not binary_identical:
         raise RuntimeError(
@@ -243,6 +326,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline-revision", required=True)
     parser.add_argument(
+        "--candidate-patch", type=Path,
+        help="committed experimental patch applied only to the private candidate source archive",
+    )
+    parser.add_argument(
+        "--variants", nargs="+", choices=(*VARIANTS, "native"), default=tuple(VARIANTS),
+        help="SSE2/AVX2 by default; native explicitly selects local diagnostic verification",
+    )
+    parser.add_argument(
         "--sse2-target-dir", type=Path,
         help="optional prebuilt SSE2 directory for untimed exact-output comparison",
     )
@@ -258,15 +349,26 @@ def main() -> int:
         parser.error("--cohorts must be between 1 and 20")
     if len(set(args.cases)) != len(args.cases):
         parser.error("--cases cannot repeat a workload")
-    if platform.machine().lower() not in {"x86_64", "amd64"}:
+    if len(set(args.variants)) != len(args.variants):
+        parser.error("--variants cannot repeat a build")
+    if any(variant != "native" for variant in args.variants) and platform.machine().lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("SSE2/AVX2 revision timing requires a native x86-64 host")
+    variants = {
+        variant: VARIANTS.get(variant, "-C target-cpu=native") for variant in args.variants
+    }
 
     candidate_revision = git("rev-parse", "HEAD")
-    if git("status", "--porcelain"):
+    # Build inputs come exclusively from Git archives. Untracked user files
+    # are never copied into either subject and do not change build identity.
+    if git("status", "--porcelain", "--untracked-files=no"):
         raise RuntimeError("candidate checkout must be clean for revision comparison")
     baseline_revision = git("rev-parse", "--verify", f"{args.baseline_revision}^{{commit}}")
     if baseline_revision != args.baseline_revision:
         raise RuntimeError("baseline revision must be an immutable commit ID")
+    candidate_patch = (
+        read_candidate_patch(args.candidate_patch, candidate_revision)
+        if args.candidate_patch is not None else None
+    )
 
     matrix = load_benchmark_matrix()
     case_by_name = {case["case"]: case for case in matrix.CASES}
@@ -280,6 +382,10 @@ def main() -> int:
         if path is not None
     }
     for variant, target_dir in prebuilt_targets.items():
+        if variant not in variants:
+            raise RuntimeError("prebuilt comparison requests an unselected build variant")
+        if candidate_patch is not None:
+            raise RuntimeError("prebuilt candidate identity is unavailable for patched experiments")
         binary = target_dir / "release" / BINARY_NAME
         if not binary.is_file():
             raise RuntimeError(f"{variant} prebuilt benchmark binary is missing: {binary}")
@@ -295,7 +401,7 @@ def main() -> int:
     producer_sources = {}
     for path in (
         Path(__file__), Path(matrix.__file__), ROOT / ".github/workflows/benchmark-x86.yml"
-    ):
+    ) + ((ROOT / candidate_patch["path"],) if candidate_patch is not None else ()):
         relative = path.resolve().relative_to(ROOT)
         retained = output.parent / "producer" / relative
         retained.parent.mkdir(parents=True, exist_ok=True)
@@ -319,10 +425,11 @@ def main() -> int:
     binary_identities: dict[str, dict[str, str]] = {}
     revision_builds = {}
     with tempfile.TemporaryDirectory(prefix="jpeg-abba-", dir=output.parent) as temporary:
-        for variant, rustflags in VARIANTS.items():
+        for variant, rustflags in variants.items():
             pair = build_revision_pair(
                 baseline_revision, candidate_revision, variant, rustflags,
                 Path(temporary), output.parent,
+                candidate_patch,
             )
             revision_builds[variant] = pair
             control_binary = Path(pair["control"]["binary"])
@@ -461,7 +568,7 @@ def main() -> int:
 
     completed_at = datetime.now(timezone.utc).isoformat()
     report = {
-        "schema": "image-slash-star/jpeg-revision-abba@3",
+        "schema": "image-slash-star/jpeg-revision-abba@4" if candidate_patch is not None else "image-slash-star/jpeg-revision-abba@3",
         "status": "completed",
         "scope": "public JPEG encoder, same-host interleaved A-B-B-A",
         "started_at_utc": started_at,
@@ -471,6 +578,8 @@ def main() -> int:
         "runner_cwd": str(ROOT),
         "baseline_revision": baseline_revision,
         "candidate_revision": candidate_revision,
+        "candidate_patch": candidate_patch,
+        "candidate_source_kind": "committed_archive_with_experimental_patch" if candidate_patch is not None else "committed_git_archive",
         "candidate_dirty": False,
         "host": {
             "platform": platform.platform(),
@@ -478,7 +587,7 @@ def main() -> int:
             "cpu": matrix.cpu_brand(),
             "rustc": matrix.capture(["rustc", "-Vv"]),
         },
-        "variants": VARIANTS,
+        "variants": variants,
         "workloads": args.cases,
         "cohorts_per_workload": args.cohorts,
         "aggregation": "median of within-cohort candidate/control ratios",
@@ -487,7 +596,12 @@ def main() -> int:
         "revision_builds": revision_builds,
         "prebuilt_binaries": prebuilt_binaries,
         "binary_sha256": binary_identities,
-        "correctness_policy": "Baseline and candidate JPEG outputs are byte-for-byte compared before timing; x86 coverage CI separately runs exact Pillow parity cases.",
+        "correctness_policy": (
+            "Baseline and candidate JPEG outputs are byte-for-byte compared before timing. "
+            "Patched implementation Pillow parity is not established by production CI and remains required before adoption."
+            if candidate_patch is not None else
+            "Baseline and candidate JPEG outputs are byte-for-byte compared before timing; x86 coverage CI separately runs exact Pillow parity cases."
+        ),
         "exact_outputs": exact_outputs,
         "summaries": summaries,
         "cohort_summaries": cohort_summaries,
