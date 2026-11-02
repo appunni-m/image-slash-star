@@ -34,7 +34,9 @@ jobs:
       group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}-fixture-integrity
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     name: Fixture and release metadata
-    runs-on: ubuntu-24.04
+    # Fixture integrity includes live Pillow AVIF observations. Use the same
+    # Apple ARM64 wheel and Python version as the pinned parity oracle.
+    runs-on: macos-15
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,6 +44,16 @@ jobs:
           # The claim ledger verifies its historical measurement revision.
           fetch-depth: 0
           persist-credentials: false
+      - name: Confirm Apple silicon runner
+        run: test "$(uname -m)" = arm64
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install hash-locked fixture and Pillow oracle dependencies
+        run: >-
+          python -m pip install --require-hashes
+          --requirement requirements-ci.txt
+          --requirement oracle-requirements.txt
       - name: Check fixture and release metadata
         run: make verify-fixture-integrity
 
