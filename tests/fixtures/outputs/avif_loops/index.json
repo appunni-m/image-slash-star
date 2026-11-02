@@ -1405,13 +1405,36 @@
         "animated_mixed_lossless_key_superres_444_10bit_integer_mv_s3_128x48_d10",
         "animated_mixed_lossless_key_superres_444_12bit_integer_mv_s3_128x48_d10"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "0389dac887fc883cc4b26f03c7f0484ac5dc21429bf119450c5b2f5622411799",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "lossy_inter_420_b16x64_reduced_transform_set_64x64"
+      ]
     }
   ],
   "artifacts": [
     {
-      "bytes": 43153,
+      "bytes": 43378,
       "path": "README.md",
-      "sha256": "5a5f0c3edaa856eb969962c430ab6a77ccf93685672128cb645688082481a998"
+      "sha256": "01a30b93c1afabf9351583d369aed56e9cd10eae2bd76cf965aa17e6f8d8a74f"
     },
     {
       "bytes": 2267,
@@ -3652,6 +3675,11 @@
       "bytes": 5386,
       "path": "inputs/lossy_inter_420_b16x64_qindex0_mode_select_64x64.avif",
       "sha256": "f9a69337b2eab0d0e6623aa874fdfcf58c35ada2154e8377a595b401c487317c"
+    },
+    {
+      "bytes": 2550,
+      "path": "inputs/lossy_inter_420_b16x64_reduced_transform_set_64x64.avif",
+      "sha256": "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e"
     },
     {
       "bytes": 2589,
@@ -9857,6 +9885,16 @@
       "bytes": 12288,
       "path": "pixels/lossy_inter_420_b16x64_qindex0_mode_select_64x64/frame_1.bin",
       "sha256": "e5ecba2d8416275ac5acba7b168f1b612bf12394274c7d1096983ed88fbc35cf"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b16x64_reduced_transform_set_64x64/frame_0.bin",
+      "sha256": "c7c4037bad1feda75d7692d103bc1f8982ed34e0e0ed6e2cbb391f626b59c3d4"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b16x64_reduced_transform_set_64x64/frame_1.bin",
+      "sha256": "32863c207860b8ba57ecb2e8adefa3c6a50ccbc1c0139c85a775e7db4b7b5ff3"
     },
     {
       "bytes": 12288,
@@ -43769,6 +43807,55 @@
       "repeat_equal": true,
       "source": "animated_mixed_lossless_key_superres_444_12bit_integer_mv_s3_128x48_d10",
       "source_sha256": "0a2688ed113caff925559dd2304217757e69931fae0f239715f3a68e231abac7"
+    },
+    {
+      "input_bytes": 2550,
+      "input_path": "inputs/lossy_inter_420_b16x64_reduced_transform_set_64x64.avif",
+      "input_sha256": "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_420_b16x64_reduced_transform_set_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "0389dac887fc883cc4b26f03c7f0484ac5dc21429bf119450c5b2f5622411799",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "c7c4037bad1feda75d7692d103bc1f8982ed34e0e0ed6e2cbb391f626b59c3d4",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "32863c207860b8ba57ecb2e8adefa3c6a50ccbc1c0139c85a775e7db4b7b5ff3",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_420_b16x64_reduced_transform_set_64x64",
+      "source_sha256": "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e"
     }
   ],
   "oracle": {

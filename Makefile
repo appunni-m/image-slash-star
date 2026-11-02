@@ -306,6 +306,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_select_16x64.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_inter_reduced_transform_set.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b16x64_qindex0_mode_select.py --check
 	$(PYTHON) scripts/generate_avif_inter_monochrome_b16x64_qindex0_mode_select.py --check
 	$(PYTHON) scripts/generate_avif_lossless_inter_i420_b128x128_10bit.py --check

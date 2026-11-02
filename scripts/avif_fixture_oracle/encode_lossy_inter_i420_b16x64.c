@@ -55,13 +55,16 @@ int main(int argc, char **argv)
 {
     const int qindex_zero_mode_requested =
         argc >= 2 && strcmp(argv[1], "--qindex-zero-nonlossless") == 0;
+    const int reduced_transform_set_requested =
+        argc >= 2 && strcmp(argv[1], "--reduced-transform-set") == 0;
+    const int option_requested =
+        qindex_zero_mode_requested || reduced_transform_set_requested;
     const int qindex_zero_nonlossless = qindex_zero_mode_requested && argc == 3;
-    const int output_index = qindex_zero_nonlossless ? 2 : 1;
-    if ((qindex_zero_mode_requested && argc != 3) ||
-        (!qindex_zero_mode_requested && argc != 2)) {
+    const int output_index = option_requested ? 2 : 1;
+    if ((option_requested && argc != 3) || (!option_requested && argc != 2)) {
         fprintf(stderr,
                 "usage: encode_lossy_inter_i420_b16x64 "
-                "[--qindex-zero-nonlossless] OUTPUT.avif\n");
+                "[--qindex-zero-nonlossless|--reduced-transform-set] OUTPUT.avif\n");
         return 2;
     }
 
@@ -105,6 +108,15 @@ int main(int argc, char **argv)
         {"loopfilter-control", "0"},
         {"enable-warped-motion", "0"},
     };
+    if (reduced_transform_set_requested) {
+        const avifResult result =
+            avifEncoderSetCodecSpecificOption(encoder, "reduced-tx-type-set", "1");
+        if (result != AVIF_RESULT_OK) {
+            fprintf(stderr, "option reduced-tx-type-set failed: %s\n",
+                    avifResultToString(result));
+            goto cleanup;
+        }
+    }
     if (qindex_zero_nonlossless) {
         const avifResult result =
             avifEncoderSetCodecSpecificOption(encoder, "enable-chroma-deltaq", "1");
