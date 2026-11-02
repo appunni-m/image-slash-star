@@ -91,7 +91,11 @@ immutable Git source archive, source revision, build logs, and a SHA-256
 inventory alongside host and build metadata, raw perf data,
 actual sample counts, inline-aware reports, annotated sampled assembly,
 source-mapped converter disassembly with ISA counts scoped to the aligned
-converter, and output hashes. The job records and temporarily sets the
+converter, and output hashes. The profiling build pins Cargo release debug information,
+disables stripping and split debug files, and verifies the actual ELF debug
+sections and converter source-line mapping. Sample counts come from bounded
+raw perf records rather than rounded report headers; lost samples or compressed
+records select the timing fallback. The job records and temporarily sets the
 [per-process user-space sampling policy](https://www.kernel.org/doc/html/latest/admin-guide/perf-security.html#unprivileged-users)
 to `2` on its [fresh hosted VM](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners),
 then restores the original setting in an unconditional cleanup step. It prefers

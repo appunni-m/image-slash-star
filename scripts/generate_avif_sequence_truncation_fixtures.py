@@ -41,9 +41,15 @@ class Recipe:
 RECIPES = (
     Recipe("display_tick", 4, "03982266c35744a8c9aafae3f5a20b50fdcd250469d69ae75fa9607a7e525a02"),
     Recipe("time_scale", 8, "67fe605c4b9b56330cc060306d10130b92bbd0378c10c435878690acb57861cf"),
+    Recipe("decoder_model_flag", 9, "69bd4fffece4e801aaf35413ab7e9c3276a87d83659732bc9b6996a2c3311485"),
     Recipe("decoder_tick", 12, "9e108f33e8f98ebc8ebb745354db5e6810575b731f839c8b8c9bdb43d5dbcb07"),
+    Recipe("buffer_removal_delay_length", 14, "a963296e04b04b92c61d3d3f5e5a8fbf45e445f6178a8b5f400b996acb963b2a"),
     Recipe("operating_point", 17, "5c15ff0e24fa70c73044a2efc57d555641000d429221aca233e3961b6df5676e"),
+    Recipe("frame_width_bits", 18, "f56e82af5610360236bbedbe68d4b4ba91200ff5eed8a7c427fb2925fcf04680"),
+    Recipe("maximum_frame_width", 19, "d60ec439294c18c23d56d21f979efe4ffb7f9dcdbdaf89c2550c3e1892267d98"),
     Recipe("frame_bounds", 20, "ae70e71f99b18c53ae79b659652f05a689510dba2246c61c77c5261426324a2b"),
+    Recipe("frame_id_numbers_flag", 21, "db063b32bc884e2d1d4890b6bf39869d27b17a6a10cb4d3a5957e661c90279c0"),
+    Recipe("order_hint_flag", 22, "547492b8e238e4346e922f8c1d7469d0f217aa53f901425090003eabe934282b"),
     Recipe("color_configuration", 26, "b70962898634caa998a3a20fdfbc4aee11240f333827b2283183caecefed9fc6"),
 )
 

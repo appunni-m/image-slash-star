@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/profile-x86.yml'
+      - 'scripts/perf_sample_count.py'
       - 'benchmarks/jpeg-production/rust/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
@@ -65,7 +66,8 @@ jobs:
           test -z "$(git ls-files --others --exclude-standard)"
           git rev-parse HEAD > "$output/source-revision.txt"
           source_paths=(Cargo.toml Cargo.lock rust-toolchain.toml README.md
-            src benchmarks/jpeg-production/rust .github/workflows/profile-x86.yml)
+            src benchmarks/jpeg-production/rust .github/workflows/profile-x86.yml
+            scripts/perf_sample_count.py)
           if git cat-file -e HEAD:.cargo/config.toml 2>/dev/null; then
             source_paths+=(.cargo/config.toml)
           fi
@@ -121,19 +123,7 @@ jobs:
               2> "$output/perf-record-preflight.stderr.txt"; then
               if perf report --stdio --header -i "$output/perf-preflight.data" \
                 > "$output/perf-record-preflight.report.txt"; then
-                if samples=$(python3 - "$output/perf-record-preflight.report.txt" <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          text = Path(sys.argv[1]).read_text(encoding="utf-8")
-          match = re.search(r"^# Samples:\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([KMG]?)(?:\s|$)", text, re.MULTILINE)
-          if match is None:
-              raise SystemExit("perf DWARF preflight produced no sample count")
-          multiplier = {"": 1, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[match.group(2)]
-          print(int(float(match.group(1).replace(",", "")) * multiplier))
-          PY
-                ); then
+                if samples=$(python3 scripts/perf_sample_count.py "$output/perf-preflight.data"); then
                   if (( samples >= 250 )); then
                     if [[ "$perf_event" == cycles:u ]]; then
                       perf_mode=cycles-dwarf
@@ -175,21 +165,6 @@ jobs:
           perf_event=${PERF_EVENT:-cycles:u}
           timed_fallback_required=0
 
-          sample_count() {
-            python3 - "$1" <<'PY'
-          from pathlib import Path
-          import re
-          import sys
-
-          text = Path(sys.argv[1]).read_text(encoding="utf-8")
-          match = re.search(r"^# Samples:\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([KMG]?)(?:\s|$)", text, re.MULTILINE)
-          if match is None:
-              raise SystemExit("perf report is missing its actual sample count")
-          multiplier = {"": 1, "K": 1_000, "M": 1_000_000, "G": 1_000_000_000}[match.group(2)]
-          print(int(float(match.group(1).replace(",", "")) * multiplier))
-          PY
-          }
-
           profile_variant() {
             local variant=$1
             local flags=$2
@@ -201,18 +176,24 @@ jobs:
               printf 'variant=%s\n' "$variant"
               printf 'cargo_target_dir=%s\n' "$target_dir"
               printf 'rustflags=%s\n' "$flags"
-              printf 'cargo_command=cargo +%s build --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked\n' "$RUST_TOOLCHAIN"
+              printf 'cargo_profile_release_debug=2\ncargo_profile_release_strip=none\ncargo_profile_release_split_debuginfo=off\n'
+              printf 'cargo_command=cargo +%s build --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked --verbose\n' "$RUST_TOOLCHAIN"
               rustc +"$RUST_TOOLCHAIN" -Vv
               cargo +"$RUST_TOOLCHAIN" -V
             } >> "$output/build-metadata.txt"
             env -u CARGO_ENCODED_RUSTFLAGS CARGO_INCREMENTAL=0 \
+              CARGO_PROFILE_RELEASE_DEBUG=2 CARGO_PROFILE_RELEASE_STRIP=none \
+              CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=off \
               CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="$flags" \
               cargo +"$RUST_TOOLCHAIN" build \
                 --manifest-path benchmarks/jpeg-production/rust/Cargo.toml \
-                --release --locked 2>&1 | tee "$output/${variant}.build.log"
+                --release --locked --verbose 2>&1 | tee "$output/${variant}.build.log"
             cp "$built_binary" "$binary"
             cmp "$built_binary" "$binary"
             sha256sum "$built_binary" "$binary" >> "$output/binary-sha256.txt"
+            readelf --wide --section-headers "$binary" > "$output/${variant}.sections.txt"
+            grep -Eq '[[:space:]]\.debug_info[[:space:]]' "$output/${variant}.sections.txt"
+            grep -Eq '[[:space:]]\.debug_line[[:space:]]' "$output/${variant}.sections.txt"
 
             objdump -d -S -l -C -M intel "$binary" > "$output/${variant}.disassembly.txt"
             python3 - "$output/${variant}.disassembly.txt" \
@@ -239,6 +220,8 @@ jobs:
           converter = "\n".join(converter_lines) + "\n"
           Path(sys.argv[2]).write_text(converter, encoding="utf-8")
           kernel_source_line_mentions = len(re.findall(r"(?m)^.*src/codecs/jpeg/kernels\.rs:\d+.*$", converter))
+          if not kernel_source_line_mentions:
+              raise SystemExit("profiled converter is missing verified kernel source-line mapping")
           summary = {
               "converter_symbol": "convert_rgb_420_mcu_row_aligned",
               "assembly_instruction_count": len(re.findall(r"(?m)^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+[a-z][a-z0-9_.]*\s", converter)),
@@ -274,7 +257,7 @@ jobs:
                   2> "$output/${variant}-${size}.stderr.txt" \
                   && test -s "$profile" \
                   && perf report --stdio --header --inline -i "$profile" > "$report"; then
-                  if samples=$(sample_count "$report") && (( samples >= minimum_samples )); then
+                  if samples=$(python3 scripts/perf_sample_count.py "$profile") && (( samples >= minimum_samples )); then
                     printf 'measurement_mode=%s event=%s frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s size=%s\n' "$perf_mode" "$perf_event" "$samples" "$variant" "$size" >> "$output/run-metadata.txt"
                     if perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
                       > "$output/${variant}-${size}.annotate.txt"; then

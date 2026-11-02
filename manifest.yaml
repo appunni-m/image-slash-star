@@ -15380,6 +15380,48 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_decoder_model_flag
+      description: Complete five-frame AVIF container bounds its sequence payload before the decoder-model presence flag; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_decoder_model_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_buffer_removal_delay_length
+      description: Complete five-frame AVIF container bounds its sequence payload before the buffer-removal delay width; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_buffer_removal_delay_length.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_frame_width_bits
+      description: Complete five-frame AVIF container bounds its sequence payload before the maximum-frame width field size; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_frame_width_bits.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_maximum_frame_width
+      description: Complete five-frame AVIF container bounds its sequence payload before the maximum frame width; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_maximum_frame_width.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_frame_id_numbers_flag
+      description: Complete five-frame AVIF container bounds its sequence payload before the frame-ID presence flag; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_frame_id_numbers_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_order_hint_flag
+      description: Complete five-frame AVIF container bounds its sequence payload before the order-hint enable flag; header verification succeeds while still and sequence decoding reject the incomplete syntax
+      test_assets:
+      - error_sequence_truncated_order_hint_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_order_hint_disabled
       description: Five-frame AVIF sequence uses ordinary AV1 headers with order hints disabled
       test_assets:
