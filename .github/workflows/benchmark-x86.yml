@@ -154,5 +154,6 @@ jobs:
           name: x86-simd-benchmarks-${{ github.run_id }}
           overwrite: true
           path: target/benchmarks/jpeg/simd-x86_64/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 90

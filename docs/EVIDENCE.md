@@ -1,8 +1,47 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,701 total rows: 3,027 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,027 decode rows are
+The current public evidence matrix contains 3,737 total rows: 3,063 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,063 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF tolerated OBU headers — 2026-11-02
+
+Thirty-three complete baseline AVIF mutations expose observable decoder
+mismatches: pinned Pillow accepts forbidden/reserved OBU header bits,
+extension headers on temporal delimiters and sequence headers, redundant
+frame extensions for an all-layer operating point, and all eight values of
+the three reserved extension bits. Each mutation preserves the complete
+49,152-byte baseline RGB output. The previous Rust parser rejected all
+thirty-three before reconstructing pixels.
+
+The parser now masks the header fields it uses and ignores the reserved bits
+as Pillow does. A nonzero operating point still requires layer IDs; selected
+layer membership, sequence/frame validation, and sample/payload bounds remain
+checked. Three complete malformed neighbors set both header flag bits on
+different OBUs and remove the final frame byte, updating the container extent.
+Pillow verifies their headers but rejects pixel decoding.
+
+All thirty-six inputs are ordinary manifest parity rows, with live pinned
+Pillow observations. Positive rows share the baseline pixel reference only
+after the generator independently checks every complete pixel buffer. They
+add no codec unit tests, target-only fault cases, runtime dependencies, or
+unsafe code. Before sources and matrix, actual public decoder executable,
+input mutations, full Pillow pixels, and producer receipts are retained under
+`.coverage-mcp/local-evidence/parity/avif-obu-header-compatibility-20261102/`
+and the preceding `avif-obu-header-flags-lead-20261102/` and
+`avif-obu-extension-lead-20261102/` directories.
+
+The retained instrumented executable passes all 1,285 AVIF decode rows,
+with zero failures or skips, including the existing operating-point error
+cases. Canonical selected coverage runs the baseline and thirty-six new rows
+(37/37); its final source and fixture guards must remain unchanged. The
+selected report and Coverage MCP query are retained in the compatibility
+directory. This is focused local evidence, not a refreshed full-suite
+percentage or a managed Coverage MCP run.
+
+Strict Clippy passes default/all-feature, release, nightly coverage, AVIF-only
+coverage, and SSE2/AVX2 cross-compile lanes. No lint exception, coverage
+exclusion, or release floor changes accompany the parser fix.
 
 ## AVIF padding-heavy samples — 2026-11-02
 
@@ -16271,7 +16310,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6f7c9af49abf462af23fe8fd559f96dbdab52ddc0f017e17002ffed5c384bb2f`; matrix `c8c5adc339b76034c53b8558be452a0ee61e7ccc7df41cf27e13bd3f5c039860`.
+- Current fixture integrity only: manifest `5d3886b26e26072b326575c7dcc9adfbefc253a06ac67d3f575a4e7d6a9d9334`; matrix `6d913c5eda5ec0b529e5d704ba2f2a6ec6c3c1ce5ab0de7ffaa311c9b43db930`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
