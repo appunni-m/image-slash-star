@@ -44,9 +44,10 @@ jobs:
           # The claim ledger verifies its historical measurement revision.
           fetch-depth: 0
           persist-credentials: false
-      - name: Confirm Apple silicon runner
+      - name: Confirm fixture oracle Apple silicon runner
         run: test "$(uname -m)" = arm64
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - name: Install fixture oracle Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install hash-locked fixture and Pillow oracle dependencies

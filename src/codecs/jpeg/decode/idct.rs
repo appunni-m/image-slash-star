@@ -531,18 +531,9 @@ fn idct_vector_descale_11(value: i32x4) -> i32x4 {
     let scaled = value
         .saturating_add(VDESCALE_11_BIAS)
         .unbounded_shr_scalar(11);
-    // Neon rounds and truncates to signed words; SSE2 packs with signed
-    // saturation. Retain the reference workspace boundary before pass two.
-    #[cfg(target_arch = "aarch64")]
-    {
-        scaled.unbounded_shl_scalar(16).unbounded_shr_scalar(16)
-    }
-    #[cfg(target_arch = "x86_64")]
-    {
-        scaled
-            .max(i32x4::new([i32::from(i16::MIN); 4]))
-            .min(i32x4::new([i32::from(i16::MAX); 4]))
-    }
+    // The pinned Pillow oracle truncates its NEON workspace to signed words.
+    // Preserve that boundary on every SIMD target, including overflowing input.
+    scaled.unbounded_shl_scalar(16).unbounded_shr_scalar(16)
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -559,15 +550,11 @@ fn store_zero_vertical_columns(
     column: usize,
     dc: i32x4,
 ) -> bool {
-    // Neon tests four columns at a time; SSE2 admits its shortcut only when
-    // all eight columns have zero vertical AC. Test the raw coefficients,
-    // since a zero quantizer must not change which upstream path is chosen.
-    #[cfg(target_arch = "aarch64")]
+    // Preserve the pinned oracle's four-column shortcut on every target.
+    // Test raw coefficients: zero quantizers must not alter path selection.
     let vertical_ac_zero = (1usize..8).all(|row| {
         load_idct_four(block, row.saturating_mul(DCTSIZE).saturating_add(column)) == i32x4::ZERO
     });
-    #[cfg(target_arch = "x86_64")]
-    let vertical_ac_zero = block[DCTSIZE..].iter().all(|&coefficient| coefficient == 0);
     if !vertical_ac_zero {
         return false;
     }
@@ -667,7 +654,10 @@ fn idct_pass1_eight_columns_avx2(
     let r0 = load(0);
     let scaled_dc = r0.unbounded_shl_scalar(PASS1_BITS.cast_unsigned());
     let narrowed_dc = scaled_dc.unbounded_shl_scalar(16).unbounded_shr_scalar(16);
-    if scaled_dc != narrowed_dc && store_zero_vertical_columns_avx2(block, workspace, narrowed_dc) {
+    if scaled_dc != narrowed_dc {
+        // A wrapped DC workspace must retain independent four-column shortcut
+        // decisions, even when the other half has nonzero vertical AC.
+        idct_pass1_wrapped_dc_avx2(block, quant_table, workspace);
         return;
     }
     let r1 = load(1);
@@ -700,17 +690,15 @@ fn load_idct_eight(values: &[i32; DCTSIZE2], offset: usize) -> i32x8 {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 #[inline(never)]
-fn store_zero_vertical_columns_avx2(
+fn idct_pass1_wrapped_dc_avx2(
     block: &[i32; DCTSIZE2],
+    quant_table: &[i32; DCTSIZE2],
     workspace: &mut [i32; DCTSIZE2],
-    dc: i32x8,
-) -> bool {
-    if block[DCTSIZE..].iter().any(|&coefficient| coefficient != 0) {
-        return false;
-    }
-    // AVX2's zero-AC shortcut also retains signed 16-bit word products.
-    store_idct_pass1_rows_avx2(workspace, [dc; DCTSIZE]);
-    true
+) {
+    // Keep the rare complete four-column transforms outside the eight-lane
+    // kernel so ordinary blocks do not carry their additional code size.
+    idct_pass1_four_columns_safe(block, quant_table, workspace, 0);
+    idct_pass1_four_columns_safe(block, quant_table, workspace, 4);
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
@@ -792,8 +780,8 @@ fn avx2_idct_descale_11(value: i32x8) -> i32x8 {
     value
         .saturating_add(AVX2_VDESCALE_11_BIAS)
         .unbounded_shr_scalar(11)
-        .max(i32x8::new([i32::from(i16::MIN); 8]))
-        .min(i32x8::new([i32::from(i16::MAX); 8]))
+        .unbounded_shl_scalar(16)
+        .unbounded_shr_scalar(16)
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]

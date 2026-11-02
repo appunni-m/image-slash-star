@@ -4,6 +4,45 @@ The current public evidence matrix contains 3,684 total rows: 3,016 decode /
 inspect / verify rows and 668 encode rows. Of those, 3,016 decode rows are
 active and 641 encode rows are active; 27 encode rows remain planned.
 
+## Publication and canonical x86 JPEG word boundaries — 2026-11-02
+
+The accumulated work is committed to the existing `develop` branch in
+[PR #154](https://github.com/appunni-m/image-slash-star/pull/154). GitHub requires
+its `Required CI checks` status before publication to `main`. No new local
+branch or worktree is created. The fixture-integrity job now supplies the same
+hash-locked Python/Pillow environment on Apple ARM64 as the primary oracle;
+its complete regeneration and observation checks remain intact. Fixture setup
+steps have distinct names so the existing workflow-policy mutation checks
+continue to target the quality job.
+
+Initial native x86 Linux SSE2 and Windows MSVC execution both find the same
+38 JPEG mismatches among 570 decode rows. The affected complete grayscale
+inputs cover sequential/progressive signed-word dequantization, wide
+quantizers, partial blocks, both column halves and dense coefficients.
+Their pinned Pillow outputs are unchanged. The preceding ARM64-only parity
+and x86 compile checks had not established native x86 behavior.
+
+The SIMD IDCT now uses the pinned ARM64 oracle's signed-word truncation and
+four-column zero-vertical-AC grouping on every SIMD target. SSE2/AVX2 workspace
+clamping no longer changes canonical pixels for extreme values. When an AVX2
+DC workspace wraps, an outlined complete four-column transform handles each
+half independently; the normal eight-lane transform retains its existing
+admission test. No scalar fallback, unsafe code, dependency, production fault
+hook or codec unit test is added. Native x86 parity remains a required CI gate;
+this change makes no latency or world-ranking claim.
+
+Local ARM64 JPEG decode parity passes all 570 rows. Strict stable/default/
+all-feature/release/coverage Clippy and SSE2/AVX2 compile checks pass. The complete
+local workflow/release tooling, formatting, verification, parity and feature
+lanes pass before the x86 correction; package verification requires a clean
+checkout and is deferred to CI because pending changes and pre-existing local
+files are preserved. The full coverage report below predates the x86 correction
+and retains its exact source identity; it is not relabeled as a new measurement.
+Raw CI failures, local checks and source comparisons are retained locally in
+`target/jpeg-x86-word-parity-20261102/` and the publication evidence directory.
+All 3,657 active parity cases and 167 separate fault contracts remain required;
+strict 100% and the 27 planned AVIF encoder rows remain open.
+
 ## AVIF integer-motion precision parity — 2026-11-02
 
 Nine complete public input sequences cover I420/I422/I444 at 8/10/12 bits,
