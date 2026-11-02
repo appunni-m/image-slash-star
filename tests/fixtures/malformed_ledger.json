@@ -3013,6 +3013,78 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_buffer_removal_time_excluded_implicit_layer.avif",
+        "class": "error_buffer_removal_time_excluded_implicit_layer",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A temporal-one mask excludes an implicit temporal-zero first frame and public still and sequence decoding reject",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_buffer_removal_time_truncated_timestamp.avif",
+        "class": "error_buffer_removal_time_truncated_timestamp",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete container truncates the first frame after its timestamp-present flag inside a declared two-bit timestamp",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "error_colr_empty_icc_profile.avif",
         "class": "error_colr_empty_icc_profile",
         "contracts": {
@@ -3534,6 +3606,222 @@
         "sequence_error_type": null,
         "sequence_status": null,
         "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_decoder_model_prefix_2.avif",
+        "class": "error_frame_header_truncated_decoder_model_prefix_2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first decoder-model frame header to 2 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_prefix_0.avif",
+        "class": "error_frame_header_truncated_prefix_0",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first frame header to 0 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_prefix_1.avif",
+        "class": "error_frame_header_truncated_prefix_1",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first frame header to 1 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_prefix_2.avif",
+        "class": "error_frame_header_truncated_prefix_2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first frame header to 2 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_prefix_4.avif",
+        "class": "error_frame_header_truncated_prefix_4",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first frame header to 4 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_frame_header_truncated_prefix_6.avif",
+        "class": "error_frame_header_truncated_prefix_6",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+            "pillow_type": "builtins.RuntimeError",
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "A complete five-frame AVIF container bounds the first frame header to 6 bytes and rejects still and sequence decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+        "pillow_status": "error",
+        "pillow_type": "builtins.RuntimeError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "truncated",
         "verify_status": "ok"
       },
       {
@@ -39604,7 +39892,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 228,
+      "avif": 236,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -39616,17 +39904,17 @@
     "by_origin": {
       "defensive_model": 5,
       "independent_implementation": 1,
-      "pillow_fixture": 892,
-      "specification_reference": 228
+      "pillow_fixture": 900,
+      "specification_reference": 236
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 41,
-      "spec_violation": 542,
+      "spec_violation": 543,
       "tolerated": 1,
-      "truncated": 273
+      "truncated": 280
     },
-    "classes": 892,
+    "classes": 900,
     "formats": 8
   }
 }

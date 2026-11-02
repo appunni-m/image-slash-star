@@ -874,7 +874,6 @@ pub(super) struct FrameState {
     /// for this canvas before any AV1 reference or display was reconstructed.
     expected_sequence_dimensions: Option<(u32, u32)>,
     operating_point_idc: u32,
-    has_nonzero_operating_point_idc: bool,
     references: [Option<ReferenceState>; REFERENCE_SLOTS],
     pending: Option<PendingFrame>,
     current_frame_id: Option<u32>,
@@ -891,7 +890,6 @@ impl FrameState {
             sequence: None,
             expected_sequence_dimensions: None,
             operating_point_idc: 0,
-            has_nonzero_operating_point_idc: false,
             references: std::array::from_fn(|_| None),
             pending: None,
             current_frame_id: None,
@@ -918,10 +916,6 @@ impl FrameState {
             .operating_points
             .first()
             .map_or(0, |operating_point| operating_point.idc);
-        self.has_nonzero_operating_point_idc = sequence
-            .operating_points
-            .iter()
-            .any(|operating_point| operating_point.idc != 0);
         self.sequence = Some(sequence);
         Ok(())
     }
@@ -930,7 +924,6 @@ impl FrameState {
     /// header and payload bounds have already been validated.
     pub(super) fn admits_layer_specific_obu(
         &self,
-        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
     ) -> Av1Result<bool> {
@@ -939,13 +932,8 @@ impl FrameState {
                 "layer-specific OBU appears before a sequence header",
             ));
         }
-        // A nonzero operating point requires layer IDs. Pillow also accepts
-        // a redundant extension when every operating point covers all OBUs.
-        if self.has_nonzero_operating_point_idc && !has_extension {
-            return Err(malformed(
-                "layer OBU extension disagrees with sequence operating points",
-            ));
-        }
+        // An absent OBU extension supplies implicit temporal/spatial IDs of
+        // zero. Apply the selected mask to those IDs just like explicit IDs.
         if self.operating_point_idc == 0 {
             return Ok(true);
         }

@@ -15332,6 +15332,134 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_zero
+      description: Present zero-valued decoder buffer-removal timestamps preserve all five frames and durations
+      test_assets:
+      - animated_buffer_removal_time_zero.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_one
+      description: Present one-valued decoder buffer-removal timestamps preserve all five frames and durations
+      test_assets:
+      - animated_buffer_removal_time_one.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_without_point_parameters
+      description: A present buffer-removal flag with no operating-point decoder parameters consumes no timestamps
+      test_assets:
+      - animated_buffer_removal_time_without_point_parameters.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_mixed_point_parameters
+      description: Only the operating point with decoder-model parameters contributes a buffer-removal timestamp
+      test_assets:
+      - animated_buffer_removal_time_mixed_point_parameters.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_ignored_temporal_point
+      description: An additional temporal-one operating point does not reject implicit layer-zero frames or consume their timestamps
+      test_assets:
+      - animated_buffer_removal_time_ignored_temporal_point.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_ignored_spatial_point
+      description: An additional spatial-one operating point does not reject implicit layer-zero frames or consume their timestamps
+      test_assets:
+      - animated_buffer_removal_time_ignored_spatial_point.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_ignored_temporal_spatial_point
+      description: An additional temporal-one spatial-one operating point does not reject implicit layer-zero frames or consume their timestamps
+      test_assets:
+      - animated_buffer_removal_time_ignored_temporal_spatial_point.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_two_admitted_points
+      description: Both applicable operating points contribute complete decoder buffer-removal timestamps
+      test_assets:
+      - animated_buffer_removal_time_two_admitted_points.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_selected_explicit_layer
+      description: A selected nonzero operating-point mask admits explicit temporal-zero spatial-zero frames
+      test_assets:
+      - animated_buffer_removal_time_selected_explicit_layer.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_two_bit
+      description: Complete two-bit decoder buffer-removal timestamps preserve every frame and duration
+      test_assets:
+      - animated_buffer_removal_time_two_bit.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_selected_implicit_layer
+      description: A selected temporal-zero spatial-zero mask admits the first frame with its extension absent and implicit zero layer IDs
+      test_assets:
+      - animated_buffer_removal_time_selected_implicit_layer.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_selected_temporal_one
+      description: A selected temporal-one operating point admits frames carrying explicit temporal-one extensions
+      test_assets:
+      - animated_buffer_removal_time_selected_temporal_one.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_buffer_removal_time_excluded_implicit_layer
+      description: A temporal-one mask excludes an implicit temporal-zero first frame and public still and sequence decoding reject
+      test_assets:
+      - error_buffer_removal_time_excluded_implicit_layer.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_buffer_removal_time_truncated_timestamp
+      description: A complete container truncates the first frame after its timestamp-present flag inside a declared two-bit timestamp
+      test_assets:
+      - error_buffer_removal_time_truncated_timestamp.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_prefix_0
+      description: A complete five-frame AVIF container bounds the first frame header to 0 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_prefix_0.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_prefix_1
+      description: A complete five-frame AVIF container bounds the first frame header to 1 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_prefix_1.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_prefix_2
+      description: A complete five-frame AVIF container bounds the first frame header to 2 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_prefix_2.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_prefix_4
+      description: A complete five-frame AVIF container bounds the first frame header to 4 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_prefix_4.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_prefix_6
+      description: A complete five-frame AVIF container bounds the first frame header to 6 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_prefix_6.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_frame_header_truncated_decoder_model_prefix_2
+      description: A complete five-frame AVIF container bounds the first decoder-model frame header to 2 bytes and rejects still and sequence decoding
+      test_assets:
+      - error_frame_header_truncated_decoder_model_prefix_2.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_decoder_model_without_operating_point_parameters
       description: Five-frame AVIF sequence enables decoder-model timing while its operating-point parameter flag remains clear
       test_assets:

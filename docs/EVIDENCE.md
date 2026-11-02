@@ -1,8 +1,58 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,782 total rows: 3,108 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,108 decode rows are
+The current public evidence matrix contains 3,802 total rows: 3,128 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,128 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF implicit layer IDs and frame timing — 2026-11-03
+
+Absent AV1 OBU extensions supply temporal/spatial IDs of zero. The decoder now
+applies its selected operating-point mask to those IDs instead of rejecting a
+frame whenever any operating point has a nonzero mask. The obsolete cached flag
+and sequence-wide scan are removed. A sample containing only excluded layers
+is malformed rather than an unsupported implementation subset; OBU bounds are
+still validated before layer selection. This makes no measured latency claim.
+
+Twenty new complete-container parity inputs cover twelve valid timestamp/layer
+layouts and eight malformed neighbors. They distinguish absent and explicit
+zero IDs, explicit temporal-one IDs, excluded implicit layers, absent/mixed
+operating-point parameters, multiple admitted points, one/two-bit timestamps,
+timestamp EOF and six bounded frame-header prefixes. All sixty complete frame
+buffers and observable durations from the twelve valid inputs match pinned
+Pillow 12.2.0. Twelve fresh repeated libavif 1.4.1 observations independently
+retain their loop counts. All 577 preceding native observations are unchanged.
+
+The fresh canonical selection passes 26/26 cases: twenty additions and six
+existing controls. Its actual executable, two profiles, 139 source files, 128
+fixtures and eight producers are retained. The initial 25/26 run exposed the
+unsupported-versus-malformed classification mismatch and remains recorded as a
+failure. The corrected run's Coverage MCP context reports source
+`matches_receipt` and tests `passed`; it is explicitly locally derived evidence,
+not managed MCP execution.
+
+A fresh full all-feature campaign passes six integration executables with 140
+checks, all 3,775 active parity rows and 167 separate target-only fault rows.
+Every executed case ID occurs exactly once in the final pass ledger. Fault
+oracles remain `not_applicable`; 27 planned AVIF encoder rows are unexecuted.
+All 657 source/setup files and 11,205 fixture files remain byte-identical during
+execution. The actual base revision is `9f94c0b7b` with the retained dirty-tree
+changes. Actual executables, profiles, sources, inputs and original reports are
+retained. Coverage is 102,450/142,191 lines (72.0510%), 20,950/31,980 branches
+(65.5097%), 5,667/9,136 functions (62.0293%) and 156,021/220,396 regions
+(70.7912%). Alpha floors pass; strict 100% exits 2 and remains unmet. No coverage
+exclusions or lower floors are introduced. The fresh full report replaces the
+older frame-parser mapping for current gap planning; source changes affect its
+denominators. Historical managed measurements remain unchanged.
+
+All 3,782 preceding matrix rows, 1,330 preceding AVIF JSON rows and 167 fault
+rows retain their observations. Prior AVIF loop-evidence index digests refresh
+because the index gains twelve witnesses; earlier pixel files remain exact.
+Pinned fixture generation, repository verification and strict default,
+all-feature, release, nightly coverage and AVIF-only Clippy checks pass. No
+codec unit tests, unsafe code, runtime dependencies or public APIs are added.
+Original selected and full execution evidence remains under
+`.coverage-mcp/local-evidence/parity/avif-frame-timing-canonical-20261103/` and
+`.coverage-mcp/local-evidence/full/20261103-9f94c0b7b-avif-layer/`.
 
 ## AVIF timing, display-delay and depth EOF neighbors — 2026-11-03
 
@@ -16455,7 +16505,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f066cdca7fa47bff44b5bd066b44de15a09deba3b72ce462b491910b80ea901d`; matrix `0ef3655cccb70ac78536fb66d862cddc30bf7b660d9ee41d05788ff2062d7cd1`.
+- Current fixture integrity only: manifest `f2547d8dd63ffd3850a99a0de60cd262b34abfc8d15dacbec6fc5905649bcdf0`; matrix `f403757e9925aa8e4660e7640b3130f14f00546cc57fafe7c7c87966d3bff94b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

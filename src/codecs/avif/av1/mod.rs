@@ -152,14 +152,14 @@ fn validate_sample_and_return_temporal_unit(
         // Pillow accepts extension headers on non-layer-specific OBUs;
         // their layer IDs do not participate in operating-point selection.
         if matches!(obu_type, 3 | 4 | 6 | 7) {
-            frame_bearing = true;
-            if !state.admits_layer_specific_obu(has_extension, temporal_id, spatial_id)? {
+            if !state.admits_layer_specific_obu(temporal_id, spatial_id)? {
                 // Membership is decided only after validating the complete
                 // OBU envelope. An ignored layer must leave decoder state
                 // exactly untouched.
                 offset = payload_end;
                 continue;
             }
+            frame_bearing = true;
         }
         match obu_type {
             1 => {
@@ -216,7 +216,7 @@ fn validate_sample_and_return_temporal_unit(
         offset = payload_end;
     }
     if !frame_bearing {
-        return Err(malformed("sample contains no frame-bearing OBU"));
+        return Err(malformed("sample contains no selected frame-bearing OBU"));
     }
     state.sample_flush()
 }
