@@ -950,6 +950,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 3110,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/size_zero_top_level_free.avif",
         "operations": [
@@ -1002,6 +1003,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 3110,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/size_zero_top_level_skip.avif",
         "operations": [
@@ -6272,6 +6274,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 379,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/unknown_top_level_box_ignored.avif",
         "operations": [
@@ -6376,6 +6379,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 3078,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/trailing_truncated_top_level_header.avif",
         "operations": [
@@ -6480,6 +6484,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 2960,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/still_duplicate_top_level_meta_after_mdat.avif",
         "operations": [
@@ -37114,6 +37119,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 1964,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/animated_duplicate_top_level_moov_after_mdat.avif",
         "operations": [

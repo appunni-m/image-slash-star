@@ -4,7 +4,7 @@ use std::sync::{Arc, OnceLock};
 
 use crate::{
     CodecOperation, DecodePolicy, Decoded, DecodedImage, DecodedSequence, ImageError,
-    ImageErrorStage, ImageFormat, ImageInfo, ImageMode, ImageResult, TransferLayout,
+    ImageErrorStage, ImageFormat, ImageInfo, ImageMode, ImageResult, Mode, TransferLayout,
     VerificationScope,
 };
 
@@ -31,8 +31,9 @@ struct EncodedImageInner {
 
 /// An immutable encoded-image snapshot with shared lazy verification and decode caches.
 ///
-/// Construction performs signature detection and header inspection but does
-/// not decompress pixels. Clones share the encoded bytes and the
+/// Construction performs signature detection and header inspection, including
+/// selection of the raster [`Mode`], but does not decompress pixels. Clones
+/// share the encoded bytes and the
 /// once-initialized verification and decode results. Deterministic failures
 /// are cached as well as successful results.
 #[derive(Debug, Clone)]
@@ -108,6 +109,14 @@ impl<'a> EncodedImageView<'a> {
     #[must_use]
     pub const fn mode(&self) -> ImageMode {
         self.info.mode
+    }
+
+    /// Exact raster identity selected from the inspected image header.
+    ///
+    /// This does not decode or materialize pixel payloads.
+    #[must_use]
+    pub const fn raster_mode(&self) -> Mode {
+        self.info.raster_mode
     }
 
     /// Detected encoded format.
@@ -310,6 +319,14 @@ impl EncodedImage {
     #[must_use]
     pub fn mode(&self) -> ImageMode {
         self.inner.info.mode
+    }
+
+    /// Returns the exact raster identity selected from header inspection.
+    ///
+    /// This reads cached metadata and does not decode or materialize pixels.
+    #[must_use]
+    pub fn raster_mode(&self) -> Mode {
+        self.inner.info.raster_mode
     }
 
     /// Returns the detected source container format.

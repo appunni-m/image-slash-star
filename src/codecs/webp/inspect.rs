@@ -3,7 +3,7 @@
 use crate::codecs::{
     CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice, terminalize,
 };
-use crate::types::{ImageFormat, ImageInfo, ImageMode};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, Mode};
 
 const RIFF_HEADER_SIZE: usize = 12;
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
@@ -69,11 +69,14 @@ fn inspect_extended_basic(
         } else {
             crate::types::SourceDescriptor::new()
         };
+        let raster_mode =
+            Mode::from_header(mode, ImageFormat::WebP, source.alpha(), source.byte_order());
         return Ok(ImageInfo {
             format: ImageFormat::WebP,
             width,
             height,
             mode,
+            raster_mode,
             bit_depth: 8,
             palette: None,
             is_animated: true,
@@ -130,11 +133,14 @@ fn inspect_extended_basic(
     } else {
         ImageMode::Rgb8
     };
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::WebP, source.alpha(), source.byte_order());
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth: 8,
         palette: None,
         is_animated: false,
@@ -208,11 +214,14 @@ fn still_info(width: u32, height: u32, mode: ImageMode, has_alpha: bool) -> Code
     } else {
         crate::types::SourceDescriptor::new()
     };
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::WebP, source.alpha(), source.byte_order());
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth: 8,
         palette: None,
         is_animated: false,
@@ -323,11 +332,14 @@ fn inspect_extended(data: &[u8], payload: &[u8], mut position: usize) -> CodecRe
     } else {
         crate::types::SourceDescriptor::new()
     };
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::WebP, source.alpha(), source.byte_order());
     Ok(ImageInfo {
         format: ImageFormat::WebP,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth: 8,
         palette: None,
         is_animated,

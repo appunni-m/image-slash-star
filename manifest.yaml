@@ -11859,11 +11859,13 @@ formats:
       description: A size-zero top-level free box consumes the remaining bytes through EOF
       test_assets:
       - size_zero_top_level_free.avif
+      rust_decode_with_metadata_limit: 3110
       status: active
     - id: size_zero_top_level_skip
       description: A size-zero top-level skip box consumes the remaining bytes through EOF
       test_assets:
       - size_zero_top_level_skip.avif
+      rust_decode_with_metadata_limit: 3110
       status: active
     - id: ipma_version_1_wide_item_ids
       description: Still AVIF with a version-1 ipma box and a widened 32-bit primary item ID
@@ -12420,6 +12422,7 @@ formats:
       description: Valid 8x8 AVIF followed by a bounded unknown top-level box; Pillow preserves the exact RGB pixels
       test_assets:
       - unknown_top_level_box_ignored.avif
+      rust_decode_with_metadata_limit: 379
       status: active
       rust_expected_metadata: []
     - id: trailing_boxes_over_budget
@@ -12433,6 +12436,7 @@ formats:
       description: Baseline still followed by one byte of a top-level box header; Pillow ignores the incomplete trailing box and preserves the baseline image
       test_assets:
       - trailing_truncated_top_level_header.avif
+      rust_decode_with_metadata_limit: 3078
       status: active
       pixel_reference_case: baseline
       pure_rust_work_item: AVF-STILL-001
@@ -12447,6 +12451,7 @@ formats:
       description: Still AVIF whose duplicate top-level meta box after mdat is ignored with exact grid pixels preserved
       test_assets:
       - still_duplicate_top_level_meta_after_mdat.avif
+      rust_decode_with_metadata_limit: 2960
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: error_incomplete_still_truncated_top_level_header
@@ -15217,6 +15222,7 @@ formats:
       description: Pillow ignores a duplicate top-level moov box after mdat and preserves the original five-frame output
       test_assets:
       - animated_duplicate_top_level_moov_after_mdat.avif
+      rust_decode_with_metadata_limit: 1964
       status: active
     - id: error_duplicate_top_level_meta_before_mdat
       description: Pillow rejects a duplicate top-level meta box before mdat at image open

@@ -16163,7 +16163,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b94ac16ec3e4df0c2f19c2220f6adfcab8482a695f7bc57042ffbc15835d31e7`; matrix `cdc8421236bc037c514401a93592dd046a4d3ef7e15deaac011fb3b7fef98630`.
+- Current fixture integrity only: manifest `34b49a94156c8f0b4746503e192bc3be3e06fe8433c1ead72a735ee0ee8319a5`; matrix `7a0933f5c5d090e8d05aa423b8dca83504d758da9c089c15816bc357c439b3f7`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21031,3 +21031,33 @@ managed claims or establish an incremental gain against changed source.
 This refresh adds no runtime changes or timing samples. Existing style and
 platform checks retain their earlier source-bound scope. SSE2/AVX2 runtime
 performance, fastest-codec ranking, and 100% coverage remain unfinished.
+
+## AVIF bounded metadata policy parity — 2026-11-02
+
+Six existing AVIF inputs now also exercise public `decode_with_policy` with
+an explicit metadata limit equal to the complete input length. They cover
+size-zero `free` and `skip` boxes, an unknown box, a truncated trailing box
+header, and duplicate trailing `meta` and animated `moov` boxes. Coverage MCP
+identified missing paths in the bounded-extent, omitted-metadata parser
+specialization. No runtime code or private codec unit tests changed.
+
+The pinned Pillow 12.2.0 oracle replayed all six inputs and ten frames with
+exact existing pixel references. Regenerating the AVIF matrix changed only
+the six policy limits; input bytes and reference pixels stayed unchanged.
+Both selected coverage campaigns passed all six parity rows with no fault
+rows selected. Their 139 source hashes match. The local LLVM summaries for
+`src/codecs/avif/samples.rs` changed from 1,699 to 1,748 covered lines (of
+2,375), 306 to 315 branches (of 588), 153 to 158 functions (of 235), and
+2,668 to 2,739 regions (of 3,967). These are selected-campaign observations,
+not full-suite gains or evidence of 100% coverage.
+
+Reports, source receipts, exact test executables, oracle replay, and matrix
+delta are retained outside `target/` under
+`.coverage-mcp/local-evidence/parity/avif-metadata-policy-20261102/`.
+The before/after report SHA-256 values are
+`0c585209bd609e313c30e19a5886fd132d4579b522d882c549cc440f21aa0a8a` and
+`878ed2642a44a9107328deb340ee99f9948fdad66482ac2d2cf1c01937fe0ee0`.
+Coverage MCP recognizes each locally derived source receipt and passing test
+status, but returns `incomparable` for their comparison: embedding the changed
+matrix produces different test-executable build IDs. This evidence is local,
+not managed Coverage MCP attribution. It makes no performance claim.

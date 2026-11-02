@@ -58,7 +58,10 @@
 //! [`decode`] and [`decode_sequence`] auto-detect the input and return a
 //! [`Decoded`] envelope. [`Decoded::format`] retains the source
 //! [`ImageFormat`], while [`DecodedImage::mode`] and
-//! [`DecodedImage::color`] describe the decoded sample bytes. Indexed images
+//! [`DecodedImage::color`] describe the decoded sample bytes. Header
+//! inspection also selects the exact [`Mode`] raster identity, available from
+//! [`ImageInfo::raster_mode`] and [`EncodedImage::raster_mode`] without loading
+//! pixels. Indexed images
 //! retain their [`ImagePalette`] rather than becoming ambiguous luminance
 //! buffers. [`ImageInfo::source`] and [`DecodedImage::source`] retain proved
 //! structural source facts such as TIFF byte order without changing transfer

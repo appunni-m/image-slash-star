@@ -2,11 +2,13 @@
 
 mod color_type;
 mod error;
+mod mode;
 
 pub use self::color_type::ColorType;
 pub use self::error::{
     ImageError, ImageErrorKind, ImageErrorStage, ImageResult, ResourceLimit, UnsupportedReason,
 };
+pub use self::mode::Mode;
 
 // ---------------------------------------------------------------------------
 // ImageFormat — supported encoding/decoding formats
@@ -101,8 +103,14 @@ pub struct ImageInfo {
     pub width: u32,
     /// Canvas height in pixels.
     pub height: u32,
-    /// Observable decoded pixel/sample mode.
+    /// Observable decoded sample mode and codec transfer-buffer layout.
     pub mode: ImageMode,
+    /// Exact raster identity selected from the encoded header.
+    ///
+    /// This is available without decoding pixels. `mode` continues to describe
+    /// the byte layout of the codec transfer buffer; `raster_mode` retains
+    /// semantic distinctions such as premultiplied alpha and endianness.
+    pub raster_mode: Mode,
     /// Encoded bits per channel or palette index.
     pub bit_depth: u8,
     /// Palette retained from a separately stored color table.

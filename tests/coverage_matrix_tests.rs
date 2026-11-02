@@ -6388,6 +6388,36 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
     }
 }
 
+fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> {
+    Some(match mode {
+        "1" => img::Mode::One,
+        "P" => img::Mode::ImagePalette8,
+        "L" | "L8" => img::Mode::ImageLuma8,
+        "LA" | "La8" if matches!(info.source.alpha(), Some(img::SourceAlpha::Premultiplied)) => {
+            img::Mode::ImageLaPremultiplied8
+        }
+        "LA" | "La8" => img::Mode::ImageLumaA8,
+        "RGB" | "Rgb8" => img::Mode::ImageRgb8,
+        "RGBA" | "Rgba8" => img::Mode::ImageRgba8,
+        "CMYK" | "Cmyk8" => img::Mode::ImageCmyk8,
+        "I;16B"
+            if info.format == img::ImageFormat::Tiff
+                && info.source.byte_order() == Some(img::SourceByteOrder::Big) =>
+        {
+            img::Mode::ImageI16B
+        }
+        "I;16" | "I;16B" | "I;16L" | "L16" => img::Mode::ImageI16,
+        "La16" => img::Mode::ImageLumaA16,
+        "Rgb16" => img::Mode::ImageRgb16,
+        "Rgba16" => img::Mode::ImageRgba16,
+        "Rgb32F" => img::Mode::ImageRgb32F,
+        "Rgba32F" => img::Mode::ImageRgba32F,
+        "F" | "F32" => img::Mode::ImageF32,
+        "I" | "I32" => img::Mode::ImageI32,
+        _ => return None,
+    })
+}
+
 fn zero_image_for_mode(
     width: u32,
     height: u32,
@@ -8802,12 +8832,17 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
+                let expected_raster_mode = row
+                    .ref_mode
+                    .as_deref()
+                    .and_then(|mode| expected_raster_mode(mode, &info));
                 if info.format != expected_format
                     || Some(info.width)
                         != row.ref_size.as_ref().and_then(|size| size.first()).copied()
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
                     || Some(info.mode) != expected_mode
+                    || expected_raster_mode.is_some_and(|expected| info.raster_mode != expected)
                     || Some(u32::from(info.bit_depth)) != expected_bit_depth
                     || (matches!(fmt_name.as_str(), "png" | "bmp" | "tiff" | "ico")
                         && info.palette != decoded.palette)

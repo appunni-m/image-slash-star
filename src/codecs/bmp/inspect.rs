@@ -1,7 +1,7 @@
 //! BMP header and palette inspection without pixel decoding.
 
 use crate::codecs::{CodecError, CodecResult, codec_add_end, need_from, need_slice};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode};
 
 const FILE_HEADER_SIZE: usize = 14;
 const CORE_HEADER_SIZE: u32 = 12;
@@ -135,11 +135,13 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         }
     });
 
+    let raster_mode = Mode::from_header(mode, ImageFormat::Bmp, None, None);
     Ok(ImageInfo {
         format: ImageFormat::Bmp,
         width,
         height,
         mode,
+        raster_mode,
         bit_depth: bit_depth.to_le_bytes()[0],
         palette,
         is_animated: false,

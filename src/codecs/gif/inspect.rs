@@ -1,7 +1,7 @@
 //! GIF container inspection without LZW pixel decoding.
 
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need_slice};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
+use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode};
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
@@ -154,11 +154,15 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     } else {
         crate::types::SourceDescriptor::new()
     };
+    let mode = first_mode.malformed("GIF contains no image frame")?;
+    let raster_mode =
+        Mode::from_header(mode, ImageFormat::Gif, source.alpha(), source.byte_order());
     Ok(ImageInfo {
         format: ImageFormat::Gif,
         width: logical_width.max(fallback_width),
         height: logical_height.max(fallback_height),
-        mode: first_mode.malformed("GIF contains no image frame")?,
+        mode,
+        raster_mode,
         bit_depth: first_bit_depth,
         palette: first_palette,
         is_animated: frame_count > 1,

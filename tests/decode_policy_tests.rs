@@ -299,6 +299,7 @@ fn assert_info(info: &img::ImageInfo, expected_size: [u32; 2]) {
     assert_eq!(info.format, img::ImageFormat::Png);
     assert_eq!([info.width, info.height], expected_size);
     assert_eq!(info.mode, img::ImageMode::Rgb8);
+    assert_eq!(info.raster_mode, img::Mode::ImageRgb8);
     assert_eq!(info.bit_depth, 8);
     assert!(!info.is_animated);
     assert_eq!(info.frame_count, Some(1));
@@ -631,9 +632,19 @@ fn encoded_input_limit_manifest_matches_the_public_contract()
                 Ok(source) if case.status == "ok" => {
                     assert_info(source.info(), manifest.expected_size);
                     assert_eq!(source.mode(), source.info().mode);
+                    assert_eq!(source.raster_mode(), img::Mode::ImageRgb8);
+                    assert_eq!(
+                        source.decode_state(),
+                        img::EncodedImageDecodeState::NotAttempted
+                    );
                     assert!(!source.is_decoded());
                     let view = img::EncodedImageView::new_with_policy(&bytes, &policy)?;
                     assert_eq!(view.mode(), view.info().mode);
+                    assert_eq!(view.raster_mode(), img::Mode::ImageRgb8);
+                    assert_eq!(
+                        source.decode_state(),
+                        img::EncodedImageDecodeState::NotAttempted
+                    );
                     assert!(!source.is_decoded());
                 }
                 Err(error) if case.status == "error" => assert_limit_error(
