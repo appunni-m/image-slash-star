@@ -93,7 +93,10 @@ actual sample counts, inline-aware reports, annotated sampled assembly,
 source-mapped converter disassembly with ISA counts scoped to the aligned
 converter, and output hashes. The profiling build pins Cargo release debug information,
 disables stripping and split debug files, and verifies the actual ELF debug
-sections and converter source-line mapping. Sample counts come from bounded
+sections and converter source-line mapping in `src/codecs/jpeg/encode/mod.rs`.
+Inlined `kernels.rs` line mentions are recorded separately when emitted by the
+compiler; they are not required for the converter's own source mapping.
+Sample counts come from bounded
 raw perf records rather than rounded report headers; lost samples or compressed
 records select the timing fallback. The job records and temporarily sets the
 [per-process user-space sampling policy](https://www.kernel.org/doc/html/latest/admin-guide/perf-security.html#unprivileged-users)

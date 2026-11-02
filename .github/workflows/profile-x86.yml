@@ -219,12 +219,15 @@ jobs:
               raise SystemExit("linked binary is missing convert_rgb_420_mcu_row_aligned disassembly")
           converter = "\n".join(converter_lines) + "\n"
           Path(sys.argv[2]).write_text(converter, encoding="utf-8")
+          converter_source_line_mentions = len(re.findall(r"(?m)^.*src/codecs/jpeg/encode/mod\.rs:\d+.*$", converter))
           kernel_source_line_mentions = len(re.findall(r"(?m)^.*src/codecs/jpeg/kernels\.rs:\d+.*$", converter))
-          if not kernel_source_line_mentions:
-              raise SystemExit("profiled converter is missing verified kernel source-line mapping")
+          if not converter_source_line_mentions:
+              raise SystemExit("profiled converter is missing verified encoder source-line mapping")
           summary = {
               "converter_symbol": "convert_rgb_420_mcu_row_aligned",
               "assembly_instruction_count": len(re.findall(r"(?m)^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2}\s+)+[a-z][a-z0-9_.]*\s", converter)),
+              "converter_source_line_mentions": converter_source_line_mentions,
+              "converter_source_mapping": "available",
               "kernel_source_line_mentions": kernel_source_line_mentions,
               "kernel_source_mapping": "available" if kernel_source_line_mentions else "unavailable",
               "xmm_register_mentions": len(re.findall(r"\bxmm[0-9]+\b", converter)),
