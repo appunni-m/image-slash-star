@@ -7453,6 +7453,324 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_420_q1",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 1,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_64x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 1,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_420_q85",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_64x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_420_q100",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 100,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_64x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 100,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_tail_420_q1",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 1,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 1,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_tail_420_q85",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_fdct_rgb_luma_extremes_tail_420_q100",
+      "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 100,
+        "subsampling": "420",
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 100,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }

@@ -1,8 +1,30 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,691 total rows: 3,023 decode /
-inspect / verify rows and 668 encode rows. Of those, 3,023 decode rows are
-active and 641 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,697 total rows: 3,023 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,023 decode rows are
+active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG full-range samples in AVX2 batch geometry — 2026-11-02
+
+Six public encode rows combine complete 64x16 and 113x17 RGB sources with
+baseline 4:2:0 at Q1, Q85, and Q100. Each block row mixes black, white,
+checker, inverse-checker, stripe, and ramp patterns. Equal RGB channels
+preserve the full luma range, including the large signed DC coefficients
+that smaller alternating-color cases do not produce.
+
+The 64x16 image reaches an eight-block luma packet on AVX2. The odd 113x17
+image also exercises right and bottom replication. Pinned Pillow supplies
+complete JPEG bytes; a separate native ARM64 public encoder probe matches
+all six outputs exactly. The manifest-driven matrix checks those same
+complete outputs, and native x86 CI executes the rows under SSE2 and AVX2.
+These are numerical boundary parity cases, not a claim of newly covered
+global branch outcomes or a refreshed full-suite percentage.
+
+Inputs, live Pillow references, public probe outputs and executable, and
+source receipts are retained outside `target/` in
+`.coverage-mcp/local-evidence/parity/jpeg-eight-lane-extremes-staging-20261102/`.
+The rejected reciprocal experiment and its measured regression limits are
+documented in [Benchmarking](BENCHMARKING.md); codec arithmetic is unchanged.
 
 ## AVIF color grids with unattached alpha items — 2026-11-02
 
@@ -16220,7 +16242,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9e15d5973d4d2300a504304d8fe0bed05700231a030eb83183226b5b2fa69e32`; matrix `c430de9d726c302c2dad4da91496f324ba60854772d4272bfb22b2f29d00ae68`.
+- Current fixture integrity only: manifest `97d2e3174631170ea5967924be4293ea44430fe81bd1da7b847c0c3db2940031`; matrix `a5f93956eb875ca38b36343b4a0b6e0ff5b34275349d02b936e0238a19192136`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

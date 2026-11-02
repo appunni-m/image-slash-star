@@ -5975,6 +5975,36 @@ formats:
       params: {'quality': 1, 'subsampling': '444', 'progressive': True, 'optimize': False, 'color': 'cmyk'}
       source_format: tiff
       source_asset: jpeg_fdct_cmyk_checker_32x8.tiff
+    - id: enc_fdct_rgb_luma_extremes_420_q1
+      description: Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q1
+      params: {'quality': 1, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_64x16.png
+    - id: enc_fdct_rgb_luma_extremes_420_q85
+      description: Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q85
+      params: {'quality': 85, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_64x16.png
+    - id: enc_fdct_rgb_luma_extremes_420_q100
+      description: Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q100
+      params: {'quality': 100, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_64x16.png
+    - id: enc_fdct_rgb_luma_extremes_tail_420_q1
+      description: Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q1
+      params: {'quality': 1, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_tail_113x17.png
+    - id: enc_fdct_rgb_luma_extremes_tail_420_q85
+      description: Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q85
+      params: {'quality': 85, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_tail_113x17.png
+    - id: enc_fdct_rgb_luma_extremes_tail_420_q100
+      description: Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q100
+      params: {'quality': 100, 'subsampling': '420', 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: jpeg_fdct_rgb_luma_extremes_tail_113x17.png
   png:
     name: PNG
     extensions:

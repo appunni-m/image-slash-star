@@ -168,6 +168,19 @@ identity accompany the measurements. Local output must stay inside the
 repository. The runner accepts `--cases` for exact matrix workloads and
 `--cohorts` for one to twenty repeated quartets; its default remains one
 quartet, while CI explicitly selects six.
+
+A 2026-11-02 AVX2 eight-block reciprocal experiment was rejected by this
+procedure. On the AMD EPYC 7763 host, RGB 512×512 Q85 4:2:0 gained 0.19%
+by median paired ratio across six cohorts, below its predeclared 3% minimum.
+The SSE2 RGB 128×128 Q10 guard was 2.43% slower, above its 2% limit. Complete
+JPEG bytes matched for all fourteen revision/workload comparisons, and all
+forty SSE2/AVX2 public output hashes and byte lengths matched. The original
+arithmetic was restored. These observations identify executable revision
+`485e879fea0208bfbfd323288cf2d5b48a6f4691` (PR merge tree for candidate
+`19d6e0df75dcb935663e0134106184f41f6e56df`) in
+[native benchmark run 41472576351](https://github.com/appunni-m/image-slash-star/actions/runs/41472576351).
+The raw artifact and audited cohort ratios are retained locally in
+`.coverage-mcp/local-evidence/ci/pr159-x86-benchmark-20261102/`.
 Local paths and hostnames are omitted from the public presentation.
 
 Fixture-harness timing from `benchmark_fixture_workloads.py` measures harness
