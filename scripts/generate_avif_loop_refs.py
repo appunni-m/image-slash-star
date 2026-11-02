@@ -32,6 +32,10 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
+    "animated_sequence_without_extra_zero_padding": (
+        "animated_sequence_without_extra_zero_padding.avif",
+        "94eff1c2a3171c570e8eb9000436ba4f1d2d62cf271b00a602054a689ed25819",
+    ),
     "animated_ignored_temporal_layer": ("animated_ignored_temporal_layer.avif", "1ba3cb1481a80a6e776b5c42199defca0c51f82a6c92ccbebe044a7ff2ad3276"),
     "animated_ignored_spatial_layer": ("animated_ignored_spatial_layer.avif", "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e"),
     "animated_mixed_lossless_key_superres_420_8bit_integer_mv_s3_128x48_d10": ("animated_mixed_lossless_key_superres_420_8bit_integer_mv_s3_128x48_d10.avif", "ad52321fb01335ed4ea68990a12d0680b0c9a124fc2647302685b820b686595f"),

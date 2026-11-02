@@ -1474,13 +1474,36 @@
       "case_names": [
         "animated_ignored_spatial_layer"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "ef1c50d503647c415957dd16e67047e65cead7dc4176186ad4caf26bea47f755",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_sequence_without_extra_zero_padding"
+      ]
     }
   ],
   "artifacts": [
     {
-      "bytes": 43378,
+      "bytes": 43952,
       "path": "README.md",
-      "sha256": "01a30b93c1afabf9351583d369aed56e9cd10eae2bd76cf965aa17e6f8d8a74f"
+      "sha256": "d3eef429fd930f3e9fb9a8e0690b6f3abd86070f13778331f93055843ec828a9"
     },
     {
       "bytes": 2267,
@@ -3271,6 +3294,11 @@
       "bytes": 1280,
       "path": "inputs/animated_sequence_only_trailing_meta_after_mdat.avif",
       "sha256": "a58d67aaece0bd6502b9f3bb63467e22de4452d4d99d9fb21d088d371f0e0c1f"
+    },
+    {
+      "bytes": 11533,
+      "path": "inputs/animated_sequence_without_extra_zero_padding.avif",
+      "sha256": "94eff1c2a3171c570e8eb9000436ba4f1d2d62cf271b00a602054a689ed25819"
     },
     {
       "bytes": 1252,
@@ -8841,6 +8869,31 @@
       "bytes": 67500,
       "path": "pixels/animated_sequence_only_trailing_meta_after_mdat/frame_4.bin",
       "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/animated_sequence_without_extra_zero_padding/frame_0.bin",
+      "sha256": "e9be50ae6d61ec6158112f74bd761ebb0ef519b31eb2740f85b6deb005905fa6"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/animated_sequence_without_extra_zero_padding/frame_1.bin",
+      "sha256": "983b3df168439173f8d22b225fef73a311e16a6c42071fd64d7f0ce0fff73172"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/animated_sequence_without_extra_zero_padding/frame_2.bin",
+      "sha256": "6049866c36a33554d8d695f035137928a8590f1593d3acb5f8aa44ad7929bbd6"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/animated_sequence_without_extra_zero_padding/frame_3.bin",
+      "sha256": "ad0776f79c5019c9baf54cad690af4dc58591bcd1848cfd41cb97e516c1b2b8a"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/animated_sequence_without_extra_zero_padding/frame_4.bin",
+      "sha256": "fd62714d1ab680473084d8d697883a25fe0e14946a4e0a82ce9061fae99155bd"
     },
     {
       "bytes": 67500,
@@ -44126,6 +44179,88 @@
       "repeat_equal": true,
       "source": "animated_ignored_spatial_layer",
       "source_sha256": "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e"
+    },
+    {
+      "input_bytes": 11533,
+      "input_path": "inputs/animated_sequence_without_extra_zero_padding.avif",
+      "input_sha256": "94eff1c2a3171c570e8eb9000436ba4f1d2d62cf271b00a602054a689ed25819",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_sequence_without_extra_zero_padding",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "ef1c50d503647c415957dd16e67047e65cead7dc4176186ad4caf26bea47f755",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "e9be50ae6d61ec6158112f74bd761ebb0ef519b31eb2740f85b6deb005905fa6",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "983b3df168439173f8d22b225fef73a311e16a6c42071fd64d7f0ce0fff73172",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "6049866c36a33554d8d695f035137928a8590f1593d3acb5f8aa44ad7929bbd6",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "ad0776f79c5019c9baf54cad690af4dc58591bcd1848cfd41cb97e516c1b2b8a",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "fd62714d1ab680473084d8d697883a25fe0e14946a4e0a82ce9061fae99155bd",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_sequence_without_extra_zero_padding",
+      "source_sha256": "94eff1c2a3171c570e8eb9000436ba4f1d2d62cf271b00a602054a689ed25819"
     }
   ],
   "oracle": {

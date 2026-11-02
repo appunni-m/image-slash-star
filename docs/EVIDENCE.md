@@ -1,8 +1,60 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,757 total rows: 3,083 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,083 decode rows are
+The current public evidence matrix contains 3,774 total rows: 3,100 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,100 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF operating-point alignment and EOF neighbors — 2026-11-02
+
+Eight further complete-container cases align later sequence fields by repeating
+valid default operating points. They cover EOF at the delta and additional
+frame-ID widths, inter/intra and joint-compound flags, integer-motion selector,
+explicit screen-content-tools value, CDEF flag, and monochrome selector.
+The live pinned oracle preserves all 96 complete frame buffers across 24
+healthy layouts; the public Rust decoder matches every buffer. Both reject
+each shortened neighbor, and its retained profile hits the intended EOF region.
+
+A fresh canonical selection passes all 17 new cases from this combined batch
+and nine existing controls. Its actual executable, two profiles, 139 source
+files, 85 fixtures, and eight producer files are retained. Coverage MCP reports
+source `matches_receipt` and tests `passed` through a locally derived context;
+this is not managed MCP execution. The identical owned sequence-parser region
+mapping has a compatible observation union of 479/492, up from 463/492 before
+this batch. These 16 additional observed regions do not constitute a fresh
+full run or a new global coverage percentage.
+
+All 3,766 preceding matrix rows and 1,314 preceding AVIF JSON rows retain their
+exact outcomes after the eight additions. The native-loop index, all 167
+target-only fault rows, and 7,666 preceding output artifacts are unchanged.
+Pinned producers, fixture integrity, and documentation checks pass. No
+production Rust changes, codec unit tests, coverage exclusions, or lower
+coverage floors are introduced.
+
+## AVIF sequence EOF fields and accepted padding neighbor — 2026-11-02
+
+Nine additional public manifest cases cover eight sequence-field EOF paths and
+one complete header with an extra zero padding byte removed. Every input
+retains a bounded complete container and consistent sample/primary-item
+extents. Pinned Pillow 12.2.0 verifies each container, rejects the eight EOF
+neighbors through still and sequence decode, and preserves all five complete
+frames and durations for the padding neighbor. A fresh repeated libavif 1.4.1
+observation independently retains that input's infinite repetition count.
+
+Canonical selected coverage passes all nine new cases and eight healthy
+controls. The 139 codec/build/test source hashes and 73 selected fixture hashes
+remain unchanged during execution; the actual executable and profiles are
+retained. Coverage MCP reports source `matches_receipt` and tests `passed`
+through an explicitly locally derived selected-execution context.
+
+The identical owned sequence-parser mapping has 492 regions. Combining the
+retained full baseline and two canonical selections covers 471 regions, up
+from the preceding union of 463. This is a compatible observation union, not a
+fresh full run or a new global coverage percentage. The 3,757 preceding matrix
+rows retain their public outcomes; their only observation-metadata change is
+the loop-index digest after appending one native observation. All 576 preceding
+native loop records, 167 target-only fault rows, and 7,652 preceding output
+artifacts retain their exact contents. No codec unit tests, production Rust
+changes, new fault rows, coverage exclusions, or lower floors are introduced.
 
 ## AVIF selected and ignored operating-point layers — 2026-11-02
 
@@ -16374,7 +16426,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `154ca22b8acd14e91b8d8879e674b034bde6f405202a90c460b838ee1e5e38eb`; matrix `6ec8c12717d75f9b0ecca79e793b9d6dae29bd7ba54b32d674672301e9968fc8`.
+- Current fixture integrity only: manifest `691dafd9aa3f04e799369d0cc36a9b597158fd0d393203752bd89a8e1e35affb`; matrix `5590d3e98f576b02f4e9e793c09971df8f0c37199416889e11e3df97d2964f9f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
