@@ -135,6 +135,24 @@ pub fn __coverage_inspect_png(data: &[u8]) -> ImageResult<ImageInfo> {
     codecs::inspect_png_for_coverage(data)
 }
 
+/// Inspect AVIF bytes below public format detection for a target-only
+/// malformed-input contract. This hook is absent from normal builds.
+#[cfg(coverage)]
+#[cfg(feature = "avif")]
+#[doc(hidden)]
+pub fn __coverage_inspect_avif_container(data: &[u8]) -> ImageResult<ImageInfo> {
+    codecs::inspect_avif_container_for_coverage(data)
+}
+
+/// Parse AVIF metadata below sample-parser validation for a target-only
+/// coverage contract. This hook is absent from normal builds.
+#[cfg(coverage)]
+#[cfg(feature = "avif")]
+#[doc(hidden)]
+pub fn __coverage_parse_avif_meta(payload: &[u8]) -> ImageResult<()> {
+    codecs::parse_avif_meta_for_coverage(payload)
+}
+
 fn work_budget_token(
     maximum: Option<u64>,
     resource: ResourceLimit,

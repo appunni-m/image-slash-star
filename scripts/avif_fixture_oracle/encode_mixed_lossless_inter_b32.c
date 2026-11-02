@@ -5,20 +5,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t luma_value(unsigned frame, unsigned x, unsigned y, int residual_roi)
+static uint8_t luma_value(unsigned frame, unsigned x, unsigned y, int residual_roi,
+                          int impulse_residual)
 {
     if (frame != 0 && x < 32 && y < 32) {
         return 96;
     }
 
-    if (residual_roi && x >= 32 && y >= 32) {
-        return frame == 0 ? 48 : 49;
+    if (x >= 32 && y >= 32) {
+        if (residual_roi) {
+            return frame == 0 ? 48 : 49;
+        }
+        const unsigned roi_x = x - 32;
+        const unsigned roi_y = y - 32;
+        const unsigned texture =
+            (roi_x * 73 + roi_y * 151 + roi_x * roi_y * 37 + (roi_x ^ roi_y) * 29) % 192;
+        const unsigned residual =
+            impulse_residual && frame != 0 && roi_x == 1 && roi_y == 1 ? 4 : 0;
+        return (uint8_t)(32 + texture + residual);
     }
 
     return 48;
 }
 
-static int fill_frame(avifImage *image, unsigned frame, int residual_roi)
+static int fill_frame(avifImage *image, unsigned frame, int residual_roi,
+                      int impulse_residual)
 {
     if (avifImageAllocatePlanes(image, AVIF_PLANES_YUV) != AVIF_RESULT_OK) {
         return 0;
@@ -29,25 +40,35 @@ static int fill_frame(avifImage *image, unsigned frame, int residual_roi)
         const unsigned int width = avifImagePlaneWidth(image, (avifChannelIndex)plane);
         const unsigned int height = avifImagePlaneHeight(image, (avifChannelIndex)plane);
         const unsigned int row_bytes = avifImagePlaneRowBytes(image, (avifChannelIndex)plane);
+        const unsigned int bytes_per_sample = image->depth > 8 ? 2U : 1U;
         for (unsigned int y = 0; y < height; ++y) {
             for (unsigned int x = 0; x < width; ++x) {
                 const unsigned int pixel_x = plane == AVIF_CHAN_Y ? x : x * 2;
                 const unsigned int pixel_y = plane == AVIF_CHAN_Y ? y : y * 2;
                 uint8_t value = 128;
                 if (plane == AVIF_CHAN_Y) {
-                    value = luma_value(frame, pixel_x, pixel_y, residual_roi);
+                    value = luma_value(frame, pixel_x, pixel_y, residual_roi,
+                                       impulse_residual);
                 }
-                data[(size_t)y * row_bytes + x] = value;
+                const uint16_t sample = (uint16_t)(
+                    (uint16_t)value << (image->depth - 8U));
+                const size_t offset = (size_t)y * row_bytes + x * bytes_per_sample;
+                data[offset] = (uint8_t)(sample & 0xffU);
+                if (bytes_per_sample == 2U) {
+                    data[offset + 1U] = (uint8_t)(sample >> 8);
+                }
             }
         }
     }
     return 1;
 }
 
-static int write_sequence(const char *path, unsigned canvas_size, int residual_roi)
+static int write_sequence(const char *path, unsigned canvas_size, int residual_roi,
+                          int impulse_residual, unsigned bit_depth)
 {
     avifEncoder *encoder = avifEncoderCreate();
-    avifImage *image = avifImageCreate(canvas_size, canvas_size, 8, AVIF_PIXEL_FORMAT_YUV420);
+    avifImage *image = avifImageCreate(canvas_size, canvas_size, bit_depth,
+                                       AVIF_PIXEL_FORMAT_YUV420);
     avifRWData output = AVIF_DATA_EMPTY;
     int success = 0;
     if (encoder == NULL || image == NULL) {
@@ -90,7 +111,7 @@ static int write_sequence(const char *path, unsigned canvas_size, int residual_r
     }
 
     for (unsigned frame = 0; frame < 2; ++frame) {
-        if (!fill_frame(image, frame, residual_roi)) {
+        if (!fill_frame(image, frame, residual_roi, impulse_residual)) {
             fprintf(stderr, "failed to fill frame %u\n", frame);
             goto cleanup;
         }
@@ -137,13 +158,19 @@ cleanup:
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s OUTPUT.avif [60|64] [--residual-roi]\n", argv[0]);
+        fprintf(stderr,
+                "usage: %s OUTPUT.avif [60|64] "
+                "[--residual-roi|--impulse-residual-roi] [--bit-depth-10]\n",
+                argv[0]);
         return 2;
     }
 
     unsigned canvas_size = 64;
+    unsigned bit_depth = 8;
     int residual_roi = 0;
+    int impulse_residual = 0;
     int canvas_size_seen = 0;
+    int bit_depth_seen = 0;
     for (int index = 2; index < argc; ++index) {
         if (strcmp(argv[index], "--residual-roi") == 0) {
             if (residual_roi) {
@@ -151,6 +178,19 @@ int main(int argc, char **argv)
                 return 2;
             }
             residual_roi = 1;
+        } else if (strcmp(argv[index], "--impulse-residual-roi") == 0) {
+            if (impulse_residual) {
+                fprintf(stderr, "--impulse-residual-roi may be provided only once\n");
+                return 2;
+            }
+            impulse_residual = 1;
+        } else if (strcmp(argv[index], "--bit-depth-10") == 0) {
+            if (bit_depth_seen) {
+                fprintf(stderr, "--bit-depth-10 may be provided only once\n");
+                return 2;
+            }
+            bit_depth = 10;
+            bit_depth_seen = 1;
         } else if (strcmp(argv[index], "60") == 0) {
             if (canvas_size_seen) {
                 fprintf(stderr, "canvas size may be provided only once\n");
@@ -166,13 +206,21 @@ int main(int argc, char **argv)
             canvas_size = 64;
             canvas_size_seen = 1;
         } else {
-            fprintf(stderr, "expected one canvas size (60 or 64) and --residual-roi\n");
+            fprintf(stderr,
+                    "expected one canvas size (60 or 64) and a residual option\n");
             return 2;
         }
+    }
+    if (residual_roi && impulse_residual) {
+        fprintf(stderr, "residual options are mutually exclusive\n");
+        return 2;
     }
     if (residual_roi && canvas_size != 64) {
         fprintf(stderr, "--residual-roi requires a 64-pixel canvas\n");
         return 2;
     }
-    return write_sequence(argv[1], canvas_size, residual_roi) ? 0 : 1;
+    return write_sequence(argv[1], canvas_size, residual_roi, impulse_residual,
+                          bit_depth)
+               ? 0
+               : 1;
 }

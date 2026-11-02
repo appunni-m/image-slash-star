@@ -453,13 +453,16 @@ fn write_segment_header<P: PartitionCheckpointControl>(
     params: &FrameParams,
     probabilities: [u8; 3],
     checkpoint: &mut P,
-) -> CodecResult<()> {
+) -> CodecResult<bool> {
     let segmentation_enabled = params.num_segments > 1;
     encode_bool(writer, 128, segmentation_enabled, checkpoint)?;
     if !segmentation_enabled {
-        return Ok(());
+        return Ok(false);
     }
-    encode_bool(writer, 128, true, checkpoint)?; // update map
+    let update_map = probabilities
+        .iter()
+        .any(|&probability| probability != u8::MAX);
+    encode_bool(writer, 128, update_map, checkpoint)?; // update map
     encode_bool(writer, 128, true, checkpoint)?; // update data
     encode_bool(writer, 128, true, checkpoint)?; // absolute feature values
     for segment in params.segments {
@@ -468,14 +471,16 @@ fn write_segment_header<P: PartitionCheckpointControl>(
     for segment in params.segments {
         write_signed(writer, i32::from(segment.filter_strength), 6, checkpoint)?;
     }
-    for probability in probabilities {
-        let update = probability != 255;
-        encode_bool(writer, 128, update, checkpoint)?;
-        if update {
-            encode_literal(writer, u32::from(probability), 8, checkpoint)?;
+    if update_map {
+        for probability in probabilities {
+            let update = probability != u8::MAX;
+            encode_bool(writer, 128, update, checkpoint)?;
+            if update {
+                encode_literal(writer, u32::from(probability), 8, checkpoint)?;
+            }
         }
     }
-    Ok(())
+    Ok(update_map)
 }
 
 fn write_coefficient_probabilities<P: PartitionCheckpointControl>(
@@ -615,7 +620,7 @@ fn write_modes<P: PartitionCheckpointControl>(
     writer: &mut BoolEncoder,
     decisions: &[MacroblockDecision],
     macroblock_width: usize,
-    params: &FrameParams,
+    update_map: bool,
     segment_probabilities: [u8; 3],
     probabilities: &AdaptedProbabilities,
     checkpoint: &mut P,
@@ -630,7 +635,7 @@ fn write_modes<P: PartitionCheckpointControl>(
     ];
     let mut macroblock_items = 0usize;
     for decision in decisions {
-        if params.num_segments > 1 {
+        if update_map {
             write_segment(writer, decision.segment, segment_probabilities, checkpoint)?;
         }
         if probabilities.use_skip_probability {
@@ -708,7 +713,7 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
     let mut writer = BoolEncoder::default();
     encode_bool(&mut writer, 128, false, checkpoint)?; // colorspace
     encode_bool(&mut writer, 128, false, checkpoint)?; // clamp type
-    write_segment_header(&mut writer, &params, segment_probabilities, checkpoint)?;
+    let update_map = write_segment_header(&mut writer, &params, segment_probabilities, checkpoint)?;
     encode_bool(&mut writer, 128, false, checkpoint)?; // strong loop filter
     let filter_level = params
         .segments
@@ -745,7 +750,7 @@ fn encode_first_partition_with_checkpoint<P: PartitionCheckpointControl>(
         &mut writer,
         decisions,
         macroblock_width,
-        &params,
+        update_map,
         segment_probabilities,
         probabilities,
         checkpoint,

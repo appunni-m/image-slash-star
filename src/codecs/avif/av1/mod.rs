@@ -36,6 +36,7 @@ use self::frame::{DisplayGeometryProof, FrameState};
 pub(super) use self::raster::FrameCanvas;
 use super::samples::{EncodedPlane, EncodedSample, ExtractedAvif};
 use crate::codecs::{CodecError, CodecResult};
+use crate::types::AvifColorProperties;
 
 const MAX_OBUS_PER_SAMPLE: usize = 4_096;
 
@@ -230,7 +231,12 @@ fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameSt
     for sample in &plane.samples {
         validate_sample(input, sample, &mut state)?;
     }
-    state.finish()?;
+    let sequence = state.finish()?;
+    let color_properties = plane
+        .samples
+        .first()
+        .and_then(|sample| sample.color_properties);
+    validate_identity_matrix_subsampling(sequence, color_properties)?;
     Ok(state)
 }
 
@@ -270,6 +276,7 @@ pub(super) fn visit_sequence_frames(
         let color_unit =
             validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
         let color_sequence = color_state.finish()?.clone();
+        validate_identity_matrix_subsampling(&color_sequence, sample.color_properties)?;
         let alpha_unit = if let Some(alpha) = &sequence.alpha {
             crate::codecs::error::check_cancelled(token)?;
             let alpha_sample = alpha
@@ -288,7 +295,11 @@ pub(super) fn visit_sequence_frames(
         if !(if color_sequence.monochrome {
             monochrome_primary_sequence_supported(&color_sequence)
         } else {
-            portable_color_sequence_supported(&color_sequence, sequence.alpha.is_some())
+            portable_color_sequence_supported(
+                &color_sequence,
+                sequence.alpha.is_some(),
+                sample.color_properties,
+            )
         }) {
             return Err(sequence_presentation_gap(
                 "has an unsupported color declaration",
@@ -408,24 +419,62 @@ fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) ->
         && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
 }
 
+/// Reject identity-matrix declarations paired with subsampled chroma.
+fn validate_identity_matrix_subsampling(
+    sequence: &sequence::SequenceHeader,
+    color_properties: Option<AvifColorProperties>,
+) -> Av1Result<()> {
+    let matrix_coefficients = color_properties.map_or(sequence.matrix_coefficients, |color| {
+        u32::from(color.matrix_coefficients)
+    });
+    if matrix_coefficients == 0 && (sequence.subsampling_x || sequence.subsampling_y) {
+        return Err(malformed(
+            "identity color matrix cannot use chroma subsampling",
+        ));
+    }
+    Ok(())
+}
+
 /// Color formats that have a checked RGB8 boundary in `decode_portable`.
 ///
 /// Share color admission with the final converter, including auxiliary alpha.
 /// HDR is currently witnessed only for primary stills, so it retains its
 /// previous sequence restriction independently of the color kernel.
-fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader, alpha: bool) -> bool {
+fn portable_color_sequence_supported(
+    sequence: &sequence::SequenceHeader,
+    alpha: bool,
+    color_properties: Option<AvifColorProperties>,
+) -> bool {
     if sequence.monochrome {
         return false;
     }
+    let (cicp, full_range) = color_properties.map_or_else(
+        || {
+            (
+                [
+                    sequence.color_primaries,
+                    sequence.transfer_characteristics,
+                    sequence.matrix_coefficients,
+                ],
+                sequence.color_range,
+            )
+        },
+        |color| {
+            (
+                [
+                    u32::from(color.color_primaries),
+                    u32::from(color.transfer_characteristics),
+                    u32::from(color.matrix_coefficients),
+                ],
+                color.full_range,
+            )
+        },
+    );
     matches!(
         super::portable_color_conversion(
-            [
-                sequence.color_primaries,
-                sequence.transfer_characteristics,
-                sequence.matrix_coefficients,
-            ],
+            cicp,
             sequence.bit_depth,
-            sequence.color_range,
+            full_range,
             (sequence.subsampling_x, sequence.subsampling_y),
             alpha,
         ),

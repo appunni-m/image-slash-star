@@ -4,6 +4,7 @@ use crate::codecs::{CodecError, CodecResult, OptionCodecExt, codec_add_end, need
 use crate::types::{ImageFormat, ImageInfo, ImageMode};
 
 const SOI: u8 = 0xd8;
+const APP0: u8 = 0xe0;
 const EOI: u8 = 0xd9;
 const SOS: u8 = 0xda;
 const SOF0: u8 = 0xc0;
@@ -63,6 +64,9 @@ fn verify_header(data: &[u8]) -> CodecResult<VerifiedHeader<'_>> {
             position,
             "truncated JPEG marker payload",
         )?;
+        if marker == APP0 {
+            validate_app0(payload)?;
+        }
         if frame.is_none() && matches!(marker, SOF0 | SOF2) {
             frame = Some(payload);
         }
@@ -70,6 +74,21 @@ fn verify_header(data: &[u8]) -> CodecResult<VerifiedHeader<'_>> {
             return Ok(VerifiedHeader { frame });
         }
     }
+}
+
+/// Require the version bytes Pillow reads for a recognized JFIF APP0 tag.
+///
+/// # Errors
+/// Returns a malformed-input error when the JFIF tag omits either version byte.
+pub(super) fn validate_app0(payload: &[u8]) -> CodecResult<()> {
+    // Pillow tolerates missing density/thumbnail fields, but its mandatory
+    // version read requires bytes 5 and 6 even without a NUL after "JFIF".
+    if payload.len() < 7 && payload.starts_with(b"JFIF") {
+        return Err(CodecError::Malformed(
+            "truncated JPEG JFIF version".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn inspect_frame(frame: &[u8]) -> CodecResult<ImageInfo> {

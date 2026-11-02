@@ -132,7 +132,8 @@
         "lossless": false,
         "quality": 80,
         "method": 4,
-        "kmax": 1
+        "kmax": 1,
+        "rust_encode_sequence_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated.webp",
@@ -4581,6 +4582,2970 @@
       }
     },
     {
+      "id": "enc_lossy_method_2_q0_neutral_16x16",
+      "source_asset": "webp_skip_neutral_16x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f04d702e124c5ffe01e333f5916ed71240939824817a229c58a9582bb47b225e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_neutral_16x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_2_q80_neutral_16x16",
+      "source_asset": "webp_skip_neutral_16x16.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f04d702e124c5ffe01e333f5916ed71240939824817a229c58a9582bb47b225e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_neutral_16x16.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_2_q0_neutral_17x19",
+      "source_asset": "webp_skip_neutral_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "4e102738c3b04e356d58aacbbd2649fa112bdf582058f7a3124ce0d8014307e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_neutral_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_2_q80_neutral_17x19",
+      "source_asset": "webp_skip_neutral_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "4e102738c3b04e356d58aacbbd2649fa112bdf582058f7a3124ce0d8014307e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_neutral_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_2_q0_sparse_64x64",
+      "source_asset": "webp_skip_sparse_64x64.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f0f0ca8e9c4d4dc3e5e94c4bb7537fff310e51b070948368ca6bf57e3ff7e9a4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_sparse_64x64.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_2_q80_sparse_64x64",
+      "source_asset": "webp_skip_sparse_64x64.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "f0f0ca8e9c4d4dc3e5e94c4bb7537fff310e51b070948368ca6bf57e3ff7e9a4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_skip_sparse_64x64.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_horizontal_17x19",
+      "source_asset": "webp_alpha_effort_horizontal_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_horizontal_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_palette16_17x19",
+      "source_asset": "webp_alpha_effort_palette16_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette16_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_palette17_17x19",
+      "source_asset": "webp_alpha_effort_palette17_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette17_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m2_q80_horizontal_17x19",
+      "source_asset": "webp_alpha_effort_horizontal_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_horizontal_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m3_q80_palette17_17x19",
+      "source_asset": "webp_alpha_effort_palette17_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 3,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette17_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m2_q80_random_17x19",
+      "source_asset": "webp_alpha_effort_random_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "be166596257f7f6cc21cda7ab8f0435644df1e0d8c650f74fed7704a28b44998",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_random_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m6_q80_random_17x19",
+      "source_asset": "webp_alpha_effort_random_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "be166596257f7f6cc21cda7ab8f0435644df1e0d8c650f74fed7704a28b44998",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_random_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m1_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 1,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q0_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m3_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 3,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 3
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m4_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m5_q80_combined_17x19",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 5,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 5
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m0_q80_vertical_17x19",
+      "source_asset": "webp_alpha_effort_vertical_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_vertical_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q80_vertical_17x19",
+      "source_asset": "webp_alpha_effort_vertical_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 2,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_vertical_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m5_q80_vertical_17x19",
+      "source_asset": "webp_alpha_effort_vertical_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 5,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_vertical_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 5
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m6_q80_vertical_17x19",
+      "source_asset": "webp_alpha_effort_vertical_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_vertical_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m4_q80_horizontal_17x19",
+      "source_asset": "webp_alpha_effort_horizontal_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_horizontal_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_implicit_zero_palette_m0_q80_vertical_17x19",
+      "source_asset": "webp_alpha_effort_vertical_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_vertical_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_discontinuous_palette_m4_band_zero_128x128",
+      "source_asset": "webp_alpha_effort_band_zero_128x128.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bca0d82b56e977a0e0538d0d52fc9e25bf4f6a9d4ec0896f6a171603341a1ef",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_band_zero_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_discontinuous_palette_m4_band_nonzero_128x128",
+      "source_asset": "webp_alpha_effort_band_nonzero_128x128.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "f7421695e2bd2e69027a8086080284b1ebc2e030e97a8053697d292d2ba49ef8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_band_nonzero_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_transparent_column_m4_transparent_gradient_33x35",
+      "source_asset": "webp_alpha_effort_transparent_gradient_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "584385b7c6cb9425cba7d9a526d7a8526fe54f57a94da5936d463f392953f84d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_transparent_gradient_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_transparent_column_m5_transparent_gradient_33x35",
+      "source_asset": "webp_alpha_effort_transparent_gradient_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "584385b7c6cb9425cba7d9a526d7a8526fe54f57a94da5936d463f392953f84d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 5,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_transparent_gradient_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 5
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_nonzero_palette_m0_thin_nonzero_33x1",
+      "source_asset": "webp_alpha_effort_thin_nonzero_33x1.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "c3cd03a3d95d1e01add194ef7335bdf9a2ba7a7a2f105d3cdddf451b26feb4bd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_thin_nonzero_33x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_combined_q0",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_combined_q80",
+      "source_asset": "webp_alpha_effort_combined_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_combined_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_horizontal_q80",
+      "source_asset": "webp_alpha_effort_horizontal_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_horizontal_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette16_q0",
+      "source_asset": "webp_alpha_effort_palette16_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 0,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette16_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 0,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette16_q80",
+      "source_asset": "webp_alpha_effort_palette16_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette16_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette17_q80",
+      "source_asset": "webp_alpha_effort_palette17_17x19.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_palette17_17x19.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_thin_nonzero",
+      "source_asset": "webp_alpha_effort_thin_nonzero_33x1.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "c3cd03a3d95d1e01add194ef7335bdf9a2ba7a7a2f105d3cdddf451b26feb4bd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_alpha_effort_thin_nonzero_33x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_column",
+      "source_asset": "webp_crunch_alpha_column_1x33.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "e7d6134981548f50c55ba5a8f09182a0313fe56586cd9dabd0457a7dbb32e32a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_alpha_column_1x33.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_palette_chain16_q100",
+      "source_asset": "webp_crunch_palette_chain16_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "5044b36010048450f53cf05e0538cb7bcd393363d284abd8553acb329867b173",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_palette_chain16_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_palette_chain17_q100",
+      "source_asset": "webp_crunch_palette_chain17_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "dade38f38fe83d0ba5ae0ad2f3a4c02baed4dfb239124c5413c0ac8d6655bae0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_palette_chain17_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m4_palette_chain16_q80",
+      "source_asset": "webp_crunch_palette_chain16_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "5044b36010048450f53cf05e0538cb7bcd393363d284abd8553acb329867b173",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_palette_chain16_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m0_palette_chain17_q80",
+      "source_asset": "webp_crunch_palette_chain17_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "dade38f38fe83d0ba5ae0ad2f3a4c02baed4dfb239124c5413c0ac8d6655bae0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_palette_chain17_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_opaque_single_q100",
+      "source_asset": "webp_crunch_opaque_single_1x1.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "073992e3038438fa4383bb008a90e883b0cd18a97c2f5113fff580448d208c82",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_opaque_single_1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_opaque_pair_q100",
+      "source_asset": "webp_crunch_opaque_pair_1x2.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "c7554919206ae25d8660e4ad057352c09c5de03ed85d412f02aa2bfd1bb08d34",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_opaque_pair_1x2.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m4_zero_planes_q80",
+      "source_asset": "webp_crunch_zero_planes_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "4e8931d23066560d050d93c1747077ca842ea4ea74b6fad11a242498bf35c153",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_zero_planes_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_zero_planes_q100",
+      "source_asset": "webp_crunch_zero_planes_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "4e8931d23066560d050d93c1747077ca842ea4ea74b6fad11a242498bf35c153",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_zero_planes_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m4_zero_plane_transition_q80",
+      "source_asset": "webp_crunch_zero_plane_transition_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "0068578a4eba2822ec0bbebe78c377ee70843acf02edc6f651648d2129cc98e8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_zero_plane_transition_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_zero_plane_transition_q100",
+      "source_asset": "webp_crunch_zero_plane_transition_33x35.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "0068578a4eba2822ec0bbebe78c377ee70843acf02edc6f651648d2129cc98e8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_zero_plane_transition_33x35.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m4_late_plane_transition_q80",
+      "source_asset": "webp_crunch_late_plane_transition_259x259.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "91699e7206b5525246a4bbcd2b87abced8c8f8e8c5048c7b110a969f7ccd01fd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_late_plane_transition_259x259.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossless_crunch_m6_late_plane_transition_q100",
+      "source_asset": "webp_crunch_late_plane_transition_259x259.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "91699e7206b5525246a4bbcd2b87abced8c8f8e8c5048c7b110a969f7ccd01fd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_crunch_late_plane_transition_259x259.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": true,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_method_1_intra16_candidate_pruning",
+      "source_asset": "lossless.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 1,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/lossless.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_lossy_q50",
       "source_asset": "lossless.webp",
       "source_format": "webp",
@@ -7365,7 +10330,8 @@
       "error_contracts": {},
       "params": {
         "lossless": true,
-        "grayscale": true
+        "grayscale": true,
+        "rust_encode_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gray.png",
@@ -7378,7 +10344,12 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -8436,6 +11407,63 @@
       }
     },
     {
+      "id": "enc_lossy_rgba_alpha_zero_palette_gap_token",
+      "source_asset": "webp_rgba_alpha_zero_palette_gap_512x512.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "0d5a554fec44c2de7f6e04f7c03f7c4fa9da67fb5acbc6cbd392a91cedd3d168",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_rgba_alpha_zero_palette_gap_512x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_lossy_rgba_alpha_filtered_gradient_plane",
       "source_asset": "webp_rgba_alpha_gradient_plane_512x512.png",
       "source_format": "png",
@@ -9150,6 +12178,177 @@
         "format": "WEBP",
         "kwargs": {
           "lossless": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_bool_carry_run",
+      "source_asset": "webp_lossy_bool_carry_noise_128x128.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossy_bool_carry_noise_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_bool_carry_method_0",
+      "source_asset": "webp_lossy_bool_carry_noise_128x128.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 100,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossy_bool_carry_noise_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_bool_carry_method_4",
+      "source_asset": "webp_lossy_bool_carry_noise_128x128.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 100,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossy_bool_carry_noise_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": false,
+          "method": 4
         },
         "roundtrip": [
           "PIL.Image.open",
@@ -10791,6 +13990,63 @@
       }
     },
     {
+      "id": "enc_lossless_palette_alpha_tail",
+      "source_asset": "webp_lossless_palette_alpha_tail_64x64.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "b749e47aa0f306c0c42c21e9d55ad6ddb36dfcfb419be5c3785f9bf8ce79f936",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_lossless_palette_alpha_tail_64x64.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_lossless_palette4_box_chain",
       "source_asset": "lossless_palette4_box_chain.webp",
       "source_format": "webp",
@@ -11061,7 +14317,8 @@
         "size": [
           17,
           17
-        ]
+        ],
+        "rust_encode_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/webp_subtract_green.png",
@@ -11074,7 +14331,12 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -11556,6 +14818,230 @@
       }
     },
     {
+      "id": "enc_dimension_limit_max_16383_vertical",
+      "source_asset": "webp_dimension_limit_1x16383.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b705847058c2ed781ae1c819e8b2f4ed8641fbfd36201b2efcf6d09a44e2c53",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_dimension_limit_1x16383.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_lossy_dimension_limit_max_16383_vertical",
+      "source_asset": "webp_dimension_limit_1x16383.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b705847058c2ed781ae1c819e8b2f4ed8641fbfd36201b2efcf6d09a44e2c53",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_dimension_limit_1x16383.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_dimension_limit_16384_vertical",
+      "source_asset": "webp_dimension_limit_1x16384.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "e96419f9a3689884605339b27794c33926af7aaf27a5ce786a59ec0be78311e4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "rust_kind": "dimensions",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": true,
+        "quality": 80,
+        "method": 4
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_dimension_limit_1x16384.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": true,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_dimension_limit_lossy_16384_vertical",
+      "source_asset": "webp_dimension_limit_1x16384.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "e96419f9a3689884605339b27794c33926af7aaf27a5ce786a59ec0be78311e4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "rust_kind": "dimensions",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_dimension_limit_1x16384.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_lossy",
       "source_asset": "lossless.webp",
       "source_format": "webp",
@@ -11851,6 +15337,120 @@
           "load",
           "tobytes"
         ]
+      }
+    },
+    {
+      "id": "enc_lossy_method_4_segment_cluster_full_span_48x48",
+      "source_asset": "webp_segment_alpha_full_span_48x48.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "596f26ec405bc7d3f8751c140bcbce1d434af0d9495694afeea3b4407a4a53a1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 4,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_segment_alpha_full_span_48x48.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_lossy_quality_80_method_0_intra4_macroblock_grid_32x32",
+      "source_asset": "webp_intra4_macroblock_grid_32x32.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b8ff21ec037d123f4efd9a53623565f2aed6cb775ff66c83bc2fb1fb9413259",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 80,
+        "method": 0,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_intra4_macroblock_grid_32x32.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 80,
+          "lossless": false,
+          "method": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {

@@ -1,0 +1,55 @@
+--- a/av1/encoder/encoder_utils.c
++++ b/av1/encoder/encoder_utils.c
+@@ -439,11 +439,16 @@
+ 
+   // Force disable of ROI if active_map is enabled. ROI for now
+   // only supported/tested for realtime mode with speed >= 7.
+-  if (!roi->enabled || cpi->active_map.enabled || cpi->oxcf.speed < 7 ||
+-      cpi->oxcf.mode != REALTIME) {
++  if (!roi->enabled || cpi->active_map.enabled) {
+     roi->enabled = 0;
+     roi->delta_qp_enabled = 0;
+     roi->reference_enabled = 0;
++    return;
++  }
++
++  // Fixture input: keep the key frame ordinary and apply the ROI to inter frames.
++  if (frame_is_intra_only(cm)) {
++    av1_disable_segmentation(seg);
+     return;
+   }
+ 
+@@ -472,8 +477,8 @@
+     // Clamp to allowed best/worst quality. For best quality clamp to 1
+     // to avoid qindex = 0 case (lossless segment) which can happen for
+     // best_quality = 0.
+-    if (qindex + internal_delta_q[i] <= cpi->rc.best_quality)
+-      internal_delta_q[i] = AOMMAX(1, cpi->rc.best_quality) - qindex;
++    if (qindex + internal_delta_q[i] < 0)
++      internal_delta_q[i] = -qindex;
+     if (qindex + internal_delta_q[i] > cpi->rc.worst_quality)
+       internal_delta_q[i] =
+           cpi->rc.worst_quality - cm->quant_params.base_qindex;
+--- a/av1/encoder/encoder.c
++++ b/av1/encoder/encoder.c
+@@ -3446,6 +3446,10 @@
+       av1_setup_in_frame_q_adj(cpi);
+     }
+ 
++    if (cpi->roi.enabled) {
++      av1_apply_roi_map(cpi);
++    }
++
+     if (cm->seg.enabled) {
+       if (!cm->seg.update_data && cm->prev_frame) {
+         segfeatures_copy(&cm->seg, &cm->prev_frame->seg);
+--- a/av1/encoder/bitstream.c
++++ b/av1/encoder/bitstream.c
+@@ -4183,6 +4183,7 @@
+     }
+   }
+ 
++  cm->seg.temporal_update = 0;
+   if (tiles->large_scale)
+     return pack_large_scale_tiles_in_tg_obus(
+         cpi, dst, saved_wb, obu_extension_header, largest_tile_id);

@@ -4330,17 +4330,45 @@ impl<'a> Directory<'a> {
             return Some(false);
         }
 
-        let value_width = entry.byte_len.checked_div(entry.count)?;
-        if value_width == 0 || entry.byte_len.checked_rem(entry.count)? != 0 {
+        #[cfg(coverage)]
+        let byte_len = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffDirectoryNumericValueWidthInvalid,
+        ) {
+            0
+        } else {
+            entry.byte_len
+        };
+        #[cfg(not(coverage))]
+        let byte_len = entry.byte_len;
+
+        #[cfg(coverage)]
+        let byte_len = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffDirectoryNumericValueWidthRemainder,
+        ) {
+            entry.byte_len.saturating_sub(1)
+        } else {
+            byte_len
+        };
+
+        let value_width = byte_len.checked_div(entry.count)?;
+        if value_width == 0 || byte_len.checked_rem(entry.count)? != 0 {
             return Some(false);
         }
-        let position = if entry.byte_len <= 4 {
+        let position = if byte_len <= 4 {
             entry.inline_position
         } else {
             entry.value_position
         };
-        let end = position.checked_add(entry.byte_len)?;
-        let bytes = self.data.get(position..end)?;
+        let value_end = position.checked_add(byte_len)?;
+        #[cfg(coverage)]
+        let value_end = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffDirectoryNumericValueRemainderNonEmpty,
+        ) {
+            value_end.checked_add(1)?
+        } else {
+            value_end
+        };
+        let bytes = self.data.get(position..value_end)?;
         let mut values = bytes.chunks_exact(value_width);
         let first = values.next()?;
         if !values.remainder().is_empty() {
@@ -4358,6 +4386,14 @@ impl<'a> Directory<'a> {
 
     pub(super) fn rational(&self, tag: u16, index: usize) -> Option<(i64, i64)> {
         let entry = self.rationals.iter().find(|entry| entry.tag == tag)?;
+        #[cfg(coverage)]
+        let index = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffYcbcrRationalIndexOutOfRange,
+        ) {
+            entry.count
+        } else {
+            index
+        };
         if index >= entry.count {
             return None;
         }
@@ -4385,6 +4421,14 @@ impl<'a> Directory<'a> {
             .floating_entries
             .iter()
             .find(|entry| entry.tag == tag)?;
+        #[cfg(coverage)]
+        let index = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::TiffYcbcrFloatingIndexOutOfRange,
+        ) {
+            entry.count
+        } else {
+            index
+        };
         if index >= entry.count {
             return None;
         }

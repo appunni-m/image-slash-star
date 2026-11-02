@@ -255,9 +255,9 @@ def replace_grain_sentence(
 
 
 def encode_update_grain(grain: dict[str, object]) -> list[int]:
-    """Write the explicit-point update sentence used by the checked I420 source."""
+    """Write an explicit-point color update, including chroma-only grain."""
 
-    if not grain["update"] or grain["chroma_scaling_from_luma"] or not grain["y_points"]:
+    if not grain["update"] or grain["chroma_scaling_from_luma"]:
         raise ValueError("source is not an explicit-point grain update")
     bits: list[int] = []
     append_bits(bits, 1, 1)
@@ -578,8 +578,9 @@ def main() -> None:
         help="verify the pinned fixture files without rewriting them",
     )
     args = parser.parse_args()
+    action = "Checked" if args.check else "Wrote"
     for path in write_avif_filmgrain_edge_fixtures(args.output_dir, check=args.check):
-        print(f"Wrote {path} ({path.stat().st_size} bytes, SHA-256 {FIXTURE_SHA256[path.name]})")
+        print(f"{action} {path} ({path.stat().st_size} bytes, SHA-256 {FIXTURE_SHA256[path.name]})")
 
 
 if __name__ == "__main__":

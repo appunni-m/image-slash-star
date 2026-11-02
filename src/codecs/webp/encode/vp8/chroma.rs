@@ -19,7 +19,20 @@ impl ChromaMode {
     const ALL: [Self; 4] = [Self::Dc, Self::TrueMotion, Self::Vertical, Self::Horizontal];
 }
 
+pub(super) enum ChromaModeSearch {
+    Fixed(ChromaMode),
+    DistortionOnly,
+    RateDistortion,
+}
+
 const FIXED_MODE_COSTS: [u32; 4] = [302, 984, 439, 642];
+
+fn squared_error_8x8(left: &[u8; 64], right: &[u8; 64]) -> u32 {
+    left.iter().zip(right).fold(0_u32, |sum, (&left, &right)| {
+        let difference = i32::from(left).wrapping_sub(i32::from(right));
+        sum.wrapping_add(difference.wrapping_mul(difference).cast_unsigned())
+    })
+}
 
 fn predict(
     mode: ChromaMode,
@@ -359,17 +372,40 @@ pub(super) fn select(
     error_diffusion: bool,
     matrices: &SegmentMatrices,
     lambda_uv: u32,
-    fixed_mode: Option<ChromaMode>,
+    mode_search: ChromaModeSearch,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> ChromaCandidate {
-    // `fixed_mode`, when present, is itself a member of this non-empty enum set.
+    let selected_mode = match mode_search {
+        ChromaModeSearch::Fixed(mode) => Some(mode),
+        ChromaModeSearch::DistortionOnly => {
+            #[allow(
+                clippy::expect_used,
+                reason = "ChromaMode::ALL is the statically non-empty set of VP8 chroma predictions."
+            )]
+            let mode = ChromaMode::ALL
+                .into_iter()
+                .min_by_key(|&mode| {
+                    let prediction_u = predict(mode, top_u, left_u, top_left_u, has_top, has_left);
+                    let prediction_v = predict(mode, top_v, left_v, top_left_v, has_top, has_left);
+                    let distortion = squared_error_8x8(source_u, &prediction_u)
+                        .wrapping_add(squared_error_8x8(source_v, &prediction_v));
+                    u64::from(distortion)
+                        .wrapping_mul(256)
+                        .wrapping_add(u64::from(FIXED_MODE_COSTS[mode as usize]).wrapping_mul(120))
+                })
+                .expect("VP8 always has chroma candidates");
+            Some(mode)
+        }
+        ChromaModeSearch::RateDistortion => None,
+    };
+    // A selected mode always belongs to the complete candidate set.
     #[allow(
         clippy::expect_used,
         reason = "ChromaMode::ALL is the statically non-empty set of VP8 chroma predictions."
     )]
     ChromaMode::ALL
         .into_iter()
-        .filter(|&mode| fixed_mode.is_none_or(|fixed| fixed == mode))
+        .filter(|&mode| selected_mode.is_none_or(|selected| selected == mode))
         .map(|mode| {
             evaluate(
                 mode,

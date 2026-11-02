@@ -26,30 +26,6 @@ pub(crate) const FIX_2_562915447: i32 = 20995;
 pub(crate) const FIX_3_072711026: i32 = 25172;
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_0_298631336: i32x4 = i32x4::new([FIX_0_298631336; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_0_390180644_NEG: i32x4 = i32x4::new([-FIX_0_390180644; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_0_541196100: i32x4 = i32x4::new([FIX_0_541196100; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_0_765366865: i32x4 = i32x4::new([FIX_0_765366865; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_0_899976223_NEG: i32x4 = i32x4::new([-FIX_0_899976223; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_1_175875602: i32x4 = i32x4::new([FIX_1_175875602; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_1_501321110: i32x4 = i32x4::new([FIX_1_501321110; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_1_847759065_NEG: i32x4 = i32x4::new([-FIX_1_847759065; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_1_961570560_NEG: i32x4 = i32x4::new([-FIX_1_961570560; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_2_053119869: i32x4 = i32x4::new([FIX_2_053119869; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_2_562915447_NEG: i32x4 = i32x4::new([-FIX_2_562915447; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-const VFIX_3_072711026: i32x4 = i32x4::new([FIX_3_072711026; 4]);
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VDESCALE_11_BIAS: i32x4 = i32x4::new([1 << 10; 4]);
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VDESCALE_18_BIAS: i32x4 = i32x4::new([1 << 17; 4]);
@@ -58,30 +34,6 @@ const VRANGE_CENTER: i32x4 = i32x4::new([128; 4]);
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VRANGE_MAX: i32x4 = i32x4::new([255; 4]);
 
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_0_298631336: i32x8 = i32x8::new([FIX_0_298631336; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_0_390180644_NEG: i32x8 = i32x8::new([-FIX_0_390180644; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_0_541196100: i32x8 = i32x8::new([FIX_0_541196100; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_0_765366865: i32x8 = i32x8::new([FIX_0_765366865; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_0_899976223_NEG: i32x8 = i32x8::new([-FIX_0_899976223; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_1_175875602: i32x8 = i32x8::new([FIX_1_175875602; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_1_501321110: i32x8 = i32x8::new([FIX_1_501321110; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_1_847759065_NEG: i32x8 = i32x8::new([-FIX_1_847759065; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_1_961570560_NEG: i32x8 = i32x8::new([-FIX_1_961570560; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_2_053119869: i32x8 = i32x8::new([FIX_2_053119869; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_2_562915447_NEG: i32x8 = i32x8::new([-FIX_2_562915447; 8]);
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-const AVX2_VFIX_3_072711026: i32x8 = i32x8::new([FIX_3_072711026; 8]);
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 const AVX2_VDESCALE_11_BIAS: i32x8 = i32x8::new([1 << 10; 8]);
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
@@ -345,10 +297,9 @@ pub(crate) fn jpeg_idct_islow_to_u8_safe(
     }
 }
 
-/// Safe vectorized baseline transform that folds exact dequantization into the
-/// first fixed-width pass and writes final bytes directly to the component
-/// plane. Baseline AC magnitudes always fit after dequantization; the caller
-/// checks the only cumulative lane, the DC predictor, before selecting it.
+/// Safe native transform that retains signed-word dequantization before the
+/// fixed-point butterfly and writes final bytes to the component plane.
+/// The caller checks the cumulative DC product before selecting this path.
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::too_many_arguments,
@@ -462,17 +413,111 @@ fn idct_pass1_column_values(block: &[i32; DCTSIZE2], column: usize) -> [i32; DCT
     ]
 }
 
+// The upstream SIMD butterflies add the even pair and two odd pairs in
+// signed 16-bit lanes, then widen for the factored fixed-point products.
+// With signed-word inputs, each final sum is bounded by 64_570 * 32_768,
+// which fits i32, including either descale bias. The safe vector operators
+// also retain the upstream wrapping lane semantics for defensive states.
+// Keep broadcasts in a const context: constructing them from a closure
+// parameter otherwise materializes temporary arrays in the release kernel.
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[inline(always)]
-fn idct_vector_add(left: i32x4, right: i32x4) -> i32x4 {
-    left.saturating_add(right)
+macro_rules! idct_fixed_word {
+    ($value:expr) => {
+        const {
+            let [low, high, ..] = ($value).to_le_bytes();
+            i16x8::new([i16::from_le_bytes([low, high]); DCTSIZE])
+        }
+    };
+}
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+macro_rules! native_idct_butterfly {
+    ($name:ident, $vector:ty, $word:path, $widen:path, $multiply:path) => {
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "the native signed-word IDCT factorization bounds its fixed-point vector arithmetic within i32"
+        )]
+        #[inline(always)]
+        fn $name(r: [$vector; DCTSIZE]) -> [$vector; DCTSIZE] {
+            let r = [
+                $word(r[0]), $word(r[1]), $word(r[2]), $word(r[3]),
+                $word(r[4]), $word(r[5]), $word(r[6]), $word(r[7]),
+            ];
+            let tmp2 = $multiply(r[2], idct_fixed_word!(FIX_0_541196100))
+                + $multiply(r[6], idct_fixed_word!(FIX_0_541196100 - FIX_1_847759065));
+            let tmp3 = $multiply(r[2], idct_fixed_word!(FIX_0_541196100 + FIX_0_765366865))
+                + $multiply(r[6], idct_fixed_word!(FIX_0_541196100));
+            let tmp0 = $widen(r[0] + r[4]).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+            let tmp1 = $widen(r[0] - r[4]).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
+            let tmp10 = tmp0 + tmp3;
+            let tmp13 = tmp0 - tmp3;
+            let tmp11 = tmp1 + tmp2;
+            let tmp12 = tmp1 - tmp2;
+
+            let pair_73 = r[7] + r[3];
+            let pair_51 = r[5] + r[1];
+            let z3 = $multiply(pair_73, idct_fixed_word!(FIX_1_175875602 - FIX_1_961570560))
+                + $multiply(pair_51, idct_fixed_word!(FIX_1_175875602));
+            let z4 = $multiply(pair_73, idct_fixed_word!(FIX_1_175875602))
+                + $multiply(pair_51, idct_fixed_word!(FIX_1_175875602 - FIX_0_390180644));
+            let odd0 = $multiply(r[7], idct_fixed_word!(FIX_0_298631336 - FIX_0_899976223))
+                - $multiply(r[1], idct_fixed_word!(FIX_0_899976223)) + z3;
+            let odd1 = $multiply(r[5], idct_fixed_word!(FIX_2_053119869 - FIX_2_562915447))
+                - $multiply(r[3], idct_fixed_word!(FIX_2_562915447)) + z4;
+            let odd2 = $multiply(r[3], idct_fixed_word!(FIX_3_072711026 - FIX_2_562915447))
+                - $multiply(r[5], idct_fixed_word!(FIX_2_562915447)) + z3;
+            let odd3 = $multiply(r[1], idct_fixed_word!(FIX_1_501321110 - FIX_0_899976223))
+                - $multiply(r[7], idct_fixed_word!(FIX_0_899976223)) + z4;
+            [
+                tmp10 + odd3,
+                tmp11 + odd2,
+                tmp12 + odd1,
+                tmp13 + odd0,
+                tmp13 - odd0,
+                tmp12 - odd1,
+                tmp11 - odd2,
+                tmp10 - odd3,
+            ]
+        }
+    };
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
-fn idct_vector_sub(left: i32x4, right: i32x4) -> i32x4 {
-    left.saturating_sub(right)
+fn idct_word_four(value: i32x4) -> i16x8 {
+    i16x8::from_i32x8_truncate(cast::<[i32x4; 2], i32x8>([value, i32x4::ZERO]))
 }
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[inline(always)]
+fn idct_widen_four(value: i16x8) -> i32x4 {
+    let [low, _] = cast::<i32x8, [i32x4; 2]>(i32x8::from_i16x8(value));
+    low
+}
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[inline(always)]
+fn idct_multiply_four(left: i16x8, right: i16x8) -> i32x4 {
+    let [low, _] = cast::<i32x8, [i32x4; 2]>(left.widening_mul(right));
+    low
+}
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+native_idct_butterfly!(
+    idct_butterfly_four,
+    i32x4,
+    idct_word_four,
+    idct_widen_four,
+    idct_multiply_four
+);
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+native_idct_butterfly!(
+    idct_butterfly_eight,
+    i32x8,
+    i16x8::from_i32x8_truncate,
+    i32x8::from_i16x8,
+    i16x8::widening_mul
+);
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
@@ -483,15 +528,57 @@ fn load_idct_four(workspace: &[i32; DCTSIZE2], offset: usize) -> i32x4 {
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn idct_vector_descale_11(value: i32x4) -> i32x4 {
-    value
+    let scaled = value
         .saturating_add(VDESCALE_11_BIAS)
-        .unbounded_shr_scalar(11)
+        .unbounded_shr_scalar(11);
+    // Neon rounds and truncates to signed words; SSE2 packs with signed
+    // saturation. Retain the reference workspace boundary before pass two.
+    #[cfg(target_arch = "aarch64")]
+    {
+        scaled.unbounded_shl_scalar(16).unbounded_shr_scalar(16)
+    }
+    #[cfg(target_arch = "x86_64")]
+    {
+        scaled
+            .max(i32x4::new([i32::from(i16::MIN); 4]))
+            .min(i32x4::new([i32::from(i16::MAX); 4]))
+    }
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn store_idct_four(workspace: &mut [i32; DCTSIZE2], offset: usize, value: i32x4) {
     workspace[offset..offset.saturating_add(4)].copy_from_slice(value.as_array());
+}
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[inline(never)]
+fn store_zero_vertical_columns(
+    block: &[i32; DCTSIZE2],
+    workspace: &mut [i32; DCTSIZE2],
+    column: usize,
+    dc: i32x4,
+) -> bool {
+    // Neon tests four columns at a time; SSE2 admits its shortcut only when
+    // all eight columns have zero vertical AC. Test the raw coefficients,
+    // since a zero quantizer must not change which upstream path is chosen.
+    #[cfg(target_arch = "aarch64")]
+    let vertical_ac_zero = (1usize..8).all(|row| {
+        load_idct_four(block, row.saturating_mul(DCTSIZE).saturating_add(column)) == i32x4::ZERO
+    });
+    #[cfg(target_arch = "x86_64")]
+    let vertical_ac_zero = block[DCTSIZE..].iter().all(|&coefficient| coefficient == 0);
+    if !vertical_ac_zero {
+        return false;
+    }
+    let group_base = column.div_euclid(4).saturating_mul(16);
+    for (lane, value) in dc.to_array().into_iter().enumerate() {
+        let offset = group_base.saturating_add(lane.saturating_mul(4));
+        let repeated = i32x4::new([value; 4]);
+        store_idct_four(workspace, offset, repeated);
+        store_idct_four(workspace, offset.saturating_add(32), repeated);
+    }
+    true
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -508,9 +595,21 @@ fn idct_pass1_four_columns_safe(
 ) {
     let load = |row: usize| {
         let offset = row.saturating_mul(DCTSIZE).saturating_add(column);
-        load_idct_four(block, offset) * load_idct_four(quant_table, offset)
+        // Upstream NEON and SSE2 multiply into signed 16-bit lanes before
+        // widening for the transform. Large quantizers retain the low word.
+        let product = load_idct_four(block, offset) * load_idct_four(quant_table, offset);
+        product.unbounded_shl_scalar(16).unbounded_shr_scalar(16)
     };
     let r0 = load(0);
+    let scaled_dc = r0.unbounded_shl_scalar(PASS1_BITS.cast_unsigned());
+    let narrowed_dc = scaled_dc.unbounded_shl_scalar(16).unbounded_shr_scalar(16);
+    // The ordinary transform already agrees when the shortcut's workspace
+    // fits i16. Outline the rare bitmap check and word-sized wrap.
+    if scaled_dc != narrowed_dc
+        && store_zero_vertical_columns(block, workspace, column, narrowed_dc)
+    {
+        return;
+    }
     let r1 = load(1);
     let r2 = load(2);
     let r3 = load(3);
@@ -519,48 +618,19 @@ fn idct_pass1_four_columns_safe(
     let r6 = load(6);
     let r7 = load(7);
 
-    let z1 = idct_vector_add(r2, r6) * VFIX_0_541196100;
-    let tmp2 = idct_vector_add(z1, r6 * VFIX_1_847759065_NEG);
-    let tmp3 = idct_vector_add(z1, r2 * VFIX_0_765366865);
-    let tmp0 = idct_vector_add(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-    let tmp1 = idct_vector_sub(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-
-    let tmp10 = idct_vector_add(tmp0, tmp3);
-    let tmp13 = idct_vector_sub(tmp0, tmp3);
-    let tmp11 = idct_vector_add(tmp1, tmp2);
-    let tmp12 = idct_vector_sub(tmp1, tmp2);
-
-    let z1 = idct_vector_add(r7, r1);
-    let z2 = idct_vector_add(r5, r3);
-    let z3 = idct_vector_add(r7, r3);
-    let z4 = idct_vector_add(r5, r1);
-    let z5 = idct_vector_add(z3, z4) * VFIX_1_175875602;
-
-    let t0 = r7 * VFIX_0_298631336;
-    let t1 = r5 * VFIX_2_053119869;
-    let t2 = r3 * VFIX_3_072711026;
-    let t3 = r1 * VFIX_1_501321110;
-    let z1 = z1 * VFIX_0_899976223_NEG;
-    let z2 = z2 * VFIX_2_562915447_NEG;
-    let z3 = idct_vector_add(z3 * VFIX_1_961570560_NEG, z5);
-    let z4 = idct_vector_add(z4 * VFIX_0_390180644_NEG, z5);
-
-    let o0 = idct_vector_add(idct_vector_add(t0, z1), z3);
-    let o1 = idct_vector_add(idct_vector_add(t1, z2), z4);
-    let o2 = idct_vector_add(idct_vector_add(t2, z2), z3);
-    let o3 = idct_vector_add(idct_vector_add(t3, z1), z4);
-    let low = transpose_idct_four([
-        idct_vector_descale_11(idct_vector_add(tmp10, o3)),
-        idct_vector_descale_11(idct_vector_add(tmp11, o2)),
-        idct_vector_descale_11(idct_vector_add(tmp12, o1)),
-        idct_vector_descale_11(idct_vector_add(tmp13, o0)),
-    ]);
-    let high = transpose_idct_four([
-        idct_vector_descale_11(idct_vector_sub(tmp13, o0)),
-        idct_vector_descale_11(idct_vector_sub(tmp12, o1)),
-        idct_vector_descale_11(idct_vector_sub(tmp11, o2)),
-        idct_vector_descale_11(idct_vector_sub(tmp10, o3)),
-    ]);
+    let rows = idct_butterfly_four([r0, r1, r2, r3, r4, r5, r6, r7]);
+    let rows = [
+        idct_vector_descale_11(rows[0]),
+        idct_vector_descale_11(rows[1]),
+        idct_vector_descale_11(rows[2]),
+        idct_vector_descale_11(rows[3]),
+        idct_vector_descale_11(rows[4]),
+        idct_vector_descale_11(rows[5]),
+        idct_vector_descale_11(rows[6]),
+        idct_vector_descale_11(rows[7]),
+    ];
+    let low = transpose_idct_four([rows[0], rows[1], rows[2], rows[3]]);
+    let high = transpose_idct_four([rows[4], rows[5], rows[6], rows[7]]);
     let group_base = column.div_euclid(4).saturating_mul(16);
     for lane in 0..4usize {
         store_idct_four(
@@ -591,9 +661,15 @@ fn idct_pass1_eight_columns_avx2(
 ) {
     let load = |frequency_row: usize| {
         let offset = frequency_row.saturating_mul(DCTSIZE);
-        load_idct_eight(block, offset) * load_idct_eight(quant_table, offset)
+        let product = load_idct_eight(block, offset) * load_idct_eight(quant_table, offset);
+        product.unbounded_shl_scalar(16).unbounded_shr_scalar(16)
     };
     let r0 = load(0);
+    let scaled_dc = r0.unbounded_shl_scalar(PASS1_BITS.cast_unsigned());
+    let narrowed_dc = scaled_dc.unbounded_shl_scalar(16).unbounded_shr_scalar(16);
+    if scaled_dc != narrowed_dc && store_zero_vertical_columns_avx2(block, workspace, narrowed_dc) {
+        return;
+    }
     let r1 = load(1);
     let r2 = load(2);
     let r3 = load(3);
@@ -602,56 +678,39 @@ fn idct_pass1_eight_columns_avx2(
     let r6 = load(6);
     let r7 = load(7);
 
-    let z1 = avx2_idct_add(r2, r6) * AVX2_VFIX_0_541196100;
-    let tmp2 = avx2_idct_add(z1, r6 * AVX2_VFIX_1_847759065_NEG);
-    let tmp3 = avx2_idct_add(z1, r2 * AVX2_VFIX_0_765366865);
-    let tmp0 = avx2_idct_add(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-    let tmp1 = avx2_idct_sub(r0, r4).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-
-    let tmp10 = avx2_idct_add(tmp0, tmp3);
-    let tmp13 = avx2_idct_sub(tmp0, tmp3);
-    let tmp11 = avx2_idct_add(tmp1, tmp2);
-    let tmp12 = avx2_idct_sub(tmp1, tmp2);
-
-    let z1 = avx2_idct_add(r7, r1);
-    let z2 = avx2_idct_add(r5, r3);
-    let z3 = avx2_idct_add(r7, r3);
-    let z4 = avx2_idct_add(r5, r1);
-    let z5 = avx2_idct_add(z3, z4) * AVX2_VFIX_1_175875602;
-
-    let t0 = r7 * AVX2_VFIX_0_298631336;
-    let t1 = r5 * AVX2_VFIX_2_053119869;
-    let t2 = r3 * AVX2_VFIX_3_072711026;
-    let t3 = r1 * AVX2_VFIX_1_501321110;
-    let z1 = z1 * AVX2_VFIX_0_899976223_NEG;
-    let z2 = z2 * AVX2_VFIX_2_562915447_NEG;
-    let z3 = avx2_idct_add(z3 * AVX2_VFIX_1_961570560_NEG, z5);
-    let z4 = avx2_idct_add(z4 * AVX2_VFIX_0_390180644_NEG, z5);
-
-    let o0 = avx2_idct_add(avx2_idct_add(t0, z1), z3);
-    let o1 = avx2_idct_add(avx2_idct_add(t1, z2), z4);
-    let o2 = avx2_idct_add(avx2_idct_add(t2, z2), z3);
-    let o3 = avx2_idct_add(avx2_idct_add(t3, z1), z4);
-
-    store_idct_pass1_rows_avx2(
-        workspace,
-        [
-            avx2_idct_descale_11(avx2_idct_add(tmp10, o3)),
-            avx2_idct_descale_11(avx2_idct_add(tmp11, o2)),
-            avx2_idct_descale_11(avx2_idct_add(tmp12, o1)),
-            avx2_idct_descale_11(avx2_idct_add(tmp13, o0)),
-            avx2_idct_descale_11(avx2_idct_sub(tmp13, o0)),
-            avx2_idct_descale_11(avx2_idct_sub(tmp12, o1)),
-            avx2_idct_descale_11(avx2_idct_sub(tmp11, o2)),
-            avx2_idct_descale_11(avx2_idct_sub(tmp10, o3)),
-        ],
-    );
+    let rows = idct_butterfly_eight([r0, r1, r2, r3, r4, r5, r6, r7]);
+    let rows = [
+        avx2_idct_descale_11(rows[0]),
+        avx2_idct_descale_11(rows[1]),
+        avx2_idct_descale_11(rows[2]),
+        avx2_idct_descale_11(rows[3]),
+        avx2_idct_descale_11(rows[4]),
+        avx2_idct_descale_11(rows[5]),
+        avx2_idct_descale_11(rows[6]),
+        avx2_idct_descale_11(rows[7]),
+    ];
+    store_idct_pass1_rows_avx2(workspace, rows);
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 #[inline(always)]
 fn load_idct_eight(values: &[i32; DCTSIZE2], offset: usize) -> i32x8 {
     pod_read_unaligned(cast_slice(&values[offset..offset.saturating_add(8)]))
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
+#[inline(never)]
+fn store_zero_vertical_columns_avx2(
+    block: &[i32; DCTSIZE2],
+    workspace: &mut [i32; DCTSIZE2],
+    dc: i32x8,
+) -> bool {
+    if block[DCTSIZE..].iter().any(|&coefficient| coefficient != 0) {
+        return false;
+    }
+    // AVX2's zero-AC shortcut also retains signed 16-bit word products.
+    store_idct_pass1_rows_avx2(workspace, [dc; DCTSIZE]);
+    true
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
@@ -671,10 +730,6 @@ fn store_idct_pass1_rows_avx2(workspace: &mut [i32; DCTSIZE2], rows: [i32x8; DCT
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-#[expect(
-    clippy::arithmetic_side_effects,
-    reason = "the AVX2 lane multiplies operate on bounded JPEG ISLOW intermediate values"
-)]
 #[allow(
     clippy::too_many_arguments,
     reason = "the AVX2 row transform writes one complete fixed-size component block"
@@ -700,60 +755,23 @@ fn idct_pass2_eight_rows_avx2(
         load_idct_eight_rows(workspace, 16, 3),
     ];
 
-    let z2 = left[2];
-    let z3 = right[2];
-    let z1 = avx2_idct_add(z2, z3) * AVX2_VFIX_0_541196100;
-    let tmp2 = avx2_idct_add(z1, z3 * AVX2_VFIX_1_847759065_NEG);
-    let tmp3 = avx2_idct_add(z1, z2 * AVX2_VFIX_0_765366865);
-
-    let z2 = left[0];
-    let z3 = right[0];
-    let tmp0 = avx2_idct_add(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-    let tmp1 = avx2_idct_sub(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-
-    let tmp10 = avx2_idct_add(tmp0, tmp3);
-    let tmp13 = avx2_idct_sub(tmp0, tmp3);
-    let tmp11 = avx2_idct_add(tmp1, tmp2);
-    let tmp12 = avx2_idct_sub(tmp1, tmp2);
-
-    let v0 = right[3];
-    let v1 = right[1];
-    let v2 = left[3];
-    let v3 = left[1];
-    let z1 = avx2_idct_add(v0, v3);
-    let z2 = avx2_idct_add(v1, v2);
-    let z3 = avx2_idct_add(v0, v2);
-    let z4 = avx2_idct_add(v1, v3);
-    let z5 = avx2_idct_add(z3, z4) * AVX2_VFIX_1_175875602;
-
-    let t0 = v0 * AVX2_VFIX_0_298631336;
-    let t1 = v1 * AVX2_VFIX_2_053119869;
-    let t2 = v2 * AVX2_VFIX_3_072711026;
-    let t3 = v3 * AVX2_VFIX_1_501321110;
-    let z1 = z1 * AVX2_VFIX_0_899976223_NEG;
-    let z2 = z2 * AVX2_VFIX_2_562915447_NEG;
-    let z3 = avx2_idct_add(z3 * AVX2_VFIX_1_961570560_NEG, z5);
-    let z4 = avx2_idct_add(z4 * AVX2_VFIX_0_390180644_NEG, z5);
-
-    let o0 = avx2_idct_add(avx2_idct_add(t0, z1), z3);
-    let o1 = avx2_idct_add(avx2_idct_add(t1, z2), z4);
-    let o2 = avx2_idct_add(avx2_idct_add(t2, z2), z3);
-    let o3 = avx2_idct_add(avx2_idct_add(t3, z1), z4);
-
+    let rows = idct_butterfly_eight([
+        left[0], left[1], left[2], left[3], right[0], right[1], right[2], right[3],
+    ]);
     store_idct_eight_rows(
         output,
         output_stride,
         output_x,
         output_y,
         [
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp10, o3))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp11, o2))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp12, o1))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_add(tmp13, o0))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp13, o0))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp12, o1))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp11, o2))),
-            avx2_idct_range_limit(avx2_idct_descale_18(avx2_idct_sub(tmp10, o3))),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[0])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[1])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[2])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[3])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[4])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[5])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[6])),
+            avx2_idct_range_limit(avx2_idct_descale_18(rows[7])),
         ],
     );
 }
@@ -770,22 +788,12 @@ fn load_idct_eight_rows(workspace: &[i32; DCTSIZE2], column_group: usize, column
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 #[inline(always)]
-fn avx2_idct_add(left: i32x8, right: i32x8) -> i32x8 {
-    left.saturating_add(right)
-}
-
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-#[inline(always)]
-fn avx2_idct_sub(left: i32x8, right: i32x8) -> i32x8 {
-    left.saturating_sub(right)
-}
-
-#[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
-#[inline(always)]
 fn avx2_idct_descale_11(value: i32x8) -> i32x8 {
     value
         .saturating_add(AVX2_VDESCALE_11_BIAS)
         .unbounded_shr_scalar(11)
+        .max(i32x8::new([i32::from(i16::MIN); 8]))
+        .min(i32x8::new([i32::from(i16::MAX); 8]))
 }
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
@@ -892,10 +900,6 @@ fn store_idct_four_rows(
     clippy::too_many_arguments,
     reason = "the vector pass receives its transposed workspace and plane coordinates"
 )]
-#[expect(
-    clippy::arithmetic_side_effects,
-    reason = "JPEG ISLOW fixed-point lanes are bounded before the safe vector multiplies"
-)]
 #[inline(always)]
 fn idct_pass2_four_rows_safe(
     workspace: &[i32; DCTSIZE2],
@@ -923,63 +927,26 @@ fn idct_pass2_four_rows_safe(
         ]
     };
 
-    let z2 = left[2];
-    let z3 = right[2];
-    let z1 = idct_vector_add(z2, z3) * VFIX_0_541196100;
-    let tmp2 = idct_vector_add(z1, z3 * VFIX_1_847759065_NEG);
-    let tmp3 = idct_vector_add(z1, z2 * VFIX_0_765366865);
-
-    let z2 = left[0];
-    let z3 = right[0];
-    let tmp0 = idct_vector_add(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-    let tmp1 = idct_vector_sub(z2, z3).unbounded_shl_scalar(CONST_BITS.cast_unsigned());
-
-    let tmp10 = idct_vector_add(tmp0, tmp3);
-    let tmp13 = idct_vector_sub(tmp0, tmp3);
-    let tmp11 = idct_vector_add(tmp1, tmp2);
-    let tmp12 = idct_vector_sub(tmp1, tmp2);
-
-    let v0 = right[3];
-    let v1 = right[1];
-    let v2 = left[3];
-    let v3 = left[1];
-    let z1 = idct_vector_add(v0, v3);
-    let z2 = idct_vector_add(v1, v2);
-    let z3 = idct_vector_add(v0, v2);
-    let z4 = idct_vector_add(v1, v3);
-    let z5 = idct_vector_add(z3, z4) * VFIX_1_175875602;
-
-    let t0 = v0 * VFIX_0_298631336;
-    let t1 = v1 * VFIX_2_053119869;
-    let t2 = v2 * VFIX_3_072711026;
-    let t3 = v3 * VFIX_1_501321110;
-    let z1 = z1 * VFIX_0_899976223_NEG;
-    let z2 = z2 * VFIX_2_562915447_NEG;
-    let z3 = idct_vector_add(z3 * VFIX_1_961570560_NEG, z5);
-    let z4 = idct_vector_add(z4 * VFIX_0_390180644_NEG, z5);
-
-    let o0 = idct_vector_add(idct_vector_add(t0, z1), z3);
-    let o1 = idct_vector_add(idct_vector_add(t1, z2), z4);
-    let o2 = idct_vector_add(idct_vector_add(t2, z2), z3);
-    let o3 = idct_vector_add(idct_vector_add(t3, z1), z4);
-
+    let rows = idct_butterfly_four([
+        left[0], left[1], left[2], left[3], right[0], right[1], right[2], right[3],
+    ]);
+    let rows = [
+        range_limit_four(rows[0]),
+        range_limit_four(rows[1]),
+        range_limit_four(rows[2]),
+        range_limit_four(rows[3]),
+        range_limit_four(rows[4]),
+        range_limit_four(rows[5]),
+        range_limit_four(rows[6]),
+        range_limit_four(rows[7]),
+    ];
     store_idct_four_rows(
         output,
         output_stride,
         output_x,
         output_y,
-        [
-            range_limit_four(idct_vector_add(tmp10, o3)),
-            range_limit_four(idct_vector_add(tmp11, o2)),
-            range_limit_four(idct_vector_add(tmp12, o1)),
-            range_limit_four(idct_vector_add(tmp13, o0)),
-        ],
-        [
-            range_limit_four(idct_vector_sub(tmp13, o0)),
-            range_limit_four(idct_vector_sub(tmp12, o1)),
-            range_limit_four(idct_vector_sub(tmp11, o2)),
-            range_limit_four(idct_vector_sub(tmp10, o3)),
-        ],
+        [rows[0], rows[1], rows[2], rows[3]],
+        [rows[4], rows[5], rows[6], rows[7]],
     );
 }
 

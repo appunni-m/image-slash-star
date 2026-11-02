@@ -1671,28 +1671,31 @@ impl FrameState {
                 .sequence
                 .as_ref()
                 .ok_or(malformed("assembled tile frame has no sequence"))?;
-            assembled_color_leaf = assemble_color_tiles(
+            let assembled_color = assemble_color_tiles(
                 &pending.complete_color_tiles,
                 &group.complete_color_tiles,
                 &pending.header,
                 sequence,
             )?;
-            if pending.header.superres_enabled {
-                let depth = SampleDepth::new(sequence.bit_depth)
-                    .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
-                assembled_color_leaf = assembled_color_leaf
-                    .map(|leaf| {
+            assembled_color_leaf = assembled_color
+                .map(|assembled| {
+                    if pending.header.superres_enabled {
+                        let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                            malformed("super-resolution sample depth is unsupported")
+                        })?;
                         upscale_color_leaf_for_superres(
-                            leaf,
+                            assembled.leaf,
                             &pending.header,
                             sequence,
-                            pending.header.frame_width,
-                            pending.header.frame_height,
+                            assembled.source_width,
+                            assembled.source_height,
                             depth,
                         )
-                    })
-                    .transpose()?;
-            }
+                    } else {
+                        Ok(assembled.leaf)
+                    }
+                })
+                .transpose()?;
         }
         if tile_count > 1
             && pending
@@ -1925,6 +1928,12 @@ struct ReconstructedColorTile {
     reconstruction: entropy::Lossy420Reconstruction,
 }
 
+struct AssembledColorLeaf {
+    leaf: super::block::FirstLeaf,
+    source_width: u32,
+    source_height: u32,
+}
+
 struct ReconstructedMonochromeTile {
     x: u32,
     y: u32,
@@ -1945,7 +1954,7 @@ fn assemble_color_tiles(
     trailing_tiles: &[ReconstructedColorTile],
     header: &FrameHeader,
     sequence: &SequenceHeader,
-) -> Av1Result<Option<super::block::FirstLeaf>> {
+) -> Av1Result<Option<AssembledColorLeaf>> {
     if tiles.is_empty() && trailing_tiles.is_empty() {
         return Ok(None);
     }
@@ -1953,15 +1962,32 @@ fn assemble_color_tiles(
         .map_err(|_| malformed("assembled frame width exceeds usize"))?;
     let frame_height = usize::try_from(header.frame_height)
         .map_err(|_| malformed("assembled frame height exceeds usize"))?;
+    let mut source_frame_width = header.frame_width;
+    let mut source_frame_height = header.frame_height;
+    for tile in tiles.iter().chain(trailing_tiles) {
+        source_frame_width = source_frame_width.max(
+            tile.x
+                .checked_add(tile.reconstruction.source_width)
+                .ok_or_else(|| malformed("assembled source frame width overflows"))?,
+        );
+        source_frame_height = source_frame_height.max(
+            tile.y
+                .checked_add(tile.reconstruction.source_height)
+                .ok_or_else(|| malformed("assembled source frame height overflows"))?,
+        );
+    }
     let active_width = frame_width.div_ceil(8);
     let active_height = frame_height.div_ceil(8);
     let region_width = frame_width.div_ceil(64);
     let region_height = frame_height.div_ceil(64);
-    let mut canvas = super::raster::FrameCanvas::new(
+    let mut canvas = super::raster::FrameCanvas::new_padded(
         header.frame_width,
         header.frame_height,
+        source_frame_width,
+        source_frame_height,
         sequence.subsampling_x,
         sequence.subsampling_y,
+        false,
     )?;
     let filter_block_count = tiles
         .iter()
@@ -2054,8 +2080,8 @@ fn assemble_color_tiles(
             return Err(malformed("CDEF tile origin is not 64-pixel aligned"));
         }
         canvas.place_planes(
-            tile.width,
-            tile.height,
+            tile.reconstruction.source_width,
+            tile.reconstruction.source_height,
             &tile.reconstruction.leaf.planes,
             tile.x,
             tile.y,
@@ -2160,35 +2186,56 @@ fn assemble_color_tiles(
             }
         }
     }
-    let planes = canvas.finish_with_filters(
-        loop_parameters,
-        &filter_blocks,
-        None,
-        None,
-        cdef_parameters,
-        &cdef_indices,
-        &cdef_active,
-    )?;
-    Ok(Some(super::block::FirstLeaf {
-        width: header.frame_width,
-        height: header.frame_height,
-        block_skipped: false,
-        planes,
-        luma_predictor: super::block::LumaPredictor::Dc,
-        chroma_predictor: None,
-        luma_context: 0x40,
-        chroma_contexts: [0x40; 2],
-        chroma_right_contexts: [[0x40; 16]; 2],
-        chroma_bottom_contexts: [[0x40; 16]; 2],
-        tx_context_width: 0,
-        tx_context_height: 0,
-        luma_transform_split: false,
-        luma_right_contexts: [0x40; 16],
-        luma_bottom_contexts: [0x40; 16],
-        wide_coefficient_contexts: None,
-        palette_cache: Default::default(),
-        #[cfg(coverage)]
-        entropy_operations: Vec::new(),
+    let planes = if header.superres_enabled {
+        canvas.finish_with_filters_preserving_padding(
+            loop_parameters,
+            &filter_blocks,
+            None,
+            None,
+            cdef_parameters,
+            &cdef_indices,
+            &cdef_active,
+        )?
+    } else {
+        canvas.finish_with_filters(
+            loop_parameters,
+            &filter_blocks,
+            None,
+            None,
+            cdef_parameters,
+            &cdef_indices,
+            &cdef_active,
+        )?
+    };
+    let (source_frame_width, source_frame_height) = if header.superres_enabled {
+        (source_frame_width, source_frame_height)
+    } else {
+        (header.frame_width, header.frame_height)
+    };
+    Ok(Some(AssembledColorLeaf {
+        leaf: super::block::FirstLeaf {
+            width: header.frame_width,
+            height: header.frame_height,
+            block_skipped: false,
+            planes,
+            luma_predictor: super::block::LumaPredictor::Dc,
+            chroma_predictor: None,
+            luma_context: 0x40,
+            chroma_contexts: [0x40; 2],
+            chroma_right_contexts: [[0x40; 16]; 2],
+            chroma_bottom_contexts: [[0x40; 16]; 2],
+            tx_context_width: 0,
+            tx_context_height: 0,
+            luma_transform_split: false,
+            luma_right_contexts: [0x40; 16],
+            luma_bottom_contexts: [0x40; 16],
+            wide_coefficient_contexts: None,
+            palette_cache: Default::default(),
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        },
+        source_width: source_frame_width,
+        source_height: source_frame_height,
     }))
 }
 
@@ -2973,17 +3020,23 @@ fn validate_tile_entropy_prefixes(
             if tiling.tile_count() == 1 && ranges.len() == 1 {
                 let mut restoration_plan = reconstruction.restoration;
                 if sequence.monochrome {
+                    let source_width = reconstruction.source_width;
+                    let source_height = reconstruction.source_height;
                     let plane = reconstruction.into_monochrome_plane()?;
                     let plane = if header.superres_enabled {
                         let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
                             malformed("super-resolution sample depth is unsupported")
                         })?;
-                        resize::upscale_monochrome_plane(
+                        resize::upscale_monochrome_plane_with_geometry(
                             plane,
-                            header.frame_width,
-                            header.upscaled_width,
-                            header.frame_height,
-                            header.superres_denominator,
+                            resize::ResizeGeometry {
+                                coded_width: header.frame_width,
+                                source_width,
+                                source_height,
+                                output_width: header.upscaled_width,
+                                output_height: header.frame_height,
+                                superres_denominator: header.superres_denominator,
+                            },
                             depth,
                         )?
                     } else {
@@ -3021,7 +3074,8 @@ fn validate_tile_entropy_prefixes(
                 } else {
                     None
                 };
-                let filtered = reconstruction.into_filtered_leaf(striped_restoration)?;
+                let filtered = reconstruction
+                    .into_filtered_leaf(header.superres_enabled, striped_restoration)?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;

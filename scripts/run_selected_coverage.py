@@ -529,6 +529,13 @@ def run(toolchain: str, cases: list[str], report: Path) -> int:
     versions = discover_toolchain(toolchain)
     argv = build_command(toolchain, report, cases, versions["target"])
     environment = os.environ.copy()
+    # LLVM-Cov scans host and target output trees. Full coverage uses Cargo's
+    # host layout, while this command sets --target explicitly. Keep their
+    # caches separate so old executables cannot add stale coverage mappings.
+    if not environment.get("CARGO_TARGET_DIR"):
+        environment["CARGO_TARGET_DIR"] = str(
+            ROOT / "target" / "cargo-llvm-cov" / "selected"
+        )
     environment["RUSTC_WRAPPER"] = ""
     environment["CARGO_NET_OFFLINE"] = "true"
     environment["CARGO_TERM_COLOR"] = "never"
@@ -559,6 +566,7 @@ def run(toolchain: str, cases: list[str], report: Path) -> int:
             "instrumentation": ["branch", "llvm-cov"],
             "target": versions["target"],
             "target_source": versions["target_source"],
+            "cargo_target_directory": str((ROOT / environment["CARGO_TARGET_DIR"]).resolve()),
             "environment_variable_hashes": environment_identity,
         },
         "argv": argv,
@@ -581,6 +589,7 @@ def run(toolchain: str, cases: list[str], report: Path) -> int:
             ("RUSTC_WRAPPER", ""),
             ("CARGO_NET_OFFLINE", "true"),
             ("CARGO_TERM_COLOR", "never"),
+            ("CARGO_TARGET_DIR", environment["CARGO_TARGET_DIR"]),
             ("IMAGE_SLASH_STAR_VERBOSE_MATRIX", "1"),
         )
     )

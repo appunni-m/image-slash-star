@@ -9,14 +9,15 @@ is not evidence that a later fix failed. No entry is silently removed here.
 ## Current pure-Rust AVIF cutover
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
-The latest complete local all-feature run passed 57/57 matrix tests and 69/69
-feature-gate tests on source commit
-`34c3930f2e7f6fdad102a421e15170fc2e202688`. Its report, exact totals, test
-counts, and Coverage MCP attribution limits are recorded in
-[Evidence](EVIDENCE.md). The LLVM percentages below remain the historical
-managed baseline; they use a separate report and denominator.
+The latest local all-feature campaign recorded in [Evidence](EVIDENCE.md)
+passed six integration executables (4, 1, 57, 7, 1, and 69 cases) against the
+working tree based at `69a79d4c4`, including 57/57 matrix tests and 69/69
+feature-gate tests. The tree contained uncommitted changes;
+Coverage MCP marks source identity unverified and test attribution unknown.
+The LLVM percentages below remain the historical managed baseline; they use a
+separate report and denominator.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 224 exact `cfg(coverage)` guards across 31 files.
+The origin verifier passes for 267 exact `cfg(coverage)` guards across 36 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -32,9 +33,57 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 637 rows total, 637 active, 0 explicit planned gaps.
-- AVIF encode: 32 rows total, 1 active parity case and 31 explicit planned gaps.
-- Whole matrix: 2,704 rows total, 2,137 active decode rows, 536 active encode rows, 0 planned decode rows, and 31 planned encode rows.
+- AVIF decode/inspect/verify: 1243 rows total, 1243 active, 0 explicit planned gaps.
+- AVIF encode: 32 rows total, 5 active parity cases and 27 explicit planned gaps.
+- Whole matrix: 3,684 rows total, 3,016 active decode rows, 641 active encode rows, 0 planned decode rows, and 27 planned encode rows.
+
+Nine integer-motion mixed-key cases now cover I420/I422/I444 at 8/10/12 bits
+with exact Pillow still/sequence output. The fresh full run passes 139 integration
+checks, 3,657 parity cases and 167 separate fault contracts. The unchanged motion
+path gains one covered line, one branch and four regions; frame parsing gains
+another branch. Concurrent owner-approved metadata getters add uncovered
+lines/functions, so global denominators differ: 72.0253% lines, 65.4476% branches,
+62.0070% functions and 70.7391% regions. Fresh strict style, SSE2/AVX2 compile and
+feature gates pass. Alpha floors pass; strict 100% remains unmet. The bounded
+follow-up and preserved edits are recorded in [Evidence](EVIDENCE.md).
+
+The 54-case color mixed-key follow-up is closed under AVF-SEQUENCE-001:
+I420/I422/I444, 8/10/12 bits, flat/varied keys and coded widths 71/100/102
+match exact Pillow still and sequence output. Strict style, SSE2/AVX2 compile,
+native/WASM/WASI feature checks, all 3,639 active parity cases and the
+54-workload latency guard pass. The color follow-up full report records 72.0255% lines,
+65.4382% branches, 62.0206% functions and 70.7374% regions. Alpha floors pass;
+strict 100%, broader reconstruction, encoder completion and native x86 speeds
+remain open. Full evidence is in [Evidence](EVIDENCE.md).
+
+The AVF-SEQUENCE-001 coded-width-102 follow-up is closed for twelve declared
+public 8/10/12-bit parity cases at logical widths 71, 100 and 102, including
+20-row bottom edges. Reconstruction keeps the native coded tail separate from
+logical resize geometry and admits the existing 8-bit mixed WHT path. Strict
+style, feature, selected/full parity and the 32-workload latency guard pass.
+That preceding full campaign records 71.9678% lines, 65.3738% branches, 61.9945%
+functions and 70.6912% regions; alpha floors pass and strict 100% remains open.
+Broader sequence reconstruction, encoder completion and native x86 performance
+remain unfinished. Full details and retained failures are in [Evidence](EVIDENCE.md).
+
+The active `decode:avif:error_animated_frame_id_outside_continuity` and
+`decode:avif:error_animated_frame_id_wrapped_outside_continuity` parity rows
+cover a unique second frame ID exactly 2^14 after its 15-bit predecessor and a
+lower ID that wraps to a modulo distance of 32,767. Pillow decodes frame zero
+and rejects frame one in both cases; the selected Rust parity run passes and
+records both subtraction directions and the continuity-boundary rejection.
+
+The active `decode:avif:animated_equal_picture_interval_two_ticks` row uses a valid two-tick AV1 equal-picture interval (`uvlc(1)`) while preserving BMFF sample timing. Its selected parity run passes exact five-frame RGB output and records both outcomes of the `bit_reader.rs:241` UVLC leading-zero loop.
+
+The active `decode:avif:animated_frame_id_stale_reference_invalidation` row
+preserves exact pixels across a three-frame sequence with IDs 0, 8,000, and
+17,000. The inter frame refreshes one slot; the final key frame reaches the
+stale-slot invalidation edge while remaining independently decodable.
+
+The companion `decode:avif:animated_frame_id_future_reference_invalidation`
+uses IDs 30,000, 10,000, and 20,000. Its wrapped inter frame leaves seven
+references above the final key frame's ID, exercising the opposite invalidation
+direction with exact three-frame parity.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
@@ -167,12 +216,14 @@ Malformed repeating-list counts, versions and missing fields are container
 errors. Color-track repetition takes precedence over alpha metadata.
 
 The [loop corpus](../tests/fixtures/outputs/avif_loops/index.json) contains
-28 complete files: 20 accepted cases with unchanged pixels and eight native
-parse/Pillow-open rejections. The matrix generator now binds AVIF loop values
+192 complete files: 184 accepted cases with Pillow frame-pixel references and eight
+native-parse/Pillow-open rejections. The matrix generator now binds AVIF loop values
 to native case/input/index hashes and records an independent origin. Pillow's
-missing loop key remains separately recorded. Deferred public regressions cover
-pixels, timing, loop values and malformed lifecycle operations. No row or
-finding is promoted; Rust execution and managed coverage remain deferred.
+missing loop key remains separately recorded. Active parity rows compare
+accepted-frame pixels, timing and available loop values, and malformed rows
+check public parse outcomes. Broader sequence-state and resource-lifecycle
+coverage remains open; full-suite line and branch coverage is still below
+100%.
 
 ## Display retention implementation in progress — 2026-09-17
 

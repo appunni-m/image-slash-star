@@ -21,6 +21,15 @@ pub(super) struct AdaptedProbabilities {
     pub(super) use_skip_probability: bool,
 }
 
+pub(super) fn default_probabilities() -> AdaptedProbabilities {
+    AdaptedProbabilities {
+        coefficients: COEFF_PROBS,
+        updates: [[[[false; 11]; 3]; 8]; 4],
+        skip_probability: 0,
+        use_skip_probability: false,
+    }
+}
+
 fn skip_probability(total: usize, skipped: usize) -> u8 {
     let total = total.max(1);
     let non_skipped = total.saturating_sub(skipped);

@@ -68,3 +68,27 @@ def rewrite_boxes(
             payload = rewrite_boxes(payload, transform, child_path)
         rebuilt.append(pack_box(kind, transform(child_path, payload)))
     return b"".join(rebuilt)
+
+
+def normalize_creation_timestamps(data: bytes) -> bytes:
+    """Zero creation/modification timestamps in movie, track, and media headers."""
+    timestamp_boxes = {b"mvhd", b"tkhd", b"mdhd"}
+
+    def clear_timestamps(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        if path[-1] not in timestamp_boxes:
+            return payload
+        if not payload:
+            raise ValueError("truncated BMFF time box")
+        version = payload[0]
+        if version == 0:
+            width = 4
+        elif version == 1:
+            width = 8
+        else:
+            raise ValueError(f"unsupported BMFF time box version {version}")
+        end = 4 + 2 * width
+        if len(payload) < end:
+            raise ValueError("truncated BMFF creation or modification time")
+        return payload[:4] + bytes(2 * width) + payload[end:]
+
+    return rewrite_boxes(data, clear_timestamps)

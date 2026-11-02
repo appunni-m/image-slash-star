@@ -60,6 +60,10 @@ FRACTIONAL_FIXTURE = (
     "ycck_fractional_3x2_8x8.jpg",
     "bc0b7c83c57fbe53482742cc9f5b7006c0923a09d370453571a23d33cad29e7b",
 )
+VERTICAL_FRACTIONAL_FIXTURE = (
+    "ycck_fractional_vertical_3x2_8x8.jpg",
+    "a2bbff78c082139a2760232d613216f6a3f799b5770a30bc7f51bccd0da960b1",
+)
 DEFAULT_PREFIX = ROOT / "target/benchmark-oracle/3.2.0/install"
 
 
@@ -81,13 +85,29 @@ def jpeg_marker(marker: int, payload: bytes) -> bytes:
 
 
 def generate_fractional_fixture() -> bytes:
-    """Build one valid 8x8 YCCK MCU whose 3:2 chroma ratio Pillow rejects."""
+    """Build one 8x8 YCCK MCU with horizontal 3:2 chroma sampling."""
+    return generate_fractional_ycck_fixture(((3, 1), (2, 1), (2, 1), (3, 1)))
+
+
+def generate_vertical_fractional_fixture() -> bytes:
+    """Build one 8x8 YCCK MCU with vertical 3:2 chroma sampling."""
+    return generate_fractional_ycck_fixture(((2, 3), (1, 2), (1, 2), (2, 3)))
+
+
+def generate_fractional_ycck_fixture(
+    sampling_factors: tuple[tuple[int, int], ...],
+) -> bytes:
+    """Build an 8x8 YCCK MCU with deterministic zero-coefficient entropy."""
     adobe = jpeg_marker(0xEE, b"Adobe\x00\x64\x00\x00\x00\x00\x02")
     quantization = jpeg_marker(0xDB, b"\x00" + b"\x01" * 64)
+    component_table = b"".join(
+        bytes((component_id, (horizontal << 4) | vertical, 0))
+        for component_id, (horizontal, vertical) in enumerate(sampling_factors, start=1)
+    )
     frame_payload = (
         bytes((8,))
         + b"\x00\x08\x00\x08\x04"
-        + bytes((1, 0x31, 0, 2, 0x21, 0, 3, 0x21, 0, 4, 0x31, 0))
+        + component_table
     )
     frame = jpeg_marker(0xC0, frame_payload)
     huffman_payload = (
@@ -100,9 +120,25 @@ def generate_fractional_fixture() -> bytes:
     )
     huffman = jpeg_marker(0xC4, huffman_payload)
     scan = jpeg_marker(0xDA, bytes((4, 1, 0, 2, 0, 3, 0, 4, 0, 0, 63, 0)))
-    # Ten blocks each encode DC category zero and EOB, followed by pad bits.
-    entropy = b"\x00\x00\x0f"
-    return b"\xff\xd8" + adobe + quantization + frame + huffman + scan + entropy + b"\xff\xd9"
+    block_count = sum(
+        horizontal * vertical for horizontal, vertical in sampling_factors
+    )
+    # Every block encodes DC category zero and AC EOB with one zero bit each.
+    entropy_bit_count = block_count * 2
+    entropy = bytearray((entropy_bit_count + 7) // 8)
+    padding_bits = (-entropy_bit_count) % 8
+    if padding_bits:
+        entropy[-1] = (1 << padding_bits) - 1
+    return (
+        b"\xff\xd8"
+        + adobe
+        + quantization
+        + frame
+        + huffman
+        + scan
+        + bytes(entropy)
+        + b"\xff\xd9"
+    )
 
 
 def generate(prefix: Path) -> dict[str, bytes]:
@@ -150,6 +186,10 @@ def generate(prefix: Path) -> dict[str, bytes]:
     fractional_data = generate_fractional_fixture()
     verify(fractional_data, fractional_sha256, fractional_name)
     generated[fractional_name] = fractional_data
+    vertical_fractional_name, vertical_fractional_sha256 = VERTICAL_FRACTIONAL_FIXTURE
+    vertical_fractional_data = generate_vertical_fractional_fixture()
+    verify(vertical_fractional_data, vertical_fractional_sha256, vertical_fractional_name)
+    generated[vertical_fractional_name] = vertical_fractional_data
     return generated
 
 
@@ -183,6 +223,17 @@ def main() -> int:
         if asset.read_bytes() != generate_fractional_fixture():
             raise SystemExit(f"{fractional_name} differs from its deterministic JPEG source")
         print(f"verified {asset.relative_to(ROOT)} ({fractional_sha256})")
+        vertical_fractional_name, vertical_fractional_sha256 = VERTICAL_FRACTIONAL_FIXTURE
+        asset = ASSET_DIR / vertical_fractional_name
+        try:
+            verify(asset.read_bytes(), vertical_fractional_sha256, vertical_fractional_name)
+        except OSError as error:
+            raise SystemExit(f"cannot read YCCK fixture {asset}: {error}") from error
+        if asset.read_bytes() != generate_vertical_fractional_fixture():
+            raise SystemExit(
+                f"{vertical_fractional_name} differs from its deterministic JPEG source"
+            )
+        print(f"verified {asset.relative_to(ROOT)} ({vertical_fractional_sha256})")
         return 0
 
     generated = generate(args.prefix)

@@ -1099,6 +1099,7 @@ def parse_frame_header(
         else frame_type == "switch" or bool(bits.bit())
     )
     if sequence["enable_order_hint"]:
+        header["order_hint_bit"] = bits.position
         header["order_hint"] = bits.read(sequence["order_hint_bits"])
     primary_ref_frame = (
         bits.read(3)
@@ -1164,6 +1165,9 @@ def parse_frame_header(
             header["reference_order_hints"] = [
                 bits.read(sequence["order_hint_bits"]) for _ in range(8)
             ]
+        header["frame_refs_short_signaling_bit"] = (
+            bits.position if sequence["enable_order_hint"] else None
+        )
         short = bool(sequence["enable_order_hint"] and bits.bit())
         header["frame_refs_short_signaling"] = short
         if short:
@@ -1175,8 +1179,10 @@ def parse_frame_header(
         else:
             reference_indices = [0] * 7
         header["reference_indices"] = reference_indices
+        header["reference_indices_bits"] = []
         for index in range(7):
             if not short:
+                header["reference_indices_bits"].append(bits.position)
                 reference_indices[index] = bits.read(3)
             reference_index = reference_indices[index]
             if sequence["frame_id_numbers_present"]:

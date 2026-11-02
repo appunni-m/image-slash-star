@@ -55,6 +55,8 @@ pub(super) struct CandidateOptions {
     pub(super) max_cache_bits: u8,
     pub(super) reference_low_effort: bool,
     pub(super) hash_chain_low_effort: bool,
+    pub(super) try_no_cache: bool,
+    pub(super) try_box_chain: bool,
 }
 
 #[inline]
@@ -920,16 +922,295 @@ impl Default for CostModel {
     }
 }
 
+// Fixed-point entropy costs for the byte-sized alphabet. These are the
+// existing round_ties_even formulas, evaluated once instead of calling
+// log2 for each population in every backward-reference candidate.
+const SMALL_SLOG: [u64; 256] = [
+    0,
+    0,
+    16777216,
+    39886887,
+    67108864,
+    97388723,
+    130105423,
+    164848600,
+    201326592,
+    239321324,
+    278663526,
+    319217973,
+    360874141,
+    403539997,
+    447137711,
+    491600606,
+    536870912,
+    582898099,
+    629637592,
+    677049776,
+    725099212,
+    773754010,
+    822985323,
+    872766924,
+    923074875,
+    973887230,
+    1025183802,
+    1076945958,
+    1129156447,
+    1181799249,
+    1234859451,
+    1288323135,
+    1342177280,
+    1396409681,
+    1451008871,
+    1505964059,
+    1561265072,
+    1616902301,
+    1672866655,
+    1729149526,
+    1785742744,
+    1842638548,
+    1899829557,
+    1957308741,
+    2015069397,
+    2073105127,
+    2131409817,
+    2189977618,
+    2248802933,
+    2307880396,
+    2367204859,
+    2426771383,
+    2486575220,
+    2546611805,
+    2606876748,
+    2667365819,
+    2728074942,
+    2789000187,
+    2850137762,
+    2911484006,
+    2973035382,
+    3034788471,
+    3096739966,
+    3158886666,
+    3221225472,
+    3283753383,
+    3346467489,
+    3409364969,
+    3472443085,
+    3535699182,
+    3599130679,
+    3662735070,
+    3726509920,
+    3790452862,
+    3854561593,
+    3918833872,
+    3983267519,
+    4047860410,
+    4112610476,
+    4177515704,
+    4242574127,
+    4307783833,
+    4373142952,
+    4438649662,
+    4504302186,
+    4570098787,
+    4636037770,
+    4702117480,
+    4768336298,
+    4834692645,
+    4901184974,
+    4967811774,
+    5034571569,
+    5101462912,
+    5168484389,
+    5235634615,
+    5302912235,
+    5370315922,
+    5437844376,
+    5505496324,
+    5573270518,
+    5641165737,
+    5709180782,
+    5777314477,
+    5845565671,
+    5913933235,
+    5982416059,
+    6051013057,
+    6119723161,
+    6188545324,
+    6257478518,
+    6326521733,
+    6395673979,
+    6464934282,
+    6534301685,
+    6603775250,
+    6673354052,
+    6743037185,
+    6812823756,
+    6882712890,
+    6952703725,
+    7022795412,
+    7092987118,
+    7163278025,
+    7233667324,
+    7304154222,
+    7374737939,
+    7445417707,
+    7516192768,
+    7587062379,
+    7658025806,
+    7729082328,
+    7800231234,
+    7871471825,
+    7942803410,
+    8014225311,
+    8085736859,
+    8157337394,
+    8229026267,
+    8300802839,
+    8372666477,
+    8444616560,
+    8516652476,
+    8588773618,
+    8660979393,
+    8733269211,
+    8805642493,
+    8878098667,
+    8950637170,
+    9023257446,
+    9095958945,
+    9168741125,
+    9241603454,
+    9314545403,
+    9387566451,
+    9460666086,
+    9533843800,
+    9607099093,
+    9680431471,
+    9753840445,
+    9827325535,
+    9900886263,
+    9974522161,
+    10048232765,
+    10122017615,
+    10195876260,
+    10269808253,
+    10343813150,
+    10417890516,
+    10492039919,
+    10566260934,
+    10640553138,
+    10714916116,
+    10789349456,
+    10863852751,
+    10938425600,
+    11013067604,
+    11087778372,
+    11162557513,
+    11237404645,
+    11312319387,
+    11387301364,
+    11462350205,
+    11537465541,
+    11612647010,
+    11687894253,
+    11763206912,
+    11838584638,
+    11914027082,
+    11989533899,
+    12065104750,
+    12140739296,
+    12216437206,
+    12292198148,
+    12368021795,
+    12443907826,
+    12519855920,
+    12595865759,
+    12671937032,
+    12748069427,
+    12824262637,
+    12900516358,
+    12976830290,
+    13053204134,
+    13129637595,
+    13206130381,
+    13282682202,
+    13359292772,
+    13435961806,
+    13512689025,
+    13589474149,
+    13666316903,
+    13743217014,
+    13820174211,
+    13897188225,
+    13974258793,
+    14051385649,
+    14128568535,
+    14205807192,
+    14283101363,
+    14360450796,
+    14437855239,
+    14515314443,
+    14592828162,
+    14670396151,
+    14748018167,
+    14825693972,
+    14903423326,
+    14981205995,
+    15059041743,
+    15136930339,
+    15214871554,
+    15292865160,
+    15370910930,
+    15449008641,
+    15527158071,
+    15605359001,
+    15683611210,
+    15761914485,
+    15840268608,
+    15918673369,
+    15997128556,
+    16075633960,
+    16154189373,
+    16232794589,
+    16311449405,
+    16390153617,
+    16468907026,
+    16547709431,
+    16626560636,
+    16705460444,
+    16784408661,
+    16863405094,
+    16942449552,
+    17021541845,
+    17100681785,
+];
+
+// Values 128..=255 are the reduced alphabet for counts below 65,536.
+const REDUCED_LOG: [u32; 128] = [
+    58720256, 58814437, 58907891, 59000628, 59092661, 59183999, 59274652, 59364632, 59453947,
+    59542609, 59630625, 59718006, 59804761, 59890898, 59976426, 60061354, 60145690, 60229443,
+    60312620, 60395229, 60477278, 60558775, 60639726, 60720140, 60800023, 60879382, 60958224,
+    61036555, 61114383, 61191714, 61268554, 61344908, 61420785, 61496188, 61571124, 61645600,
+    61719620, 61793189, 61866315, 61939001, 62011253, 62083076, 62154476, 62225457, 62296024,
+    62366182, 62435935, 62505289, 62574248, 62642816, 62710997, 62778797, 62846219, 62913267,
+    62979946, 63046260, 63112212, 63177807, 63243048, 63307939, 63372484, 63436687, 63500551,
+    63564080, 63627277, 63690146, 63752690, 63814912, 63876816, 63938405, 63999682, 64060650,
+    64121313, 64181673, 64241734, 64301498, 64360969, 64420148, 64479040, 64537646, 64595970,
+    64654014, 64711782, 64769274, 64826495, 64883447, 64940132, 64996553, 65052711, 65108611,
+    65164253, 65219641, 65274776, 65329662, 65384299, 65438691, 65492840, 65546747, 65600416,
+    65653847, 65707044, 65760008, 65812741, 65865245, 65917522, 65969575, 66021404, 66073013,
+    66124403, 66175575, 66226531, 66277275, 66327806, 66378127, 66428240, 66478146, 66527847,
+    66577345, 66626641, 66675737, 66724635, 66773336, 66821842, 66870154, 66918274, 66966204,
+    67013944, 67061497,
+];
+
 pub(super) fn fast_slog(value: u32) -> u64 {
     if value < 256 {
-        (f64::from(value) * f64::from(value).log2() * f64::from(1_u32 << 23)).round_ties_even()
-            as u64
+        SMALL_SLOG[value as usize]
     } else if value < 65_536 {
         let log_count = value.ilog2() - 7;
         let scale = 1_u32 << log_count;
         let reduced = value >> log_count;
-        let reduced_log =
-            (f64::from(reduced).log2() * f64::from(1_u32 << 23)).round_ties_even() as u32;
+        let reduced_log = REDUCED_LOG[(reduced - 128) as usize];
         u64::from(value) * u64::from(reduced_log + (log_count << 23))
             + 12_102_203_u64 * u64::from(value & (scale - 1))
     } else {
@@ -938,16 +1219,36 @@ pub(super) fn fast_slog(value: u32) -> u64 {
 }
 
 fn population_estimate_fixed(counts: &[u32]) -> u64 {
-    let sum: u32 = counts.iter().sum();
-    let nonzero = counts.iter().filter(|&&count| count != 0).count();
-    let maximum = counts.iter().copied().max().unwrap_or(0);
-    let entropy = fast_slog(sum)
-        - counts
-            .iter()
-            .copied()
-            .filter(|&count| count != 0)
-            .map(fast_slog)
-            .sum::<u64>();
+    // The streak walk already visits every population. Accumulate its totals
+    // here and evaluate repeated counts once, rather than scanning the same
+    // alphabet separately for sum, maximum, nonzero count, and entropy.
+    let mut sum = 0_u32;
+    let mut nonzero = 0_u32;
+    let mut maximum = 0_u32;
+    let mut entropy_sum = 0_u64;
+    let mut counts_by_kind = [0_u32; 2];
+    let mut streaks = [[0_u32; 2]; 2];
+    let mut start = 0;
+    while start < counts.len() {
+        let value = counts[start];
+        let mut end = start + 1;
+        while end < counts.len() && counts[end] == value {
+            end += 1;
+        }
+        let length = (end - start) as u32;
+        sum += value * length;
+        if value != 0 {
+            nonzero += length;
+            maximum = maximum.max(value);
+            entropy_sum += fast_slog(value) * u64::from(length);
+        }
+        let kind = usize::from(value != 0);
+        let long = usize::from(end - start > 3);
+        counts_by_kind[kind] += u32::from(long != 0);
+        streaks[kind][long] += (end - start) as u32;
+        start = end;
+    }
+    let entropy = fast_slog(sum) - entropy_sum;
     let div_round = |value: u64, divisor: u64| (value + divisor / 2) / divisor;
     let refined = match nonzero {
         0 | 1 => 0,
@@ -968,21 +1269,6 @@ fn population_estimate_fixed(counts: &[u32]) -> u64 {
         }
     };
 
-    let mut counts_by_kind = [0_u32; 2];
-    let mut streaks = [[0_u32; 2]; 2];
-    let mut start = 0;
-    while start < counts.len() {
-        let value = counts[start];
-        let mut end = start + 1;
-        while end < counts.len() && counts[end] == value {
-            end += 1;
-        }
-        let kind = usize::from(value != 0);
-        let long = usize::from(end - start > 3);
-        counts_by_kind[kind] += u32::from(long != 0);
-        streaks[kind][long] += (end - start) as u32;
-        start = end;
-    }
     let extra = counts_by_kind[0] * 1600
         + 240 * streaks[0][1]
         + counts_by_kind[1] * 2640
@@ -1931,8 +2217,9 @@ pub(super) struct CandidateScratch {
     // each trial. Retain a bounded pool so the next stream can seed cache
     // selection without allocating another pixel-scaled token buffer.
     pub(super) result_pool: Vec<Vec<Token>>,
-    // The candidate list itself is bounded to the standard and optional
-    // box-chain candidates. Retain its outer allocation across image streams;
+    // Standard and optional box-chain configurations each return a cached
+    // candidate and, when requested, one no-cache candidate. Retain the
+    // bounded outer allocation across image streams;
     // the token vectors remain independently owned by `result_pool` or the
     // active trial.
     pub(super) result_list: Vec<(Vec<Token>, u8)>,
@@ -2221,6 +2508,8 @@ pub(super) fn candidates(
         max_cache_bits,
         reference_low_effort,
         hash_chain_low_effort,
+        try_no_cache,
+        try_box_chain,
     } = options;
     let mut result = core::mem::take(&mut scratch.result_list);
     result.clear();
@@ -2251,9 +2540,10 @@ pub(super) fn candidates(
         result.push((core::mem::take(source_scratch), 0));
         return Ok(result);
     }
-    let mut choose_cache = |source: &[Token],
-                            scratch: &mut CostEstimateScratch,
-                            cache_scratch: &mut CacheTransformScratch|
+    let choose_cache = |source: &[Token],
+                        scratch: &mut CostEstimateScratch,
+                        cache_scratch: &mut CacheTransformScratch,
+                        result_pool: &mut Vec<Vec<Token>>|
      -> CheckpointResult<(Vec<Token>, u8, u64)> {
         let maximum = if allow_cache && quality > 25 {
             max_cache_bits
@@ -2293,6 +2583,20 @@ pub(super) fn candidates(
         checkpoint(token)?;
         Ok((tokens, bits, cost))
     };
+    let without_cache = |source: &[Token],
+                         scratch: &mut CostEstimateScratch,
+                         pool: &mut Vec<Vec<Token>>|
+     -> CheckpointResult<(Vec<Token>, u8, u64)> {
+        let mut refs = pool.pop().unwrap_or_default();
+        refs.clear();
+        refs.reserve(source.len());
+        for chunk in source.chunks(COST_CHECKPOINT_TOKENS) {
+            refs.extend_from_slice(chunk);
+            checkpoint(token)?;
+        }
+        let cost = estimated_bits_with_checkpoint(&refs, 0, token, scratch)?;
+        Ok((refs, 0, cost))
+    };
     let improve = |mut candidate: (Vec<Token>, u8, u64),
                    source_chain: &[(usize, usize)],
                    scratch: &mut CostEstimateScratch,
@@ -2322,28 +2626,73 @@ pub(super) fn candidates(
     };
 
     lz77(pixels, width, chain, token, source_scratch)?;
-    let standard = choose_cache(source_scratch, estimate_scratch, cache_scratch)?;
+    let standard_uncached = if try_no_cache {
+        Some(without_cache(
+            source_scratch,
+            estimate_scratch,
+            result_pool,
+        )?)
+    } else {
+        None
+    };
+    let standard = choose_cache(source_scratch, estimate_scratch, cache_scratch, result_pool)?;
     rle_into(pixels, width, token, source_scratch)?;
-    let rle = choose_cache(source_scratch, estimate_scratch, cache_scratch)?;
+    let rle = choose_cache(source_scratch, estimate_scratch, cache_scratch, result_pool)?;
+    let uncached = if let Some(standard_uncached) = standard_uncached {
+        let rle_uncached = without_cache(source_scratch, estimate_scratch, result_pool)?;
+        Some(if standard_uncached.2 <= rle_uncached.2 {
+            result_pool.push(rle_uncached.0);
+            improve(standard_uncached, chain, estimate_scratch, trace_scratch)?
+        } else {
+            result_pool.push(standard_uncached.0);
+            rle_uncached
+        })
+    } else {
+        None
+    };
     let mut primary = if standard.2 <= rle.2 {
         improve(standard, chain, estimate_scratch, trace_scratch)?
     } else {
         rle
     };
     result.push((std::mem::take(&mut primary.0), primary.1));
+    if let Some(uncached) = uncached {
+        if primary.1 != 0 {
+            result.push((uncached.0, 0));
+        } else {
+            result_pool.push(uncached.0);
+        }
+    }
 
     // libwebp evaluates its low-distance "box" chain as a separate crunch
     // configuration for palette images containing at most sixteen colors.
-    if allow_cache && max_cache_bits <= 4 {
+    if try_box_chain {
         box_chain(pixels, width, chain, &mut scratch.counts, token)?;
         lz77(pixels, width, chain, token, source_scratch)?;
+        let uncached = if try_no_cache {
+            Some(improve(
+                without_cache(source_scratch, estimate_scratch, result_pool)?,
+                chain,
+                estimate_scratch,
+                trace_scratch,
+            )?)
+        } else {
+            None
+        };
         let mut box_candidate = improve(
-            choose_cache(source_scratch, estimate_scratch, cache_scratch)?,
+            choose_cache(source_scratch, estimate_scratch, cache_scratch, result_pool)?,
             chain,
             estimate_scratch,
             trace_scratch,
         )?;
         result.push((std::mem::take(&mut box_candidate.0), box_candidate.1));
+        if let Some(uncached) = uncached {
+            if box_candidate.1 != 0 {
+                result.push((uncached.0, 0));
+            } else {
+                result_pool.push(uncached.0);
+            }
+        }
     }
     Ok(result)
 }

@@ -145,15 +145,18 @@ impl From<AvifEncodeOptions> for EncodeOptions {
     }
 }
 
-/// JPEG chroma-subsampling layout.
+/// JPEG component-sampling layout.
+///
+/// RGB input is converted to Y/Cb/Cr, with Y at full resolution. For CMYK,
+/// explicit subsampling retains full-resolution C and reduces M, Y, and K.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum JpegSubsampling {
-    /// Preserve one chroma sample per luma sample.
+    /// Preserve full resolution for every component.
     Cs444,
-    /// Horizontally halve chroma resolution.
+    /// Halve horizontal resolution for components after the first.
     Cs422,
-    /// Horizontally and vertically halve chroma resolution.
+    /// Halve horizontal and vertical resolution for components after the first.
     Cs420,
 }
 
@@ -167,7 +170,11 @@ pub struct JpegEncodeOptions {
     pub progressive: Option<bool>,
     /// Whether to optimize Huffman tables.
     pub optimize: Option<bool>,
-    /// Chroma-subsampling override.
+    /// Component-sampling override, matching Pillow's JPEG save option.
+    ///
+    /// `None` defaults to [`JpegSubsampling::Cs420`] for RGB and
+    /// [`JpegSubsampling::Cs444`] for CMYK. An explicit CMYK override reduces
+    /// M, Y, and K relative to C.
     pub subsampling: Option<JpegSubsampling>,
     /// Restart interval in MCU rows.
     pub restart_interval: Option<u32>,

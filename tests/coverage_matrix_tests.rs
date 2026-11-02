@@ -1164,19 +1164,131 @@ fn execute_bmp_rle_work_budget_contract(
 }
 
 #[cfg(coverage)]
+fn execute_bmp_encode_dimension_limit_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "encode"
+        || row.format != "bmp"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "bmp.encode.height_over_signed_limit"
+        || row.fault.contract != "encode_dimensions_error"
+    {
+        return Err(format!(
+            "{}: invalid BMP encode dimension-limit contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode || source_key.format != row.format {
+        return Err(format!(
+            "{}: source_case must identify a BMP decode row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active" || source.oracle_status.as_deref() != Some("ok") {
+        return Err(format!(
+            "{}: source_case must be an active Pillow parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(&source_key.format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "BMP encode dimension contract source asset",
+    )?;
+    let expected = load_pixel_reference(
+        manifest_dir,
+        &source.id,
+        source.ref_path.as_deref(),
+        "Decode",
+        &source_key.format,
+        asset,
+        (source.ref_size.as_deref(), source.ref_mode.as_deref()),
+    )
+    .ok_or_else(|| format!("{}: source Pillow reference is missing", row.id))?;
+    assert_sha256(
+        &expected.bytes,
+        source.ref_sha256.as_deref(),
+        "BMP encode dimension contract Pillow reference",
+    )?;
+    let decoded = img::decode(&bytes)
+        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?
+        .content;
+    assert_pixel_parity(&expected, &decoded)
+        .map_err(|error| format!("{}: source decode differs from Pillow: {error}", row.id))?;
+
+    let format = img::ImageFormat::Bmp;
+    let options = img::EncodeOptions::for_format(format);
+    match img::__coverage_with_fault_point(
+        img::CoverageFaultPoint::BmpEncodeHeightBeyondSignedLimit,
+        || img::encode(&decoded, format, &options),
+    ) {
+        Err(img::ImageError::Dimensions {
+            format: Some(img::ImageFormat::Bmp),
+            stage: Some(img::ImageErrorStage::StillEncode),
+            ..
+        }) => Ok(()),
+        Err(error) => Err(format!(
+            "{}: BMP encoder returned the wrong dimension-limit result: {error:?}",
+            row.id
+        )),
+        Ok(_) => Err(format!(
+            "{}: BMP encoder accepted a height beyond its signed dimension limit",
+            row.id
+        )),
+    }
+}
+
+#[cfg(coverage)]
 fn execute_webp_riff_header_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    let fault_point = match row.fault.point.as_str() {
-        "webp.riff_sink.short_header" => img::CoverageFaultPoint::WebpRiffHeaderTooShort,
-        "webp.riff_sink.riff_signature_mismatch" => {
-            img::CoverageFaultPoint::WebpRiffSignatureMismatch
-        }
-        "webp.riff_sink.webp_form_type_mismatch" => {
-            img::CoverageFaultPoint::WebpRiffFormTypeMismatch
-        }
+    let (fault_point, expected_error_message) = match row.fault.point.as_str() {
+        "webp.riff_sink.short_header" => (
+            img::CoverageFaultPoint::WebpRiffHeaderTooShort,
+            "encode: WebP encoder produced an invalid RIFF header",
+        ),
+        "webp.riff_sink.riff_signature_mismatch" => (
+            img::CoverageFaultPoint::WebpRiffSignatureMismatch,
+            "encode: WebP encoder produced an invalid RIFF header",
+        ),
+        "webp.riff_sink.webp_form_type_mismatch" => (
+            img::CoverageFaultPoint::WebpRiffFormTypeMismatch,
+            "encode: WebP encoder produced an invalid RIFF header",
+        ),
+        "webp.riff_sink.declared_size_mismatch" => (
+            img::CoverageFaultPoint::WebpRiffDeclaredSizeMismatch,
+            "encode: WebP encoder produced an inconsistent RIFF size",
+        ),
         _ => {
             return Err(format!("{}: unknown WebP RIFF sink fault point", row.id));
         }
@@ -1308,7 +1420,7 @@ fn execute_webp_riff_header_contract(
             stage: Some(img::ImageErrorStage::StillEncode),
             offset: None,
             identity: None,
-        }) if message == "encode: WebP encoder produced an invalid RIFF header" => {}
+        }) if message == expected_error_message => {}
         Err(error) => {
             return Err(format!(
                 "{}: injected sink encode returned the wrong public error: {error:?}",
@@ -1639,12 +1751,443 @@ fn execute_png_inspect_signature_contract(
     }
 }
 
+#[cfg(all(coverage, feature = "avif"))]
+fn append_coverage_avif_box(
+    bytes: &mut Vec<u8>,
+    kind: &[u8; 4],
+    payload: &[u8],
+) -> Result<(), String> {
+    let size = payload
+        .len()
+        .checked_add(8)
+        .ok_or_else(|| "coverage AVIF box size overflowed usize".to_owned())?;
+    let size = u32::try_from(size)
+        .map_err(|_| "coverage AVIF box size exceeds the 32-bit header".to_owned())?;
+    bytes.extend_from_slice(&size.to_be_bytes());
+    bytes.extend_from_slice(kind);
+    bytes.extend_from_slice(payload);
+    Ok(())
+}
+
+#[cfg(all(coverage, feature = "avif"))]
+fn append_coverage_avif_ftyp(bytes: &mut Vec<u8>, brand: &[u8; 4]) -> Result<(), String> {
+    let mut payload = Vec::with_capacity(8);
+    payload.extend_from_slice(brand);
+    payload.extend_from_slice(&0_u32.to_be_bytes());
+    append_coverage_avif_box(bytes, b"ftyp", &payload)
+}
+
+#[cfg(all(coverage, feature = "avif"))]
+fn expect_coverage_avif_inspection_error(label: &str, bytes: &[u8]) -> Result<(), String> {
+    match img::__coverage_inspect_avif_container(bytes) {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Avif,
+            stage: Some(img::ImageErrorStage::Inspection),
+            ..
+        }) => Ok(()),
+        Err(error) => Err(format!(
+            "{label}: internal container inspection returned the wrong error: {error:?}"
+        )),
+        Ok(info) => Err(format!(
+            "{label}: malformed internal container unexpectedly inspected as {info:?}"
+        )),
+    }
+}
+
+#[cfg(all(coverage, feature = "avif"))]
+fn execute_avif_meta_version_fault_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "inspect"
+        || row.format != "avif"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "avif.container.meta_full_box_version"
+        || row.fault.contract != "inspection_error_then_retry_succeeds"
+    {
+        return Err(format!(
+            "{}: invalid AVIF meta-version fault contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "avif"
+        || source_key.id != "baseline"
+    {
+        return Err(format!(
+            "{}: source_case must identify the AVIF baseline decode row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("avif")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active"
+        || source.oracle_status.as_deref() != Some("ok")
+        || source.inspect_status != "ok"
+    {
+        return Err(format!(
+            "{}: source_case must retain active Pillow inspection parity",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/avif")
+        .join(asset);
+    let source_bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
+    assert_sha256(
+        &source_bytes,
+        source.asset_sha256.as_deref(),
+        "AVIF meta-version contract source asset",
+    )?;
+
+    match img::__coverage_parse_avif_meta(&[1, 0, 0, 0]) {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Avif,
+            stage: Some(img::ImageErrorStage::Inspection),
+            ..
+        }) => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: nonzero meta version returned the wrong error: {error:?}",
+                row.id
+            ));
+        }
+        Ok(()) => {
+            return Err(format!(
+                "{}: nonzero meta version unexpectedly parsed",
+                row.id
+            ));
+        }
+    }
+
+    let retry = img::inspect(&source_bytes)
+        .map_err(|error| format!("{}: baseline inspection retry failed: {error:?}", row.id))?;
+    let expected_size = source
+        .ref_size
+        .as_deref()
+        .filter(|size| size.len() == 2)
+        .ok_or_else(|| format!("{}: source Pillow dimensions are missing", row.id))?;
+    if retry.format != img::ImageFormat::Avif
+        || [retry.width, retry.height] != [expected_size[0], expected_size[1]]
+        || source
+            .ref_bit_depth
+            .is_some_and(|depth| u32::from(retry.bit_depth) != depth)
+        || source
+            .ref_frame_count
+            .is_some_and(|count| retry.frame_count != Some(count))
+        || source
+            .ref_is_animated
+            .is_some_and(|animated| retry.is_animated != animated)
+    {
+        return Err(format!(
+            "{}: clean inspection retry differs from the baseline parity row: {retry:?}",
+            row.id
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(all(coverage, feature = "avif"))]
+fn execute_avif_inspect_container_invariant_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "inspect"
+        || row.format != "avif"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "avif.container.inspect_unvalidated_input"
+        || row.fault.contract != "inspection_error_then_retry_succeeds"
+    {
+        return Err(format!(
+            "{}: invalid AVIF container-inspection invariant contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "avif"
+        || source_key.id != "baseline"
+    {
+        return Err(format!(
+            "{}: source_case must identify the AVIF baseline decode row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("avif")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active"
+        || source.oracle_status.as_deref() != Some("ok")
+        || source.inspect_status != "ok"
+    {
+        return Err(format!(
+            "{}: source_case must retain active Pillow inspection parity",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/avif")
+        .join(asset);
+    let source_bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
+    assert_sha256(
+        &source_bytes,
+        source.asset_sha256.as_deref(),
+        "AVIF inspection contract source asset",
+    )?;
+
+    let mut wrong_first_box = Vec::new();
+    append_coverage_avif_box(&mut wrong_first_box, b"free", &[])?;
+    expect_coverage_avif_inspection_error("non-ftyp first box", &wrong_first_box)?;
+
+    let mut unrecognized_brand = Vec::new();
+    append_coverage_avif_ftyp(&mut unrecognized_brand, b"mif1")?;
+    expect_coverage_avif_inspection_error("unrecognized AVIF brand", &unrecognized_brand)?;
+
+    let mut avif_without_meta = Vec::new();
+    append_coverage_avif_ftyp(&mut avif_without_meta, b"avif")?;
+    append_coverage_avif_box(&mut avif_without_meta, b"mdat", &[])?;
+    expect_coverage_avif_inspection_error("AVIF without meta", &avif_without_meta)?;
+
+    let mut incomplete_avif = avif_without_meta.clone();
+    incomplete_avif.push(0);
+    expect_coverage_avif_inspection_error("incomplete AVIF trailer", &incomplete_avif)?;
+
+    let mut avis_without_movie = Vec::new();
+    append_coverage_avif_ftyp(&mut avis_without_movie, b"avis")?;
+    append_coverage_avif_box(&mut avis_without_movie, b"mdat", &[])?;
+    expect_coverage_avif_inspection_error("AVIS without moov", &avis_without_movie)?;
+
+    let mut incomplete_avis = avis_without_movie.clone();
+    incomplete_avis.push(0);
+    expect_coverage_avif_inspection_error("incomplete AVIS trailer", &incomplete_avis)?;
+
+    let mut track = Vec::new();
+    append_coverage_avif_box(&mut track, b"trak", &[])?;
+    let mut avis_without_details = Vec::new();
+    append_coverage_avif_ftyp(&mut avis_without_details, b"avis")?;
+    append_coverage_avif_box(&mut avis_without_details, b"moov", &track)?;
+    expect_coverage_avif_inspection_error(
+        "AVIS track without image details",
+        &avis_without_details,
+    )?;
+
+    let retry = img::inspect(&source_bytes)
+        .map_err(|error| format!("{}: Pillow parity retry failed: {error:?}", row.id))?;
+    let expected_size = source
+        .ref_size
+        .as_deref()
+        .filter(|size| size.len() == 2)
+        .ok_or_else(|| format!("{}: source Pillow dimensions are missing", row.id))?;
+    if retry.format != img::ImageFormat::Avif
+        || [retry.width, retry.height] != [expected_size[0], expected_size[1]]
+        || source
+            .ref_bit_depth
+            .is_some_and(|depth| u32::from(retry.bit_depth) != depth)
+        || source
+            .ref_frame_count
+            .is_some_and(|count| retry.frame_count != Some(count))
+        || source
+            .ref_is_animated
+            .is_some_and(|animated| retry.is_animated != animated)
+    {
+        return Err(format!(
+            "{}: clean inspection retry differs from the source Pillow reference: {retry:?}",
+            row.id
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(coverage)]
+fn execute_tiff_inspection_incomplete_chain_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "inspect"
+        || row.format != "tiff"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.contract != "inspection_incomplete_chain_then_retry_restores_parity"
+    {
+        return Err(format!(
+            "{}: invalid TIFF incomplete-chain inspection contract",
+            row.id
+        ));
+    }
+
+    let fault_point = match row.fault.point.as_str() {
+        "tiff.directory.numeric_value_width_invalid" => {
+            img::CoverageFaultPoint::TiffDirectoryNumericValueWidthInvalid
+        }
+        "tiff.directory.numeric_value_width_remainder" => {
+            img::CoverageFaultPoint::TiffDirectoryNumericValueWidthRemainder
+        }
+        "tiff.directory.numeric_value_remainder_nonempty" => {
+            img::CoverageFaultPoint::TiffDirectoryNumericValueRemainderNonEmpty
+        }
+        _ => {
+            return Err(format!(
+                "{}: unsupported TIFF incomplete-chain fault point",
+                row.id
+            ));
+        }
+    };
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "tiff"
+        || source_key.id != "multi_page"
+    {
+        return Err(format!(
+            "{}: source_case must identify the active two-page TIFF parity row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("tiff")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active"
+        || source.oracle_status.as_deref() != Some("ok")
+        || source.inspect_status != "ok"
+        || source.ref_frame_count != Some(2)
+        || source.ref_is_animated != Some(true)
+    {
+        return Err(format!(
+            "{}: source_case must retain active two-page Pillow inspection parity",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/tiff")
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "fault-contract source asset",
+    )?;
+
+    let injected = img::__coverage_with_fault_point(fault_point, || img::inspect(&bytes));
+    match injected {
+        Ok(info)
+            if info.format == img::ImageFormat::Tiff
+                && info.is_animated
+                && info.frame_count.is_none()
+                && !info.frame_count_complete => {}
+        Ok(info) => {
+            return Err(format!(
+                "{}: injected inspection did not report an incomplete TIFF chain: {info:?}",
+                row.id
+            ));
+        }
+        Err(error) => {
+            return Err(format!(
+                "{}: injected inspection returned an error instead of an incomplete count: {error:?}",
+                row.id
+            ));
+        }
+    }
+
+    let retry = img::inspect(&bytes)
+        .map_err(|error| format!("{}: inspection retry failed: {error:?}", row.id))?;
+    let reference = img::inspect(&bytes)
+        .map_err(|error| format!("{}: fresh inspection failed: {error:?}", row.id))?;
+    let size = source
+        .ref_size
+        .as_deref()
+        .filter(|size| size.len() == 2)
+        .ok_or_else(|| format!("{}: source parity row has no exact dimensions", row.id))?;
+    let bit_depth = source
+        .ref_bit_depth
+        .ok_or_else(|| format!("{}: source parity row has no exact bit depth", row.id))?;
+    if retry != reference
+        || retry.format != img::ImageFormat::Tiff
+        || retry.width != size[0]
+        || retry.height != size[1]
+        || u32::from(retry.bit_depth) != bit_depth
+        || retry.frame_count != source.ref_frame_count
+        || retry.is_animated != source.ref_is_animated.unwrap_or(false)
+        || !retry.frame_count_complete
+    {
+        return Err(format!(
+            "{}: clean retry did not restore the source row's Pillow-parity inspection: {retry:?}",
+            row.id
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(coverage)]
 fn execute_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    if row.fault.point == "bmp.encode.height_over_signed_limit" {
+        return execute_bmp_encode_dimension_limit_contract(manifest_dir, matrix, row);
+    }
+    #[cfg(feature = "avif")]
+    if row.fault.point == "avif.container.inspect_unvalidated_input" {
+        return execute_avif_inspect_container_invariant_contract(manifest_dir, matrix, row);
+    }
+    #[cfg(feature = "avif")]
+    if row.fault.point == "avif.container.meta_full_box_version" {
+        return execute_avif_meta_version_fault_contract(manifest_dir, matrix, row);
+    }
     if row.fault.point == "png.inspect.signature_mismatch" {
         return execute_png_inspect_signature_contract(manifest_dir, matrix, row);
     }
@@ -1653,6 +2196,9 @@ fn execute_fault_contract(
     }
     if row.fault.point == "webp.hash_chain.index_overflow" {
         return execute_webp_hash_chain_index_overflow_contract(manifest_dir, matrix, row);
+    }
+    if row.fault.contract == "inspection_incomplete_chain_then_retry_restores_parity" {
+        return execute_tiff_inspection_incomplete_chain_contract(manifest_dir, matrix, row);
     }
     if row.row_type != "fault-contract"
         || !matches!(row.operation.as_str(), "decode" | "inspect")
@@ -1675,6 +2221,170 @@ fn execute_fault_contract(
     }
     let (fault_point, sequence_decode, expected_format, expected_stage) =
         match (row.fault.point.as_str(), row.fault.contract.as_str()) {
+            (
+                "av1.inter_translation.sample_depth_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1InterTranslationSampleDepthMismatch,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.motion_predictor.zero_width", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1MotionPredictorZeroWidth,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.motion.reference_mv_geometry_guard_sweep",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1ReferenceMvGeometryGuardSweep,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.unfiltered_copy.source_x_end_overflow",
+                "sequence_decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1UnfilteredCopySourceXEndOverflow,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.lossless_i444.first_partition_fallback",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1LosslessI444FirstPartitionFallback,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "av1.diff_mask.first_plane_length_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DifferenceMaskFirstPlaneShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.diff_mask.second_plane_length_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DifferenceMaskSecondPlaneShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.diff_mask.output_plane_length_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DifferenceMaskOutputPlaneShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.diff_mask.scratch_length_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DifferenceMaskScratchShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.wedge_mask.fill_empty_width", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1WedgeFillEmptyWidth,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.wedge_mask.fill_empty_height", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1WedgeFillEmptyHeight,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.wedge_mask.fill_scratch_short", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1WedgeFillScratchShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.inter_intra_mask.invalid_mode", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1InterIntraMaskInvalidMode,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.inter_intra_mask.empty_width", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1InterIntraMaskEmptyWidth,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.inter_intra_mask.empty_height", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1InterIntraMaskEmptyHeight,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.inter_intra_mask.scratch_length_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1InterIntraMaskScratchShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.inter_intra_mask.non_normative_width",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1InterIntraMaskNonNormativeWidth,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.inter_intra_mask.non_normative_height",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1InterIntraMaskNonNormativeHeight,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.wedge_mask.reduce_empty_width", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1WedgeReduceEmptyWidth,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.wedge_mask.reduce_empty_height", "sequence_decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::Av1WedgeReduceEmptyHeight,
+                    true,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::SequenceDecode,
+                )
+            }
+            (
+                "av1.wedge_mask.reduce_scratch_short",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1WedgeReduceScratchShort,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("av1.segment_map.reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SegmentMapReservation,
                 false,
@@ -1918,6 +2628,84 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.i420_12bit_alpha.zero_width", "decode_unsupported_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaZeroWidth,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.i420_12bit_alpha.nondivisible_luma_length",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaNondivisibleLumaLength,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.i420_12bit_alpha.zero_height", "decode_unsupported_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaZeroHeight,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.i420_12bit_alpha.u_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaUPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.i420_12bit_alpha.v_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Avif12BitI420AlphaVPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.portable.y_plane_length_mismatch", "decode_unsupported_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::AvifPortableYPlaneLengthMismatch,
+                    false,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("avif.portable.u_plane_length_mismatch", "decode_unsupported_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::AvifPortableUPlaneLengthMismatch,
+                    false,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("avif.portable.v_plane_length_mismatch", "decode_unsupported_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::AvifPortableVPlaneLengthMismatch,
+                    false,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            (
+                "avif.portable.alpha_plane_length_mismatch",
+                "decode_unsupported_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifPortableAlphaPlaneLengthMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("avif.subsampled.identity_conversion", "decode_unsupported_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifSubsampledIdentityConversion,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
                 true,
@@ -2061,6 +2849,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.metadata.item_table_reservation", "inspection_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifItemTableReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::Inspection,
+            ),
             (
                 "avif.metadata.item_location_table_reservation",
                 "decode_error_then_retry_succeeds",
@@ -2070,11 +2864,29 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "avif.metadata.item_location_table_reservation",
+                "inspection_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifItemLocationTableReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::Inspection,
+            ),
             ("avif.metadata.item_extent_span_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::AvifItemExtentSpanReservation,
                 false,
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.metadata.item_extent_span_reservation",
+                "inspection_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifItemExtentSpanReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::Inspection,
             ),
             (
                 "av1.frame.assembled_monochrome_loop_filter_metadata_reservation",
@@ -2099,6 +2911,50 @@ fn execute_fault_contract(
                 "decode_error_then_retry_succeeds",
             ) => (
                 img::CoverageFaultPoint::Av1AssembledMonochromeCdefActiveMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.invalid_sample_depth", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefInvalidSampleDepth,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.direction_invalid_sample_depth", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefDirectionInvalidSampleDepth,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.input_guard_sweep", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefInputGuardSweep,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.active_map_extent_mismatch", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefActiveMapExtentMismatch,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.active_strength_index_out_of_range", "decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::Av1CdefActiveStrengthIndexOutOfRange,
+                    false,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("av1.cdef.invalid_y_strength_count", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefInvalidYStrengthCount,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.cdef.invalid_uv_strength_count", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1CdefInvalidUvStrengthCount,
                 false,
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
@@ -2355,6 +3211,18 @@ fn execute_fault_contract(
                 img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("tiff.ycbcr.rational_index_out_of_range", "inspection_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrRationalIndexOutOfRange,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::Inspection,
+            ),
+            ("tiff.ycbcr.floating_index_out_of_range", "inspection_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffYcbcrFloatingIndexOutOfRange,
+                false,
+                img::ImageFormat::Tiff,
+                img::ImageErrorStage::Inspection,
+            ),
             ("tiff.ycbcr.rgb_output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffYcbcrRgbOutputReservation,
                 false,
@@ -2413,6 +3281,35 @@ fn execute_fault_contract(
         "av1.temporal_projection.field_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 projected temporal field",
         ),
+        "av1.inter_translation.sample_depth_mismatch" => Some(
+            "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
+        ),
+        "av1.motion_predictor.zero_width" => Some(
+            "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
+        ),
+        "av1.motion.reference_mv_geometry_guard_sweep" => Some(
+            "decode sequence: AVIF sequence validation failed: invalid AV1 bitstream: reference-MV geometry guard sweep rejected invalid requests",
+        ),
+        "av1.diff_mask.first_plane_length_mismatch"
+        | "av1.diff_mask.second_plane_length_mismatch"
+        | "av1.diff_mask.output_plane_length_mismatch"
+        | "av1.diff_mask.scratch_length_mismatch" => Some(
+            "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
+        ),
+        "av1.wedge_mask.fill_empty_width"
+        | "av1.wedge_mask.fill_empty_height"
+        | "av1.wedge_mask.fill_scratch_short"
+        | "av1.wedge_mask.reduce_empty_width"
+        | "av1.wedge_mask.reduce_empty_height"
+        | "av1.wedge_mask.reduce_scratch_short"
+        | "av1.inter_intra_mask.invalid_mode"
+        | "av1.inter_intra_mask.empty_width"
+        | "av1.inter_intra_mask.empty_height"
+        | "av1.inter_intra_mask.scratch_length_mismatch"
+        | "av1.inter_intra_mask.non_normative_width"
+        | "av1.inter_intra_mask.non_normative_height" => Some(
+            "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
+        ),
         "avif.i444_10bit_alpha.plane_length_mismatch"
         | "avif.i444_generic_alpha.plane_length_mismatch"
         | "avif.i444_generic_rgb.u_plane_length_mismatch"
@@ -2431,7 +3328,17 @@ fn execute_fault_contract(
         | "avif.monochrome_portable.y_sample_out_of_depth"
         | "avif.monochrome_portable.alpha_sample_out_of_depth"
         | "avif.monochrome_portable.output_length_mismatch"
-        | "avif.i420_12bit_alpha.sample_count_mismatch" => {
+        | "avif.i420_12bit_alpha.sample_count_mismatch"
+        | "avif.i420_12bit_alpha.zero_width"
+        | "avif.i420_12bit_alpha.nondivisible_luma_length"
+        | "avif.i420_12bit_alpha.zero_height"
+        | "avif.i420_12bit_alpha.u_plane_length_mismatch"
+        | "avif.i420_12bit_alpha.v_plane_length_mismatch"
+        | "avif.portable.y_plane_length_mismatch"
+        | "avif.portable.u_plane_length_mismatch"
+        | "avif.portable.v_plane_length_mismatch"
+        | "avif.portable.alpha_plane_length_mismatch"
+        | "avif.subsampled.identity_conversion" => {
             Some("decode: AVIF input is outside the supported pure-Rust decode subset")
         }
         "avif.i444_10bit_alpha.output_reservation" => {
@@ -2461,15 +3368,21 @@ fn execute_fault_contract(
         "av1.grid.monochrome_cell_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to reserve AVIF monochrome grid cells")
         }
-        "avif.metadata.item_table_reservation" => {
-            Some("decode: AVIF container validation failed: unable to reserve AVIF item metadata")
-        }
-        "avif.metadata.item_location_table_reservation" => {
-            Some("decode: AVIF container validation failed: unable to reserve AVIF item locations")
-        }
-        "avif.metadata.item_extent_span_reservation" => Some(
-            "decode: AVIF container validation failed: unable to reserve AVIF item extent spans",
-        ),
+        "avif.metadata.item_table_reservation" => Some(if row.operation == "inspect" {
+            "inspect: AVIF container validation failed: unable to reserve AVIF item metadata"
+        } else {
+            "decode: AVIF container validation failed: unable to reserve AVIF item metadata"
+        }),
+        "avif.metadata.item_location_table_reservation" => Some(if row.operation == "inspect" {
+            "inspect: AVIF container validation failed: unable to reserve AVIF item locations"
+        } else {
+            "decode: AVIF container validation failed: unable to reserve AVIF item locations"
+        }),
+        "avif.metadata.item_extent_span_reservation" => Some(if row.operation == "inspect" {
+            "inspect: AVIF container validation failed: unable to reserve AVIF item extent spans"
+        } else {
+            "decode: AVIF container validation failed: unable to reserve AVIF item extent spans"
+        }),
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome loop-filter metadata",
         ),
@@ -2478,6 +3391,24 @@ fn execute_fault_contract(
         ),
         "av1.frame.assembled_monochrome_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome CDEF active map",
+        ),
+        "av1.cdef.invalid_sample_depth" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: monochrome CDEF block exceeds its source plane",
+        ),
+        "av1.cdef.direction_invalid_sample_depth" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: monochrome CDEF direction is unavailable",
+        ),
+        "av1.cdef.input_guard_sweep" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF guard sweep rejected 19 invalid inputs",
+        ),
+        "av1.cdef.active_map_extent_mismatch" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF metadata maps have invalid extents",
+        ),
+        "av1.cdef.active_strength_index_out_of_range" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF active region index exceeds strengths",
+        ),
+        "av1.cdef.invalid_y_strength_count" | "av1.cdef.invalid_uv_strength_count" => Some(
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF strength counts are invalid",
         ),
         "av1.frame.tile_cell_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 tile cells")
@@ -2578,6 +3509,12 @@ fn execute_fault_contract(
         "tiff.ycbcr.horizontal_subsampling_zero" | "tiff.ycbcr.vertical_subsampling_zero" => {
             Some("decode: unsupported TIFF YCbCr subsampling")
         }
+        "tiff.ycbcr.rational_index_out_of_range" => {
+            Some("inspect: TIFF YCbCr tag 529 is truncated")
+        }
+        "tiff.ycbcr.floating_index_out_of_range" => {
+            Some("inspect: TIFF YCbCr tag 529 is truncated")
+        }
         "tiff.ycbcr.rgb_output_reservation" => {
             Some("decode: unable to allocate TIFF YCbCr RGB buffer")
         }
@@ -2635,6 +3572,86 @@ fn execute_fault_contract(
         "fault-contract source asset",
     )?;
 
+    if row.fault.contract == "decode_fallback_matches_parity_then_retry_succeeds" {
+        let expected = load_pixel_reference(
+            manifest_dir,
+            &source.id,
+            source.ref_path.as_deref(),
+            "Decode",
+            &source_key.format,
+            asset,
+            (source.ref_size.as_deref(), source.ref_mode.as_deref()),
+        )
+        .ok_or_else(|| format!("{}: source Pillow reference is missing", row.id))?;
+        assert_sha256(
+            &expected.bytes,
+            source.ref_sha256.as_deref(),
+            "fallback contract Pillow reference",
+        )?;
+        let injected = img::__coverage_with_fault_point(fault_point, || img::decode(&bytes))
+            .map_err(|error| format!("{}: fallback decode failed: {error:?}", row.id))?;
+        if injected.format != expected_format {
+            return Err(format!(
+                "{}: injected fallback decoded as {:?}, expected {:?}",
+                row.id, injected.format, expected_format
+            ));
+        }
+        assert_pixel_parity(&expected, &injected.content).map_err(|error| {
+            format!(
+                "{}: first-partition fallback differs from Pillow parity: {error}",
+                row.id
+            )
+        })?;
+        let retry = img::decode(&bytes)
+            .map_err(|error| format!("{}: clean decode retry failed: {error:?}", row.id))?;
+        if injected != retry {
+            return Err(format!(
+                "{}: clean retry differs from the injected fallback result",
+                row.id
+            ));
+        }
+        return Ok(());
+    }
+
+    if row.fault.contract == "sequence_decode_fallback_matches_parity_then_retry_succeeds" {
+        let injected =
+            img::__coverage_with_fault_point(fault_point, || img::decode_sequence(&bytes))
+                .map_err(|error| format!("{}: fallback decode failed: {error:?}", row.id))?;
+        if injected.format != expected_format {
+            return Err(format!(
+                "{}: injected fallback decoded as {:?}, expected {:?}",
+                row.id, injected.format, expected_format
+            ));
+        }
+        let expected_sequence = source
+            .sequence
+            .as_ref()
+            .ok_or_else(|| format!("{}: source parity row has no sequence", row.id))?;
+        assert_sequence_reference_parity(
+            manifest_dir,
+            &source.id,
+            expected_sequence,
+            &injected.content,
+            expected_format,
+            &bytes,
+        )
+        .map_err(|error| {
+            format!(
+                "{}: source-end overflow fallback differs from Pillow parity: {error}",
+                row.id
+            )
+        })?;
+        let retry = img::decode_sequence(&bytes)
+            .map_err(|error| format!("{}: clean sequence retry failed: {error:?}", row.id))?;
+        if injected != retry {
+            return Err(format!(
+                "{}: clean retry differs from the injected fallback result",
+                row.id
+            ));
+        }
+        return Ok(());
+    }
+
     let injected = img::__coverage_with_fault_point(fault_point, || {
         if row.operation == "inspect" {
             img::inspect(&bytes).map(|_| ())
@@ -2658,7 +3675,15 @@ fn execute_fault_contract(
             "png.apng.sequence_counter_exhaustion"
                 | "png.chunk_iterator.failure_stops_iteration"
                 | "av1.film_grain.points_reservation"
+                | "av1.cdef.invalid_sample_depth"
+                | "av1.cdef.direction_invalid_sample_depth"
+                | "av1.cdef.input_guard_sweep"
+                | "av1.cdef.active_map_extent_mismatch"
+                | "av1.cdef.active_strength_index_out_of_range"
+                | "av1.cdef.invalid_y_strength_count"
+                | "av1.cdef.invalid_uv_strength_count"
                 | "av1.superres.header_geometry_mismatch"
+                | "av1.motion.reference_mv_geometry_guard_sweep"
                 | "jpeg.upsample.h1v2_empty_geometry"
                 | "jpeg.upsample.h1v2_zero_width"
                 | "jpeg.upsample.h1v2_source_length_mismatch"
@@ -2686,6 +3711,8 @@ fn execute_fault_contract(
                 | "tiff.ignored_samples.assembly_length_mismatch"
                 | "tiff.ycbcr.horizontal_subsampling_zero"
                 | "tiff.ycbcr.vertical_subsampling_zero"
+                | "tiff.ycbcr.rational_index_out_of_range"
+                | "tiff.ycbcr.floating_index_out_of_range"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}
@@ -2730,6 +3757,34 @@ fn execute_fault_contract(
                 | "avif.monochrome_portable.alpha_sample_out_of_depth"
                 | "avif.monochrome_portable.output_length_mismatch"
                 | "avif.i420_12bit_alpha.sample_count_mismatch"
+                | "avif.i420_12bit_alpha.zero_width"
+                | "avif.i420_12bit_alpha.nondivisible_luma_length"
+                | "avif.i420_12bit_alpha.zero_height"
+                | "avif.i420_12bit_alpha.u_plane_length_mismatch"
+                | "avif.i420_12bit_alpha.v_plane_length_mismatch"
+                | "avif.portable.y_plane_length_mismatch"
+                | "avif.portable.u_plane_length_mismatch"
+                | "avif.portable.v_plane_length_mismatch"
+                | "avif.portable.alpha_plane_length_mismatch"
+                | "avif.subsampled.identity_conversion"
+                | "av1.inter_translation.sample_depth_mismatch"
+                | "av1.motion_predictor.zero_width"
+                | "av1.diff_mask.first_plane_length_mismatch"
+                | "av1.diff_mask.second_plane_length_mismatch"
+                | "av1.diff_mask.output_plane_length_mismatch"
+                | "av1.diff_mask.scratch_length_mismatch"
+                | "av1.wedge_mask.fill_empty_width"
+                | "av1.wedge_mask.fill_empty_height"
+                | "av1.wedge_mask.fill_scratch_short"
+                | "av1.wedge_mask.reduce_empty_width"
+                | "av1.wedge_mask.reduce_empty_height"
+                | "av1.wedge_mask.reduce_scratch_short"
+                | "av1.inter_intra_mask.invalid_mode"
+                | "av1.inter_intra_mask.empty_width"
+                | "av1.inter_intra_mask.empty_height"
+                | "av1.inter_intra_mask.scratch_length_mismatch"
+                | "av1.inter_intra_mask.non_normative_width"
+                | "av1.inter_intra_mask.non_normative_height"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_some_and(|expected| message == expected) => {}
@@ -4546,22 +5601,31 @@ fn assert_jpeg_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resu
             return Err(format!("JPEG grayscale mode does not match {expected}"));
         }
     }
-    if let Some(request) = params.get("subsampling").and_then(Value::as_str) {
-        let expected = match request {
-            "444" => 0x11,
-            "422" => 0x21,
-            "420" => 0x22,
-            value => return Err(format!("unknown JPEG subsampling request {value}")),
-        };
-        if sof_data[7] != expected {
-            return Err(format!("JPEG sampling factors do not match {request}"));
-        }
+    let requested_sampling = match params.get("subsampling").and_then(Value::as_str) {
+        Some("444") => Some(0x11),
+        Some("422") => Some(0x21),
+        Some("420") => Some(0x22),
+        Some(value) => return Err(format!("unknown JPEG subsampling request {value}")),
+        None => None,
+    };
+    if let Some(expected) = requested_sampling
+        && sof_data[7] != expected
+    {
+        return Err(format!(
+            "JPEG sampling factors {:#04x} do not match requested {expected:#04x}",
+            sof_data[7]
+        ));
     }
     if params.get("color").and_then(Value::as_str) == Some("cmyk") {
         if sof_data[5] != 4 || sof_data.len() < 18 {
             return Err("JPEG CMYK output does not have four components".to_owned());
         }
-        let expected_components = [(b'C', 0x11), (b'M', 0x11), (b'Y', 0x11), (b'K', 0x11)];
+        let expected_components = [
+            (b'C', requested_sampling.unwrap_or(0x11)),
+            (b'M', 0x11),
+            (b'Y', 0x11),
+            (b'K', 0x11),
+        ];
         for (index, (expected_id, expected_sampling)) in expected_components.into_iter().enumerate()
         {
             let component = 6usize.saturating_add(index.saturating_mul(3));
@@ -6702,7 +7766,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_encode.len(),
-        31,
+        27,
         "the AVIF former-native encode census changed"
     );
     assert!(
@@ -6718,12 +7782,12 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     );
     assert_eq!(
         former_native_decode.len() + promoted_decode.len() + former_native_encode.len(),
-        34,
+        30,
         "the complete former-native AVIF census changed"
     );
     assert_eq!(
         planned_encodes.len(),
-        31,
+        27,
         "the AVIF planned encoder ledger changed"
     );
     assert_eq!(

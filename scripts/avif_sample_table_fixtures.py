@@ -16,6 +16,7 @@ SOURCE_SHA256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906
 OUTPUT_SHA256 = "5b2c438346c66b7ee1cb165742e639bc98e3180d5da42dd8e479f48b99598105"
 ALPHA_TIMING_SOURCE_SHA256 = "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
 ALPHA_TIMING_VARIANT_SHA256 = "b70e900cbe163b4e394aaa0bab6f283fec8f7f0093cc8dbf9ea790b85103902d"
+ALPHA_TIMESCALE_VARIANT_SHA256 = "4aa9b40d1971afcb9d26c5beb312f8973fc8f1f69c2cf64eafa4fcaeaf3acf69"
 ALPHA_SAMPLE_COUNT_VARIANT_SHA256 = "89a13baeb503ace10bea0f07d9c2aa296235d2ca8ed0471f3ee99751deccafcf"
 STTS_BOX_OFFSET = 883
 STTS_ENTRY_COUNT_OFFSET = 895
@@ -25,6 +26,8 @@ STTS_SECOND_RUN_OFFSET = 907
 STCO_CHUNK_OFFSET_OFFSET = 991
 ILOC_EXTENT_OFFSET_OFFSET = 132
 STTS_VARIANT_SHA256 = {
+    "stts_nonzero_version": "7723b92c39ed4477a37b37245f0f4b828ebd68543f89cc11edb14d4716fdb123",
+    "stts_trailing_payload": "315886b7d98357707dac59164052be3b44b735c25c0ccdbe0b35c4a87d8289c4",
     "stts_empty": "c23b9d465406ba51f46d5fd6c3cf8d7a71dde68110bb0ccc7512d48977208b30",
     "stts_zero_sample_count": "2e7fb956b121ced30abf59cc70a30fd7dc2dd8146484252883553651a86107d6",
     "stts_underfilled": "0c8b7e231c455711581f0eed1272f2be2b32a764fc9eb782c955678ba64e9738",
@@ -154,6 +157,59 @@ def alpha_track_duration_mismatch(source: bytes) -> bytes:
     return result
 
 
+def alpha_track_timescale_mismatch(source: bytes) -> bytes:
+    """Change only the auxiliary alpha track's media timescale from 1 to 2."""
+    if hashlib.sha256(source).hexdigest() != ALPHA_TIMING_SOURCE_SHA256:
+        raise ValueError("AVIF high-bit-depth sequence source differs from its pin")
+
+    movie = unique_box(parse_boxes(source, 0, len(source)), b"moov")
+    tracks = [
+        (track, parse_track(source, track))
+        for track in children(source, movie)
+        if track.kind == b"trak"
+    ]
+    color_track_ids = {
+        track_info["track_id"]
+        for _, track_info in tracks
+        if track_info["handler"] in ("pict", "vide")
+    }
+    alpha_tracks = [
+        track
+        for track, track_info in tracks
+        if track_info["handler"] == "auxv"
+        and track_info["aux_for_track_id"] in color_track_ids
+    ]
+    if len(alpha_tracks) != 1:
+        raise ValueError(
+            f"expected one auxiliary alpha track, found {len(alpha_tracks)}"
+        )
+
+    alpha_mdia = unique_box(children(source, alpha_tracks[0]), b"mdia")
+    alpha_mdhd = unique_box(children(source, alpha_mdia), b"mdhd")
+    version = source[alpha_mdhd.payload_start]
+    timescale_offset = alpha_mdhd.payload_start + (20 if version == 1 else 12)
+    if version not in (0, 1) or int.from_bytes(
+        source[timescale_offset : timescale_offset + 4], "big"
+    ) != 1:
+        raise ValueError("AVIF alpha media-timescale source differs from its pin")
+
+    output = bytearray(source)
+    struct.pack_into(">I", output, timescale_offset, 2)
+    result = bytes(output)
+    if len(result) != len(source) or hashlib.sha256(result).hexdigest() != (
+        ALPHA_TIMESCALE_VARIANT_SHA256
+    ):
+        raise ValueError("AVIF alpha timescale variant differs from its pinned output")
+    changed = [
+        index
+        for index, (before, after) in enumerate(zip(source, result))
+        if before != after
+    ]
+    if changed != [timescale_offset + 3]:
+        raise ValueError("AVIF alpha timescale mutation changed unexpected bytes")
+    return result
+
+
 def alpha_track_sample_count_mismatch(source: bytes) -> bytes:
     """Declare four auxiliary alpha samples while retaining five table entries."""
     if hashlib.sha256(source).hexdigest() != ALPHA_TIMING_SOURCE_SHA256:
@@ -213,9 +269,25 @@ def alpha_track_sample_count_mismatch(source: bytes) -> bytes:
 
 
 def stts_timing_variants(source: bytes) -> dict[str, bytes]:
-    """Build pinned incomplete-table and wrapped-count `stts` variants."""
+    """Build pinned `stts` version, payload, timing, and count variants."""
     timing, enclosing_boxes, stco, iloc = _validate_source(source)
     variants: dict[str, bytes] = {}
+
+    nonzero_version = bytearray(source)
+    nonzero_version[timing.payload_start] = 1
+    nonzero_version_result = bytes(nonzero_version)
+    if hashlib.sha256(nonzero_version_result).hexdigest() != (
+        STTS_VARIANT_SHA256["stts_nonzero_version"]
+    ):
+        raise ValueError("nonzero-version `stts` AVIF mutation differs from its pin")
+    if [
+        index
+        for index, (before, after) in enumerate(zip(source, nonzero_version_result))
+        if before != after
+    ] != [timing.payload_start]:
+        raise ValueError("nonzero-version mutation changed bytes outside the version field")
+    variants["stts_nonzero_version"] = nonzero_version_result
+
     for name, sample_count in (
         ("stts_zero_sample_count", 0),
         ("stts_underfilled", 4),
@@ -293,6 +365,37 @@ def stts_timing_variants(source: bytes) -> dict[str, bytes]:
     ]:
         raise ValueError("wrapped-count mutation changed the AVIF media payload")
     variants["stts_wrapped_sample_count"] = wrapped_result
+
+    trailing = bytearray(source)
+    trailing[STTS_BOX_OFFSET : STTS_BOX_OFFSET + 4] = (timing.size + 4).to_bytes(
+        4, "big"
+    )
+    for box in enclosing_boxes:
+        trailing[box.start : box.start + 4] = (box.size + 4).to_bytes(4, "big")
+    for offset_field in (STCO_CHUNK_OFFSET_OFFSET, ILOC_EXTENT_OFFSET_OFFSET):
+        current_offset = int.from_bytes(source[offset_field : offset_field + 4], "big")
+        if current_offset != 1023:
+            raise ValueError("animated AVIF media offset differs from the pinned source")
+        trailing[offset_field : offset_field + 4] = (current_offset + 4).to_bytes(
+            4, "big"
+        )
+    trailing[STTS_SECOND_RUN_OFFSET:STTS_SECOND_RUN_OFFSET] = bytes(4)
+    trailing_result = bytes(trailing)
+    if len(trailing_result) != len(source) + 4:
+        raise ValueError("trailing-payload mutation changed the file by an unexpected size")
+    if hashlib.sha256(trailing_result).hexdigest() != (
+        STTS_VARIANT_SHA256["stts_trailing_payload"]
+    ):
+        raise ValueError("trailing-payload `stts` AVIF mutation differs from its pin")
+
+    source_mdat = unique_box(parse_boxes(source, 0, len(source)), b"mdat")
+    trailing_mdat = unique_box(parse_boxes(trailing_result, 0, len(trailing_result)), b"mdat")
+    assert source_mdat is not None and trailing_mdat is not None
+    if trailing_result[trailing_mdat.payload_start : trailing_mdat.end] != source[
+        source_mdat.payload_start : source_mdat.end
+    ]:
+        raise ValueError("trailing-payload mutation changed the AVIF media payload")
+    variants["stts_trailing_payload"] = trailing_result
     return variants
 
 

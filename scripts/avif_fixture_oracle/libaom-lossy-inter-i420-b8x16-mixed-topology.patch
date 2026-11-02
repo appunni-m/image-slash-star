@@ -1,0 +1,130 @@
+diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
+index 81ac00be2a..e794995665 100644
+--- a/av1/encoder/partition_search.c
++++ b/av1/encoder/partition_search.c
+@@ -3613,9 +3613,16 @@ static void rectangular_partition_search(
+           mi_pos_rect[i][sub_part_idx][1], blk_params.subsize, partition_type);
+     }
+     // Update HORZ / VERT best partition.
+-    if (sum_rdc->rdcost < best_rdc->rdcost) {
++    const bool force_fixture_vertical_16x16 =
++        cm->current_frame.frame_type == INTER_FRAME &&
++        cm->current_frame.frame_number == 1 &&
++        blk_params.bsize == BLOCK_16X16 &&
++        partition_type == PARTITION_VERT && sum_rdc->rdcost < INT64_MAX;
++    if (sum_rdc->rdcost < best_rdc->rdcost ||
++        force_fixture_vertical_16x16) {
+       sum_rdc->rdcost = RDCOST(x->rdmult, sum_rdc->rate, sum_rdc->dist);
+-      if (sum_rdc->rdcost < best_rdc->rdcost) {
++      if (sum_rdc->rdcost < best_rdc->rdcost ||
++          force_fixture_vertical_16x16) {
+         *best_rdc = *sum_rdc;
+         part_search_state->found_best_partition = true;
+         pc_tree->partitioning = partition_type;
+@@ -5642,6 +5649,18 @@ BEGIN_PARTITION_SEARCH:
+       part_search_state.intra_part_info->cnn_output_valid = 0;
+     }
+   }
++  // Fixture-only: force frame two into vertical 16x16 partition splits.
++  if (cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1 && bsize == BLOCK_16X16) {
++    part_search_state.partition_none_allowed = 0;
++    part_search_state.do_square_split = 0;
++    part_search_state.do_rectangular_split = 1;
++    part_search_state.partition_rect_allowed[HORZ] = 0;
++    part_search_state.partition_rect_allowed[VERT] = 1;
++    part_search_state.prune_rect_part[HORZ] = 1;
++    part_search_state.prune_rect_part[VERT] = 0;
++    part_search_state.terminate_partition_search = 0;
++  }
+   // Partition block source pixel variance.
+   unsigned int pb_source_variance = UINT_MAX;
+ 
+@@ -5729,6 +5748,15 @@ BEGIN_PARTITION_SEARCH:
+   // Prune partitions based on PARTITION_NONE and PARTITION_SPLIT.
+   prune_partitions_after_split(cpi, x, sms_tree, &part_search_state, &best_rdc,
+                                part_none_rd, part_split_rd);
++  if (cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1 && bsize == BLOCK_16X16) {
++    part_search_state.terminate_partition_search = 0;
++    part_search_state.do_rectangular_split = 1;
++    part_search_state.partition_rect_allowed[HORZ] = 0;
++    part_search_state.partition_rect_allowed[VERT] = 1;
++    part_search_state.prune_rect_part[HORZ] = 1;
++    part_search_state.prune_rect_part[VERT] = 0;
++  }
+ #if CONFIG_COLLECT_COMPONENT_TIMING
+   start_timing(cpi, rectangular_partition_search_time);
+ #endif
+diff --git a/av1/encoder/tx_search.c b/av1/encoder/tx_search.c
+index 334bce15a0..e1f1835408 100644
+--- a/av1/encoder/tx_search.c
++++ b/av1/encoder/tx_search.c
+@@ -2563,6 +2563,18 @@ static inline void select_tx_block(
+                                          mbmi->bsize, tx_size);
+   struct macroblock_plane *const p = &x->plane[0];
+ 
++  const bool force_fixture_split =
++      cpi->common.current_frame.frame_type == INTER_FRAME &&
++      cpi->common.current_frame.frame_number == 1 &&
++      plane_bsize == BLOCK_8X16 &&
++      (tx_size == TX_8X16 ||
++       (tx_size == TX_8X8 && blk_row == 0 && blk_col == 0));
++  const bool force_fixture_no_split =
++      cpi->common.current_frame.frame_type == INTER_FRAME &&
++      cpi->common.current_frame.frame_number == 1 &&
++      plane_bsize == BLOCK_8X16 && tx_size == TX_8X8 && blk_row == 2 &&
++      blk_col == 0;
++
+   int try_no_split = (cpi->oxcf.txfm_cfg.enable_tx64 ||
+                       txsize_sqr_up_map[tx_size] != TX_64X64) &&
+                      (cpi->oxcf.txfm_cfg.enable_rect_tx ||
+@@ -2582,6 +2594,9 @@ static inline void select_tx_block(
+     if (x->try_merge_partition && try_split && p->eobs[block]) try_no_split = 0;
+   }
+ 
++  if (force_fixture_split || force_fixture_no_split) try_no_split = 1;
++  if (force_fixture_no_split) try_split = 0;
++
+   // Try using current block as a single transform block without split.
+   if (try_no_split) {
+     try_tx_block_no_split(cpi, x, blk_row, blk_col, block, tx_size, depth,
+@@ -2591,7 +2606,8 @@ static inline void select_tx_block(
+     // Speed features for early termination.
+     const int search_level = cpi->sf.tx_sf.adaptive_txb_search_level;
+     if (search_level) {
+-      if ((no_split.rd - (no_split.rd >> (1 + search_level))) > ref_best_rd) {
++      if (!force_fixture_split && !force_fixture_no_split &&
++          (no_split.rd - (no_split.rd >> (1 + search_level))) > ref_best_rd) {
+         *is_cost_valid = 0;
+         return;
+       }
+@@ -2615,17 +2631,25 @@ static inline void select_tx_block(
+     }
+   }
+ 
++  if (force_fixture_split) try_split = 1;
++  if (force_fixture_no_split) try_split = 0;
++
+   RD_STATS split_rd_stats;
+   split_rd_stats.rdcost = INT64_MAX;
+   // Try splitting current block into smaller transform blocks.
+   if (try_split) {
++    const int64_t split_no_split_rd =
++        force_fixture_split ? INT64_MAX : no_split.rd;
++    const int64_t split_best_rd =
++        force_fixture_split ? INT64_MAX : AOMMIN(no_split.rd, ref_best_rd);
+     try_tx_block_split(cpi, x, blk_row, blk_col, block, tx_size, depth,
+-                       plane_bsize, ta, tl, tx_above, tx_left, ctx, no_split.rd,
+-                       AOMMIN(no_split.rd, ref_best_rd), ftxs_mode,
++                       plane_bsize, ta, tl, tx_above, tx_left, ctx,
++                       split_no_split_rd, split_best_rd, ftxs_mode,
+                        &split_rd_stats);
+   }
+ 
+-  if (no_split.rd < split_rd_stats.rdcost) {
++  if (force_fixture_no_split ||
++      (!force_fixture_split && no_split.rd < split_rd_stats.rdcost)) {
+     ENTROPY_CONTEXT *pta = ta + blk_col;
+     ENTROPY_CONTEXT *ptl = tl + blk_row;
+     p->txb_entropy_ctx[block] = no_split.txb_entropy_ctx;

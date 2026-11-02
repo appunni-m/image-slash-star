@@ -72,12 +72,33 @@ pub(super) struct JpegInfo {
     pub(super) max_h_samp: u8,
     pub(super) max_v_samp: u8,
     pub(super) progressive: bool,
+    /// Header color transform; nonzero four-component values normalize to YCCK (2).
     pub(super) adobe_color_transform: Option<u8>,
+    /// Input color interpretation captured at the first SOS marker.
+    pub(super) rgb_components: bool,
     pub(super) scans: Vec<ScanInfo>,
     pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
 }
 
 // ── JPEG Parser ───────────────────────────────────────────────────────────
+
+/// Match libjpeg's three-component color selection from header metadata.
+fn uses_rgb_components(
+    components: &[FrameComponent],
+    adobe_transform: Option<u8>,
+    metadata: &[crate::types::OpaqueMetadata],
+) -> bool {
+    if components.len() != 3 {
+        return false;
+    }
+    let rgb = match adobe_transform {
+        Some(transform) => transform == 0,
+        None => components.iter().map(|component| component.id).eq(*b"RGB"),
+    };
+    rgb && !metadata.iter().any(|entry| {
+        entry.kind == [0xe0] && entry.data.len() >= 14 && entry.data.starts_with(b"JFIF\0")
+    })
+}
 
 pub(super) fn read_u16(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     if pos.saturating_add(1) >= data.len() {
@@ -145,14 +166,20 @@ pub(super) fn find_entropy_end(data: &[u8], mut pos: usize) -> (usize, bool) {
         if pos.saturating_add(1) >= data.len() {
             return (data.len(), saw_restart_marker);
         }
-        let next = data[pos.saturating_add(1)];
-        if next == 0x00 {
-            pos = pos.saturating_add(2);
-        } else if (0xD0..=0xD7).contains(&next) {
-            saw_restart_marker = true;
-            pos = pos.saturating_add(2);
-        } else {
-            return (pos, saw_restart_marker);
+        let mut code_pos = pos.saturating_add(1);
+        while code_pos < data.len() && data[code_pos] == 0xFF {
+            code_pos = code_pos.saturating_add(1);
+        }
+        if code_pos >= data.len() {
+            return (data.len(), saw_restart_marker);
+        }
+        match data[code_pos] {
+            0x00 => pos = code_pos.saturating_add(1),
+            0xD0..=0xD7 => {
+                saw_restart_marker = true;
+                pos = code_pos.saturating_add(1);
+            }
+            _ => return (pos, saw_restart_marker),
         }
     }
     (data.len(), saw_restart_marker)
@@ -470,6 +497,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut saw_sos = false;
     let mut progressive = false;
     let mut adobe_color_transform = None;
+    let mut rgb_components = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
     let mut metadata = Vec::new();
 
@@ -524,6 +552,19 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let result = parse_sos(data, &mut pos, &components)
                     .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
+                if !saw_sos {
+                    // Unsupported nonzero four-component transforms follow
+                    // libjpeg's YCCK default. Normalize once in the header;
+                    // retained APP14 metadata keeps its original payload.
+                    if num_components == 4 {
+                        adobe_color_transform = adobe_color_transform
+                            .map(|transform| if transform == 0 { 0 } else { 2 });
+                    }
+                    // Metadata after the first scan cannot change libjpeg's
+                    // header-time choice between RGB and YCbCr components.
+                    rgb_components =
+                        uses_rgb_components(&components, adobe_color_transform, &metadata);
+                }
                 let comps = result.0;
                 let scan_start = result.1;
                 let ss = result.2;
@@ -640,10 +681,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let payload_end = pos.saturating_add(payload_len);
                 let payload = &data[pos..payload_end];
-                if adobe_color_transform.is_none()
-                    && payload.starts_with(b"Adobe")
-                    && payload.len() >= 12
-                {
+                // libjpeg chooses the input colorspace after reading the header.
+                // Earlier header transforms may be replaced; scan-time markers
+                // remain retained metadata without changing decoded pixels.
+                if !saw_sos && payload.starts_with(b"Adobe") && payload.len() >= 12 {
                     adobe_color_transform = payload.get(11).copied();
                 }
                 metadata.push(crate::types::OpaqueMetadata {
@@ -669,6 +710,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     .at(marker_offset, "jpeg_metadata"));
                 }
                 let payload_end = pos.saturating_add(payload_len);
+                if marker == M_APP0 && !saw_sos {
+                    super::super::inspect::validate_app0(&data[pos..payload_end])
+                        .map_err(|error| error.at(marker_offset, "jpeg_metadata"))?;
+                }
                 metadata.push(crate::types::OpaqueMetadata {
                     kind: vec![marker.to_le_bytes()[0]],
                     data: data[pos..payload_end].to_vec(),
@@ -722,6 +767,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         max_v_samp,
         progressive,
         adobe_color_transform,
+        rgb_components,
         scans,
         metadata,
     })

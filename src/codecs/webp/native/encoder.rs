@@ -129,9 +129,50 @@ struct AlphaPalette {
     len: usize,
 }
 
+#[derive(Clone, Copy)]
+struct PalettePackingConfig {
+    width: usize,
+    height: usize,
+    pixels_per_group: usize,
+    bits_per_pixel: usize,
+    packed_width: usize,
+}
+
 trait BitWriterCheckpoint: Clone {
     fn checkpoint_bits(&mut self, written: usize) -> Result<(), EncodingError>;
     fn checkpoint_output_bytes(&mut self, emitted: usize) -> Result<(), EncodingError>;
+
+    fn minimize_palette_deltas(&self, palette: &mut [u32]) -> Result<(), EncodingError>;
+
+    fn pack_palette_pixels(
+        &self,
+        pixels: &mut [u32],
+        palette: &[u32],
+        config: PalettePackingConfig,
+    ) -> Result<(), EncodingError>;
+
+    fn subtract_green_pixels(&self, pixels: &mut [u32]) -> Result<(), EncodingError>;
+
+    fn materialize_meta_pixels(
+        &self,
+        symbols: &[u16],
+        meta_pixels: &mut Vec<u32>,
+    ) -> Result<(), EncodingError>;
+
+    fn write_token_references(
+        writer: &mut BitWriter<'_, Self>,
+        tokens: &[backward_refs::Token],
+        context: TokenStreamReferenceContext<'_>,
+    ) -> Result<(), EncodingError>
+    where
+        Self: Sized;
+
+    fn finish_alpha_output(
+        &self,
+        encoded: Vec<u8>,
+        alpha: &[u8],
+        header: u8,
+    ) -> Result<Vec<u8>, EncodingError>;
 }
 
 #[derive(Clone, Copy)]
@@ -153,6 +194,97 @@ impl BitWriterCheckpoint for NoopBitWriterCheckpoint {
     #[inline(always)]
     fn checkpoint_output_bytes(&mut self, _emitted: usize) -> Result<(), EncodingError> {
         self.checkpoint_event()
+    }
+
+    fn minimize_palette_deltas(&self, palette: &mut [u32]) -> Result<(), EncodingError> {
+        minimize_palette_deltas(palette);
+        Ok(())
+    }
+
+    #[allow(
+        clippy::unwrap_used,
+        reason = "palette construction retains every pixel color before the index-packing pass"
+    )]
+    #[cfg_attr(coverage, inline(never))]
+    fn pack_palette_pixels(
+        &self,
+        pixels: &mut [u32],
+        palette: &[u32],
+        config: PalettePackingConfig,
+    ) -> Result<(), EncodingError> {
+        let PalettePackingConfig {
+            width,
+            height,
+            pixels_per_group,
+            bits_per_pixel,
+            packed_width,
+        } = config;
+        for row_index in 0..height {
+            let row_start = row_index * width;
+            let packed_row_start = row_index * packed_width;
+            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
+                let mut packed_pixel = 0xff00_0000_u32;
+                let group_len = (width - group_start).min(pixels_per_group);
+                for index in 0..group_len {
+                    let color = pixels[row_start + group_start + index];
+                    let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
+                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+                }
+                pixels[packed_row_start + group_index] = packed_pixel;
+            }
+        }
+        Ok(())
+    }
+
+    fn subtract_green_pixels(&self, pixels: &mut [u32]) -> Result<(), EncodingError> {
+        subtract_green(pixels);
+        Ok(())
+    }
+
+    fn finish_alpha_output(
+        &self,
+        mut encoded: Vec<u8>,
+        alpha: &[u8],
+        header: u8,
+    ) -> Result<Vec<u8>, EncodingError> {
+        // Reuse the encoded allocation for either winner. Pillow prefers the
+        // compressed representation when the two payload sizes tie.
+        if alpha.len() < encoded.len() {
+            encoded.clear();
+            encoded.push(header);
+            encoded.extend_from_slice(alpha);
+            return Ok(encoded);
+        }
+
+        let encoded_length = encoded.len();
+        encoded.reserve(1);
+        encoded.push(0);
+        encoded.copy_within(..encoded_length, 1);
+        encoded[0] = 1 | header;
+        Ok(encoded)
+    }
+
+    #[cfg_attr(coverage, inline(never))]
+    fn materialize_meta_pixels(
+        &self,
+        symbols: &[u16],
+        meta_pixels: &mut Vec<u32>,
+    ) -> Result<(), EncodingError> {
+        meta_pixels.extend(symbols.iter().map(|&symbol| u32::from(symbol) << 8));
+        Ok(())
+    }
+
+    #[cfg_attr(coverage, inline(never))]
+    fn write_token_references(
+        writer: &mut BitWriter<'_, Self>,
+        tokens: &[backward_refs::Token],
+        context: TokenStreamReferenceContext<'_>,
+    ) -> Result<(), EncodingError> {
+        let mut position = 0;
+        for &reference in tokens {
+            position += write_token_reference(writer, reference, position, context)?;
+        }
+        Ok(())
     }
 }
 
@@ -293,6 +425,116 @@ impl BitWriterCheckpoint for TokenBitWriterCheckpoint<'_> {
         while previous_interval < current_interval {
             previous_interval = previous_interval.saturating_add(1);
             check_token(Some(self.token))?;
+        }
+        Ok(())
+    }
+
+    fn minimize_palette_deltas(&self, palette: &mut [u32]) -> Result<(), EncodingError> {
+        minimize_palette_deltas_with_checkpoint(palette, self.token)
+    }
+
+    #[cfg_attr(coverage, inline(never))]
+    fn pack_palette_pixels(
+        &self,
+        pixels: &mut [u32],
+        palette: &[u32],
+        config: PalettePackingConfig,
+    ) -> Result<(), EncodingError> {
+        let PalettePackingConfig {
+            width,
+            height,
+            pixels_per_group,
+            bits_per_pixel,
+            packed_width,
+        } = config;
+        let mut source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
+        for row_index in 0..height {
+            if row_index.is_multiple_of(64) {
+                check_token(Some(self.token))?;
+            }
+            let row_start = row_index * width;
+            let packed_row_start = row_index * packed_width;
+            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
+                let mut packed_pixel = 0xff00_0000_u32;
+                let group_len = (width - group_start).min(pixels_per_group);
+                for index in 0..group_len {
+                    let color = pixels[row_start + group_start + index];
+                    let palette_index = palette_index_with_checkpoint(palette, color, self.token)?;
+                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
+                }
+                pixels[packed_row_start + group_index] = packed_pixel;
+                source_pixels_until_checkpoint =
+                    source_pixels_until_checkpoint.saturating_sub(group_len);
+                if source_pixels_until_checkpoint == 0 {
+                    check_token(Some(self.token))?;
+                    source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn subtract_green_pixels(&self, pixels: &mut [u32]) -> Result<(), EncodingError> {
+        subtract_green_with_checkpoint(pixels, Some(self.token))
+    }
+
+    fn finish_alpha_output(
+        &self,
+        encoded: Vec<u8>,
+        alpha: &[u8],
+        header: u8,
+    ) -> Result<Vec<u8>, EncodingError> {
+        let mut compressed = Vec::with_capacity(encoded.len() + 1);
+        compressed.push(1 | header);
+        extend_bytes_with_checkpoint(&mut compressed, &encoded, self.token)?;
+
+        let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
+        uncompressed.push(header);
+        extend_bytes_with_checkpoint(&mut uncompressed, alpha, self.token)?;
+
+        check_token(Some(self.token))?;
+        Ok(if uncompressed.len() < compressed.len() {
+            uncompressed
+        } else {
+            compressed
+        })
+    }
+
+    #[cfg_attr(coverage, inline(never))]
+    fn materialize_meta_pixels(
+        &self,
+        symbols: &[u16],
+        meta_pixels: &mut Vec<u32>,
+    ) -> Result<(), EncodingError> {
+        let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+        for &symbol in symbols {
+            meta_pixels.push(u32::from(symbol) << 8);
+            symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
+            if symbols_until_checkpoint == 0 {
+                check_token(Some(self.token))?;
+                symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg_attr(coverage, inline(never))]
+    fn write_token_references(
+        writer: &mut BitWriter<'_, Self>,
+        tokens: &[backward_refs::Token],
+        context: TokenStreamReferenceContext<'_>,
+    ) -> Result<(), EncodingError> {
+        let token = writer.checkpoint.token;
+        let mut position = 0;
+        let mut next_checkpoint = VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS;
+        for &reference in tokens {
+            let consumed = write_token_reference(writer, reference, position, context)?;
+            position += consumed;
+            while position >= next_checkpoint {
+                check_token(Some(token))?;
+                next_checkpoint =
+                    next_checkpoint.saturating_add(VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS);
+            }
         }
         Ok(())
     }
@@ -1256,6 +1498,8 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
             max_cache_bits,
             reference_low_effort: config.reference_low_effort,
             hash_chain_low_effort: config.hash_chain_low_effort,
+            try_no_cache: config.try_no_cache,
+            try_box_chain: config.try_box_chain,
         },
         &mut token_scratch.candidates,
         token,
@@ -1315,10 +1559,13 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
             }
             token_scratch.candidates.result_pool.push(tokens);
         }
-        // At most the standard and optional box-chain candidates are emitted
-        // for one stream. Keep the pool bounded even when the cache scratch
-        // already has sufficient capacity and did not consume a pooled vector.
-        token_scratch.candidates.result_pool.truncate(2);
+        // Standard and optional box-chain trials each emit at most one cached
+        // and one no-cache candidate. Keep the pool bounded even when cache
+        // scratch did not need to consume a pooled vector.
+        token_scratch
+            .candidates
+            .result_pool
+            .truncate(if config.try_no_cache { 4 } else { 2 });
         let (_, mut suffix, buffer, nbits, checkpoint) = best.unwrap();
         w.writer.reserve(suffix.len());
         // The ordinary path has no caller-visible copy checkpoint. Move the
@@ -1326,7 +1573,7 @@ fn write_image_stream_configured_with_scratch<C: BitWriterCheckpoint>(
         // the token-aware path's chunked copy and cancellation behavior.
         match token {
             None => w.writer.append(&mut suffix),
-            Some(token) => extend_bytes_with_checkpoint(w.writer, &suffix, Some(token))?,
+            Some(token) => extend_bytes_with_checkpoint(w.writer, &suffix, token)?,
         }
         *output_scratch = suffix;
         w.buffer = buffer;
@@ -1397,6 +1644,10 @@ struct ImageStreamScratch {
     // Retain the filtered alpha plane between sequential frames without
     // retaining its contents after the frame is encoded.
     alpha_filtered: Vec<u8>,
+    // Reuse one mutable image across the bounded native cruncher trials.
+    frame_trial_pixels: Vec<u32>,
+    palette_cooccurrence: Vec<u32>,
+    palette_row: Vec<usize>,
 }
 
 #[derive(Clone, Copy)]
@@ -1412,6 +1663,8 @@ struct ImageStreamConfig {
     quality: u32,
     reference_low_effort: bool,
     hash_chain_low_effort: bool,
+    try_no_cache: bool,
+    try_box_chain: bool,
 }
 
 struct PaletteInput {
@@ -1655,6 +1908,8 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         quality,
         reference_low_effort,
         hash_chain_low_effort,
+        try_no_cache: _,
+        try_box_chain: _,
     } = image;
     w.write_bits(u64::from(cache_bits != 0), 1)?;
     if cache_bits != 0 {
@@ -1698,19 +1953,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                 let meta_pixels = &mut scratch.meta_pixels;
                 meta_pixels.clear();
                 meta_pixels.reserve(symbols.len());
-                if let Some(token) = token {
-                    let mut symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
-                    for &symbol in symbols.iter() {
-                        meta_pixels.push(u32::from(symbol) << 8);
-                        symbols_until_checkpoint = symbols_until_checkpoint.saturating_sub(1);
-                        if symbols_until_checkpoint == 0 {
-                            check_token(Some(token))?;
-                            symbols_until_checkpoint = VP8L_HISTOGRAM_SAMPLING_CHECKPOINT_SYMBOLS;
-                        }
-                    }
-                } else {
-                    meta_pixels.extend(symbols.iter().map(|&symbol| u32::from(symbol) << 8));
-                }
+                w.checkpoint.materialize_meta_pixels(symbols, meta_pixels)?;
             }
             let meta_width = width.div_ceil(1 << encoded_histogram_bits);
             let meta_scratch = scratch
@@ -1726,6 +1969,8 @@ fn write_token_stream<C: BitWriterCheckpoint>(
                     quality,
                     reference_low_effort,
                     hash_chain_low_effort,
+                    try_no_cache: false,
+                    try_box_chain: false,
                 },
                 0,
                 &mut scratch.meta_output,
@@ -1771,24 +2016,7 @@ fn write_token_stream<C: BitWriterCheckpoint>(
         tile_width,
         groups: &group_scratch[..group_count],
     };
-    if let Some(token) = token {
-        let mut position = 0;
-        let mut next_checkpoint = VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS;
-        for &reference in tokens {
-            let consumed = write_token_reference(w, reference, position, reference_context)?;
-            position += consumed;
-            while position >= next_checkpoint {
-                check_token(Some(token))?;
-                next_checkpoint =
-                    next_checkpoint.saturating_add(VP8L_TOKEN_STREAM_CHECKPOINT_PIXELS);
-            }
-        }
-    } else {
-        let mut position = 0;
-        for &reference in tokens {
-            position += write_token_reference(w, reference, position, reference_context)?;
-        }
-    }
+    C::write_token_references(w, tokens, reference_context)?;
     Ok(())
 }
 
@@ -1936,6 +2164,14 @@ enum EntropyMode {
     SubtractGreen,
     SpatialSubtractGreen,
     Palette,
+    PaletteSpatial,
+}
+
+#[derive(Clone, Copy)]
+enum PaletteOrder {
+    Default,
+    MinimizeDeltas,
+    ModifiedZeng,
 }
 
 #[derive(Clone, Copy)]
@@ -1944,6 +2180,8 @@ struct FrameEncodeConfig {
     method: u8,
     histogram_bits: u8,
     transform_bits: u8,
+    palette_order: PaletteOrder,
+    try_box_chain: bool,
 }
 
 fn huffman_tile_count(width: usize, height: usize, bits: u8) -> usize {
@@ -1955,10 +2193,10 @@ fn huffman_tile_count(width: usize, height: usize, bits: u8) -> usize {
 fn frame_encode_config(
     width: usize,
     height: usize,
-    has_palette: bool,
+    palette_size: Option<usize>,
     options: LosslessEncodeOptions,
 ) -> FrameEncodeConfig {
-    let palette_bias: u8 = if has_palette { 9 } else { 7 };
+    let palette_bias: u8 = if palette_size.is_some() { 9 } else { 7 };
     let mut histogram_bits = palette_bias
         .saturating_sub(options.method)
         .clamp(VP8L_MIN_HUFFMAN_BITS, VP8L_MAX_HUFFMAN_BITS);
@@ -1986,6 +2224,12 @@ fn frame_encode_config(
         method: options.method,
         histogram_bits,
         transform_bits: histogram_bits.min(max_transform_bits),
+        try_box_chain: palette_size.is_some_and(|size| size <= 16) && options.method != 0,
+        palette_order: if options.method == 0 {
+            PaletteOrder::Default
+        } else {
+            PaletteOrder::MinimizeDeltas
+        },
     }
 }
 
@@ -2264,7 +2508,7 @@ fn analyze_entropy(
         .map(|&(mode, _)| mode)
         .unwrap();
     let (red_histogram, blue_histogram) = match mode {
-        EntropyMode::Direct | EntropyMode::Palette => (RED, BLUE),
+        EntropyMode::Direct | EntropyMode::Palette | EntropyMode::PaletteSpatial => (RED, BLUE),
         EntropyMode::Spatial => (RED_PREDICTED, BLUE_PREDICTED),
         EntropyMode::SubtractGreen => (RED_SUB_GREEN, BLUE_SUB_GREEN),
         EntropyMode::SpatialSubtractGreen => (RED_PREDICTED_SUB_GREEN, BLUE_PREDICTED_SUB_GREEN),
@@ -2303,20 +2547,149 @@ fn subtract_green_with_checkpoint(
     Ok(())
 }
 
-// The palette is constructed from the same pixel set being packed.
-#[allow(
-    clippy::unwrap_used,
-    reason = "the palette indices are built from the same source pixels packed by this pass"
-)]
+// libwebp's modified Zeng order uses four-connected palette co-occurrences.
+// Keep its strict first-winner ties and swap-removal order: both affect the
+// encoded palette. The alphabet is bounded to 256 entries before this call.
+fn sort_palette_zeng(
+    pixels: &[u32],
+    width: usize,
+    palette: &mut [u32],
+    scratch: &mut ImageStreamScratch,
+    token: Option<&crate::CancellationToken>,
+) -> Result<(), EncodingError> {
+    check_token(token)?;
+    let colors = palette.len();
+    if colors <= 1 {
+        return Ok(());
+    }
+    let matrix = &mut scratch.palette_cooccurrence;
+    matrix.resize(colors * colors, 0);
+    for chunk in matrix.chunks_mut(VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS) {
+        chunk.fill(0);
+        check_token(token)?;
+    }
+    let previous_row = &mut scratch.palette_row;
+    previous_row.resize(width, 0);
+    let mut previous_pixel = !pixels[0];
+    let mut index = 0;
+    let mut pixels_until_checkpoint = VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS;
+    for (y, row) in pixels.chunks_exact(width).enumerate() {
+        let mut left = 0;
+        for (x, &pixel) in row.iter().enumerate() {
+            if pixel != previous_pixel {
+                // Every source color is in this sorted palette, so its
+                // lower bound is the exact palette index.
+                index = palette.partition_point(|&color| color < pixel);
+                previous_pixel = pixel;
+            }
+            if x > 0 && index != left {
+                matrix[index * colors + left] += 1;
+                matrix[left * colors + index] += 1;
+            }
+            let top = previous_row[x];
+            if y > 0 && index != top {
+                matrix[index * colors + top] += 1;
+                matrix[top * colors + index] += 1;
+            }
+            previous_row[x] = index;
+            left = index;
+            pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+            if pixels_until_checkpoint == 0 {
+                check_token(token)?;
+                pixels_until_checkpoint = VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS;
+            }
+        }
+    }
+
+    let mut order = [0_usize; 256];
+    let mut best_sum = 0;
+    for index in 0..colors {
+        check_token(token)?;
+        let sum: u32 = matrix[index * colors..(index + 1) * colors].iter().sum();
+        if sum > best_sum {
+            best_sum = sum;
+            order[0] = index;
+        }
+    }
+    let mut best_pair = 0;
+    for index in 0..colors {
+        let count = matrix[order[0] * colors + index];
+        if count > best_pair {
+            best_pair = count;
+            order[1] = index;
+        }
+    }
+    let mut sums = [(0_usize, 0_u32); 256];
+    let mut remaining = 0;
+    let mut best = 0;
+    for index in 0..colors {
+        if index == order[0] || index == order[1] {
+            continue;
+        }
+        sums[remaining] = (
+            index,
+            matrix[index * colors + order[0]] + matrix[index * colors + order[1]],
+        );
+        if sums[remaining].1 > sums[best].1 {
+            best = remaining;
+        }
+        remaining += 1;
+    }
+    let mut first = 0;
+    let mut last = 1;
+    while remaining > 0 {
+        check_token(token)?;
+        let added = sums[best].0;
+        let placed = colors - remaining;
+        let mut delta = 0_i32;
+        for offset in 0..placed {
+            let neighbor = order[(first + offset) % colors];
+            let weight = i32::from(placed as u16) - 1 - 2 * i32::from(offset as u16);
+            // Define the reference's 32-bit weighted accumulation explicitly
+            // even for large, valid images with heavily repeated edges.
+            delta = delta
+                .wrapping_add(weight.wrapping_mul(matrix[added * colors + neighbor].cast_signed()));
+        }
+        if delta > 0 {
+            first = if first == 0 { colors - 1 } else { first - 1 };
+            order[first] = added;
+        } else {
+            last += 1;
+            order[last] = added;
+        }
+        sums[best] = sums[remaining - 1];
+        remaining -= 1;
+        best = 0;
+        for index in 0..remaining {
+            sums[index].1 += matrix[added * colors + sums[index].0];
+            if sums[index].1 > sums[best].1 {
+                best = index;
+            }
+        }
+    }
+    let mut original = [0_u32; 256];
+    original[..colors].copy_from_slice(palette);
+    for (index, color) in palette.iter_mut().enumerate() {
+        *color = original[order[(first + index) % colors]];
+    }
+    Ok(())
+}
+
+struct PaletteImage {
+    width: usize,
+    len: usize,
+    max_cache_bits: u8,
+}
+
 #[cfg_attr(coverage, inline(never))]
 fn apply_palette<C: BitWriterCheckpoint>(
     w: &mut BitWriter<'_, C>,
     pixels: &mut [u32],
     input: PaletteInput,
-    config: ImageStreamConfig,
+    config: FrameEncodeConfig,
     scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
-) -> Result<(), EncodingError> {
+) -> Result<PaletteImage, EncodingError> {
     check_token(token)?;
     let PaletteInput {
         width,
@@ -2324,12 +2697,17 @@ fn apply_palette<C: BitWriterCheckpoint>(
         colors,
     } = input;
     let mut palette = colors;
-    let low_effort = config.reference_low_effort;
-    if !low_effort {
-        if let Some(token) = token {
-            minimize_palette_deltas_with_checkpoint(&mut palette, token)?;
-        } else {
-            minimize_palette_deltas(&mut palette);
+    match config.palette_order {
+        PaletteOrder::Default => {
+            // Native kSortedDefault leaves transparent black implicit when the
+            // palette is large enough that removing it cannot change packing.
+            if palette.len() > 17 && palette.first() == Some(&0) {
+                palette.rotate_left(1);
+            }
+        }
+        PaletteOrder::MinimizeDeltas => w.checkpoint.minimize_palette_deltas(&mut palette)?,
+        PaletteOrder::ModifiedZeng => {
+            sort_palette_zeng(pixels, width, &mut palette, scratch, token)?
         }
     }
     let encoded_length = if palette.len() > 17 && palette.last() == Some(&0) {
@@ -2359,7 +2737,9 @@ fn apply_palette<C: BitWriterCheckpoint>(
             histogram_bits: 3,
             quality: 20,
             reference_low_effort: false,
-            hash_chain_low_effort: config.hash_chain_low_effort,
+            hash_chain_low_effort: config.method == 0,
+            try_no_cache: false,
+            try_box_chain: false,
         },
         0,
         &mut scratch.output,
@@ -2381,61 +2761,30 @@ fn apply_palette<C: BitWriterCheckpoint>(
     // left-to-right into its prefix is safe because each destination index is
     // at or before the source group being read; for one-pixel groups the
     // source value is read before the same slot is overwritten.
-    if let Some(token) = token {
-        let mut source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
-        for row_index in 0..height {
-            if row_index.is_multiple_of(64) {
-                check_token(Some(token))?;
-            }
-            let row_start = row_index * width;
-            let packed_row_start = row_index * packed_width;
-            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
-                let mut packed_pixel = 0xff00_0000_u32;
-                let group_len = (width - group_start).min(pixels_per_group);
-                for index in 0..group_len {
-                    let color = pixels[row_start + group_start + index];
-                    let palette_index = palette_index_with_checkpoint(&palette, color, token)?;
-                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
-                }
-                pixels[packed_row_start + group_index] = packed_pixel;
-                source_pixels_until_checkpoint =
-                    source_pixels_until_checkpoint.saturating_sub(group_len);
-                if source_pixels_until_checkpoint == 0 {
-                    check_token(Some(token))?;
-                    source_pixels_until_checkpoint = VP8L_PALETTE_PACKING_CHECKPOINT_PIXELS;
-                }
-            }
-        }
-    } else {
-        for row_index in 0..height {
-            let row_start = row_index * width;
-            let packed_row_start = row_index * packed_width;
-            for (group_index, group_start) in (0..width).step_by(pixels_per_group).enumerate() {
-                let mut packed_pixel = 0xff00_0000_u32;
-                let group_len = (width - group_start).min(pixels_per_group);
-                for index in 0..group_len {
-                    let color = pixels[row_start + group_start + index];
-                    let palette_index = palette.iter().position(|&entry| entry == color).unwrap();
-                    packed_pixel |= (palette_index as u32) << (8 + bits_per_pixel * index);
-                }
-                pixels[packed_row_start + group_index] = packed_pixel;
-            }
-        }
-    }
-    w.write_bits(0, 1)?;
+    w.checkpoint.pack_palette_pixels(
+        pixels,
+        &palette,
+        PalettePackingConfig {
+            width,
+            height,
+            pixels_per_group,
+            bits_per_pixel,
+            packed_width,
+        },
+    )?;
     let maximum_cache_bits =
         ((usize::BITS - palette.len().leading_zeros()) as u8).min(VP8L_MAX_COLOR_CACHE_BITS);
-    write_image_stream_configured_with_scratch(
-        w,
-        &pixels[..packed_len],
-        packed_width,
-        true,
-        config,
-        maximum_cache_bits,
-        &mut scratch.output,
-        &mut scratch.tokens,
-        token,
-    )
+    Ok(PaletteImage {
+        width: packed_width,
+        len: packed_len,
+        max_cache_bits: maximum_cache_bits,
+    })
+}
+
+#[derive(Clone, Copy)]
+enum FrameStreamKind {
+    Image { has_alpha: bool },
+    Alpha,
 }
 
 #[allow(
@@ -2447,7 +2796,108 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
     pixels: &mut [u32],
     width: u32,
     height: u32,
-    is_alpha: bool,
+    kind: FrameStreamKind,
+    entropy_mode: EntropyMode,
+    red_and_blue_zero: bool,
+    config: FrameEncodeConfig,
+    palette: Vec<u32>,
+    token: Option<&crate::CancellationToken>,
+    checkpoint: C,
+    scratch: &mut ImageStreamScratch,
+) -> Result<Vec<u8>, EncodingError> {
+    if config.method != 6 || config.quality != 100 {
+        return encode_frame_candidate(
+            pixels,
+            width,
+            height,
+            kind,
+            entropy_mode,
+            red_and_blue_zero,
+            config,
+            palette,
+            token,
+            checkpoint,
+            scratch,
+        );
+    }
+    let has_palette = !palette.is_empty() && palette.len() <= VP8L_MAX_PALETTE_ENTRIES;
+    let mut trial_pixels = core::mem::take(&mut scratch.frame_trial_pixels);
+    let result = (|| {
+        // Four non-palette modes always run. Native order and strict size
+        // comparisons preserve the first candidate when byte lengths tie.
+        let mut best_size = usize::MAX;
+        let mut best = Vec::new();
+        for mode in [
+            EntropyMode::Direct,
+            EntropyMode::Spatial,
+            EntropyMode::SubtractGreen,
+            EntropyMode::SpatialSubtractGreen,
+            EntropyMode::Palette,
+            EntropyMode::PaletteSpatial,
+        ] {
+            let use_palette = matches!(mode, EntropyMode::Palette | EntropyMode::PaletteSpatial);
+            if use_palette && !has_palette {
+                continue;
+            }
+            let orders: &[PaletteOrder] = if use_palette {
+                &[PaletteOrder::MinimizeDeltas, PaletteOrder::ModifiedZeng]
+            } else {
+                &[PaletteOrder::Default]
+            };
+            for &palette_order in orders {
+                check_token(token)?;
+                trial_pixels.clear();
+                trial_pixels.reserve(pixels.len());
+                for chunk in pixels.chunks(VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS) {
+                    trial_pixels.extend_from_slice(chunk);
+                    check_token(token)?;
+                }
+                let mut candidate = encode_frame_candidate(
+                    &mut trial_pixels,
+                    width,
+                    height,
+                    kind,
+                    mode,
+                    red_and_blue_zero,
+                    FrameEncodeConfig {
+                        palette_order,
+                        ..config
+                    },
+                    if use_palette {
+                        palette.clone()
+                    } else {
+                        Vec::new()
+                    },
+                    token,
+                    checkpoint.clone(),
+                    scratch,
+                )?;
+                if candidate.len() < best_size {
+                    best_size = candidate.len();
+                    core::mem::swap(&mut best, &mut candidate);
+                }
+                if candidate.capacity() > scratch.output.capacity() {
+                    scratch.output = candidate;
+                }
+            }
+        }
+        Ok(best)
+    })();
+    scratch.frame_trial_pixels = trial_pixels;
+    scratch.frame_trial_pixels.clear();
+    result
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "frame geometry, transform choices, cancellation, checkpoint, and reusable stream scratch are independently consumed by the writer"
+)]
+#[cfg_attr(coverage, inline(never))]
+fn encode_frame_candidate<C: BitWriterCheckpoint>(
+    pixels: &mut [u32],
+    width: u32,
+    height: u32,
+    kind: FrameStreamKind,
     entropy_mode: EntropyMode,
     red_and_blue_zero: bool,
     config: FrameEncodeConfig,
@@ -2469,20 +2919,28 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
             nbits: 0,
             checkpoint,
         };
-        w.write_bits(0x2f, 8)?; // signature
-        w.write_bits(u64::from(width) - 1, 14)?;
-        w.write_bits(u64::from(height) - 1, 14)?;
+        if let FrameStreamKind::Image { has_alpha } = kind {
+            w.write_bits(0x2f, 8)?; // signature
+            w.write_bits(u64::from(width) - 1, 14)?;
+            w.write_bits(u64::from(height) - 1, 14)?;
 
-        w.write_bits(u64::from(is_alpha), 1)?; // alpha used
-        w.write_bits(0x0, 3)?; // version
+            w.write_bits(u64::from(has_alpha), 1)?; // alpha used
+            w.write_bits(0x0, 3)?; // version
+        }
 
-        if entropy_mode == EntropyMode::Palette {
-            let image_config = ImageStreamConfig {
-                histogram_bits: config.histogram_bits,
-                quality: u32::from(config.quality),
-                reference_low_effort: config.method == 0,
-                hash_chain_low_effort: config.method == 0,
-            };
+        let use_palette = matches!(
+            entropy_mode,
+            EntropyMode::Palette | EntropyMode::PaletteSpatial
+        );
+        let image_config = ImageStreamConfig {
+            histogram_bits: config.histogram_bits,
+            quality: u32::from(config.quality),
+            reference_low_effort: config.method == 0,
+            hash_chain_low_effort: config.method == 0,
+            try_no_cache: config.method == 6 && config.quality == 100,
+            try_box_chain: config.try_box_chain,
+        };
+        let palette_image = if use_palette {
             apply_palette(
                 w,
                 pixels,
@@ -2491,42 +2949,48 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     height: height as usize,
                     colors: palette,
                 },
-                image_config,
+                config,
                 scratch,
                 token,
-            )?;
+            )?
         } else {
-            let (grayscale, has_nonopaque_alpha) = if is_alpha {
-                pixels_are_grayscale_and_have_nonopaque_alpha_with_checkpoint(pixels, token)?
-            } else {
-                (pixels_are_grayscale_with_checkpoint(pixels, token)?, false)
-            };
+            PaletteImage {
+                width: width as usize,
+                len: pixels.len(),
+                max_cache_bits: VP8L_MAX_COLOR_CACHE_BITS,
+            }
+        };
+        let width = palette_image.width as u32;
+        let pixels = &mut pixels[..palette_image.len];
+        if entropy_mode != EntropyMode::Palette {
+            let (grayscale, has_nonopaque_alpha) =
+                if matches!(kind, FrameStreamKind::Image { has_alpha: true }) {
+                    pixels_are_grayscale_and_have_nonopaque_alpha_with_checkpoint(pixels, token)?
+                } else {
+                    (pixels_are_grayscale_with_checkpoint(pixels, token)?, false)
+                };
             let use_subtract_green = matches!(
                 entropy_mode,
                 EntropyMode::SubtractGreen | EntropyMode::SpatialSubtractGreen
             );
             let use_predictor = matches!(
                 entropy_mode,
-                EntropyMode::Spatial | EntropyMode::SpatialSubtractGreen
+                EntropyMode::Spatial
+                    | EntropyMode::SpatialSubtractGreen
+                    | EntropyMode::PaletteSpatial
             );
-            let image_config = ImageStreamConfig {
-                histogram_bits: config.histogram_bits,
-                quality: u32::from(config.quality),
-                reference_low_effort: config.method == 0,
-                hash_chain_low_effort: config.method == 0,
-            };
             if use_subtract_green {
                 w.write_bits(1, 1)?;
                 w.write_bits(2, 2)?;
-                if token.is_some() {
-                    subtract_green_with_checkpoint(pixels, token)?;
-                } else {
-                    subtract_green(pixels);
-                }
+                w.checkpoint.subtract_green_pixels(pixels)?;
                 check_token(token)?;
             }
 
             if use_predictor {
+                let predictor_config = predictor::PredictorConfig {
+                    bits: config.transform_bits,
+                    preserve_hidden_rgb: matches!(kind, FrameStreamKind::Alpha),
+                };
                 // Mode 12 is a fast predictor for grayscale RGB. Variable
                 // alpha changes the per-tile choice, so use the full selector
                 // for grayscale RGBA frames that contain nonopaque pixels.
@@ -2540,7 +3004,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         &mut scratch.predictor,
                         token,
                     )?
-                } else if grayscale && !has_nonopaque_alpha {
+                } else if grayscale && !has_nonopaque_alpha && !use_palette {
                     predictor::apply_fixed::<false, true>(
                         pixels,
                         width as usize,
@@ -2555,7 +3019,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         pixels,
                         width as usize,
                         height as usize,
-                        config.transform_bits,
+                        predictor_config,
                         config.method,
                         &mut scratch.predictor,
                         token,
@@ -2565,7 +3029,7 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                         pixels,
                         width as usize,
                         height as usize,
-                        config.transform_bits,
+                        predictor_config,
                         &mut scratch.predictor,
                         token,
                     )?
@@ -2580,14 +3044,18 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     scratch.predictor.modes(),
                     predictor_width,
                     false,
-                    image_config,
+                    ImageStreamConfig {
+                        try_no_cache: false,
+                        try_box_chain: false,
+                        ..image_config
+                    },
                     &mut scratch.output,
                     &mut scratch.tokens,
                     token,
                 )?;
             }
 
-            if use_predictor && !red_and_blue_zero {
+            if use_predictor && !red_and_blue_zero && !use_palette {
                 let color_bits = cross_color::select_and_apply(
                     pixels,
                     width as usize,
@@ -2606,25 +3074,29 @@ fn encode_frame_stream<C: BitWriterCheckpoint>(
                     scratch.cross_color.image(),
                     color_width,
                     false,
-                    image_config,
+                    ImageStreamConfig {
+                        try_no_cache: false,
+                        try_box_chain: false,
+                        ..image_config
+                    },
                     &mut scratch.output,
                     &mut scratch.tokens,
                     token,
                 )?;
             }
-
-            w.write_bits(0, 1)?; // transforms done
-            write_image_stream(
-                w,
-                pixels,
-                width as usize,
-                true,
-                image_config,
-                &mut scratch.output,
-                &mut scratch.tokens,
-                token,
-            )?;
         }
+        w.write_bits(0, 1)?; // transforms done
+        write_image_stream_configured_with_scratch(
+            w,
+            pixels,
+            width as usize,
+            true,
+            image_config,
+            palette_image.max_cache_bits,
+            &mut scratch.output,
+            &mut scratch.tokens,
+            token,
+        )?;
 
         w.flush()?;
     }
@@ -2784,11 +3256,8 @@ fn encode_frame(
         data.len() as u64
     );
 
-    if width == 0
-        || width > WEBP_MAX_ENCODER_DIMENSION
-        || height == 0
-        || height > WEBP_MAX_ENCODER_DIMENSION
-    {
+    // Public image validation rejects zero dimensions before codec dispatch.
+    if width > WEBP_MAX_ENCODER_DIMENSION || height > WEBP_MAX_ENCODER_DIMENSION {
         return Err(EncodingError::InvalidDimensions);
     }
 
@@ -2798,10 +3267,12 @@ fn encode_frame(
     // Pillow's lossless WebP path uses libwebp's default `exact=false`.
     // libwebp therefore replaces hidden RGB values of fully transparent
     // pixels with transparent black before selecting any transforms.
+    let mut has_nonopaque_alpha = false;
     if is_alpha {
         if let Some(token) = token {
             let mut pixels_until_checkpoint = VP8L_ALPHA_CLEANUP_CHECKPOINT_PIXELS;
             for pixel in &mut pixels {
+                has_nonopaque_alpha |= *pixel >> 24 != u32::from(u8::MAX);
                 if *pixel >> 24 == 0 {
                     *pixel = 0;
                 }
@@ -2813,6 +3284,7 @@ fn encode_frame(
             }
         } else {
             for pixel in &mut pixels {
+                has_nonopaque_alpha |= *pixel >> 24 != u32::from(u8::MAX);
                 if *pixel >> 24 == 0 {
                     *pixel = 0;
                 }
@@ -2823,12 +3295,7 @@ fn encode_frame(
 
     let palette = collect_palette(&pixels, token)?;
     let palette_size = (palette.len() <= VP8L_MAX_PALETTE_ENTRIES).then_some(palette.len());
-    let config = frame_encode_config(
-        width as usize,
-        height as usize,
-        palette_size.is_some(),
-        options,
-    );
+    let config = frame_encode_config(width as usize, height as usize, palette_size, options);
     let (entropy_mode, red_and_blue_zero) = if options.method == 0 {
         (
             if palette_size.is_some() {
@@ -2855,7 +3322,9 @@ fn encode_frame(
             &mut pixels,
             width,
             height,
-            is_alpha,
+            FrameStreamKind::Image {
+                has_alpha: has_nonopaque_alpha,
+            },
             entropy_mode,
             red_and_blue_zero,
             config,
@@ -2872,7 +3341,9 @@ fn encode_frame(
             &mut pixels,
             width,
             height,
-            is_alpha,
+            FrameStreamKind::Image {
+                has_alpha: has_nonopaque_alpha,
+            },
             entropy_mode,
             red_and_blue_zero,
             config,
@@ -2882,6 +3353,12 @@ fn encode_frame(
             scratch,
         ),
     }
+}
+
+#[derive(Clone, Copy)]
+struct AlphaEncodeConfig {
+    method: u8,
+    filter: Option<AlphaFilter>,
 }
 
 #[allow(
@@ -2895,7 +3372,7 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     packed: &[u32],
     packed_width: usize,
     alpha: &[u8],
-    filtering_method: Option<AlphaFilter>,
+    config: AlphaEncodeConfig,
     output_scratch: &mut Vec<u8>,
     token_scratch: &mut TokenStreamScratch,
     token: Option<&crate::CancellationToken>,
@@ -2907,89 +3384,68 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
     // nested trials refill the scratch buffer after this vector is taken.
     let mut encoded = core::mem::take(output_scratch);
     encoded.clear();
-    let mut writer = BitWriter {
-        writer: &mut encoded,
-        buffer: 0,
-        nbits: 0,
-        checkpoint,
+    let checkpoint = {
+        let mut writer = BitWriter {
+            writer: &mut encoded,
+            buffer: 0,
+            nbits: 0,
+            checkpoint,
+        };
+        writer.write_bits(1, 1)?; // transform present
+        writer.write_bits(3, 2)?; // color-indexing transform
+        writer.write_bits((palette_len - 1) as u64, 8)?;
+        write_image_stream_configured_with_scratch(
+            &mut writer,
+            palette_delta,
+            palette_len,
+            false,
+            ImageStreamConfig {
+                histogram_bits: 3,
+                quality: 20,
+                reference_low_effort: false,
+                hash_chain_low_effort: config.method == 0,
+                try_no_cache: false,
+                try_box_chain: false,
+            },
+            0,
+            output_scratch,
+            token_scratch,
+            token,
+        )?;
+
+        writer.write_bits(0, 1)?; // transforms done
+        write_image_stream_configured_with_scratch(
+            &mut writer,
+            packed,
+            packed_width,
+            true,
+            ImageStreamConfig {
+                histogram_bits: 9,
+                // Low-effort alpha uses the reference's method-dependent quality.
+                // The legacy palette path for methods four and five remains
+                // until their cache/histogram parity work is complete. Method
+                // six uses the shared frame cruncher instead.
+                quality: if config.method < 4 {
+                    8 * u32::from(config.method)
+                } else {
+                    32
+                },
+                reference_low_effort: config.method == 0,
+                hash_chain_low_effort: config.method == 0,
+                try_no_cache: false,
+                try_box_chain: config.method != 0,
+            },
+            2,
+            output_scratch,
+            token_scratch,
+            token,
+        )?;
+        writer.flush()?;
+        writer.checkpoint
     };
-    writer.write_bits(1, 1)?; // transform present
-    writer.write_bits(3, 2)?; // color-indexing transform
-    writer.write_bits((palette_len - 1) as u64, 8)?;
-    write_image_stream_configured_with_scratch(
-        &mut writer,
-        palette_delta,
-        palette_len,
-        false,
-        ImageStreamConfig {
-            histogram_bits: 3,
-            quality: 20,
-            reference_low_effort: false,
-            hash_chain_low_effort: false,
-        },
-        0,
-        output_scratch,
-        token_scratch,
-        token,
-    )?;
 
-    writer.write_bits(0, 1)?; // transforms done
-    write_image_stream_configured_with_scratch(
-        &mut writer,
-        packed,
-        packed_width,
-        true,
-        ImageStreamConfig {
-            histogram_bits: 9,
-            quality: 32,
-            reference_low_effort: false,
-            hash_chain_low_effort: false,
-        },
-        2,
-        output_scratch,
-        token_scratch,
-        token,
-    )?;
-    writer.flush()?;
-
-    // The ordinary path already knows which ALPH representation is shorter.
-    // Avoid materializing both candidates: reuse the encoded allocation for
-    // either winner, replacing its contents with the raw plane when that is
-    // strictly shorter and inserting the one-byte ALPH header in place when
-    // compression wins or the candidate sizes tie. Pillow keeps compression
-    // on a tie. `alpha` is already filtered when `filtering_method` is `Some`.
-    // Keep the token-aware path below unchanged because its per-candidate copy
-    // checkpoints are part of the existing Rust-only work-budget contract.
-    if token.is_none() {
-        if alpha.len() < encoded.len() {
-            encoded.clear();
-            encoded.push(filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
-            encoded.extend_from_slice(alpha);
-            return Ok(encoded);
-        }
-
-        let encoded_length = encoded.len();
-        encoded.reserve(1);
-        encoded.push(0);
-        encoded.copy_within(..encoded_length, 1);
-        encoded[0] = 1 | (filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
-        return Ok(encoded);
-    }
-
-    let mut compressed = Vec::with_capacity(encoded.len() + 1);
-    compressed.push(1 | (filtering_method.map_or(0, AlphaFilter::header_bits) << 2));
-    extend_bytes_with_checkpoint(&mut compressed, &encoded, token)?;
-
-    let mut uncompressed = Vec::with_capacity(alpha.len() + 1);
-    uncompressed.push(filtering_method.map_or(0, AlphaFilter::header_bits) << 2);
-    extend_bytes_with_checkpoint(&mut uncompressed, alpha, token)?;
-
-    check_token(token)?;
-    Ok(if uncompressed.len() < compressed.len() {
-        uncompressed
-    } else {
-        compressed
-    })
+    let header = config.filter.map_or(0, AlphaFilter::header_bits) << 2;
+    checkpoint.finish_alpha_output(encoded, alpha, header)
 }
 
 // Alpha output may be copied from either the compressed VP8L stream or the
@@ -3002,12 +3458,8 @@ fn encode_alpha_stream<C: BitWriterCheckpoint>(
 fn extend_bytes_with_checkpoint(
     output: &mut Vec<u8>,
     source: &[u8],
-    token: Option<&crate::CancellationToken>,
+    token: &crate::CancellationToken,
 ) -> Result<(), EncodingError> {
-    let Some(token) = token else {
-        output.extend_from_slice(source);
-        return Ok(());
-    };
     for chunk in source.chunks(VP8L_OUTPUT_CHECKPOINT_BYTES) {
         output.extend_from_slice(chunk);
         if chunk.len() == VP8L_OUTPUT_CHECKPOINT_BYTES {
@@ -3065,6 +3517,7 @@ fn encode_alpha_with_scratch(
     alpha: &[u8],
     width: u32,
     height: u32,
+    method: u8,
     scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
@@ -3077,10 +3530,38 @@ fn encode_alpha_with_scratch(
     } else {
         None
     };
-    let unfiltered =
-        encode_alpha_candidate_with_filter(alpha, width, height, palette, None, scratch, token)?;
+    // libwebp's FAST alpha policy skips the unfiltered trial at low effort
+    // unless there are more than 192 distinct values. Preserve NONE-first
+    // tie-breaking whenever both candidates are considered.
     let Some(filtering_method) = filtering_method else {
-        return Ok(unfiltered);
+        return encode_alpha_candidate_with_filter(
+            alpha,
+            width,
+            height,
+            palette,
+            AlphaEncodeConfig {
+                method,
+                filter: None,
+            },
+            scratch,
+            token,
+        );
+    };
+    let unfiltered = if method > 3 || palette.len > 192 {
+        Some(encode_alpha_candidate_with_filter(
+            alpha,
+            width,
+            height,
+            palette,
+            AlphaEncodeConfig {
+                method,
+                filter: None,
+            },
+            scratch,
+            token,
+        )?)
+    } else {
+        None
     };
 
     let mut filtered_alpha = core::mem::take(&mut scratch.alpha_filtered);
@@ -3099,7 +3580,10 @@ fn encode_alpha_with_scratch(
             width,
             height,
             palette,
-            Some(filtering_method),
+            AlphaEncodeConfig {
+                method,
+                filter: Some(filtering_method),
+            },
             scratch,
             token,
         )
@@ -3108,10 +3592,9 @@ fn encode_alpha_with_scratch(
     scratch.alpha_filtered.clear();
     let filtered = filtered_result?;
 
-    Ok(if filtered.len() < unfiltered.len() {
-        filtered
-    } else {
-        unfiltered
+    Ok(match unfiltered {
+        Some(unfiltered) if unfiltered.len() <= filtered.len() => unfiltered,
+        _ => filtered,
     })
 }
 
@@ -3269,13 +3752,175 @@ where
     Ok(())
 }
 
+// Only green varies in an internal alpha image. Constant A/R/B channels
+// have zero entropy; subtract-green duplicates the green cost into R/B and
+// cannot beat direct or spatial. Keep the native palette hash distribution,
+// predictor zero bias, transform overhead, and strict tie order unchanged.
+fn analyze_alpha_entropy(
+    alpha: &[u8],
+    width: usize,
+    palette_len: usize,
+    transform_bits: u8,
+    token: Option<&crate::CancellationToken>,
+) -> Result<EntropyMode, EncodingError> {
+    let mut histograms = [[0_u32; 256]; 3];
+    let mut previous = alpha[0];
+    let mut pixels_until_checkpoint = VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS;
+    for (y, row) in alpha.chunks_exact(width).enumerate() {
+        let above = y
+            .checked_sub(1)
+            .map(|row| &alpha[row * width..(row + 1) * width]);
+        for (x, &value) in row.iter().enumerate() {
+            let difference = value.wrapping_sub(previous);
+            previous = value;
+            if difference != 0 && above.is_none_or(|above| above[x] != value) {
+                histograms[0][usize::from(value)] += 1;
+                histograms[1][usize::from(difference)] += 1;
+                let green = u64::from(value) << 8;
+                let hash = (((green * 0x39c5_fba7) & 0xffff_ffff) >> 24) as usize;
+                histograms[2][hash] += 1;
+            }
+            pixels_until_checkpoint = pixels_until_checkpoint.saturating_sub(1);
+            if pixels_until_checkpoint == 0 {
+                check_token(token)?;
+                pixels_until_checkpoint = VP8L_ENTROPY_ANALYSIS_CHECKPOINT_PIXELS;
+            }
+        }
+    }
+    histograms[1][0] += 1;
+    let direct = histogram::bits_entropy_with_checkpoint(&histograms[0], token)?;
+    let tiles = width.div_ceil(1 << transform_bits)
+        * alpha.len().div_ceil(width).div_ceil(1 << transform_bits);
+    let predictor_overhead = (14.0_f64.log2() * f64::from(1_u32 << 23)).round() as u64;
+    let spatial = histogram::bits_entropy_with_checkpoint(&histograms[1], token)?
+        + tiles as u64 * predictor_overhead;
+    let palette = histogram::bits_entropy_with_checkpoint(&histograms[2], token)?
+        + ((palette_len as u64 * 8) << 23);
+    let (mode, cost) = if spatial < direct {
+        (EntropyMode::Spatial, spatial)
+    } else {
+        (EntropyMode::Direct, direct)
+    };
+    Ok(if palette < cost {
+        EntropyMode::Palette
+    } else {
+        mode
+    })
+}
+
+// Alpha is encoded as green with A/R/B zero. Reuse the complete VP8L
+// image writer for entropy-selected transforms and method six's complete
+// transform search. ALPH omits the standalone signature and dimensions.
+// None selects the complete checked palette writer for earlier methods.
+#[cfg_attr(coverage, inline(never))]
+fn encode_alpha_entropy_stream(
+    alpha: &[u8],
+    width: u32,
+    height: u32,
+    palette: &AlphaPalette,
+    config: AlphaEncodeConfig,
+    scratch: &mut ImageStreamScratch,
+    token: Option<&crate::CancellationToken>,
+) -> Result<Option<Vec<u8>>, EncodingError> {
+    let frame = frame_encode_config(
+        width as usize,
+        height as usize,
+        Some(palette.len),
+        LosslessEncodeOptions {
+            quality: if config.method == 6 {
+                100
+            } else {
+                8 * config.method
+            },
+            method: config.method,
+        },
+    );
+    let entropy_mode = analyze_alpha_entropy(
+        alpha,
+        width as usize,
+        palette.len,
+        frame.transform_bits,
+        token,
+    )?;
+    if config.method != 6 && entropy_mode == EntropyMode::Palette {
+        return Ok(None);
+    }
+    let mut pixels = core::mem::take(&mut scratch.alpha_packed);
+    pixels.clear();
+    pixels.reserve(alpha.len());
+    let result = (|| {
+        if let Some(token) = token {
+            for chunk in alpha.chunks(VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS) {
+                pixels.extend(chunk.iter().map(|&value| u32::from(value) << 8));
+                if chunk.len() == VP8L_PIXEL_CONVERSION_CHECKPOINT_PIXELS {
+                    check_token(Some(token))?;
+                }
+            }
+        } else {
+            pixels.extend(alpha.iter().map(|&value| u32::from(value) << 8));
+        }
+        let palette: Vec<u32> = if config.method == 6 {
+            palette.values[..palette.len]
+                .iter()
+                .map(|&value| u32::from(value) << 8)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let header = config.filter.map_or(0, AlphaFilter::header_bits) << 2;
+        let encoded = match token {
+            Some(token) => {
+                let checkpoint = TokenBitWriterCheckpoint {
+                    token,
+                    written_bits: 0,
+                    output_bytes: 0,
+                };
+                let encoded = encode_frame_stream(
+                    &mut pixels,
+                    width,
+                    height,
+                    FrameStreamKind::Alpha,
+                    entropy_mode,
+                    true,
+                    frame,
+                    palette,
+                    Some(token),
+                    checkpoint,
+                    scratch,
+                )?;
+                checkpoint.finish_alpha_output(encoded, alpha, header)?
+            }
+            None => {
+                let encoded = encode_frame_stream(
+                    &mut pixels,
+                    width,
+                    height,
+                    FrameStreamKind::Alpha,
+                    entropy_mode,
+                    true,
+                    frame,
+                    palette,
+                    None,
+                    NoopBitWriterCheckpoint,
+                    scratch,
+                )?;
+                NoopBitWriterCheckpoint.finish_alpha_output(encoded, alpha, header)?
+            }
+        };
+        Ok(Some(encoded))
+    })();
+    scratch.alpha_packed = pixels;
+    scratch.alpha_packed.clear();
+    result
+}
+
 #[cfg_attr(coverage, inline(never))]
 fn encode_alpha_candidate_with_filter(
     alpha: &[u8],
     width: u32,
     height: u32,
     mut palette_values: AlphaPalette,
-    filtering_method: Option<AlphaFilter>,
+    config: AlphaEncodeConfig,
     scratch: &mut ImageStreamScratch,
     token: Option<&crate::CancellationToken>,
 ) -> Result<Vec<u8>, EncodingError> {
@@ -3283,6 +3928,20 @@ fn encode_alpha_candidate_with_filter(
     assert_eq!(alpha.len(), width as usize * height as usize);
 
     let palette_len = palette_values.len;
+    if config.method != 0
+        && (palette_len > 16 || config.method == 6)
+        && let Some(encoded) = encode_alpha_entropy_stream(
+            alpha,
+            width,
+            height,
+            &palette_values,
+            config,
+            scratch,
+            token,
+        )?
+    {
+        return Ok(encoded);
+    }
     let palette_values = &mut palette_values.values[..palette_len];
     let mut signs = 0u8;
     let mut predicted = 0u8;
@@ -3296,7 +3955,7 @@ fn encode_alpha_candidate_with_filter(
         }
         predicted = value;
     }
-    if signs == 3 {
+    if config.method != 0 && signs == 3 {
         let mut sortable_len = palette_values.len();
         if sortable_len > 17 && palette_values[0] == 0 {
             sortable_len -= 1;
@@ -3345,6 +4004,14 @@ fn encode_alpha_candidate_with_filter(
             }
         }
     }
+    if config.method == 0 && palette_len > 17 && palette_values.first() == Some(&0) {
+        palette_values.rotate_left(1);
+    }
+    let encoded_palette_len = if palette_len > 17 && palette_values.last() == Some(&0) {
+        palette_len - 1
+    } else {
+        palette_len
+    };
     let mut palette_indices = [0u8; 256];
     for (index, &value) in palette_values.iter().enumerate() {
         if index.is_multiple_of(64) {
@@ -3357,7 +4024,7 @@ fn encode_alpha_candidate_with_filter(
     // second heap vector for their transformed view.
     let mut palette_delta = [0_u32; 256];
     let mut previous = 0u32;
-    for (index, &value) in palette_values.iter().enumerate() {
+    for (index, &value) in palette_values[..encoded_palette_len].iter().enumerate() {
         if index.is_multiple_of(64) {
             check_token(token)?;
         }
@@ -3421,12 +4088,12 @@ fn encode_alpha_candidate_with_filter(
     let packed = &scratch.alpha_packed;
     match token {
         Some(token) => encode_alpha_stream(
-            &palette_delta[..palette_len],
-            palette_len,
+            &palette_delta[..encoded_palette_len],
+            encoded_palette_len,
             packed,
             packed_width,
             alpha,
-            filtering_method,
+            config,
             &mut scratch.output,
             &mut scratch.tokens,
             Some(token),
@@ -3437,12 +4104,12 @@ fn encode_alpha_candidate_with_filter(
             },
         ),
         None => encode_alpha_stream(
-            &palette_delta[..palette_len],
-            palette_len,
+            &palette_delta[..encoded_palette_len],
+            encoded_palette_len,
             packed,
             packed_width,
             alpha,
-            filtering_method,
+            config,
             &mut scratch.output,
             &mut scratch.tokens,
             None,
@@ -3464,7 +4131,7 @@ fn write_chunk(
     output: &mut Vec<u8>,
     name: &[u8],
     data: &[u8],
-    token: Option<&crate::CancellationToken>,
+    token: &crate::CancellationToken,
 ) -> Result<(), EncodingError> {
     debug_assert!(name.len() == 4);
 
@@ -3507,6 +4174,7 @@ impl WebPEncoder {
         rgba: &[u8],
         width: u32,
         height: u32,
+        method: u8,
         token: Option<&crate::CancellationToken>,
     ) -> Result<Vec<u8>, EncodingError> {
         self.alpha_scratch.clear();
@@ -3531,7 +4199,7 @@ impl WebPEncoder {
         };
         let result = result.and_then(|()| {
             let scratch = self.scratch.get_or_insert_with(ImageStreamScratch::default);
-            encode_alpha_with_scratch(&self.alpha_scratch, width, height, scratch, token)
+            encode_alpha_with_scratch(&self.alpha_scratch, width, height, method, scratch, token)
         });
         self.alpha_scratch.clear();
         result
@@ -3583,7 +4251,7 @@ impl WebPEncoder {
         // behind the RIFF/VP8L headers; keep the token-aware copy below so its
         // existing output-copy checkpoints and cancellation behavior remain
         // unchanged.
-        if token.is_none() {
+        let Some(token) = token else {
             let frame_length = frame.len();
             let padding = frame_length % 2;
             frame.reserve(20 + padding);
@@ -3598,14 +4266,14 @@ impl WebPEncoder {
                 frame.push(0);
             }
             return Ok(frame);
-        }
+        };
 
         let mut output = Vec::with_capacity(frame.len().saturating_add(20));
         output.extend_from_slice(b"RIFF");
         output.extend_from_slice(&(chunk_size(frame.len()) + 4).to_le_bytes());
         output.extend_from_slice(b"WEBP");
         write_chunk(&mut output, b"VP8L", &frame, token)?;
-        check_token(token)?;
+        check_token(Some(token))?;
         Ok(output)
     }
 }

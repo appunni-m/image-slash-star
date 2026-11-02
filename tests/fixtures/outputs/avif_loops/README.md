@@ -1,24 +1,75 @@
-# Native AVIF repetition evidence
+This bundle records 573 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 565 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 1980 hashed artifacts cover this README, 573 input files, the observer source, and exact Pillow-decoded frame outputs.
 
-This bundle records 145 input observations made with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Of these, 137 accepted files decode completely;
-8 malformed files fail native parsing and Pillow opening. The 471 hashed
-artifacts total 24,786,304 bytes, including 145 input files, the compiled
-observer source, and 23,966,828 bytes of Pillow-decoded frame outputs. Mutation
-cases share original frame artifacts; each observation records complete per-frame
-pixel hashes and durations. Each case also records the exact observer binary
-digest used for its native repetition observation.
 
-The 111 fixture sources are declared in
-`scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
+Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
+`index.json` records each source digest.
+
+`animated_sequence_header_cicp_mismatch_nclx` changes only the AV1 sequence
+header's primaries and matrix to 9/13/0 while preserving valid item and track
+`nclx` declarations at 1/13/6. Pillow and pinned libavif decode both exact
+RGB frames and report one total play; the loop observation is collected as a
+separate native build collection.
+
+The high-frame-ID companion advances the contiguous IDs to 20,000 and 20,001,
+above the 14-bit delta range. Pinned libavif and Pillow preserve the same two
+exact frames and infinite-loop count as the low-ID source.
+
+The wrapped-frame-ID companion advances the first frame to 32,760 and wraps
+the next to 10 with all seven reference deltas set to 18. Pinned libavif and
+Pillow preserve the same two exact frames and infinite-loop count.
+
+The stale-reference companion uses frame IDs 0, 8,000, and 17,000. The middle
+inter frame refreshes one reference slot, leaving the ID-0 references stale
+until the final key frame invalidates them. Pinned libavif and Pillow preserve
+all three exact frames and the infinite-loop count.
+
+The future-reference companion uses frame IDs 30,000, 10,000, and 20,000. Its
+wrapped inter frame refreshes one slot; the final key frame invalidates the
+remaining references whose IDs are above its current ID. Pinned libavif and
+Pillow preserve all three exact frames and the infinite-loop count.
+
+The trailing top-level duplicate cases copy the original `meta` and `moov`
+boxes after `mdat`. Pillow and the repeated native observer both report five
+frames with identical pixels and repetition count zero (one play).
+The duplicate-track-reference companion contains two `tref` boxes with ignored
+`hint` references. Pillow preserves all five frames and their 33 ms timing; a
+fresh pinned native observation reports five decoded frames and repetition
+count zero (one play).
+The zero-target auxiliary-reference companion contains a `tref/auxl` entry
+with track ID zero. Pillow and pinned libavif ignore it and preserve all
+five exact frames, their 33 ms timings, and the one-play count.
+The alpha-timescale companion changes only the auxiliary track `mdhd`
+timescale from one to two. Pillow retains all five RGBA frames and their
+1,000 ms color-track durations; pinned libavif reports one play.
+The duplicate-alpha companion adds a second `auxv` track with a distinct
+track ID and the same color-track reference and samples. Pillow and pinned
+libavif both preserve the five exact RGBA frames; the native observer reports
+five decoded frames.
 The two-chunk sample-table companion maps samples 1–2 and 3–5 through two
 `stsc` rows and records both chunk offsets. Its five exact Pillow RGB frames,
 33 ms timings, and native repetition observation match `animated.avif`.
+The companion with one trailing byte in `stco` adjusts both chunk offsets and
+the primary-item extent. Pillow and pinned libavif decode all five matching
+frames with 33 ms durations and one play.
+Its zero-description-index variant is also accepted by Pillow and pinned
+libavif, which both decode the same five frames with 33 ms timing and one play.
+The trailing-payload companion appends one ignored byte after both `stsc`
+mapping rows and rebases the `iloc` and `stco` offsets by one. Pillow and pinned
+libavif preserve the same five frames, 33 ms timing, and one play. The `stts`
+trailing-payload companion adds four bounded bytes after the timing run and
+adjusts enclosing sizes and media offsets; both oracles preserve the same five
+frames, 33 ms timing, and one play.
 The decoder-model companion repeats the AV1 sequence header in the second
 temporal unit and changes only the allowed decoder-buffer delay from zero to
 one. It adds a false buffer-removal flag to each coded frame header. Its five
 exact Pillow RGB frames and 33 ms timings match `animated.avif`; pinned native
 libavif reports repetition count zero (one total play).
+The initial-display-delay companion enables the display model and uses the
+maximum valid delay of 10. Pillow and pinned native libavif preserve all five
+exact RGB frames at 33 ms and report one total play.
+The high-tier operating-point companion changes only `seq_level_idx` to 8 and
+inserts the required main-tier bit. Pillow and pinned native libavif preserve
+the same five exact RGB frames at 33 ms and report one total play.
 The duplicate-`stsc` companions append a second sample-to-chunk table to that
 sequence. The identical table retains five Pillow frames; a later four-sample
 mapping yields four. Both match the native repetition observations. The loop
@@ -26,18 +77,48 @@ evidence records the exact runtime and header identities because a clean
 libavif source checkout was unavailable when these observations were made.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
-large 4:2:0 source covers large inter blocks. The 4:2:0 4x4 source includes a
-small change in a sequence with forced 4x4 inter partitions. The 17x17 4:2:0
+16x16 I422 CDEF source pins the active one-entry strength set on its inter
+frame, with no loop filtering or restoration. The
+large 4:2:0 source covers large inter blocks. The 64x64 all-lossless 4:2:0
+source forces fixed 4x4 inter partitions around a moving luma patch. The 17x17 4:2:0
 source moves a patch near the bottom-right corner and exposes an inter-intra
 context edge plus odd-width chroma upsampling at the final visible column. Both
 Pillow frame hashes are retained in the native record. The lossy 4:2:0 source
 contains a final B16x16 inter leaf with one TX16x16-to-TX8x8 split, and retains
 exact Pillow RGB frames and a native infinite-loop observation.
+The eight-frame lossy 4:2:0 skip-mode source has four displayed inter frames
+with skip mode enabled. Its native record retains all eight Pillow frame
+hashes and confirms the sequence's infinite repetition count.
 The three-frame mixed-topology B16x16 companion adds sparse luma residuals to
 the top-right 8x8 child. In the final inter frame, that TX8 child splits to
 TX4 while the other three stay at TX8; all three RGB frames match Pillow and
 the native observer confirms infinite repetition.
 The monochrome 128x128 source selects wide switchable-transform inter blocks.
+The 124x128 all-lossless monochrome companion clips its 128x128 inter block by
+four columns at the right frame edge; its exact Pillow RGB frames and native
+infinite-repeat observation cover clipped wide-grid reconstruction.
+The three-frame quality-80 I420 companion has two seeded full-range reference
+frames and an averaged final frame with a residual patch in each 128x128
+region. Its final frame advertises both references for compound selection;
+native libavif decodes all three exact Pillow RGB frames and reports infinite
+repetition.
+The companion exact-average 4:2:0 sequence keeps the same two references and
+uses their per-pixel average as its final frame. The pinned native observer
+decodes all three Pillow-matching frames and reports infinite repetition.
+The quality-99 64x64 I420 companion applies the AV1 soft B16x16 wedge mask to
+its two seeded grayscale reference frames in every partition. All three exact
+Pillow RGB frames and the native infinite-repetition observation are retained.
+The selected Rust public parity case passes exact RGB comparison and records
+inter-inter wedge blending plus 4:2:0 chroma-mask reduction.
+The all-lossless 128x128 I420 companion uses the same seeded two-reference and
+exact-average pattern with 128x128 superblocks. Its final inter block takes the
+compound wide lossless-grid path in the Rust public decoder; Pillow and native
+libavif retain all three exact RGB frames, each with a 100 ms duration.
+The compound tall companion keeps the same three-frame exact-average
+pattern and fixture-forces a vertical partition into two B64x128 leaves. It
+reaches the height-only wide lossless-grid arm in the public Rust decoder; the
+pinned native observer retains all three exact Pillow RGB frames and reports
+infinite repetition.
 The two-frame 8x16 all-lossless I420 source moves a 4x4 patch between frames
 and selects a rectangular B8x16 inter transform. Its two exact Pillow RGB
 frames, 100 ms durations, and native infinite-loop observation are retained.
@@ -69,10 +150,34 @@ its final inter frame; all three exact Pillow RGB frames and the native
 infinite-loop observation are retained. The three-frame 64x64 lossy I422
 compound-reference companion uses largest-transform mode and a full-frame
 B64x64 inter block; all exact Pillow RGB frames and the pinned native
-infinite-loop observation are retained. The two-frame
+infinite-loop observation are retained. A separate 64x64 I422 profile signals
+TX_MODE_SELECT with a single reference and positive qindex; its exact Pillow
+RGB frames and native loop observation are retained. The three-frame
+128x64 I422 companion contains two 64x64 regions; its final TX_MODE_SELECT
+frame repeats the right source region and blends the left, retaining exact
+Pillow RGB frames and a separate native loop observation. The three-frame
+128x64 I444 companion uses the same two 64x64 regions with a single-reference
+TX_MODE_SELECT frame, exercising full-resolution direct chroma grids; its
+exact Pillow RGB frames and independent native loop observation are retained.
+The two-frame
 32x64 lossy I422 vertical-split companion reaches the B32x64 TX4 chroma-grid
 path; its complete Pillow RGB frames and pinned libavif infinite-loop
-observation are retained. The two-frame
+observation are retained. The two-frame 64x64 full-range lossy I420 companion
+forces a vertical root split into B32x64 inter blocks and retains their deep
+transform trees; its exact Pillow RGB frames and native infinite-loop
+observation are retained. A second I420 companion preserves a mixed one-child
+and deep transform topology across its B32x64 inter blocks; its exact Pillow
+RGB frames and native infinite-loop observation are retained. The two-frame
+32x64 lossy I422 small-partition companion uses 8–16-pixel inter partition
+bounds and retains exact Pillow RGB frames plus the native one-play observation.
+The two-frame 64x64 I422 qindex-zero companion keeps its key frame lossless
+and makes its `TX_MODE_SELECT` inter frame non-lossless with a luma DC delta.
+Its two exact Pillow RGB frames and pinned native one-play observation are
+retained.
+The two-frame 64x64 lossy I420 mixed-topology companion forces B8x16 inter
+leaves with one TX8x8 child split into TX4x4 blocks and the other left unsplit.
+It retains both exact Pillow RGB frames and the pinned native loop observation.
+The two-frame
 full-range 8-bit I420 companion forces `PARTITION_VERT_4`, producing four
 B16x64 leaves with a low-frequency residual in the first leaf so the inter
 frame retains TX_MODE_SELECT. Its exact Pillow frames and native loop
@@ -102,6 +207,10 @@ The companion full-range 8-bit I420 source follows the same flat-key and
 8x8-inter pattern. Its inter picture uses 128x56 coded dimensions, 160x56
 upscaled dimensions, and SGR restoration on Y, U, and V, retaining the exact
 Pillow frames and native infinite-loop observation.
+The full-range 8-bit I444 companion follows that flat-key and 8x8-inter
+pattern, with 128x56 coded dimensions, 160x56 upscaled dimensions, and SGR
+restoration on all three full-resolution planes. Its exact Pillow RGB frames
+and native infinite-loop observation are retained.
 The 64x64 I444 film-grain reuse sequence has a key frame with explicit grain
 parameters and an inter frame that reuses reference slot 0 with a new grain
 seed. Both 100 ms Pillow RGB frames match the generated reference hashes, and
@@ -134,6 +243,10 @@ leaf at MI `(8,8)` and changes all 1,024 pixels in its bottom-right ROI
 between frames. The pinned encoder trace proves the leaf remains unsplit;
 both exact Pillow RGB frames and a separate native infinite-loop observation
 are retained.
+The two-frame full-range 10-bit I420 mixed-segment sequence uses a qindex-zero
+inter B32 ROI with one lossless residual at `(33,33)`. Its AV1 header selects
+transform mode, both exact Pillow RGB frames are retained, and the native
+observer confirms infinite repetition.
 The 28x64 full-range 10-bit I420 companion fixes encoder partitions to 32x32.
 AV1 pads its partition tree to 32 luma columns, so the translated patch stays
 inside the full-width left B32 leaf. The generator checks its key/inter
@@ -195,9 +308,16 @@ Pinned dav1d syntax tracing observes non-wedge mode 3 on the B16x16 at
 `(16,16)`; branch-instrumented public decoding observes the mode-3 `x.min(y)`
 mask path for all Y/U/V mask samples. Its three exact RGB frames and durations
 also match Pillow.
+The companion wedge sequence selects inter-intra wedge index 2 in the
+oblique117 direction with sign flipping disabled at B16x16 `(16,16)`. A public
+Rust trace observes all 256 mask samples, and its three Pillow RGB frame hashes
+are retained with the native infinite-repetition observation.
 The four-frame lossy global-motion I444 case carries non-identity global
 RotZoom references and four frame-3 B128 compound GlobalGlobal blocks; its
 exact Pillow pixels, durations, and native sequence timing are retained.
+The global-motion subexponential companion changes two same-length frame-2
+parameter codes in that sequence. Pinned libavif and Pillow decode all four
+frames and retain the independent infinite-repetition observation.
 The four-frame identity/RotZoom I444 case has five frame-3 compound spatial
 neighbors where the identity lane has no affine vector and the RotZoom lane
 does. It retains four exact Pillow frames, 100ms durations, and an independent
@@ -240,6 +360,17 @@ The `animated_sequence_only_no_meta` input has AVIS as both its major and sole
 compatible brand, with no top-level still-image `meta` box. It retains the five
 exact RGB frames and 33 ms timing values from `animated.avif`; Pillow and pinned
 libavif both decode all frames, and libavif reports one total play.
+`animated_sequence_only_trailing_meta_after_mdat` appends a handler-only
+top-level `meta` box after the complete track media. Pillow and pinned libavif
+ignore it and preserve the same five frames, 33 ms timing, and one total play.
+`animated_sequence_only_interstitial_meta_before_moov` moves `moov` after
+`mdat` and places the same handler-only `meta` box between them. Pillow and
+pinned libavif ignore it and preserve all five frames, 33 ms timing, and one
+total play.
+`animated_stsd_trailing_payload` appends one zero byte after its one declared
+`stsd` entry and rebases `stco` to the shifted media data. Pillow and pinned
+libavif decode all five original RGB frames; libavif reports one total play.
+`animated_unknown_sample_entry_ignored_hint_track` adds a `hint` track with one bounded sample and an unknown sample-entry type. Pillow and pinned libavif preserve all five RGB frames, and libavif reports one total play.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is
@@ -257,6 +388,16 @@ repeats, the largest finite native count, its first overflowing value,
 indefinite and very large track durations, and disagreement between alpha and
 color repetition. The color track supplies the loop count. Invalid metadata
 in either track still rejects the container.
+Three repeating edit-list cases set the FullBox repeating flag with track
+and segment durations 5/5, 6/5, and 2³¹+1/1. They preserve all five exact
+frames and 33 ms timings; pinned libavif reports 0, 1, and -1 repetitions,
+respectively. A zero track duration with the repeating flag is rejected by
+Pillow at image open.
+
+Two sample-entry parity cases retain the first codec and auxiliary properties
+when later duplicate `av1C` and `auxi` boxes conflict. Pillow preserves the
+exact five frames; pinned libavif parses both inputs, decodes five frames, and
+reports one total play.
 
 The largest finite observation is 2,147,483,647 repetitions, meaning
 2,147,483,648 total plays. Larger repetition counts normalize to infinite.
@@ -312,3 +453,189 @@ frame. A fixture-only libaom patch forces inter square partitions down to
 8x8 while the frame retains TX_MODE_SELECT and a positive qindex. Its two
 exact Pillow RGB frames and independent native one-play observation are
 retained.
+
+The lossy I444 B8x16 companion forces vertical 16x16 inter partitions, retains two exact Pillow RGB frames, and records an independent native libavif one-play observation.
+The four inter-inter difference-weighted witnesses use seeded grayscale references
+and final frames derived from AV1's mask `min(64, 38 + abs(ref0 - ref1) / 16)`.
+They cover I420, I422, and I444 mask layouts plus the inverted I420 mask. The
+public parity cases compare all RGB frames with Pillow; each complete input has
+an independent pinned native repetition observation.
+
+The two-frame 10-bit I422 super-resolution sequence codes its inter frame at
+128x56, resizes to 160x56, and applies SGR restoration to all three planes.
+Its `TX_MODE_LARGEST` syntax reaches the high-depth I422 restoration path; both
+exact Pillow RGB frames and a fresh native infinite-loop observation are
+retained for the public parity case.
+
+The 8-bit I422 companion uses the same 128x56-to-160x56 super-resolution and
+all-plane SGR profile with largest-transform mode. It retains both exact
+Pillow RGB frames and an independent native infinite-loop observation for the
+public parity case.
+
+The 12-bit I422 companion uses a 128x56 coded inter frame that super-resolves to 160x56 with restoration disabled. Both exact Pillow RGB frames and the pinned native two-frame infinite-repetition observation are retained.
+
+The `stss` companion declares zero sync-sample entries while retaining the original sample index as bounded trailing payload. Pillow 12.2.0 and the pinned libavif observer preserve the same five RGB frames, 33 ms durations, and one-play repetition count.
+
+The clipped 60x64 10-bit I420 companion fixes B16x16 partitions and places a
+textured inter residual in the right-edge leaf clipped to 12 visible columns.
+Pillow retains both exact RGB frames; the pinned native observer decodes both
+and reports infinite repetition.
+
+
+The distance-compound companion contains three 64x64 8-bit 4:2:0 frames. It enables AV1 distance-weighted compound syntax and uses an 11:5 blend of its two reference frames for the final frame; all three Pillow pixel arrays and the native infinite-repeat observation are retained.
+The super-resolution distance-compound companion codes both inter frames at
+51x64 and upscales them to 64x64. Its final inter frame enables selectable
+distance-weighted compound prediction; exact Pillow RGB pixels and an
+independent native infinite-repeat observation are retained.
+The six-frame altref companion enables AOM's hidden alternate-reference frames
+and distance-weighted compound syntax. Its selected track prefix retains two
+hidden references, six exact Pillow RGB frames, and the native infinite-repeat
+observation.
+
+The six-frame distance-ratio companion uses reference order hints 3 and 6 around
+current hint 5. Its selected distance-compound path has absolute reference
+distances 2 and 1; the native observer confirms six decoded frames and infinite
+repetition.
+The two-frame 128x128 lossy I420 companion changes one localized 16x16 patch between frames. Its public Rust parity case reaches a positive reference lane in single-reference extended motion-vector search; both exact Pillow RGB frames and the native infinite-repeat observation are retained.
+
+The high-depth I444 companion uses a full-range 10-bit sequence whose second
+frame forces a vertical B16x64 inter partition in mode 2. Both exact Pillow
+RGB frames and a separate native one-play repetition observation are retained.
+
+
+The `animated_monochrome_superres_sequence_17x16` case is a two-frame, full-range 8-bit monochrome sequence with single-unit SGR restoration. Both frames signal super-resolution denominator 9, reconstruct coded width 16 to visible width 17, and match exact Pillow RGB references at 33 ms per frame. The pinned native observer decodes both frames and reports infinite repetition; its observer build is recorded in `additional_collections`.
+
+The `animated_timing_without_decoder_model` case adds valid timing information
+to the five-frame AV1 sequence header while leaving
+`decoder_model_info_present_flag` clear. Pillow and pinned libavif preserve all
+five exact 150×150 RGB frames at 33 ms per frame, and libavif reports one play.
+Its native observer build is recorded in `additional_collections`.
+
+The `animated_decoder_model_without_operating_point_parameters` case enables
+valid sequence-level decoder-model timing but leaves
+`decoder_model_present_for_this_op` clear. Its frame headers include the
+required false buffer-removal flags; Pillow and pinned libavif preserve the
+same five exact 150×150 RGB frames at 33 ms per frame and report one play.
+Its native observer build is recorded in `additional_collections`.
+
+The `animated_order_hint_disabled` case contains five 64×64 RGB frames with
+ordinary AV1 sequence headers and order hints disabled. Pillow and pinned
+libavif preserve all five exact RGB frames at 33 ms per frame; the native
+observer reports infinite repetition. Its observer build is recorded in
+`additional_collections`.
+
+The `animated_screen_content_tools_disabled` case fixes AV1 screen-content
+tools off in the sequence header and omits the per-frame selector bits. The
+generator preserves each tile payload; Pillow and pinned libavif decode all
+five exact RGB frames at 33 ms per frame, and the native observer reports
+infinite repetition. Its observer build is recorded in `additional_collections`.
+
+The `animated_integer_mv_disabled` case keeps screen-content tools selectable
+while selecting the explicit `force_integer_mv=0` sequence value. Pillow and
+pinned libavif decode all five exact RGB frames at 33 ms per frame, and the
+native observer reports infinite repetition. Its observer build is recorded
+in `additional_collections`.
+
+The `animated_transfer_characteristics_bt709` case signals BT.709 primaries
+and transfer characteristics with the BT.601 matrix coefficients in a
+five-frame 64×64 4:2:0 animation. Pillow and pinned libavif preserve all five
+exact RGB frames at 33 ms per frame; the native observer reports infinite
+repetition. Its observer build is recorded in `additional_collections`.
+
+The `animated_identity_matrix_profile1_444` case signals CICP 1/13/0 in an
+8-bit 4:4:4 AV1 profile-1 sequence. Pillow and pinned libavif preserve all five
+exact RGB frames at 33 ms per frame; the native observer reports infinite
+repetition. Its observer build is recorded in `additional_collections`.
+
+The `animated_identity_matrix_profile2_12bit_444` case signals the same valid
+CICP values in a 12-bit 4:4:4 AV1 profile-2 sequence. Pillow and pinned libavif
+preserve all five exact RGB frames at 33 ms per frame; the native observer
+reports infinite repetition. Its observer build is recorded in
+`additional_collections`.
+
+The `animated_equal_picture_interval_two_ticks` case encodes AV1 equal-picture timing with `num_ticks_per_picture_minus_1 = uvlc(1)` (`010`) while leaving the BMFF sample timing unchanged. Pillow and pinned libavif preserve all five exact RGB frames at 33 ms and report one total play; the separately collected observer identity is recorded in `additional_collections`.
+
+The 24 `short_refs_q{100,99}_*` inputs retain two or three complete 64x64 I444
+frames. Repeated native observations preserve their frame counts and infinite
+loop count across aliased slots, tied and wrapped order hints, and references
+to different retained images. Live Pillow supplies every exact RGB frame.
+
+The 30 `animated_lossy_wide_*` inputs cover 8/10/12-bit 256x256 sequences
+with gray, colored, and fractional planar samples. Native observations retain
+frame and loop counts; live Pillow supplies exact RGB frames. Three 12-bit
+checker sequences regress wide-color OBMC reconstruction.
+
+The 21 `animated_lossy_wide_i400_*` inputs extend neutral single-tile
+monochrome observations to 256-pixel frame axes at 8/10/12-bit depth. They
+retain complete frame and loop evidence across multi-superblock and partial
+right/bottom coded edges. Live Pillow supplies exact public RGB frames.
+
+The fifteen `animated_lossy_inter_*_b16x4_q*` and `*_b4x16_q*` inputs
+retain narrow inter leaves across qualities 45, 70 and 99 in 4:2:0, 4:2:2
+and 4:4:4. Each input supplies two exact Pillow RGB frames and an independent
+native observation of its loop count. Vertical 4:2:2 producer probes are
+excluded because the pinned Pillow oracle rejects their second frame.
+
+Ten quality-99 companions extend the narrow inter inputs to 10 and 12 bits.
+Each supplies two exact Pillow RGB frames and independent native loop evidence.
+
+Four fine-detail quality-99 inputs cover fully split vertical narrow transforms at 10 and 12 bits.
+Each supplies two exact Pillow RGB frames and independent native loop evidence.
+
+Twelve CDF-control sequences check frozen probability tables at 8/10/12 bits in
+4:2:0, 4:2:2 and 4:4:4, including adaptive key frames followed by frozen inter frames.
+Every sequence supplies two exact Pillow RGB frames and independent native loop evidence.
+
+Forty-two narrow inter sequences check 8x32 and 32x8 transform trees at 8/10/12 bits
+in monochrome, 4:2:0, horizontal 4:2:2 and 4:4:4, using fine quality-70/99 residuals.
+Every sequence supplies two exact Pillow RGB frames and independent native loop evidence.
+
+Forty-two thin-64 inter sequences check 16x64 and 64x16 transform trees at 8/10/12 bits
+in monochrome, 4:2:0, horizontal 4:2:2 and 4:4:4, using fine quality-70/99 residuals.
+Every sequence supplies two exact Pillow RGB frames and independent native loop evidence.
+
+Eighteen five-frame square-64 inter sequences check complete chroma neighbor grids
+in 4:2:2 and 4:4:4 at 8/10/12 bits and qualities 70/95/99. Exact Pillow RGB frames
+and independent native loop observations cover adjacent blocks and transform trees.
+
+Twenty mixed lossless/lossy super-resolution inter inputs cover monochrome and
+4:2:0/4:2:2/4:4:4 at 8/10/12 bits, with luma SGR restoration at 8/10 bits.
+All complete frames match pinned Pillow; normal native decode observations
+are collected independently of the source-only input producer.
+
+Three ordinary monochrome 8/10/12-bit super-resolution inter inputs cover
+neutral filters with no segmentation or restoration. All complete frames
+are collected independently with pinned Pillow and the native observer.
+
+Two ordinary monochrome 8/10-bit super-resolution inter inputs cover active
+luma SGR restoration without segmentation. All complete frames are collected
+independently with pinned Pillow and the native observer.
+
+Four ordinary 8-bit I422 neutral-filter super-resolution sequences cover small
+frames, an odd coded width, and denominator-16 scaling beyond the restoration
+height limit. Complete frames are observed independently with pinned Pillow
+and the native sequence observer.
+
+Five monochrome sequences carry mixed lossless/lossy key and inter frames,
+including varied 8/10/12-bit keys. Complete frames are independently observed
+with pinned Pillow and the native sequence observer.
+
+Nine boundary sequences carry mixed lossless/lossy key and inter frames,
+including 40x16, 60x20 and 128x128 varied 8/10/12-bit keys. Frames are observed
+with pinned Pillow and the native sequence observer.
+
+Twelve mixed-key monochrome sequences retain exact reconstructed coded-edge
+samples at logical widths 71, 100 and 102, including 20-row bottom edges.
+Pinned Pillow observes both frames; the native observer records frame syntax.
+
+Fifty-four color mixed-key sequences cover I420/I422/I444 at 8/10/12 bits,
+flat and varied keys, coded widths 71/100/102, and 20-row bottom edges.
+Pinned Pillow observes both frames; the native observer records frame syntax.
+
+Nine translated-source mixed-key sequences cover I420/I422/I444 at 8/10/12 bits
+with a distinct second-frame source pattern and coded width 102.
+Pinned Pillow observes both frames; the native observer records frame syntax.
+
+Nine integer-motion mixed-key sequences cover I420/I422/I444 at 8/10/12 bits
+with screen-content tuning, integer-only inter motion precision and coded width 102.
+Pinned Pillow observes both frames; the native observer records frame syntax.

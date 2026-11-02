@@ -8,7 +8,7 @@ use super::{
     intra16::{self, Intra16Candidate, Intra16Mode},
     quant::{SegmentMatrices, libwebp_segment_matrices},
 };
-use crate::codecs::CodecResult;
+use crate::codecs::{CodecError, CodecResult};
 
 const STORED_NONZERO_MASK: u32 = (1 << 3)
     | (1 << 7)
@@ -141,6 +141,14 @@ pub(super) fn select_frame(
     assert_eq!(height % 16, 0);
     let macroblock_width = width / 16;
     let macroblock_height = height / 16;
+    let macroblock_count = macroblock_width.wrapping_mul(macroblock_height);
+    let header_bit_limit = if method == 2 {
+        (256 * 510 * 8 * 1_024_u64)
+            .checked_div(u64::try_from(macroblock_count).unwrap_or(u64::MAX))
+            .ok_or_else(|| CodecError::Dimensions("WebP macroblock grid is empty".to_owned()))?
+    } else {
+        u64::MAX
+    };
     let chroma_stride = width / 2;
     let params = segment_params(analysis, quality);
     let matrices: [SegmentMatrices; 4] = std::array::from_fn(|segment| {
@@ -250,66 +258,79 @@ pub(super) fn select_frame(
                 matrix,
                 matrix.lambda_i16.cast_unsigned(),
                 matrix.texture_lambda.cast_unsigned(),
-                None,
                 method,
                 coefficient_probabilities,
                 trellis,
             );
-            let intra16_mode_score = rd_score(
-                intra16.rate_cost,
-                intra16.header_cost,
-                intra16.distortion.wrapping_add(intra16.spectral_distortion),
-                matrix.lambda_mode.cast_unsigned(),
-            );
-            let intra16_mode = intra16.mode;
-            let intra4 = if let Some(token) = token {
-                intra4::select_macroblock_with_token(
-                    &source_y,
-                    &top_y_i4,
-                    &y_left,
-                    y_top_left,
-                    &top_modes,
-                    &neighboring_left_modes,
-                    top_y_nonzero,
-                    left_y_nonzero,
-                    matrix,
-                    matrix.lambda_i4.cast_unsigned(),
-                    matrix.lambda_mode.cast_unsigned(),
-                    matrix.texture_lambda.cast_unsigned(),
-                    method <= 1,
-                    coefficient_probabilities,
-                    trellis,
-                    token,
-                )?
+            let intra16_mode_score = if method == 2 {
+                intra16.score
             } else {
-                intra4::select_macroblock(
-                    &source_y,
-                    &top_y_i4,
-                    &y_left,
-                    y_top_left,
-                    &top_modes,
-                    &neighboring_left_modes,
-                    top_y_nonzero,
-                    left_y_nonzero,
-                    matrix,
-                    matrix.lambda_i4.cast_unsigned(),
+                rd_score(
+                    intra16.rate_cost,
+                    intra16.header_cost,
+                    intra16.distortion.wrapping_add(intra16.spectral_distortion),
                     matrix.lambda_mode.cast_unsigned(),
-                    matrix.texture_lambda.cast_unsigned(),
-                    method <= 1,
-                    coefficient_probabilities,
-                    trellis,
                 )
             };
-            let luma = if method <= 1 {
-                if analysis.macroblocks[block_index].use_intra4 {
+            let intra16_mode = intra16.mode;
+            let luma = if method == 2
+                && intra16::flat_border_mode(&source_y, macroblock_y != 0, macroblock_x != 0)
+                    .is_some()
+            {
+                LumaDecision::Intra16(intra16)
+            } else {
+                let intra4 = if let Some(token) = token {
+                    intra4::select_macroblock_with_token(
+                        &source_y,
+                        &top_y_i4,
+                        &y_left,
+                        y_top_left,
+                        &top_modes,
+                        &neighboring_left_modes,
+                        top_y_nonzero,
+                        left_y_nonzero,
+                        matrix,
+                        matrix.lambda_i4.cast_unsigned(),
+                        matrix.lambda_mode.cast_unsigned(),
+                        matrix.texture_lambda.cast_unsigned(),
+                        method,
+                        coefficient_probabilities,
+                        trellis,
+                        token,
+                    )?
+                } else {
+                    intra4::select_macroblock(
+                        &source_y,
+                        &top_y_i4,
+                        &y_left,
+                        y_top_left,
+                        &top_modes,
+                        &neighboring_left_modes,
+                        top_y_nonzero,
+                        left_y_nonzero,
+                        matrix,
+                        matrix.lambda_i4.cast_unsigned(),
+                        matrix.lambda_mode.cast_unsigned(),
+                        matrix.texture_lambda.cast_unsigned(),
+                        method,
+                        coefficient_probabilities,
+                        trellis,
+                    )
+                };
+                if method <= 1 {
+                    if analysis.macroblocks[block_index].use_intra4 {
+                        LumaDecision::Intra4(intra4)
+                    } else {
+                        LumaDecision::Intra16(intra16)
+                    }
+                } else if intra4.score < intra16_mode_score
+                    && (method != 2
+                        || u64::from(intra4.header_cost.saturating_sub(211)) <= header_bit_limit)
+                {
                     LumaDecision::Intra4(intra4)
                 } else {
                     LumaDecision::Intra16(intra16)
                 }
-            } else if intra4.score < intra16_mode_score {
-                LumaDecision::Intra4(intra4)
-            } else {
-                LumaDecision::Intra16(intra16)
             };
             let (reconstructed_y, luma_d, luma_sd, luma_h, luma_r, luma_score, luma_nz) =
                 match &luma {
@@ -350,15 +371,19 @@ pub(super) fn select_frame(
                 quality < 98.0,
                 matrix,
                 matrix.lambda_uv.cast_unsigned(),
-                (method == 0).then(|| {
-                    let mode = analysis.macroblocks[block_index].chroma_mode;
-                    debug_assert!(mode <= 1);
-                    if mode == 0 {
-                        chroma::ChromaMode::Dc
-                    } else {
-                        chroma::ChromaMode::TrueMotion
+                match method {
+                    0 => {
+                        let mode = analysis.macroblocks[block_index].chroma_mode;
+                        debug_assert!(mode <= 1);
+                        chroma::ChromaModeSearch::Fixed(if mode == 0 {
+                            chroma::ChromaMode::Dc
+                        } else {
+                            chroma::ChromaMode::TrueMotion
+                        })
                     }
-                }),
+                    1 | 2 => chroma::ChromaModeSearch::DistortionOnly,
+                    _ => chroma::ChromaModeSearch::RateDistortion,
+                },
                 coefficient_probabilities,
             );
             let nonzero = luma_nz | chroma.nonzero;

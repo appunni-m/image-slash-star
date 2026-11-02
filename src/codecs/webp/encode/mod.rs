@@ -168,6 +168,8 @@ fn corrupt_riff_header_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
         Some(0)
     } else if take_fault_point(CoverageFaultPoint::WebpRiffFormTypeMismatch) {
         Some(8)
+    } else if take_fault_point(CoverageFaultPoint::WebpRiffDeclaredSizeMismatch) {
+        Some(4)
     } else {
         None
     };
@@ -1076,7 +1078,7 @@ fn encode_lossy(
             if has_alpha {
                 crate::codecs::error::check_cancelled(token)?;
                 let alpha_chunk = encoder
-                    .encode_alpha_from_rgba_with_token(&pixels.bytes, width, height, token)
+                    .encode_alpha_from_rgba_with_token(&pixels.bytes, width, height, method, token)
                     .map_err(encode_error)?;
                 crate::codecs::error::check_cancelled(token)?;
                 vp8::encoder::encode_vp8_lossy_rgba(

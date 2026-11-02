@@ -12,22 +12,62 @@ index a6a92bf..885820d 100644
      return pack_large_scale_tiles_in_tg_obus(
          cpi, dst, saved_wb, obu_extension_header, largest_tile_id);
 diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
-index fd9e025..7776f0a 100644
+index fd9e025..ec0c2e8 100644
 --- a/av1/encoder/partition_search.c
 +++ b/av1/encoder/partition_search.c
-@@ -3022,6 +3022,15 @@ void av1_nonrd_use_partition(AV1_COMP *cpi, ThreadData *td,
+@@ -2097,6 +2097,16 @@ static void encode_b_nonrd(const AV1_COMP *const cpi, TileDataEnc *tile_data,
+   MB_MODE_INFO *mbmi = xd->mi[0];
+   mbmi->partition = partition;
+   av1_update_state(cpi, td, ctx, mi_row, mi_col, bsize, dry_run);
++  // Fixture-only: lossless inter residuals always use 4x4 transforms.
++  if (mi_row == 8 && mi_col == 8 && bsize == BLOCK_32X32 &&
++      cm->current_frame.frame_number == 1 &&
++      cm->current_frame.frame_type == INTER_FRAME &&
++      mbmi->segment_id == 1 && mbmi->current_qindex == 0 &&
++      is_inter_block(mbmi)) {
++    for (int tx_index = 0; tx_index < INTER_TX_SIZE_BUF_LEN; ++tx_index) {
++      mbmi->inter_tx_size[tx_index] = TX_4X4;
++    }
++  }
+   const int subsampling_x = cpi->common.seq_params->subsampling_x;
+   const int subsampling_y = cpi->common.seq_params->subsampling_y;
+   if (!dry_run) {
+@@ -3013,5 +3013,5 @@
+   switch (partition) {
+-    case PARTITION_NONE:
++    case PARTITION_NONE: {
+       if (!pc_tree->none) {
+         pc_tree->none = av1_alloc_pmc(cpi, bsize, &td->shared_coeff_buf);
+         if (!pc_tree->none)
+@@ -3022,6 +3022,12 @@
+       }
+       pick_sb_modes_nonrd(cpi, tile_data, x, mi_row, mi_col, &dummy_cost, bsize,
+                           pc_tree->none);
++      const int fixture_leaf = mi_row == 8 && mi_col == 8 && bsize == BLOCK_32X32;
++      const int fixture_segment = fixture_leaf ? mib[0]->segment_id : -1;
++      const int fixture_qindex = fixture_leaf ? mib[0]->current_qindex : -1;
++      const int fixture_inter = fixture_leaf ? is_inter_block(mib[0]) : 0;
++      const int fixture_mode = fixture_leaf ? (int)mib[0]->mode : -1;
++      const int fixture_ref0 = fixture_leaf ? (int)mib[0]->ref_frame[0] : -1;
+       if (mi_row == 8 && mi_col == 8 && bsize == BLOCK_32X32) {
+         fprintf(stderr,
                  "AVIF_FIXTURE_LEAF row=%d col=%d width=%d height=%d segment=%d qindex=%d\n",
-                 mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
-                 mib[0]->segment_id, mib[0]->current_qindex);
-+        if (cm->current_frame.frame_number == 1 &&
-+            cm->current_frame.frame_type == INTER_FRAME) {
-+          fprintf(stderr,
-+                  "AVIF_FIXTURE_INTER_LEAF frame_number=%u frame_type=%d row=%d col=%d width=%d height=%d partition=%d segment=%d qindex=%d\n",
-+                  cm->current_frame.frame_number, cm->current_frame.frame_type,
-+                  mi_row, mi_col, block_size_wide[bsize],
-+                  block_size_high[bsize], partition, mib[0]->segment_id,
-+                  mib[0]->current_qindex);
-+        }
+@@ -3030,7 +3036,18 @@
        }
        encode_b_nonrd(cpi, tile_data, td, tp, mi_row, mi_col, 0, bsize,
                       partition, pc_tree->none, NULL);
++      if (fixture_leaf && cm->current_frame.frame_number == 1 &&
++          cm->current_frame.frame_type == INTER_FRAME &&
++          partition == PARTITION_NONE) {
++        fprintf(stderr,
++                "AVIF_FIXTURE_INTER_LEAF frame_number=%u frame_type=%d row=%d col=%d width=%d height=%d partition=%d segment=%d qindex=%d inter=%d mode=%d ref0=%d skip_txfm=%d\n",
++                cm->current_frame.frame_number, cm->current_frame.frame_type,
++                mi_row, mi_col, block_size_wide[bsize], block_size_high[bsize],
++                partition, fixture_segment, fixture_qindex, fixture_inter,
++                fixture_mode, fixture_ref0, mib[0]->skip_txfm);
++      }
+       break;
++    }
+     case PARTITION_VERT:
+       for (int i = 0; i < SUB_PARTITIONS_RECT; ++i) {
+         if (!pc_tree->vertical[i]) {

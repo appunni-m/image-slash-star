@@ -7,7 +7,8 @@ use crate::types::ImageInfo;
 pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let extracted = super::samples::inspected(data)
         .map_err(|error| error.context("AVIF container validation failed"))?;
-    let mut info = super::container::inspect(&extracted)?;
+    let sequence_sample_count = extracted.sequence_sample_count();
+    let mut info = super::container::inspect(extracted)?;
 
     // The primary-item count is authoritative for `avif` files, while `avis`
     // and other track-led brands present the sample-to-chunk expansion. The
@@ -17,7 +18,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
         .source
         .avif_file_type()
         .is_some_and(|file_type| file_type.major_brand() != *b"avif");
-    if track_led && let Some(sample_count) = extracted.sequence_sample_count() {
+    if track_led && let Some(sample_count) = sequence_sample_count {
         let frame_count = u32::try_from(sample_count).map_err(|_| {
             CodecError::Malformed(
                 "AVIF sequence sample count exceeds the public frame-count range".to_owned(),

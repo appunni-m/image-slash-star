@@ -2566,75 +2566,27 @@ fn sorted_octree_buckets(
     Ok(buckets)
 }
 
-fn subtract_octree_buckets(
-    cube: &mut OctreeCube,
-    buckets: &[OctreeBucket],
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<()> {
-    if let Some(token) = token {
-        for (bucket_index, bucket) in buckets.iter().enumerate() {
-            if bucket_index != 0 && bucket_index.is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS) {
-                crate::codecs::error::check_cancelled(Some(token))?;
-            }
-            if bucket.count == 0 {
-                continue;
-            }
-            let offset = cube.offset(bucket.average());
-            let destination = &mut cube.buckets[offset];
-            destination.count = destination.count.saturating_sub(bucket.count);
-            for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
-                *sum = sum.saturating_sub(value);
-            }
-        }
-    } else {
-        for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
-            let offset = cube.offset(bucket.average());
-            let destination = &mut cube.buckets[offset];
-            destination.count = destination.count.saturating_sub(bucket.count);
-            for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
-                *sum = sum.saturating_sub(value);
-            }
+// Each caller bounds this slice by the 256-entry GIF palette limit. Adjacent
+// octree passes poll cancellation, so this small reduction needs no checkpoint.
+fn subtract_octree_buckets(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
+    for bucket in buckets.iter().filter(|bucket| bucket.count > 0) {
+        let offset = cube.offset(bucket.average());
+        let destination = &mut cube.buckets[offset];
+        destination.count = destination.count.saturating_sub(bucket.count);
+        for (sum, value) in destination.sums.iter_mut().zip(bucket.sums) {
+            *sum = sum.saturating_sub(value);
         }
     }
-    Ok(())
 }
 
-// A GIF palette has at most 256 coarse buckets. The second reduction pass can
-// therefore contain a valid remainder, but its 1024-entry cancellation edge
-// is unreachable for the bounded target used by this encoder. Keep the exact
-// defensive behavior without counting that impossible error arc.
-#[inline(never)]
-fn subtract_octree_remainder(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
-    // The caller proves this remainder is at most the 256-color target, so
-    // subtract_octree_buckets cannot reach its 1,024-entry cancellation
-    // checkpoint. Passing no token preserves the valid bounded behavior while
-    // keeping the impossible defensive Result arc out of the measured model.
-    let _ = subtract_octree_buckets(cube, buckets, None);
-}
-
-fn add_octree_lookup(
-    cube: &mut OctreeCube,
-    palette: &[OctreeBucket],
-    offset: usize,
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<()> {
-    if let Some(token) = token {
-        for (lookup_index, index) in (offset..palette.len()).rev().enumerate() {
-            if lookup_index != 0 && lookup_index.is_multiple_of(GIF_OCTREE_CHECKPOINT_CELLS) {
-                crate::codecs::error::check_cancelled(Some(token))?;
-            }
-            let bucket = &palette[index];
-            let position = cube.offset(bucket.average());
-            cube.buckets[position].count = bounded_u32(index);
-        }
-    } else {
-        for index in (offset..palette.len()).rev() {
-            let bucket = &palette[index];
-            let position = cube.offset(bucket.average());
-            cube.buckets[position].count = bounded_u32(index);
-        }
+// These palette slices are also bounded by 256 entries; cancellation is
+// checked before and after the surrounding octree work.
+fn add_octree_lookup(cube: &mut OctreeCube, palette: &[OctreeBucket], offset: usize) {
+    for index in (offset..palette.len()).rev() {
+        let bucket = &palette[index];
+        let position = cube.offset(bucket.average());
+        cube.buckets[position].count = bounded_u32(index);
     }
-    Ok(())
 }
 
 fn pillow_fast_octree(
@@ -2661,26 +2613,20 @@ fn pillow_fast_octree(
     let mut coarse_count = coarse.used().min(target);
     let mut fine_count = target.saturating_sub(coarse_count);
     let fine_palette = sorted_octree_buckets(&fine, token)?;
-    // The public GIF target is capped at 256 entries, so this first
-    // subtraction cannot reach its 1,024-item cancellation checkpoint.
-    subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token)?;
+    subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count]);
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
         coarse_count = coarse.used();
         fine_count = target.saturating_sub(coarse_count);
-        subtract_octree_remainder(&mut coarse, &fine_palette[already_subtracted..fine_count]);
+        subtract_octree_buckets(&mut coarse, &fine_palette[already_subtracted..fine_count]);
     }
     let coarse_palette = sorted_octree_buckets(&coarse, token)?;
     let mut buckets = coarse_palette[..coarse_count].to_vec();
     buckets.extend_from_slice(&fine_palette[..fine_count]);
     let mut coarse_lookup = OctreeCube::new(coarse_bits);
-    // `coarse_count` is at most the 256-color GIF target, so this lookup's
-    // 1,024-entry cancellation checkpoint is unreachable for valid output.
-    add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token)?;
+    add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0);
     let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits, token)?;
-    // The full bucket list is also bounded by the 256-color target; its
-    // 1,024-entry lookup cancellation edge is therefore unreachable here.
-    add_octree_lookup(&mut lookup, &buckets, coarse_count, token)?;
+    add_octree_lookup(&mut lookup, &buckets, coarse_count);
     let indices = if let Some(token) = token {
         let mut indices = Vec::with_capacity(colors.len());
         for (pixel_index, &color) in colors.iter().enumerate() {

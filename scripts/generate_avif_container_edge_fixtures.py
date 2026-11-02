@@ -44,20 +44,43 @@ FIXTURE_SHA256 = {
     "ipma_optional_zero_index.avif": "590514b40d0df05335861bf4345eb99068dc1264d38715f23f8e931c5376aaf3",
     "ipma_essential_zero_index.avif": "b4f6f62f44d85c84a27bd98c1ad9529453c7ce31fa88602fc88eae0641b06c80",
     "error_ipma_property_index_out_of_bounds.avif": "ca46ccb69a865f237092cf3ed7fb77862fa3faff112d311f860ecfb91eec77dd",
+    "ipma_trailing_payload.avif": "23a534bd7e04ad59d041c782d5983295736ec8ebcfdb43ee9bb0e8d0c5a38602",
+    "error_ipma_zero_item_id.avif": "cf1f32e814397234389b0468b40767c549f7346a34533517df92b78c24b4bd58",
+    "error_ipma_non_increasing_item_id.avif": "f40d900163475affb71ea9612378035702f5fbebff5fd16ff9a936a094057ede",
     "iloc_file_data_reference_1.avif": "d4b06f63b3bd3ce2bd409930b7c2892236000ff4583e70e771f4a21573dbb6af",
     "iloc_file_data_reference_65535.avif": "a9d263c7af3c3d1219cf2187bef5916ace90bf1018dfb6fa58650f99f51be0f7",
     "iloc_idat_data_reference_1.avif": "b0689513b0693085ef11397fa967bcc56741ae79b80d8a81d4ef424ce561bea2",
     "iloc_idat_data_reference_65535.avif": "756ea5b7a21c472cee85913fbb64260fccd5267f98900dd2b815760738f07eb4",
     "trailing_boxes_over_budget.avif": "0a92d1c734bb48ab51ffe4aef1f0c5f5693ca06790058cb9a0c74c4c9eb73971",
+    "trailing_truncated_top_level_header.avif": "70def23bc6c03c8b3b49d79ca2f9fc3d01eeb60aa44fc00088e07ecb8ca7d616",
+    "trailing_truncated_top_level_payload.avif": "78c60fa1cc0f453fbe9f6db714eb1f53001b0e7e57e7c7a401a4b4c3e7581816",
+    "error_incomplete_still_truncated_top_level_header.avif": "286ab06301e7cd9b2355a651876b6f9935ca37d60fc2de42ed1808b095c15e72",
+    "error_avif_missing_meta.avif": "5ed417664c2b5b74bd36591baf392c94a99a16724ee12454fa921d2ef1ff2a8b",
+    "error_avis_missing_moov.avif": "5831e8f2c248e9cec39f80cd7856f95135be889e13a138fe436587f061321cf4",
+    "error_avis_moov_without_trak.avif": "b7bad81724df0c975c0ba70935f07ade291f5aa55f9b539b230bbb7bfe00562f",
+    "error_pitm_zero_item_id.avif": "c85de8c2432106246e3135cb873eaf4d48ec94ff7b1d34b69e77cb2e119c126d",
+    "error_iinf_duplicate_item_id.avif": "b80ecc8c82022162c98d17e84047f9c6a5988345eb702e41445faf33469994e1",
     "error_iref_records_over_budget_trailing_byte.avif": "a160f1c9ddc2dd178b79ba152ac834d8887c6ec1921b4d5e904ec9df37c2c11c",
+    "error_iref_zero_from_id.avif": "1ca57926bb34b675c86199ec41782bf0e1790d79c787443f77ee9c7e24c34380",
+    "error_iref_zero_to_id.avif": "d30d90de12cf354712ae84ace87a95ea1d7879d943fd594eb87ce65c246a3297",
+    "error_iref_trailing_payload.avif": "73e5d173083b327a269280cc67842f3dc34222d111dc6e9363ece4e169dd4600",
+    "duplicate_alpha_auxl_reference_first_wins.avif": "680204d0a9bb9dd0f058b2539e0ccb527c265f6b2ee5e863f2f3674fbe9d03a6",
     "error_grid_without_dimg_references.avif": "a283fb5590e31db1f491fe1e010a22fec3f55da99080dd4dcc61b95e89d6316a",
     "error_grid_descriptor_short_extent.avif": "95670f2861407e944391adfdd75bbc97e6ebd010aedda7850dd65a7286cb49e5",
     "error_grid_descriptor_overlong_extent.avif": "e0ef3f8597d7ae703cd5ccf7ee8eb24293a857ea4c1e86c8828a899508e54e4f",
+    "error_grid_version_1.avif": "6d75c008f18bf3c509c79ba810656a0e71d0f1da05c890456af598e51172ddeb",
+    "error_grid_zero_width.avif": "37b53b695d8d8a97ddba92087ad15de6c75635c970c2dd94d037b6ad6f754bf2",
+    "error_grid_zero_height.avif": "3f2fd4d6f618c5527c25a1750b508c5ed7122f69b4a7c44a7c3bd9c4fb5292b6",
+    "error_primary_item_missing_ispe.avif": "475d45c0c712b011983d6d946a2e3ce4512d7968664853b0a6953fa7da0c06f7",
+    "error_ftyp_misaligned_compatible_brand_payload.avif": "ada44e071b8609bc68b65ce123df4dac04b21e4b64d0865ec699bc7425400fc3",
+    "ftyp_1025_compatible_brands.avif": "4ded572af8b55afd4d876e8a129c651074a6b55e1cb4a01646a144a92fa9bcec",
     "error_iloc_zero_item_id.avif": "6628085ef24f7bb3a62eb656950f609d585ebcb5e27b3fd1c2f9d04ad50c06fa",
     "error_infe_zero_item_id.avif": "9cd1623b8c3cf615b708968e90f6b9bb0fb081dbda2185348ebf087db82e7e7f",
+    "error_infe_missing_item_name_terminator.avif": "b8609cd7fd3acd8c4f7eacad072ed85dcce52c65df9ebd9760ab1e1a8328620d",
     "error_meta_duplicate_idat.avif": "466e3ecd6e89e4cbd2dba8084642fc2ddbda83e196e005819a31aa54cc3c960b",
     "error_meta_hdlr_nonzero_version.avif": "e5d7f45c33cc3aec2868d57bddaad27b62df23210326822382f81e2cb344dc62",
     "error_meta_hdlr_nonzero_predefined.avif": "b9119779779df0addfdfcd92927ae06127109846796ca6806c1a0bc20ce7391d",
+    "error_meta_reordered_handler.avif": "75d67ac340bfec40e5bce5e0f5d19d769053ec5fe774989fd56cb90b32392516",
     "error_auxc_nonzero_version.avif": "2357cdc2bc511390a97c6f84cdf1bbf03b0debe3b7bda4090b397d7bd20c3822",
     "error_pixi_zero_depth.avif": "7c815a023acc909df7a21d80d11aa1ca92aaae6ce0748bfc989288cae91d3c5f",
     "error_pixi_nonzero_version.avif": "a50bd4126788de5efdeefa05ec6583267311fe021af9168928850589d9fd5689",
@@ -115,6 +138,252 @@ def append_property_index(source: bytes, association: int) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source) + 1:
         raise RuntimeError("property mutation must change exactly one association box")
+    return candidate
+
+
+def remove_primary_ispe_association(source: bytes) -> bytes:
+    """Clear the baseline primary item's spatial-extent association."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"iprp", b"ipma"):
+            return payload
+        if payload != bytes.fromhex("000000000000000100010401028304"):
+            raise RuntimeError("file source primary-item property associations changed")
+        changed += 1
+        return payload[:11] + b"\0" + payload[12:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("missing-ispe mutation must change one association without resizing")
+    if sum(left != right for left, right in zip(candidate, source, strict=True)) != 1:
+        raise RuntimeError("missing-ispe mutation must change exactly one source byte")
+    return candidate
+
+
+def append_ipma_trailing_payload(source: bytes) -> bytes:
+    """Append one ignored byte after the indexed-idat ipma records."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"ipma":
+            return payload
+        if payload != bytes.fromhex("000000000000000100010401028304"):
+            raise RuntimeError("indexed-idat source property associations changed")
+        changed += 1
+        return payload + b"\0"
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 1:
+        raise RuntimeError("ipma trailing-payload mutation changed an unexpected extent")
+    return candidate
+
+
+def set_ipma_item_id_zero(source: bytes) -> bytes:
+    """Set the indexed-idat primary item's ipma identifier to zero."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"ipma":
+            return payload
+        if payload != bytes.fromhex("000000000000000100010401028304"):
+            raise RuntimeError("indexed-idat source property associations changed")
+        changed += 1
+        return payload[:8] + bytes(2) + payload[10:]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("zero ipma item ID mutation must preserve the file size")
+    return candidate
+
+
+def append_duplicate_ipma_item_id(source: bytes) -> bytes:
+    """Append a second ipma record with the existing item ID and no associations."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"ipma":
+            return payload
+        if payload != bytes.fromhex("000000000000000100010401028304"):
+            raise RuntimeError("indexed-idat source property associations changed")
+        changed += 1
+        return payload[:4] + (2).to_bytes(4, "big") + payload[8:] + bytes.fromhex("000100")
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 3:
+        raise RuntimeError("duplicate ipma item ID mutation changed an unexpected extent")
+    return candidate
+
+
+def zero_iref_item_id(source: bytes, *, source_id: bool) -> bytes:
+    """Zero one endpoint in alpha.avif's pinned version-zero auxl reference."""
+    if not isinstance(source_id, bool):
+        raise TypeError("source_id must be a boolean")
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"iref"):
+            return payload
+        if payload != bytes.fromhex("000000000000000e6175786c000200010001"):
+            raise RuntimeError("alpha source item reference differs from its pinned layout")
+        changed += 1
+        start = 12 if source_id else 16
+        return payload[:start] + bytes(2) + payload[start + 2 :]
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("zero iref item-ID mutation must preserve the file size")
+    return candidate
+
+
+def alpha_file_item_payloads(data: bytes) -> tuple[tuple[int, bytes], ...]:
+    """Read bounded file-backed extents from the pinned alpha fixture layout."""
+    top_level = read_boxes(data, 0, len(data))
+    metas = [payload for kind, _, payload in top_level if kind == b"meta"]
+    if len(metas) != 1 or metas[0][:4] != bytes(4):
+        raise RuntimeError("expected one version-zero alpha meta box")
+    children = read_boxes(metas[0], 4, len(metas[0]))
+    locations = [payload for kind, _, payload in children if kind == b"iloc"]
+    if len(locations) != 1 or locations[0][4:6] != bytes.fromhex("4400"):
+        raise RuntimeError("alpha file extents differ from the pinned iloc layout")
+    payload = locations[0]
+    item_count = int.from_bytes(payload[6:8], "big")
+    position = 8
+    result = []
+    for _ in range(item_count):
+        item_id = int.from_bytes(payload[position : position + 2], "big")
+        position += 2
+        data_reference_index = int.from_bytes(payload[position : position + 2], "big")
+        position += 2
+        extent_count = int.from_bytes(payload[position : position + 2], "big")
+        position += 2
+        if data_reference_index != 0 or extent_count != 1:
+            raise RuntimeError("alpha file extents are not local single extents")
+        extent_offset = int.from_bytes(payload[position : position + 4], "big")
+        position += 4
+        extent_length = int.from_bytes(payload[position : position + 4], "big")
+        position += 4
+        extent = data[extent_offset : extent_offset + extent_length]
+        if len(extent) != extent_length:
+            raise RuntimeError("alpha file extent exceeds its complete input")
+        result.append((item_id, extent))
+    if position != len(payload):
+        raise RuntimeError("alpha file extents contain unexpected trailing data")
+    return tuple(result)
+
+
+def append_iref_trailing_payload(source: bytes) -> bytes:
+    """Append an ignored byte after alpha.avif's declared auxl reference."""
+    changed = {"iref": 0, "iloc": 0}
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        if path == (b"meta", b"iref"):
+            boxes = read_boxes(payload, 4, len(payload))
+            if (
+                payload[:4] != bytes(4)
+                or len(boxes) != 1
+                or boxes[0][0] != b"auxl"
+                or boxes[0][2] != bytes.fromhex("000200010001")
+            ):
+                raise RuntimeError("alpha source item reference differs from its pinned layout")
+            changed["iref"] += 1
+            return payload[:4] + pack_box(b"auxl", boxes[0][2] + b"\0")
+        if path == (b"meta", b"iloc"):
+            if payload != bytes.fromhex(
+                "0000000044000002000100000001000002d700001652"
+                "000200000001000001c90000010e"
+            ):
+                raise RuntimeError("alpha source item locations differ from their pinned layout")
+            changed["iloc"] += 1
+            result = bytearray(payload)
+            position = 8
+            item_count = int.from_bytes(payload[6:8], "big")
+            for _ in range(item_count):
+                position += 2
+                data_reference_index = int.from_bytes(payload[position : position + 2], "big")
+                position += 2
+                extent_count = int.from_bytes(payload[position : position + 2], "big")
+                position += 2
+                if data_reference_index != 0 or extent_count != 1:
+                    raise RuntimeError("alpha source item locations are not the pinned file extents")
+                source_offset = int.from_bytes(payload[position : position + 4], "big")
+                position += 4
+                position += 4  # extent length
+                result[position - 8 : position - 4] = (source_offset + 1).to_bytes(4, "big")
+            if position != len(payload):
+                raise RuntimeError("alpha source item locations contain unexpected trailing data")
+            return bytes(result)
+        return payload
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != {"iref": 1, "iloc": 1} or len(candidate) != len(source) + 1:
+        raise RuntimeError("iref trailing-payload mutation changed an unexpected extent")
+    if alpha_file_item_payloads(candidate) != alpha_file_item_payloads(source):
+        raise RuntimeError("iref growth changed a referenced alpha AV1 payload")
+    return candidate
+
+
+def duplicate_alpha_auxl_reference_first_wins(source: bytes) -> bytes:
+    """Duplicate alpha.avif's auxl destination while preserving both AV1 items."""
+    changed = {"iref": 0, "iloc": 0}
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        if path == (b"meta", b"iref"):
+            boxes = read_boxes(payload, 4, len(payload))
+            if (
+                payload[:4] != bytes(4)
+                or len(boxes) != 1
+                or boxes[0][0] != b"auxl"
+                or boxes[0][2] != bytes.fromhex("000200010001")
+            ):
+                raise RuntimeError("alpha source item reference differs from its pinned layout")
+            changed["iref"] += 1
+            reference = boxes[0][2]
+            reference_count = int.from_bytes(reference[2:4], "big")
+            duplicate = (
+                reference[:2]
+                + (reference_count + 1).to_bytes(2, "big")
+                + reference[4:]
+                + reference[4:6]
+            )
+            return payload[:4] + pack_box(b"auxl", duplicate)
+        if path == (b"meta", b"iloc"):
+            if payload != bytes.fromhex(
+                "0000000044000002000100000001000002d700001652"
+                "000200000001000001c90000010e"
+            ):
+                raise RuntimeError("alpha source item locations differ from their pinned layout")
+            changed["iloc"] += 1
+            result = bytearray(payload)
+            position = 8
+            item_count = int.from_bytes(payload[6:8], "big")
+            for _ in range(item_count):
+                position += 2
+                data_reference_index = int.from_bytes(payload[position : position + 2], "big")
+                position += 2
+                extent_count = int.from_bytes(payload[position : position + 2], "big")
+                position += 2
+                if data_reference_index != 0 or extent_count != 1:
+                    raise RuntimeError("alpha source item locations are not the pinned file extents")
+                source_offset = int.from_bytes(payload[position : position + 4], "big")
+                position += 4
+                position += 4  # extent length
+                result[position - 8 : position - 4] = (source_offset + 2).to_bytes(4, "big")
+            if position != len(payload):
+                raise RuntimeError("alpha source item locations contain unexpected trailing data")
+            return bytes(result)
+        return payload
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != {"iref": 1, "iloc": 1} or len(candidate) != len(source) + 2:
+        raise RuntimeError("duplicate auxl mutation changed an unexpected extent")
+    if alpha_file_item_payloads(candidate) != alpha_file_item_payloads(source):
+        raise RuntimeError("duplicate auxl mutation changed a referenced alpha AV1 payload")
     return candidate
 
 
@@ -215,6 +484,78 @@ def append_trailing_boxes_over_budget(source: bytes) -> bytes:
     if len(read_boxes(candidate, 0, len(candidate))) != total_box_count:
         raise RuntimeError("box-budget fixture must contain exactly 4,097 root boxes")
     return candidate
+
+
+def append_truncated_top_level_header(source: bytes) -> bytes:
+    """Append one byte of a top-level box header after the complete still."""
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError(
+            "truncated-header source must have the baseline still's three root boxes"
+        )
+    return source + b"\x00"
+
+
+def append_truncated_top_level_payload(source: bytes) -> bytes:
+    """Append a complete box header whose declared payload is absent."""
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError(
+            "truncated-payload source must have the baseline still's three root boxes"
+        )
+    return source + struct.pack(">I4s", 16, b"free")
+
+
+def append_ftyp_misaligned_compatible_brand_byte(source: bytes) -> bytes:
+    """Append one byte to the ftyp compatible-brand list without shifting items."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"ftyp":
+            return payload
+        changed += 1
+        return payload + b"\x00"
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 1:
+        raise RuntimeError("misaligned ftyp mutation must grow the file by exactly one byte")
+    return candidate
+
+
+def extend_ftyp_compatible_brands(source: bytes, count: int) -> bytes:
+    """Append unique compatible brands while preserving every following box."""
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError("brand-list source must have ftyp, meta and mdat root boxes")
+    ftyp, meta, mdat = (complete for _, complete, _ in root_boxes)
+    payload = ftyp[8:]
+    if len(payload) < 8 or (len(payload) - 8) % 4:
+        raise RuntimeError("brand-list source must have an aligned ftyp payload")
+    brands = (len(payload) - 8) // 4
+    if not brands < count <= 0xFFF:
+        raise RuntimeError("requested brand count must extend the source and fit unique xNNN brands")
+    additions = b"".join(
+        f"x{index:03x}".encode("ascii") for index in range(count - brands)
+    )
+    new_ftyp = pack_box(b"ftyp", payload + additions)
+    candidate = new_ftyp + meta + mdat
+    if len(candidate) != len(source) + len(additions):
+        raise RuntimeError("compatible-brand fixture changed bytes outside its ftyp growth")
+    if candidate[len(new_ftyp) :] != source[len(ftyp) :]:
+        raise RuntimeError("compatible-brand fixture changed metadata or media boxes")
+    return candidate
+
+
+def truncate_before_meta_with_partial_header(source: bytes) -> bytes:
+    """Keep the AVIF ftyp box and append one byte of an incomplete next box."""
+    root_boxes = read_boxes(source, 0, len(source))
+    if [kind for kind, _, _ in root_boxes] != [b"ftyp", b"meta", b"mdat"]:
+        raise RuntimeError(
+            "incomplete-still source must have the baseline's three root boxes"
+        )
+    _, ftyp_box, _ = root_boxes[0]
+    return ftyp_box + b"\x00"
 
 
 def append_reference_records_over_budget(source: bytes) -> bytes:
@@ -322,6 +663,44 @@ def lengthen_grid_descriptor_extent(source: bytes) -> bytes:
     return candidate
 
 
+def grid_descriptor_offset(source: bytes) -> int:
+    """Return the pinned primary grid descriptor's bounded file offset."""
+    top_level = read_boxes(source, 0, len(source))
+    metas = [payload for kind, _, payload in top_level if kind == b"meta"]
+    if len(metas) != 1 or metas[0][:4] != bytes(4):
+        raise RuntimeError("grid source must have one version-zero meta box")
+    children = read_boxes(metas[0], 4, len(metas[0]))
+    locations = [payload for kind, _, payload in children if kind == b"iloc"]
+    prefix = bytes.fromhex("00000000440000050001000000010000027300000008")
+    if len(locations) != 1 or locations[0][: len(prefix)] != prefix:
+        raise RuntimeError("grid source iloc no longer has its pinned primary extent")
+    offset = int.from_bytes(locations[0][14:18], "big")
+    length = int.from_bytes(locations[0][18:22], "big")
+    if length != 8 or source[offset : offset + length] != bytes.fromhex("0000010000500050"):
+        raise RuntimeError("grid source primary descriptor differs from its pinned bytes")
+    return offset
+
+
+def mutate_grid_descriptor(source: bytes, mutation: str) -> bytes:
+    """Change one bounded primary-grid descriptor field without shifting media."""
+    descriptor_offset = grid_descriptor_offset(source)
+    fields = {
+        "version": (0, b"\x01"),
+        "zero_width": (4, bytes(2)),
+        "zero_height": (6, bytes(2)),
+    }
+    try:
+        relative_offset, value = fields[mutation]
+    except KeyError as error:
+        raise ValueError(f"unsupported grid descriptor mutation {mutation!r}") from error
+    result = bytearray(source)
+    start = descriptor_offset + relative_offset
+    result[start : start + len(value)] = value
+    if len(result) != len(source):
+        raise RuntimeError("grid descriptor mutation must preserve the full file size")
+    return bytes(result)
+
+
 def zero_iloc_first_item_id(source: bytes) -> bytes:
     """Set the pinned file-backed iloc's sole item ID to the invalid value zero."""
     changed = 0
@@ -365,6 +744,32 @@ def zero_infe_first_item_id(source: bytes) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
         raise RuntimeError("zero infe item-ID mutation must preserve the file size")
+    return candidate
+
+
+def unterminate_infe_first_item_name(source: bytes) -> bytes:
+    """Replace the only terminator in the baseline's first AV1 item name."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iinf":
+            return payload
+        if payload[:6] != bytes.fromhex("000000000001"):
+            raise RuntimeError("file source iinf no longer has its pinned single-entry layout")
+        children = read_boxes(payload, 6, len(payload))
+        if len(children) != 1 or children[0][0] != b"infe":
+            raise RuntimeError("file source iinf no longer contains one infe entry")
+        kind, _, item_info = children[0]
+        expected = bytes.fromhex("020000000001000061763031436f6c6f7200")
+        if item_info != expected:
+            raise RuntimeError("file source infe item-name layout changed")
+        changed += 1
+        return payload[:6] + pack_box(kind, item_info[:-1] + b"X")
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("unterminated infe name mutation must preserve the file size")
     return candidate
 
 
@@ -426,6 +831,41 @@ def set_handler_nonzero_predefined(source: bytes) -> bytes:
     candidate = rewrite_boxes(source, transform)
     if changed != 1 or len(candidate) != len(source):
         raise RuntimeError("nonzero hdlr pre_defined mutation must preserve the file size")
+    return candidate
+
+
+def move_meta_handler_after_primary_item(source: bytes) -> bytes:
+    """Move the primary meta handler after pitm without changing other boxes."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta",):
+            return payload
+        children = read_boxes(payload, 4, len(payload))
+        handler_indices = [
+            index for index, (kind, _, _) in enumerate(children) if kind == b"hdlr"
+        ]
+        primary_indices = [
+            index for index, (kind, _, _) in enumerate(children) if kind == b"pitm"
+        ]
+        if len(handler_indices) != 1 or len(primary_indices) != 1:
+            raise RuntimeError("file source meta must contain one hdlr and one pitm")
+        handler_index = handler_indices[0]
+        primary_index = primary_indices[0]
+        if handler_index >= primary_index:
+            raise RuntimeError("file source meta must place hdlr before pitm")
+        handler = children.pop(handler_index)
+        primary_index -= 1
+        children.insert(primary_index + 1, handler)
+        changed += 1
+        return payload[:4] + b"".join(
+            pack_box(kind, child) for kind, _, child in children
+        )
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("reordered meta handler mutation must preserve the file size")
     return candidate
 
 
@@ -564,6 +1004,50 @@ def set_data_reference(source: bytes, idat: bool, value: int) -> bytes:
     return candidate
 
 
+def zero_primary_item_id(source: bytes) -> bytes:
+    """Set the baseline still image's complete version-zero pitm ID to zero."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path != (b"meta", b"pitm"):
+            return payload
+        if payload != bytes.fromhex("000000000001"):
+            raise RuntimeError("primary-item source pitm differs from its pinned layout")
+        changed += 1
+        return payload[:4] + bytes(2)
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source):
+        raise RuntimeError("zero primary-item ID mutation must preserve the complete file")
+    return candidate
+
+
+def duplicate_iinf_first_item(source: bytes) -> bytes:
+    """Duplicate the baseline's AV1 item-info entry without changing its ID."""
+    changed = 0
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        nonlocal changed
+        if path[-1] != b"iinf":
+            return payload
+        if payload[:6] != bytes.fromhex("000000000001"):
+            raise RuntimeError("file source iinf no longer has its pinned single-entry layout")
+        children = read_boxes(payload, 6, len(payload))
+        if len(children) != 1 or children[0][0] != b"infe":
+            raise RuntimeError("file source iinf no longer contains one infe entry")
+        kind, _, item_info = children[0]
+        if item_info != bytes.fromhex("020000000001000061763031436f6c6f7200"):
+            raise RuntimeError("file source infe no longer has its pinned primary-item layout")
+        changed += 1
+        return payload[:4] + (2).to_bytes(2, "big") + pack_box(kind, item_info) * 2
+
+    candidate = rewrite_boxes(source, transform)
+    if changed != 1 or len(candidate) != len(source) + 26:
+        raise RuntimeError("duplicate item-info mutation must append exactly one infe box")
+    return candidate
+
+
 def verify_open_failure(source: bytes, filename: str) -> None:
     """Require the exact pinned public open rejection for malformed metadata."""
     try:
@@ -574,6 +1058,31 @@ def verify_open_failure(source: bytes, filename: str) -> None:
         return
     image.close()
     raise RuntimeError(f"{filename}: Pillow unexpectedly opened an invalid association")
+
+
+def verify_open_runtime_failure(source: bytes, filename: str) -> None:
+    """Require Pillow's typed AVIF error when a zero pitm cannot select an item."""
+    try:
+        image = Image.open(BytesIO(source))
+    except RuntimeError as error:
+        expected = "Failed to decode image: Missing or empty image item"
+        if stable_error_message(str(error)) != expected:
+            raise RuntimeError(f"{filename}: Pillow primary-item diagnostic changed") from error
+        return
+    image.close()
+    raise RuntimeError(f"{filename}: Pillow unexpectedly opened an image with a zero pitm ID")
+
+
+def verify_decode_runtime_failure(source: bytes, filename: str, expected: str) -> None:
+    """Require the pinned public decode rejection for malformed item metadata."""
+    try:
+        with Image.open(BytesIO(source)) as image:
+            image.load()
+    except RuntimeError as error:
+        if stable_error_message(error) != expected:
+            raise RuntimeError(f"{filename}: Pillow decode diagnostic changed") from error
+        return
+    raise RuntimeError(f"{filename}: Pillow unexpectedly decoded malformed item metadata")
 
 
 def verify_invalid_grid_rejection(source: bytes, filename: str) -> None:
@@ -588,6 +1097,20 @@ def verify_invalid_grid_rejection(source: bytes, filename: str) -> None:
             raise RuntimeError(f"{filename}: Pillow grid diagnostic changed") from error
         return
     raise RuntimeError(f"{filename}: Pillow unexpectedly decoded a grid without dimg references")
+
+
+def verify_grid_descriptor_rejection(
+    source: bytes, filename: str, expected_message: str
+) -> None:
+    """Require Pillow's public rejection for an invalid grid descriptor."""
+    try:
+        with Image.open(BytesIO(source)) as image:
+            image.load()
+    except RuntimeError as error:
+        if stable_error_message(error) != expected_message:
+            raise RuntimeError(f"{filename}: Pillow grid diagnostic changed") from error
+        return
+    raise RuntimeError(f"{filename}: Pillow unexpectedly decoded an invalid grid descriptor")
 
 
 def verify_pixi_rejection(source: bytes, filename: str, reason: str) -> None:
@@ -613,6 +1136,101 @@ def encoded_media_payloads(source: bytes) -> tuple[tuple[bytes, bytes], ...]:
     if len(idat) > 1 and any(idat[1:]):
         raise RuntimeError("additional idat boxes must be empty mutation witnesses")
     return ((b"mdat", mdat[0]),) + tuple((b"idat", payload) for payload in idat)
+
+
+def omit_required_meta(source: bytes) -> bytes:
+    """Keep the complete ftyp and mdat boxes while omitting required metadata."""
+    boxes = read_boxes(source, 0, len(source))
+    file_types = [payload for kind, _, payload in boxes if kind == b"ftyp"]
+    metadata = [payload for kind, _, payload in boxes if kind == b"meta"]
+    media = [payload for kind, _, payload in boxes if kind == b"mdat"]
+    if len(file_types) != 1 or len(metadata) != 1 or len(media) != 1:
+        raise RuntimeError("missing-meta source must contain one ftyp, meta and mdat")
+    if boxes[0][0] != b"ftyp" or boxes[-1][0] != b"mdat":
+        raise RuntimeError("missing-meta source must begin with ftyp and end with mdat")
+
+    candidate = pack_box(b"ftyp", file_types[0]) + pack_box(b"mdat", media[0])
+    retained = read_boxes(candidate, 0, len(candidate))
+    if tuple(kind for kind, _, _ in retained) != (b"ftyp", b"mdat"):
+        raise RuntimeError("missing-meta file must retain only complete ftyp and mdat boxes")
+    if retained[0][2] != file_types[0] or retained[1][2] != media[0]:
+        raise RuntimeError("missing-meta mutation changed file type or encoded media bytes")
+    return candidate
+
+
+def omit_required_movie(source: bytes) -> bytes:
+    """Keep a complete AVIS ftyp and mdat while omitting meta and moov."""
+    boxes = read_boxes(source, 0, len(source))
+    file_types = [payload for kind, _, payload in boxes if kind == b"ftyp"]
+    media = [payload for kind, _, payload in boxes if kind == b"mdat"]
+    if len(file_types) != 1 or len(media) != 1:
+        raise RuntimeError("missing-moov source must contain one ftyp and mdat")
+    if tuple(kind for kind, _, _ in boxes) != (b"ftyp", b"meta", b"moov", b"mdat"):
+        raise RuntimeError("missing-moov source boxes differ from the pinned sequence layout")
+
+    source_ftyp = file_types[0]
+    compatible = source_ftyp[8:]
+    if source_ftyp[:4] != b"avis" or len(compatible) % 4 != 0:
+        raise RuntimeError("missing-moov source must use an aligned AVIS file type")
+    brands = tuple(compatible[index : index + 4] for index in range(0, len(compatible), 4))
+    if b"avif" not in brands:
+        raise RuntimeError("missing-moov source must have the pinned AVIF compatible brand")
+    rewritten_brands = b"".join(b"avis" if brand == b"avif" else brand for brand in brands)
+    file_type = source_ftyp[:8] + rewritten_brands
+    candidate = pack_box(b"ftyp", file_type) + pack_box(b"mdat", media[0])
+    retained = read_boxes(candidate, 0, len(candidate))
+    if tuple(kind for kind, _, _ in retained) != (b"ftyp", b"mdat"):
+        raise RuntimeError("missing-moov file must retain only complete ftyp and mdat boxes")
+    if retained[0][2] != file_type or retained[1][2] != media[0]:
+        raise RuntimeError("missing-moov mutation changed file type or encoded media bytes")
+    if any(
+        rewritten_brands[index : index + 4] == b"avif"
+        for index in range(0, len(rewritten_brands), 4)
+    ):
+        raise RuntimeError("missing-moov ftyp must not retain an AVIF compatible brand")
+    return candidate
+
+
+def remove_avis_movie_track(source: bytes) -> bytes:
+    """Keep the AVIS movie header while removing its sole picture track."""
+    boxes = read_boxes(source, 0, len(source))
+    if tuple(kind for kind, _, _ in boxes) != (b"ftyp", b"meta", b"moov", b"mdat"):
+        raise RuntimeError("trackless-moov source boxes differ from the pinned sequence layout")
+
+    rebuilt = []
+    removed_tracks = 0
+    for kind, _, payload in boxes:
+        if kind == b"moov":
+            children = read_boxes(payload, 0, len(payload))
+            if sum(child_kind == b"mvhd" for child_kind, _, _ in children) != 1:
+                raise RuntimeError("trackless-moov source must contain one movie header")
+            kept_children = []
+            for child_kind, _, child_payload in children:
+                if child_kind == b"trak":
+                    removed_tracks += 1
+                    continue
+                kept_children.append(pack_box(child_kind, child_payload))
+            payload = b"".join(kept_children)
+        rebuilt.append(pack_box(kind, payload))
+
+    candidate = b"".join(rebuilt)
+    if removed_tracks != 1:
+        raise RuntimeError("trackless-moov mutation must remove exactly one picture track")
+    retained = read_boxes(candidate, 0, len(candidate))
+    movie_payloads = [payload for kind, _, payload in retained if kind == b"moov"]
+    if len(movie_payloads) != 1:
+        raise RuntimeError("trackless AVIS file must retain one moov box")
+    movie_children = read_boxes(movie_payloads[0], 0, len(movie_payloads[0]))
+    if not any(kind == b"mvhd" for kind, _, _ in movie_children) or any(
+        kind == b"trak" for kind, _, _ in movie_children
+    ):
+        raise RuntimeError("trackless moov must retain mvhd and contain no trak")
+
+    source_mdat = [payload for kind, _, payload in boxes if kind == b"mdat"]
+    candidate_mdat = [payload for kind, _, payload in retained if kind == b"mdat"]
+    if candidate_mdat != source_mdat:
+        raise RuntimeError("trackless-moov mutation changed encoded AV1 media bytes")
+    return candidate
 
 
 def generate(
@@ -645,10 +1263,100 @@ def generate(
             None,
         ),
         (
+            "trailing_truncated_top_level_header.avif",
+            "file",
+            append_truncated_top_level_header(sources["file"]),
+            None,
+        ),
+        (
+            "trailing_truncated_top_level_payload.avif",
+            "file",
+            append_truncated_top_level_payload(sources["file"]),
+            None,
+        ),
+        (
+            "error_incomplete_still_truncated_top_level_header.avif",
+            "file",
+            truncate_before_meta_with_partial_header(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_avif_missing_meta.avif",
+            "file",
+            omit_required_meta(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_primary_item_missing_ispe.avif",
+            "file",
+            remove_primary_ispe_association(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_avis_missing_moov.avif",
+            "sequence",
+            omit_required_movie(sources["sequence"]),
+            "open_error",
+        ),
+        (
+            "error_avis_moov_without_trak.avif",
+            "sequence",
+            remove_avis_movie_track(sources["sequence"]),
+            "open_error",
+        ),
+        (
+            "error_pitm_zero_item_id.avif",
+            "file",
+            zero_primary_item_id(sources["file"]),
+            "open_runtime_error",
+        ),
+        (
+            "error_iinf_duplicate_item_id.avif",
+            "file",
+            duplicate_iinf_first_item(sources["file"]),
+            "duplicate_iinf_decode_error",
+        ),
+        (
+            "error_ftyp_misaligned_compatible_brand_payload.avif",
+            "idat",
+            append_ftyp_misaligned_compatible_brand_byte(sources["idat"]),
+            "open_error",
+        ),
+        (
+            "ftyp_1025_compatible_brands.avif",
+            "idat",
+            extend_ftyp_compatible_brands(sources["idat"], 1_025),
+            None,
+        ),
+        (
             "error_iref_records_over_budget_trailing_byte.avif",
             "file",
             append_reference_records_over_budget(sources["file"]),
             "open_error",
+        ),
+        (
+            "error_iref_zero_from_id.avif",
+            "alpha",
+            zero_iref_item_id(sources["alpha"], source_id=True),
+            "open_error",
+        ),
+        (
+            "error_iref_zero_to_id.avif",
+            "alpha",
+            zero_iref_item_id(sources["alpha"], source_id=False),
+            "open_error",
+        ),
+        (
+            "error_iref_trailing_payload.avif",
+            "alpha",
+            append_iref_trailing_payload(sources["alpha"]),
+            "open_error",
+        ),
+        (
+            "duplicate_alpha_auxl_reference_first_wins.avif",
+            "alpha",
+            duplicate_alpha_auxl_reference_first_wins(sources["alpha"]),
+            None,
         ),
         (
             "error_iloc_zero_item_id.avif",
@@ -660,6 +1368,12 @@ def generate(
             "error_infe_zero_item_id.avif",
             "file",
             zero_infe_first_item_id(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_infe_missing_item_name_terminator.avif",
+            "file",
+            unterminate_infe_first_item_name(sources["file"]),
             "open_error",
         ),
         (
@@ -678,6 +1392,12 @@ def generate(
             "error_meta_hdlr_nonzero_predefined.avif",
             "file",
             set_handler_nonzero_predefined(sources["file"]),
+            "open_error",
+        ),
+        (
+            "error_meta_reordered_handler.avif",
+            "file",
+            move_meta_handler_after_primary_item(sources["file"]),
             "open_error",
         ),
         (
@@ -753,6 +1473,24 @@ def generate(
             "open_error",
         ),
         (
+            "error_grid_version_1.avif",
+            "grid",
+            mutate_grid_descriptor(sources["grid"], "version"),
+            "grid_version_not_implemented",
+        ),
+        (
+            "error_grid_zero_width.avif",
+            "grid",
+            mutate_grid_descriptor(sources["grid"], "zero_width"),
+            "grid_dimensions_invalid",
+        ),
+        (
+            "error_grid_zero_height.avif",
+            "grid",
+            mutate_grid_descriptor(sources["grid"], "zero_height"),
+            "grid_dimensions_invalid",
+        ),
+        (
             "animated_tkhd_version_zero.avif",
             "sequence",
             use_version_zero_track_header(sources["sequence"], False),
@@ -769,6 +1507,24 @@ def generate(
             "idat",
             append_property_index(sources["idat"], 0),
             None,
+        ),
+        (
+            "ipma_trailing_payload.avif",
+            "idat",
+            append_ipma_trailing_payload(sources["idat"]),
+            None,
+        ),
+        (
+            "error_ipma_zero_item_id.avif",
+            "idat",
+            set_ipma_item_id_zero(sources["idat"]),
+            "open_error",
+        ),
+        (
+            "error_ipma_non_increasing_item_id.avif",
+            "idat",
+            append_duplicate_ipma_item_id(sources["idat"]),
+            "open_error",
         ),
         (
             "ipma_essential_zero_index.avif",
@@ -790,15 +1546,82 @@ def generate(
     for filename, source_name, data, oracle_error in variants:
         if hashlib.sha256(data).hexdigest() != FIXTURE_SHA256[filename]:
             raise RuntimeError(f"{filename}: deterministic mutation differs from its pinned hash")
-        expected_media = encoded_media_payloads(sources[source_name])
+        if filename == "error_incomplete_still_truncated_top_level_header.avif":
+            expected_media = ()
+        elif filename in {
+            "error_avif_missing_meta.avif",
+            "error_avis_missing_moov.avif",
+        }:
+            expected_media = tuple(
+                (kind, payload)
+                for kind, _, payload in read_boxes(sources[source_name], 0, len(sources[source_name]))
+                if kind == b"mdat"
+            )
+        else:
+            expected_media = encoded_media_payloads(sources[source_name])
         if filename == "error_meta_duplicate_idat.avif":
             expected_media += ((b"idat", b""),)
-        if encoded_media_payloads(data) != expected_media:
+        if filename == "trailing_truncated_top_level_payload.avif":
+            complete_box_data = data[:-8]
+        elif filename in {
+            "trailing_truncated_top_level_header.avif",
+            "error_incomplete_still_truncated_top_level_header.avif",
+        }:
+            complete_box_data = data[:-1]
+        else:
+            complete_box_data = data
+        if filename in {
+            "error_grid_version_1.avif",
+            "error_grid_zero_width.avif",
+            "error_grid_zero_height.avif",
+        }:
+            source = sources["grid"]
+            descriptor_offset = grid_descriptor_offset(source)
+            descriptor_end = descriptor_offset + 8
+            if (
+                len(data) != len(source)
+                or data[:descriptor_offset] != source[:descriptor_offset]
+                or data[descriptor_end:] != source[descriptor_end:]
+            ):
+                raise RuntimeError(f"{filename}: mutation changed bytes outside the grid descriptor")
+            normalized = bytearray(data)
+            normalized[descriptor_offset:descriptor_end] = source[descriptor_offset:descriptor_end]
+            complete_box_data = bytes(normalized)
+        if filename == "error_incomplete_still_truncated_top_level_header.avif":
+            actual_media = ()
+        elif filename in {
+            "error_avif_missing_meta.avif",
+            "error_avis_missing_moov.avif",
+        }:
+            actual_media = tuple(
+                (kind, payload)
+                for kind, _, payload in read_boxes(complete_box_data, 0, len(complete_box_data))
+                if kind == b"mdat"
+            )
+        else:
+            actual_media = encoded_media_payloads(complete_box_data)
+        if actual_media != expected_media:
             raise RuntimeError(f"{filename}: mutation changed encoded AV1 media bytes")
         if oracle_error == "open_error":
             verify_open_failure(data, filename)
+        elif oracle_error == "open_runtime_error":
+            verify_open_runtime_failure(data, filename)
+        elif oracle_error == "duplicate_iinf_decode_error":
+            verify_decode_runtime_failure(
+                data,
+                filename,
+                "Failed to decode frame 0: Decoding of color planes failed",
+            )
         elif oracle_error == "decode_error":
             verify_invalid_grid_rejection(data, filename)
+        elif oracle_error == "grid_version_not_implemented":
+            verify_grid_descriptor_rejection(
+                data, filename, "Failed to decode image: Not implemented"
+            )
+        elif oracle_error == "grid_dimensions_invalid":
+            verify_grid_descriptor_rejection(
+                data, filename, "Failed to decode image: Invalid image grid"
+            )
         elif oracle_error == "pixi_depth_above_16":
             verify_pixi_rejection(data, filename, "a pixi channel depth above 16")
         elif oracle_error == "pixi_channel_depth_mismatch":

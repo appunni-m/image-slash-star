@@ -2684,6 +2684,31 @@ pub(super) struct PreparedInterQuantization {
     pub(super) quantization: LossyQuantization,
 }
 
+#[cfg(coverage)]
+#[inline(never)]
+fn inter_translation_quantization_for_geometry(
+    quantization: LossyQuantization,
+) -> LossyQuantization {
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1InterTranslationSampleDepthMismatch,
+    ) {
+        LossyQuantization {
+            sample_depth: SampleDepth::TEN,
+            ..quantization
+        }
+    } else {
+        quantization
+    }
+}
+
+#[cfg(not(coverage))]
+#[inline(always)]
+fn inter_translation_quantization_for_geometry(
+    quantization: LossyQuantization,
+) -> LossyQuantization {
+    quantization
+}
+
 enum LargeIntraPrelude {
     Ordinary {
         quantization: LossyQuantization,
@@ -7493,7 +7518,7 @@ fn decode_luma_dc_after_ac(
     // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:526-546. Once EOB is nonzero,
     // DC uses base_tok rather than eob_base_tok, and its high-token context
     // is derived from the preceding AC level neighborhood.
-    let dc_base_token = decoder.adaptive_symbol(&mut cdfs.base_luma[0], 3);
+    let dc_base_token = decoder.adaptive_symbol4(&mut cdfs.base_luma[0]);
     (dc_base_token == 3).then_some(()).portable()?;
     let dc_token = decode_high_token(decoder, &mut cdfs.high_luma[high_context]);
 
@@ -7559,7 +7584,7 @@ fn decode_luma_eob_two_after_eob(
         .then_some(())
         .portable()?;
     let ac_token = decode_luma_direct_ac_token(decoder, cdfs)?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[1]) == 0)
         .then_some(())
         .portable()?;
     decode_luma_direct_ac_and_dc(decoder, sign_context, cdfs, ac_token, 1)
@@ -7578,10 +7603,10 @@ fn decode_luma_eob_four_coefficients(
         .then_some(())
         .portable()?;
     let coefficient_five_token = decode_high_token(decoder, &mut cdfs.high_luma[7]);
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[3]) == 3)
         .then_some(())
         .portable()?;
     let high_context = match coefficient_five_token {
@@ -7593,7 +7618,7 @@ fn decode_luma_eob_four_coefficients(
     (coefficient_one_token == coefficient_five_token)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[3]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[high_context]);
@@ -7641,21 +7666,21 @@ fn decode_luma_eob_six_coefficients(
         .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
     (coefficient_twelve_token == 5).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[8]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
     (coefficient_eight_token == 5).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[1]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[4]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
@@ -7758,7 +7783,7 @@ fn decode_luma_dc_after_ac_generic(
     cdfs: &mut BlockCdfs,
     high_context: usize,
 ) -> PortableResult<(u32, bool)> {
-    let dc_base_token = decoder.adaptive_symbol(&mut cdfs.base_luma[0], 3);
+    let dc_base_token = decoder.adaptive_symbol4(&mut cdfs.base_luma[0]);
     let dc_token = if dc_base_token == 3 {
         decode_high_token(decoder, cdfs.high_luma.get_mut(high_context).portable()?)
     } else {
@@ -7826,7 +7851,7 @@ fn decode_luma_eob_base_coefficients(
         let context_result = lossy_chroma_low_context(&levels, x, y);
         let (low_context, high_magnitude) = context_result?;
         let cdf = cdfs.base_luma.get_mut(low_context);
-        let base_token = decoder.adaptive_symbol(cdf.portable()?, 3);
+        let base_token = decoder.adaptive_symbol4(cdf.portable()?);
         let token = if base_token == 3 {
             let high_context = ac_high_context(x, y, high_magnitude);
             let cdf = cdfs.high_luma.get_mut(high_context);
@@ -7876,7 +7901,7 @@ fn decode_chroma_dc_after_ac_generic(
     cdfs: &mut BlockCdfs,
     high_context: usize,
 ) -> PortableResult<(u32, bool)> {
-    let base_token = decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3);
+    let base_token = decoder.adaptive_symbol4(&mut cdfs.base_chroma[0]);
     let high_token = base_token == 3;
     let token = if high_token {
         decode_high_token(decoder, cdfs.high_chroma.get_mut(high_context).portable()?)
@@ -7979,7 +8004,7 @@ fn decode_chroma_eob_general_after_eob(
         let y = rc & 3;
         let (low_context, high_magnitude) = lossy_chroma_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.base_chroma.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.base_chroma.get_mut(low_context).portable()?);
         let high_token = base_token == 3;
         let token = if high_token {
             let high_context = ac_high_context(x, y, high_magnitude);
@@ -8069,18 +8094,18 @@ fn decode_luma_eob_nine_coefficients(
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
     (coefficient_three_token == 6).then_some(()).portable()?;
     for _ in 0..5 {
-        let value = decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3);
+        let value = decoder.adaptive_symbol4(&mut cdfs.base_luma[6]);
         (value == 0).then_some(()).portable()?;
     }
-    let base8 = decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3);
+    let base8 = decoder.adaptive_symbol4(&mut cdfs.base_luma[8]);
     (base8 == 3).then_some(()).portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
     (coefficient_two_token == 6).then_some(()).portable()?;
-    let base4 = decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3);
+    let base4 = decoder.adaptive_symbol4(&mut cdfs.base_luma[4]);
     (base4 == 3).then_some(()).portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
     (coefficient_one_token == 6).then_some(()).portable()?;
-    let base1 = decoder.adaptive_symbol(&mut cdfs.base_luma[1], 3);
+    let base1 = decoder.adaptive_symbol4(&mut cdfs.base_luma[1]);
     (base1 == 0).then_some(()).portable()?;
 
     // One neighboring direct magnitude selects DC high-token context three.
@@ -8120,39 +8145,39 @@ fn decode_luma_eob_ten_coefficients(
     let coefficient_seven_token = decode_high_token(decoder, &mut cdfs.high_luma[14]);
     (coefficient_seven_token == 3).then_some(()).portable()?;
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[8]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
     (coefficient_three_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[8]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_six_token = decode_high_token(decoder, &mut cdfs.high_luma[16]);
     (coefficient_six_token == 3).then_some(()).portable()?;
 
     for _ in 0..3 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
             .then_some(())
             .portable()?;
     }
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[9]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_five_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
     (coefficient_five_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[10]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[19]);
     (coefficient_two_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[5]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[12]);
     (coefficient_one_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[4]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[9]);
@@ -8210,17 +8235,17 @@ fn decode_luma_eob_twelve_coefficients(
     let coefficient_thirteen_token = 2;
 
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[21], 3) == 0)
+        (decoder.adaptive_symbol4(&mut cdfs.base_luma[21]) == 0)
             .then_some(())
             .portable()?;
     }
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+        (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
             .then_some(())
             .portable()?;
     }
 
-    let coefficient_nine_base = decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3);
+    let coefficient_nine_base = decoder.adaptive_symbol4(&mut cdfs.base_luma[7]);
     if coefficient_nine_base == 3 {
         return decode_luma_alternate_eob_twelve_coefficients(
             decoder,
@@ -8231,29 +8256,29 @@ fn decode_luma_eob_twelve_coefficients(
     }
     (coefficient_nine_base == 2).then_some(()).portable()?;
     let coefficient_nine_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[7]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
     (coefficient_twelve_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[10]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[18]);
     (coefficient_eight_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 2)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[8]) == 2)
         .then_some(())
         .portable()?;
     let coefficient_five_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[3], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[3]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[8]);
     (coefficient_one_token == 7).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[5]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[11]);
@@ -8310,27 +8335,27 @@ fn decode_luma_alternate_eob_twelve_coefficients(
     // and 4 before DC.
     let coefficient_nine_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
     (coefficient_nine_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[7]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
     (coefficient_twelve_token == 3).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[10], 3) == 2)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[10]) == 2)
         .then_some(())
         .portable()?;
     let coefficient_eight_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 2)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[9]) == 2)
         .then_some(())
         .portable()?;
     let coefficient_five_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[6], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[6]) == 0)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[4], 3) == 2)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[4]) == 2)
         .then_some(())
         .portable()?;
     let coefficient_one_token = 2;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[5]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[11]);
@@ -8409,51 +8434,51 @@ fn decode_luma_eob_fifteen_trace(
         .portable()?;
 
     for _ in 0..3 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1)
+        (decoder.adaptive_symbol4(&mut cdfs.base_luma[22]) == 1)
             .then_some(())
             .portable()?;
     }
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[23], 3) == 1)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[23]) == 1)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[22], 3) == 1)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[22]) == 1)
         .then_some(())
         .portable()?;
 
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[7]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_three_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
     (coefficient_three_token == 4).then_some(()).portable()?;
     for _ in 0..2 {
-        (decoder.adaptive_symbol(&mut cdfs.base_luma[8], 3) == 1)
+        (decoder.adaptive_symbol4(&mut cdfs.base_luma[8]) == 1)
             .then_some(())
             .portable()?;
     }
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[7], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[7]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_twelve_token = decode_high_token(decoder, &mut cdfs.high_luma[15]);
     (coefficient_twelve_token == 4).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[9]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_eight_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
     (coefficient_eight_token == 4).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 1)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[9]) == 1)
         .then_some(())
         .portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[9], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[9]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_two_token = decode_high_token(decoder, &mut cdfs.high_luma[17]);
     (coefficient_two_token == 4).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[5]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
     (coefficient_one_token == 4).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_luma[5], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_luma[5]) == 3)
         .then_some(())
         .portable()?;
     let coefficient_four_token = decode_high_token(decoder, &mut cdfs.high_luma[10]);
@@ -8555,7 +8580,7 @@ fn decode_chroma_high_dc_after_ac(
     sign_context: usize,
     cdfs: &mut BlockCdfs,
 ) -> PortableResult<(u32, bool)> {
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3) == 3)
+    (decoder.adaptive_symbol4(&mut cdfs.base_chroma[0]) == 3)
         .then_some(())
         .portable()?;
     let dc_token = decode_high_token(decoder, &mut cdfs.high_chroma[2]);
@@ -8603,7 +8628,7 @@ fn decode_chroma_eob_two_after_eob(
         .portable()?;
     let coefficient_one_token = decode_high_token(decoder, &mut cdfs.high_chroma[7]);
     (coefficient_one_token == 4).then_some(()).portable()?;
-    (decoder.adaptive_symbol(&mut cdfs.base_chroma[1], 3) == 0)
+    (decoder.adaptive_symbol4(&mut cdfs.base_chroma[1]) == 0)
         .then_some(())
         .portable()?;
     let (dc_token, dc_negative) = decode_chroma_high_dc_after_ac(decoder, sign_context, cdfs)?;
@@ -8629,13 +8654,13 @@ fn decode_chroma_eob_four_after_eob(
     (!decoder.equal()).then_some(()).portable()?;
     let eob_base = decoder.adaptive_symbol(&mut cdfs.eob_base_chroma[2], 2);
     (eob_base == 1).then_some(()).portable()?;
-    let token_one = decoder.adaptive_symbol(&mut cdfs.base_chroma[6], 3);
+    let token_one = decoder.adaptive_symbol4(&mut cdfs.base_chroma[6]);
     (token_one == 0).then_some(()).portable()?;
-    let token_two = decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3);
+    let token_two = decoder.adaptive_symbol4(&mut cdfs.base_chroma[2]);
     (token_two == 2).then_some(()).portable()?;
-    let token_three = decoder.adaptive_symbol(&mut cdfs.base_chroma[2], 3);
+    let token_three = decoder.adaptive_symbol4(&mut cdfs.base_chroma[2]);
     (token_three == 2).then_some(()).portable()?;
-    let token_four = decoder.adaptive_symbol(&mut cdfs.base_chroma[0], 3);
+    let token_four = decoder.adaptive_symbol4(&mut cdfs.base_chroma[0]);
     (token_four == 2).then_some(()).portable()?;
     let dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[1][sign_context]);
     let coefficient_four_negative = decoder.equal();
@@ -9833,7 +9858,7 @@ fn decode_delta_q(
     initial_qindex: u32,
     resolution_log2: u32,
 ) -> PortableResult<u32> {
-    let symbol = decoder.adaptive_symbol(&mut cdfs.delta_q, 3);
+    let symbol = decoder.adaptive_symbol4(&mut cdfs.delta_q);
     let magnitude = if symbol == 3 {
         let n_bits = decoder.bits(3).saturating_add(1);
         decoder
@@ -9876,7 +9901,7 @@ fn decode_delta_lf(
     };
     for component in 0_usize..component_count {
         let row = component.saturating_add(usize::from(syntax.multi));
-        let symbol = decoder.adaptive_symbol(cdfs.delta_lf.get_mut(row).portable()?, 3);
+        let symbol = decoder.adaptive_symbol4(cdfs.delta_lf.get_mut(row).portable()?);
         let magnitude = if symbol == 3 {
             let bit_count = decoder.bits(3).saturating_add(1);
             decoder
@@ -10819,7 +10844,7 @@ fn decode_lossy_luma_16x16_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_16x16_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_16x16_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels.get(1).copied().ok_or(PortableUnavailable)?)
             .saturating_add(u32::from(
@@ -11013,7 +11038,7 @@ fn decode_lossy_luma_32x32_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_32x32_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_32x32_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels[1])
             .saturating_add(u32::from(levels[LOSSY_LUMA_32X32_LEVEL_STRIDE]))
@@ -11205,7 +11230,7 @@ fn decode_lossy_luma_8x16_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_16x16_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_16x16_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels.get(1).copied().ok_or(PortableUnavailable)?)
             .saturating_add(u32::from(
@@ -11624,7 +11649,7 @@ fn decode_lossy_luma_8x8_coefficients(
         let y = rc & (LOSSY_LUMA_LEVEL_STRIDE - 1);
         let (low_context, high_magnitude) = lossy_luma_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?);
 
         let token = if base_token == 3 {
             let high_context = (if (x | y) > 1 { 14_usize } else { 7 })
@@ -11657,7 +11682,7 @@ fn decode_lossy_luma_8x8_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(lossy_luma_level(&levels, 0, 1).portable()?)
             .saturating_add(u32::from(lossy_luma_level(&levels, 1, 0).portable()?))
@@ -12008,7 +12033,7 @@ fn decode_lossy_luma_4x8_coefficients(
         let y = rc & (LOSSY_LUMA_4X8_LEVEL_STRIDE - 1);
         let (low_context, high_magnitude) = lossy_luma_4x8_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = (if (x | y) > 1 { 14_usize } else { 7 })
                 .saturating_add(coefficient_high_context(high_magnitude));
@@ -12040,7 +12065,7 @@ fn decode_lossy_luma_4x8_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(
             *levels
@@ -12203,7 +12228,7 @@ fn decode_lossy_luma_8x4_coefficients(
         let y = rc & (LOSSY_LUMA_8X4_LEVEL_STRIDE - 1);
         let (low_context, high_magnitude) = lossy_luma_8x4_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = (if (x | y) > 1 { 14_usize } else { 7 })
                 .saturating_add(coefficient_high_context(high_magnitude));
@@ -12235,7 +12260,7 @@ fn decode_lossy_luma_8x4_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels.get(1).copied().ok_or(PortableUnavailable)?)
             .saturating_add(u32::from(
@@ -12400,7 +12425,7 @@ fn decode_lossy_luma_16x4_coefficients(
         let y = rc & (LOSSY_LUMA_16X4_LEVEL_STRIDE - 1);
         let (low_context, high_magnitude) = lossy_luma_16x4_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = (if (x | y) > 1 { 14_usize } else { 7 })
                 .saturating_add(coefficient_high_context(high_magnitude));
@@ -12432,7 +12457,7 @@ fn decode_lossy_luma_16x4_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_luma_8x8_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_luma_8x8_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(*levels.get(1).portable()?)
             .saturating_add(u32::from(
@@ -13458,8 +13483,7 @@ fn decode_lossy_luma_4x4_1d_coefficients(
     for scan_index in (1..eob).rev() {
         let (x, y, rc) = coordinate(scan_index);
         let (low_context, high_magnitude) = lossy_luma_4x4_1d_low_context(&levels, x, y)?;
-        let base_token =
-            decoder.adaptive_symbol(cdfs.base_luma.get_mut(low_context).portable()?, 3);
+        let base_token = decoder.adaptive_symbol4(cdfs.base_luma.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = (if y != 0 { 14_usize } else { 7 })
                 .saturating_add(coefficient_high_context(high_magnitude));
@@ -13483,7 +13507,7 @@ fn decode_lossy_luma_4x4_1d_coefficients(
     }
 
     let (dc_low_context, dc_magnitude) = lossy_luma_4x4_1d_low_context(&levels, 0, 0)?;
-    let dc_base = decoder.adaptive_symbol(cdfs.base_luma.get_mut(dc_low_context).portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.base_luma.get_mut(dc_low_context).portable()?);
     let dc_token = if dc_base == 3 {
         decode_high_token(
             decoder,
@@ -13649,8 +13673,7 @@ fn decode_lossy_luma_4x4_coefficients(
         let x = rc >> 2;
         let y = rc & 3;
         let (low_context, high_magnitude) = lossy_chroma_low_context(&levels, x, y)?;
-        let base_token =
-            decoder.adaptive_symbol(cdfs.base_luma.get_mut(low_context).portable()?, 3);
+        let base_token = decoder.adaptive_symbol4(cdfs.base_luma.get_mut(low_context).portable()?);
         let high_token = base_token == 3;
         let token = if high_token {
             let high_context = ac_high_context(x, y, high_magnitude);
@@ -13672,7 +13695,7 @@ fn decode_lossy_luma_4x4_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.base_luma.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.base_luma.first_mut().portable()?);
 
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels.get(1).copied().ok_or(PortableUnavailable)?)
@@ -15077,7 +15100,7 @@ fn decode_lossy_chroma_rect32_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.lossy_chroma_8x4_base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.lossy_chroma_8x4_base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels[1])
             .saturating_add(u32::from(levels[level_stride]))
@@ -15260,7 +15283,7 @@ fn decode_lossy_chroma_4x4_coefficients(
         let y = rc & 3;
         let (low_context, high_magnitude) = lossy_chroma_low_context(&levels, x, y)?;
         let base_token =
-            decoder.adaptive_symbol(cdfs.base_chroma.get_mut(low_context).portable()?, 3);
+            decoder.adaptive_symbol4(cdfs.base_chroma.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = (if (x | y) > 1 { 14_usize } else { 7 })
                 .saturating_add(coefficient_high_context(high_magnitude));
@@ -15287,7 +15310,7 @@ fn decode_lossy_chroma_4x4_coefficients(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(cdfs.base_chroma.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(cdfs.base_chroma.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let dc_magnitude = u32::from(levels.get(1).copied().ok_or(PortableUnavailable)?)
             .saturating_add(u32::from(
@@ -15940,7 +15963,7 @@ fn decode_lossy_large_two_d_coefficients_into(
             .checked_add(usize::try_from(magnitude).map_err(|_| PortableUnavailable)?)
             .filter(|&context| context < base_context_count)
             .portable()?;
-        let base_token = decoder.adaptive_symbol(base.get_mut(low_context).portable()?, 3);
+        let base_token = decoder.adaptive_symbol4(base.get_mut(low_context).portable()?);
         let token = if base_token == 3 {
             let high_context = ac_high_context(x, y, high_magnitude);
 
@@ -15967,7 +15990,7 @@ fn decode_lossy_large_two_d_coefficients_into(
         }
     }
 
-    let dc_base = decoder.adaptive_symbol(base.first_mut().portable()?, 3);
+    let dc_base = decoder.adaptive_symbol4(base.first_mut().portable()?);
     let dc_token = if dc_base == 3 {
         let diagonal_index = levels_stride.checked_add(1).portable()?;
         let dc_magnitude = u32::from(*levels.get(1).portable()?)
@@ -16292,7 +16315,6 @@ fn decode_generic_lossy_coefficients_into(
         .then_some(())
         .portable()?;
     coefficients.fill(0);
-
     let eob_bin = decode_generic_eob_bin(decoder, cdfs, tx_size, chroma, one_dimensional);
     let eob = if eob_bin > 1 {
         let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
@@ -45859,13 +45881,30 @@ impl GenericCoefficientState {
     }
 }
 
+/// Validated coded and active dimensions for one AV1 plane.
+///
+/// Coded dimensions are positive multiples of four and fit the bounded grid.
+/// Active dimensions are positive and clipped to the coded extent.
+#[derive(Clone, Copy)]
+pub(super) struct GenericPlaneGeometry {
+    /// Full coded width in plane samples.
+    pub(super) coded_width: usize,
+    /// Full coded height in plane samples.
+    pub(super) coded_height: usize,
+    /// Visible width in plane samples, clipped to the coded extent.
+    pub(super) active_width: usize,
+    /// Visible height in plane samples, clipped to the coded extent.
+    pub(super) active_height: usize,
+}
+
+/// Compute one plane's coded and visible dimensions from AV1 block geometry.
 pub(super) fn generic_plane_geometry(
     block_size: BlockSize,
     chroma_sampling: ChromaSampling,
     plane: usize,
     visible_width: u32,
     visible_height: u32,
-) -> PortableResult<(usize, usize, usize, usize)> {
+) -> PortableResult<GenericPlaneGeometry> {
     fn sampled_axis(pixels: u32, scale: u32) -> PortableResult<usize> {
         (pixels != 0 && scale != 0).then_some(()).portable()?;
         let samples = if scale == 1 {
@@ -45888,7 +45927,12 @@ pub(super) fn generic_plane_geometry(
         // monochrome leaf never visits or publishes U/V. Keep only the
         // canonical dummy transform footprint instead of allocating two
         // block-sized midpoint rasters for 128-pixel leaves.
-        return Ok((4, 4, 4, 4));
+        return Ok(GenericPlaneGeometry {
+            coded_width: 4,
+            coded_height: 4,
+            active_width: 4,
+            active_height: 4,
+        });
     }
     let (coded_width, coded_height) = block_size.pixel_dimensions();
     let (scale_x, scale_y) = chroma_sampling.plane_subsampling(plane);
@@ -45902,7 +45946,12 @@ pub(super) fn generic_plane_geometry(
     let active_height = sampled_axis(visible_height, scale_y)?
         .max(usize::from(plane != 0) * 4)
         .min(coded_height);
-    Ok((coded_width, coded_height, active_width, active_height))
+    Ok(GenericPlaneGeometry {
+        coded_width,
+        coded_height,
+        active_width,
+        active_height,
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -45954,6 +46003,30 @@ struct InterPrediction<'a> {
     compound: Option<PreparedCompound>,
     inter_intra: Option<InterIntraPrediction<'a>>,
     obmc: Option<ObmcContext<'a>>,
+}
+
+/// One causal luma block's portion of a shared sub-eight chroma predictor.
+#[derive(Clone, Copy)]
+pub(super) struct Sub8ChromaPart<'a> {
+    pub(super) reference: &'a FrameSurface,
+    pub(super) scale: ScaleFactors,
+    pub(super) request: PredictionRequest,
+    pub(super) output_x: usize,
+    pub(super) output_y: usize,
+}
+
+#[derive(Clone, Copy)]
+struct InterTranslationAdmission<'a> {
+    tools: BlockTools,
+    quantization: LossyQuantization,
+    references: [&'a FrameSurface; 2],
+    layout: PixelLayout,
+    visible_dimensions: (u32, u32),
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    lossless_grid: bool,
+    lossless_large: bool,
+    frame_all_lossless: bool,
 }
 
 /// A compound blend that has already consumed and validated its entropy
@@ -46044,6 +46117,13 @@ pub(super) enum RectSplitTopology {
 /// contexts so a following partition can consume only the edge cells it
 /// owns; unused entries remain neutral.
 const LOSSLESS_GRID_EDGE_CAPACITY: usize = 32;
+
+// Keep every normative AV1 block within the fixed transform-grid buffers.
+const _: () = {
+    let (max_width, max_height) = BlockSize::B128x128.pixel_dimensions();
+    assert!(max_width as usize / 4 <= LOSSLESS_GRID_EDGE_CAPACITY);
+    assert!(max_height as usize / 4 <= LOSSLESS_GRID_EDGE_CAPACITY);
+};
 
 #[derive(Clone, Copy)]
 struct LosslessGridContexts {
@@ -46395,6 +46475,7 @@ pub(super) struct Lossy420Decoder {
     motion_scratch: Option<MotionScratch>,
     pending_global_warps: [Option<PreparedGlobalWarp>; 2],
     pending_local_warp: Option<PreparedLocalWarp>,
+    pending_sub8_chroma: Option<[Vec<u16>; 2]>,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     cdef_index_bits: u32,
@@ -46443,6 +46524,7 @@ impl Lossy420Decoder {
             motion_scratch: None,
             pending_global_warps: [None, None],
             pending_local_warp: None,
+            pending_sub8_chroma: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             cdef_index_bits: 0,
@@ -46469,6 +46551,7 @@ impl Lossy420Decoder {
             motion_scratch: None,
             pending_global_warps: [None, None],
             pending_local_warp: None,
+            pending_sub8_chroma: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -46503,6 +46586,7 @@ impl Lossy420Decoder {
             motion_scratch: None,
             pending_global_warps: [None, None],
             pending_local_warp: None,
+            pending_sub8_chroma: None,
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -46959,6 +47043,66 @@ impl Lossy420Decoder {
     ) {
         self.pending_global_warps = global;
         self.pending_local_warp = local;
+    }
+
+    /// Replace the shared predictor before every inter leaf, including leaves
+    /// that use the ordinary complete-block predictor instead.
+    pub(super) fn clear_sub8_chroma_prediction(&mut self) {
+        self.pending_sub8_chroma = None;
+    }
+
+    /// Assemble the normative two- or four-part chroma carrier using each
+    /// contributing luma block's reference, motion vector, and filter. The
+    /// caller supplies a complete rectangular partition of the carrier.
+    pub(super) fn prepare_sub8_chroma_prediction(
+        &mut self,
+        parts: &[Sub8ChromaPart<'_>],
+        width: usize,
+        height: usize,
+    ) -> PortableResult<()> {
+        let length = width.checked_mul(height).portable()?;
+        let mut predictions = [Vec::new(), Vec::new()];
+        for (index, prediction) in predictions.iter_mut().enumerate() {
+            prediction
+                .try_reserve_exact(length)
+                .map_err(|_| PortableUnavailable)?;
+            prediction.resize(length, 0);
+            for part in parts {
+                let reference = part
+                    .reference
+                    .plane(index + 1)
+                    .map_err(|_| PortableUnavailable)?
+                    .portable()?;
+                let scratch = self.ensure_motion_scratch()?;
+                let pixels = if part.scale.scaled {
+                    scratch.put_scaled(reference, part.request, part.scale)
+                } else {
+                    scratch.put_unscaled(reference, part.request)
+                }
+                .map_err(|_| PortableUnavailable)?;
+                let part_width =
+                    usize::try_from(part.request.width).map_err(|_| PortableUnavailable)?;
+                let part_height =
+                    usize::try_from(part.request.height).map_err(|_| PortableUnavailable)?;
+                for row in 0..part_height {
+                    let source_start = row.checked_mul(part_width).portable()?;
+                    let source_end = source_start.checked_add(part_width).portable()?;
+                    let target_start = part
+                        .output_y
+                        .checked_add(row)
+                        .and_then(|y| y.checked_mul(width))
+                        .and_then(|offset| offset.checked_add(part.output_x))
+                        .portable()?;
+                    let target_end = target_start.checked_add(part_width).portable()?;
+                    prediction
+                        .get_mut(target_start..target_end)
+                        .portable()?
+                        .copy_from_slice(pixels.get(source_start..source_end).portable()?);
+                }
+            }
+        }
+        self.pending_sub8_chroma = Some(predictions);
+        Ok(())
     }
 
     fn apply_obmc_prediction(
@@ -48007,6 +48151,1229 @@ impl Lossy420Decoder {
             && (visible_width < 32 || visible_height < 32)
     }
 
+    // Keep this admission check in one coverage body because the reconstruction
+    // method is monomorphized for each transform callback. Normal builds inline
+    // the check into the hot path.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn lossless_small_prediction_supported(
+        lossless_small: bool,
+        has_compound: bool,
+        has_obmc: bool,
+        has_inter_intra: bool,
+    ) -> bool {
+        // Eager boolean OR avoids separate coverage branches for invalid tool combinations.
+        let has_incompatible_prediction = has_compound | has_obmc | has_inter_intra;
+        !lossless_small || !has_incompatible_prediction
+    }
+
+    // Keep this check in one coverage body because the reconstruction method is
+    // monomorphized for each transform callback.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_intra_prediction_supported(
+        has_inter_intra: bool,
+        has_compound: bool,
+        has_obmc: bool,
+    ) -> bool {
+        // Eager boolean OR avoids branches for invalid tool combinations.
+        !has_inter_intra || !(has_compound | has_obmc)
+    }
+
+    // Keep geometry admission in one coverage body for transform callback paths.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validated_inter_grid_plane_count(
+        grid_transform: bool,
+        monochrome: bool,
+        has_chroma: bool,
+        plane_geometries: [GenericPlaneGeometry; 3],
+        lossless_partial_grid: bool,
+    ) -> PortableResult<usize> {
+        let plane_count = if monochrome || !has_chroma { 1 } else { 3 };
+        if grid_transform {
+            plane_geometries
+                .into_iter()
+                .take(plane_count)
+                .all(|geometry| {
+                    let full_extent = geometry.coded_width == geometry.active_width
+                        && geometry.coded_height == geometry.active_height;
+                    lossless_partial_grid || full_extent
+                })
+                .then_some(plane_count)
+                .portable()
+        } else {
+            Ok(plane_count)
+        }
+    }
+
+    // Default to geometry validation for every new plan; only Single skips it.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_transform_plan_requires_exact_geometry(plan: InterTransformPlan) -> bool {
+        !matches!(plan, InterTransformPlan::Single { .. })
+    }
+
+    // Keep split-plan classification in one coverage body. The shared decode
+    // path is monomorphized for transform callbacks, while the plan itself is
+    // already a compact enum that identifies each split shape.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_transform_plan_is_split(plan: InterTransformPlan) -> bool {
+        matches!(
+            plan,
+            InterTransformPlan::SplitB8
+                | InterTransformPlan::SplitB4x8
+                | InterTransformPlan::SplitB8x4
+                | InterTransformPlan::SplitB4x16
+                | InterTransformPlan::SplitB4x16Deep
+                | InterTransformPlan::SplitB4x16Topology { .. }
+                | InterTransformPlan::SplitB16x4
+                | InterTransformPlan::SplitB16x4Deep
+                | InterTransformPlan::SplitB16x4Topology { .. }
+                | InterTransformPlan::SplitB8x16
+                | InterTransformPlan::SplitB8x16Deep
+                | InterTransformPlan::SplitB8x16Topology { .. }
+                | InterTransformPlan::SplitB16x8
+                | InterTransformPlan::SplitB16x8Deep
+                | InterTransformPlan::SplitB16x8Topology { .. }
+                | InterTransformPlan::SplitB8x32Topology { .. }
+                | InterTransformPlan::SplitB8x32
+                | InterTransformPlan::SplitB8x32Deep
+                | InterTransformPlan::SplitB32x8Topology { .. }
+                | InterTransformPlan::SplitB32x8
+                | InterTransformPlan::SplitB32x8Deep
+                | InterTransformPlan::SplitB16x64Topology { .. }
+                | InterTransformPlan::SplitB16x64
+                | InterTransformPlan::SplitB16x64Deep
+                | InterTransformPlan::SplitB64x16Topology { .. }
+                | InterTransformPlan::SplitB64x16
+                | InterTransformPlan::SplitB64x16Deep
+                | InterTransformPlan::SplitB32x64Topology { .. }
+                | InterTransformPlan::SplitB32x64
+                | InterTransformPlan::SplitB32x64Deep
+                | InterTransformPlan::SplitB64x32Topology { .. }
+                | InterTransformPlan::SplitB64x32
+                | InterTransformPlan::SplitB64x32Deep
+                | InterTransformPlan::SplitB64Deep
+                | InterTransformPlan::SplitB16
+                | InterTransformPlan::SplitB16Deep
+                | InterTransformPlan::SplitB16Topology { .. }
+                | InterTransformPlan::SplitB16x32
+                | InterTransformPlan::SplitB16x32Deep
+                | InterTransformPlan::SplitB16x32Topology { .. }
+                | InterTransformPlan::SplitB32x16
+                | InterTransformPlan::SplitB32x16Deep
+                | InterTransformPlan::SplitB32x16Topology { .. }
+                | InterTransformPlan::SplitB32
+                | InterTransformPlan::SplitB32Deep
+                | InterTransformPlan::SplitB32Topology { .. }
+                | InterTransformPlan::SplitB64
+                | InterTransformPlan::SplitB64Topology { .. }
+        )
+    }
+
+    // Match a plan directly to its supported block shape. This avoids a long
+    // short-circuit chain in the callback-generic decoder and keeps coverage
+    // observations attached to the finite plan enum.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_transform_plan_geometry_matches(
+        plan: InterTransformPlan,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        chroma_sampling: ChromaSampling,
+        lossless_partial_grid: bool,
+    ) -> bool {
+        let (coded_width, coded_height) = block_size.pixel_dimensions();
+        let full_extent = visible_width == coded_width && visible_height == coded_height;
+        let expected_block = match plan {
+            InterTransformPlan::Single { .. } => return false,
+            InterTransformPlan::SplitB8
+            | InterTransformPlan::LosslessB8I420
+            | InterTransformPlan::LosslessB8I422
+            | InterTransformPlan::LosslessB8I444 => BlockSize::B8x8,
+            InterTransformPlan::SplitB4x8
+            | InterTransformPlan::LosslessB4x8I420
+            | InterTransformPlan::LosslessB4x8I422
+            | InterTransformPlan::LosslessB4x8I444 => BlockSize::B4x8,
+            InterTransformPlan::SplitB8x4
+            | InterTransformPlan::LosslessB8x4I420
+            | InterTransformPlan::LosslessB8x4I422
+            | InterTransformPlan::LosslessB8x4I444 => BlockSize::B8x4,
+            InterTransformPlan::SplitB4x16
+            | InterTransformPlan::SplitB4x16Deep
+            | InterTransformPlan::SplitB4x16Topology { .. }
+            | InterTransformPlan::LosslessB4x16I420
+            | InterTransformPlan::LosslessB4x16I422
+            | InterTransformPlan::LosslessB4x16I444 => BlockSize::B4x16,
+            InterTransformPlan::SplitB16x4
+            | InterTransformPlan::SplitB16x4Deep
+            | InterTransformPlan::SplitB16x4Topology { .. }
+            | InterTransformPlan::LosslessB16x4I420
+            | InterTransformPlan::LosslessB16x4I422
+            | InterTransformPlan::LosslessB16x4I444 => BlockSize::B16x4,
+            InterTransformPlan::SplitB8x16
+            | InterTransformPlan::SplitB8x16Deep
+            | InterTransformPlan::SplitB8x16Topology { .. }
+            | InterTransformPlan::LosslessB8x16I420
+            | InterTransformPlan::LosslessB8x16I422
+            | InterTransformPlan::LosslessB8x16I444 => BlockSize::B8x16,
+            InterTransformPlan::SplitB16x8
+            | InterTransformPlan::SplitB16x8Deep
+            | InterTransformPlan::SplitB16x8Topology { .. }
+            | InterTransformPlan::LosslessB16x8I420
+            | InterTransformPlan::LosslessB16x8I422
+            | InterTransformPlan::LosslessB16x8I444 => BlockSize::B16x8,
+            InterTransformPlan::SplitB8x32Topology { .. }
+            | InterTransformPlan::SplitB8x32
+            | InterTransformPlan::SplitB8x32Deep => BlockSize::B8x32,
+            InterTransformPlan::SplitB32x8Topology { .. }
+            | InterTransformPlan::SplitB32x8
+            | InterTransformPlan::SplitB32x8Deep => BlockSize::B32x8,
+            InterTransformPlan::SplitB16x64Topology { .. }
+            | InterTransformPlan::SplitB16x64
+            | InterTransformPlan::SplitB16x64Deep => BlockSize::B16x64,
+            InterTransformPlan::SplitB64x16Topology { .. }
+            | InterTransformPlan::SplitB64x16
+            | InterTransformPlan::SplitB64x16Deep => BlockSize::B64x16,
+            InterTransformPlan::SplitB32x64Topology { .. }
+            | InterTransformPlan::SplitB32x64
+            | InterTransformPlan::SplitB32x64Deep => BlockSize::B32x64,
+            InterTransformPlan::SplitB64x32Topology { .. }
+            | InterTransformPlan::SplitB64x32
+            | InterTransformPlan::SplitB64x32Deep => BlockSize::B64x32,
+            InterTransformPlan::SplitB16
+            | InterTransformPlan::SplitB16Deep
+            | InterTransformPlan::SplitB16Topology { .. }
+            | InterTransformPlan::LosslessB16I420
+            | InterTransformPlan::LosslessB16I422
+            | InterTransformPlan::LosslessB16I444 => BlockSize::B16x16,
+            InterTransformPlan::SplitB16x32
+            | InterTransformPlan::SplitB16x32Deep
+            | InterTransformPlan::SplitB16x32Topology { .. } => BlockSize::B16x32,
+            InterTransformPlan::SplitB32x16
+            | InterTransformPlan::SplitB32x16Deep
+            | InterTransformPlan::SplitB32x16Topology { .. } => BlockSize::B32x16,
+            InterTransformPlan::SplitB32
+            | InterTransformPlan::SplitB32Deep
+            | InterTransformPlan::SplitB32Topology { .. } => BlockSize::B32x32,
+            InterTransformPlan::SplitB64Deep
+            | InterTransformPlan::SplitB64
+            | InterTransformPlan::SplitB64Topology { .. } => BlockSize::B64x64,
+            InterTransformPlan::LosslessB4I420
+            | InterTransformPlan::LosslessB4I422
+            | InterTransformPlan::LosslessB4I444 => BlockSize::B4x4,
+            InterTransformPlan::LosslessGrid { .. } => {
+                return lossless_partial_grid || full_extent;
+            }
+            InterTransformPlan::LossyWideDirectChromaGrid { .. } => {
+                return matches!(
+                    chroma_sampling,
+                    ChromaSampling::Full | ChromaSampling::Subsampled422
+                ) && full_extent;
+            }
+            InterTransformPlan::LossyWideChunked { .. }
+            | InterTransformPlan::LossyWideMode2Unsplit { .. }
+            | InterTransformPlan::LossyWideMode2Split32 { .. }
+            | InterTransformPlan::LossyWideMode2Deep16 { .. }
+            | InterTransformPlan::LossyWideMode2Mixed { .. } => return full_extent,
+        };
+        block_size == expected_block && full_extent
+    }
+
+    // Keep grid-plan classification in one coverage body. The reconstruction
+    // method is monomorphized for many transform callbacks; all lossless
+    // layouts, partial visible grids, and lossy wide plans use the grid path.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_grid_transform_flags(transform_plan: InterTransformPlan) -> (bool, bool) {
+        let lossless_grid = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB8I420
+                | InterTransformPlan::LosslessB8I422
+                | InterTransformPlan::LosslessB8I444
+                | InterTransformPlan::LosslessB16I420
+                | InterTransformPlan::LosslessB16I422
+                | InterTransformPlan::LosslessB16I444
+                | InterTransformPlan::LosslessB8x16I420
+                | InterTransformPlan::LosslessB8x16I422
+                | InterTransformPlan::LosslessB8x16I444
+                | InterTransformPlan::LosslessB16x8I420
+                | InterTransformPlan::LosslessB16x8I422
+                | InterTransformPlan::LosslessB16x8I444
+                | InterTransformPlan::LosslessB4I420
+                | InterTransformPlan::LosslessB4I422
+                | InterTransformPlan::LosslessB4I444
+                | InterTransformPlan::LosslessB4x8I420
+                | InterTransformPlan::LosslessB4x8I422
+                | InterTransformPlan::LosslessB4x8I444
+                | InterTransformPlan::LosslessB8x4I420
+                | InterTransformPlan::LosslessB8x4I422
+                | InterTransformPlan::LosslessB8x4I444
+                | InterTransformPlan::LosslessB4x16I420
+                | InterTransformPlan::LosslessB4x16I422
+                | InterTransformPlan::LosslessB4x16I444
+                | InterTransformPlan::LosslessB16x4I420
+                | InterTransformPlan::LosslessB16x4I422
+                | InterTransformPlan::LosslessB16x4I444
+                | InterTransformPlan::LosslessGrid { .. }
+        );
+        let grid_transform = lossless_grid
+            || matches!(
+                transform_plan,
+                InterTransformPlan::LossyWideChunked { .. }
+                    | InterTransformPlan::LossyWideMode2Unsplit { .. }
+                    | InterTransformPlan::LossyWideMode2Split32 { .. }
+                    | InterTransformPlan::LossyWideMode2Deep16 { .. }
+                    | InterTransformPlan::LossyWideMode2Mixed { .. }
+            );
+        (lossless_grid, grid_transform)
+    }
+
+    // Keep the shared geometry contract out of the generic callback body so
+    // coverage observes one copy of the public-input invariants.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn inter_translation_common_geometry_is_valid(
+        tools: BlockTools,
+        quantization: LossyQuantization,
+        references: [&FrameSurface; 2],
+        layout: PixelLayout,
+        visible_dimensions: (u32, u32),
+        block_size: BlockSize,
+    ) -> bool {
+        let (visible_width, visible_height) = visible_dimensions;
+        tools.sample_depth == quantization.sample_depth
+            && references.iter().all(|reference| {
+                tools.sample_depth == reference.depth && reference.layout == layout
+            })
+            && visible_width != 0
+            && visible_height != 0
+            && block_size.valid_for_layout(layout)
+    }
+
+    // Keep the shared admission checks outside the generic callback body so
+    // coverage observes one copy while optimized builds inline the contract.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validate_inter_translation_admission(
+        admission: InterTranslationAdmission<'_>,
+    ) -> PortableResult<()> {
+        let InterTranslationAdmission {
+            tools,
+            quantization,
+            references,
+            layout,
+            visible_dimensions,
+            block_size,
+            chroma_sampling,
+            lossless_grid,
+            lossless_large,
+            frame_all_lossless,
+        } = admission;
+        let geometry_quantization = inter_translation_quantization_for_geometry(quantization);
+        let common_geometry = Self::inter_translation_common_geometry_is_valid(
+            tools,
+            geometry_quantization,
+            references,
+            layout,
+            visible_dimensions,
+            block_size,
+        );
+        let mixed_lossless_transform_mode =
+            Self::mixed_lossless_inter_transform_mode_enabled(tools, quantization, chroma_sampling);
+        (common_geometry
+            && if lossless_grid {
+                (lossless_large || tools.sample_depth == SampleDepth::EIGHT)
+                    && (tools.transform_mode == 0 || mixed_lossless_transform_mode)
+                    && quantization.segment_lossless
+                    && quantization.qindex == 0
+                    && quantization.segment_qindex == 0
+                    && !quantization.delta_q_present
+                    && (!quantization.using_matrix || frame_all_lossless)
+                    && quantization.y_dc_delta == 0
+                    && quantization.y_ac_delta == 0
+                    && quantization.u_dc_delta == 0
+                    && quantization.u_ac_delta == 0
+                    && quantization.v_dc_delta == 0
+                    && quantization.v_ac_delta == 0
+            } else {
+                !quantization.segment_lossless
+            })
+        .then_some(())
+        .portable()
+    }
+
+    // Segment losslessness fixes every residual to TX4x4 WHT, independently
+    // of the frame transform mode. The same checked grid handles monochrome
+    // and color planes at each supported sample depth.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn mixed_lossless_inter_transform_mode_enabled(
+        tools: BlockTools,
+        quantization: LossyQuantization,
+        chroma_sampling: ChromaSampling,
+    ) -> bool {
+        matches!(tools.transform_mode, 1 | 2)
+            && quantization.segment_lossless
+            && tools.sample_depth == quantization.sample_depth
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && matches!(
+                chroma_sampling,
+                ChromaSampling::Monochrome
+                    | ChromaSampling::Subsampled420
+                    | ChromaSampling::Subsampled422
+                    | ChromaSampling::Full
+            )
+    }
+
+    // Keep split-plan validation in a non-generic coverage body. The shared
+    // decoder is monomorphized for many transform callbacks; normal builds
+    // inline these checks back into the hot path.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "split-plan validation depends on the transform, geometry, quantization, and prediction contract"
+    )]
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validate_inter_split_plan(
+        transform_plan: InterTransformPlan,
+        block_size: BlockSize,
+        chroma_sampling: ChromaSampling,
+        tools: BlockTools,
+        quantization: LossyQuantization,
+        visible_width: u32,
+        visible_height: u32,
+        has_obmc: bool,
+    ) -> PortableResult<()> {
+        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
+        let split_b8x16 = matches!(transform_plan, InterTransformPlan::SplitB8x16);
+        let split_b8x16_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB8x16Topology { .. }
+        );
+        let split_b16x8 = matches!(transform_plan, InterTransformPlan::SplitB16x8);
+        let split_b16x8_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB16x8Topology { .. }
+        );
+        let split_b8x32 = matches!(transform_plan, InterTransformPlan::SplitB8x32);
+        let split_b32x8 = matches!(transform_plan, InterTransformPlan::SplitB32x8);
+        let split_b16x64 = matches!(transform_plan, InterTransformPlan::SplitB16x64);
+        let split_b16x64_deep = matches!(transform_plan, InterTransformPlan::SplitB16x64Deep);
+        let split_b64x16 = matches!(transform_plan, InterTransformPlan::SplitB64x16);
+        let split_b64x16_deep = matches!(transform_plan, InterTransformPlan::SplitB64x16Deep);
+        let split_b32x64 = matches!(transform_plan, InterTransformPlan::SplitB32x64);
+        let split_b32x64_deep = matches!(transform_plan, InterTransformPlan::SplitB32x64Deep);
+        let split_b64x32 = matches!(transform_plan, InterTransformPlan::SplitB64x32);
+        let split_b64x32_deep = matches!(transform_plan, InterTransformPlan::SplitB64x32Deep);
+        let split_b64_deep = matches!(transform_plan, InterTransformPlan::SplitB64Deep);
+        let split_b16 = matches!(transform_plan, InterTransformPlan::SplitB16);
+        let split_b16_deep = matches!(transform_plan, InterTransformPlan::SplitB16Deep);
+        let split_b16_topology =
+            matches!(transform_plan, InterTransformPlan::SplitB16Topology { .. });
+        let split_b16x32 = matches!(transform_plan, InterTransformPlan::SplitB16x32);
+        let split_b16x32_deep = matches!(transform_plan, InterTransformPlan::SplitB16x32Deep);
+        let split_b16x32_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB16x32Topology { .. }
+        );
+        let split_b32x16 = matches!(transform_plan, InterTransformPlan::SplitB32x16);
+        let split_b32x16_deep = matches!(transform_plan, InterTransformPlan::SplitB32x16Deep);
+        let split_b32x16_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB32x16Topology { .. }
+        );
+        let split_b32 = matches!(transform_plan, InterTransformPlan::SplitB32);
+        let split_b32_deep = matches!(transform_plan, InterTransformPlan::SplitB32Deep);
+        let split_b32_topology =
+            matches!(transform_plan, InterTransformPlan::SplitB32Topology { .. });
+        let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
+        let split_b64_topology =
+            matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
+        if split_b8 {
+            (block_size == BlockSize::B8x8
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16 || split_b16_deep {
+            (block_size == BlockSize::B16x16
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB16Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.iter().flatten().any(|&split| split);
+            let all_children_split = child_splits.iter().flatten().all(|&split| split);
+            (block_size == BlockSize::B16x16
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16x32 {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16x32_deep {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16x32_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB16x32Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.into_iter().any(|split| split);
+            let all_children_split = child_splits.into_iter().all(|split| split);
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b8x16 || split_b16x8 {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B8x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B8x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x8, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x8, ChromaSampling::Monochrome)
+                    | (BlockSize::B8x16, ChromaSampling::Full)
+                    | (BlockSize::B16x8, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b8x16_topology || split_b16x8_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB8x16Topology { child_splits }
+                | InterTransformPlan::SplitB16x8Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.into_iter().any(|split| split);
+            let all_children_split = child_splits.into_iter().all(|split| split);
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B8x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B8x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B8x16, ChromaSampling::Full)
+                    | (BlockSize::B16x8, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x8, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x8, ChromaSampling::Full)
+            ) && ((split_b8x16_topology
+                && block_size == BlockSize::B8x16
+                && visible_width == 8
+                && visible_height == 16)
+                || (split_b16x8_topology
+                    && block_size == BlockSize::B16x8
+                    && visible_width == 16
+                    && visible_height == 8))
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b8x32 || split_b32x8 {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B8x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B8x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x8, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x8, ChromaSampling::Monochrome)
+                    | (BlockSize::B8x32, ChromaSampling::Full)
+                    | (BlockSize::B32x8, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16x64 || split_b64x16 {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x64, ChromaSampling::Subsampled420)
+                    | (BlockSize::B64x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x64, ChromaSampling::Subsampled422)
+                    | (BlockSize::B64x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x64, ChromaSampling::Full)
+                    | (BlockSize::B64x16, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b16x64_deep || split_b64x16_deep {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x64, ChromaSampling::Subsampled420)
+                    | (BlockSize::B64x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x64, ChromaSampling::Subsampled422)
+                    | (BlockSize::B64x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x64, ChromaSampling::Full)
+                    | (BlockSize::B64x16, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32x64 || split_b64x32 {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x64, ChromaSampling::Subsampled420)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x64, ChromaSampling::Full)
+                    | (BlockSize::B64x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32x64_deep || split_b64x32_deep {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x64, ChromaSampling::Subsampled420)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x64, ChromaSampling::Full)
+                    | (BlockSize::B64x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b64_deep {
+            (block_size == BlockSize::B64x64
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32x16 {
+            (block_size == BlockSize::B32x16
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32x16_deep {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x16, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32x16_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB32x16Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.into_iter().any(|split| split);
+            let all_children_split = child_splits.into_iter().all(|split| split);
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x16, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split
+                && !has_obmc)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32 || split_b32_deep {
+            (block_size == BlockSize::B32x32
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b32_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB32Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.iter().flatten().any(|&split| split);
+            let all_children_split = child_splits.iter().flatten().all(|&split| split);
+            (block_size == BlockSize::B32x32
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b64 {
+            (block_size == BlockSize::B64x64
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
+        if split_b64_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB64Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.iter().flatten().any(|&split| split);
+            let all_children_split = child_splits.iter().flatten().all(|&split| split);
+            (block_size == BlockSize::B64x64
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split)
+                .then_some(())
+                .portable()?;
+        }
+        Ok(())
+    }
+
+    // Keep plan validation in a non-generic coverage body. The shared decoder
+    // below is monomorphized for many transform callbacks; normal builds inline
+    // these checks back into the hot path.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validate_inter_translation_plan(
+        transform_plan: InterTransformPlan,
+        block_size: BlockSize,
+        chroma_sampling: ChromaSampling,
+        sample_depth: SampleDepth,
+        transform_mode: u32,
+        quantization: LossyQuantization,
+    ) -> PortableResult<bool> {
+        let wide_lossy_single = matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx16x64
+                    | TxSize::Tx32x64
+                    | TxSize::Tx64x16
+                    | TxSize::Tx64x32
+                    | TxSize::Tx64x64,
+                transform: Av1TransformType::DctDct,
+                ..
+            }
+        ) && matches!(
+            block_size,
+            BlockSize::B16x64
+                | BlockSize::B64x16
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
+        ) && matches!(
+            chroma_sampling,
+            ChromaSampling::Subsampled420 | ChromaSampling::Monochrome
+        ) && matches!(sample_depth.bits(), 8 | 10 | 12)
+            && sample_depth == quantization.sample_depth
+            && matches!(transform_mode, 1 | 2)
+            // Both admitted layouts allow qindex-zero mode-2 single roots;
+            // split plans keep their quantizer checks in their own paths.
+            && !quantization.segment_lossless;
+        if matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx16x64
+                    | TxSize::Tx32x64
+                    | TxSize::Tx64x16
+                    | TxSize::Tx64x32
+                    | TxSize::Tx64x64,
+                ..
+            }
+        ) {
+            wide_lossy_single.then_some(()).portable()?;
+        }
+
+        let lossless_wide = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessGrid {
+                luma_width,
+                luma_height,
+                ..
+            } if luma_width > 64 || luma_height > 64
+        );
+        if let InterTransformPlan::LosslessGrid {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (sampling == chroma_sampling
+                && (sample_depth != SampleDepth::EIGHT
+                    || matches!(sampling, ChromaSampling::Monochrome)
+                    || lossless_grid_block_supported(block_size))
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+
+        Ok(lossless_wide)
+    }
+
+    // Validate the lossy wide-plan variants outside the generic callback body.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validate_lossy_wide_inter_plan(
+        transform_plan: InterTransformPlan,
+        block_size: BlockSize,
+        chroma_sampling: ChromaSampling,
+        tools: BlockTools,
+        quantization: LossyQuantization,
+    ) -> PortableResult<()> {
+        if let InterTransformPlan::LossyWideChunked {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 1
+                && !quantization.segment_lossless
+                && lossy_wide_chunked_block_supported(block_size)
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        // The direct lossy chroma-grid tranche is deliberately narrow: exact
+        // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
+        // consumed by the bounded grid compositor, plus the existing 4:2:0
+        // single-terminal tranche. Monochrome mode-2 roots use the same
+        // luma-only 64-axis validation. I422 roots in the bounded vertical
+        // split family inherit each luma child transform into its TX4 chroma
+        // rows; 64-axis direct profiles retain their DCT-only restriction.
+        if let InterTransformPlan::LossyWideDirectChromaGrid {
+            luma_width,
+            luma_height,
+            luma_tx,
+            luma_txb_skipped: _,
+            luma_transform,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (ChromaSampling::Full, BlockSize::B16x64)
+                    | (ChromaSampling::Full, BlockSize::B64x16)
+                    | (ChromaSampling::Full, BlockSize::B32x64)
+                    | (ChromaSampling::Full, BlockSize::B64x32)
+                    | (ChromaSampling::Full, BlockSize::B64x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B8x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B8x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B16x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B16x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.transform_mode, 1 | 2)
+                && (tools.transform_mode != 2
+                    || quantization.segment_qindex > 0
+                    || (sampling == ChromaSampling::Subsampled422
+                        && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
+                        && (luma_width, luma_height) == block_size.pixel_dimensions())
+                    || (tools.transform_mode == 2
+                        && quantization.segment_qindex == 0
+                        && sampling == ChromaSampling::Subsampled422
+                        && matches!(
+                            block_size,
+                            BlockSize::B8x16 | BlockSize::B8x32 | BlockSize::B16x32
+                        )
+                        && (luma_width, luma_height) == block_size.pixel_dimensions())
+                    || (tools.transform_mode == 2
+                        && quantization.segment_qindex == 0
+                        && matches!(
+                            sampling,
+                            ChromaSampling::Subsampled422 | ChromaSampling::Full
+                        )
+                        && matches!(
+                            block_size,
+                            BlockSize::B16x64
+                                | BlockSize::B64x16
+                                | BlockSize::B32x64
+                                | BlockSize::B64x32
+                                | BlockSize::B64x64
+                        )
+                        && (luma_width, luma_height) == block_size.pixel_dimensions()))
+                && !quantization.segment_lossless
+                && (!matches!(
+                    (sampling, block_size),
+                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                        | (ChromaSampling::Subsampled422, BlockSize::B4x16)
+                ) || matches!(tools.transform_mode, 1 | 2))
+                && matches!(
+                    block_size,
+                    BlockSize::B4x8
+                        | BlockSize::B4x16
+                        | BlockSize::B8x16
+                        | BlockSize::B8x32
+                        | BlockSize::B16x32
+                        | BlockSize::B16x64
+                        | BlockSize::B64x16
+                        | BlockSize::B32x64
+                        | BlockSize::B64x32
+                        | BlockSize::B64x64
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions()
+                && luma_tx == block_size.maximum_luma_tx()
+                && match (chroma_sampling, block_size) {
+                    // TX4x8/TX4x16 luma transforms inherit into the
+                    // TX4x4 chroma grid without a transform-type symbol;
+                    // the small inter transform set is already checked by
+                    // the entropy decoder.
+                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x16) => true,
+                    (ChromaSampling::Subsampled422, BlockSize::B8x16) => true,
+                    (ChromaSampling::Subsampled422, BlockSize::B8x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B16x32) => matches!(
+                        luma_transform,
+                        Av1TransformType::DctDct | Av1TransformType::IdentityIdentity
+                    ),
+                    (ChromaSampling::Subsampled422, BlockSize::B16x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
+                    | (ChromaSampling::Full, BlockSize::B16x64)
+                    | (ChromaSampling::Full, BlockSize::B64x16)
+                    | (ChromaSampling::Full, BlockSize::B32x64)
+                    | (ChromaSampling::Full, BlockSize::B64x32)
+                    | (ChromaSampling::Full, BlockSize::B64x64) => {
+                        luma_transform == Av1TransformType::DctDct
+                    }
+                    _ => false,
+                })
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyWideMode2Unsplit {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                // A qindex-zero root is valid only after the parser has
+                // classified this exact plan as all-roots-unsplit. Split,
+                // deep, and mixed plans retain their positive-q validators.
+                && matches!(
+                    block_size,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyWideMode2Split32 {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && matches!(
+                    block_size,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyWideMode2Deep16 {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && matches!(
+                    block_size,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyWideMode2Mixed {
+            luma_width,
+            luma_height,
+            sampling,
+            ..
+        } = transform_plan
+        {
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && matches!(
+                    block_size,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        Ok(())
+    }
+
     #[expect(
         clippy::too_many_arguments,
         reason = "lossless grid single-reference reconstruction carries block, frame, prediction, and residual state"
@@ -48384,760 +49751,32 @@ impl Lossy420Decoder {
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64)
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64Deep)
             );
-        // The direct lossy chroma-grid tranche is deliberately narrow: exact
-        // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
-        // consumed by the bounded grid compositor, plus the existing 4:2:0
-        // single-terminal tranche. Monochrome mode-2 roots use the same
-        // luma-only 64-axis validation. I422 roots in the bounded vertical
-        // split family inherit each luma child transform into its TX4 chroma
-        // rows; 64-axis direct profiles retain their DCT-only restriction.
-        let wide_lossy_single = matches!(
+        let lossless_wide = Self::validate_inter_translation_plan(
             transform_plan,
-            InterTransformPlan::Single {
-                tx_size: TxSize::Tx16x64
-                    | TxSize::Tx32x64
-                    | TxSize::Tx64x16
-                    | TxSize::Tx64x32
-                    | TxSize::Tx64x64,
-                transform: Av1TransformType::DctDct,
-                ..
-            }
-        ) && matches!(
             block_size,
-            BlockSize::B16x64
-                | BlockSize::B64x16
-                | BlockSize::B32x64
-                | BlockSize::B64x32
-                | BlockSize::B64x64
-        ) && matches!(
             chroma_sampling,
-            ChromaSampling::Subsampled420 | ChromaSampling::Monochrome
-        ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.sample_depth == quantization.sample_depth
-            && matches!(tools.transform_mode, 1 | 2)
-            // Both admitted layouts allow qindex-zero mode-2 single roots;
-            // split plans keep their quantizer checks in their own paths.
-            && !quantization.segment_lossless;
-        if matches!(
+            tools.sample_depth,
+            tools.transform_mode,
+            quantization,
+        )?;
+        Self::validate_lossy_wide_inter_plan(
             transform_plan,
-            InterTransformPlan::Single {
-                tx_size: TxSize::Tx16x64
-                    | TxSize::Tx32x64
-                    | TxSize::Tx64x16
-                    | TxSize::Tx64x32
-                    | TxSize::Tx64x64,
-                ..
-            }
-        ) {
-            wide_lossy_single.then_some(()).portable()?;
-        }
-        let lossless_wide = matches!(
+            block_size,
+            chroma_sampling,
+            tools,
+            quantization,
+        )?;
+        Self::validate_inter_split_plan(
             transform_plan,
-            InterTransformPlan::LosslessGrid {
-                luma_width,
-                luma_height,
-                ..
-            } if luma_width > 64 || luma_height > 64
-        );
-        if let InterTransformPlan::LosslessGrid {
-            luma_width,
-            luma_height,
-            sampling,
-        } = transform_plan
-        {
-            (sampling == chroma_sampling
-                && (tools.sample_depth != SampleDepth::EIGHT
-                    || matches!(sampling, ChromaSampling::Monochrome)
-                    || lossless_grid_block_supported(block_size))
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideChunked {
-            luma_width,
-            luma_height,
-            sampling,
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (
-                    ChromaSampling::Subsampled420,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Subsampled422,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Full,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Monochrome,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && tools.transform_mode == 1
-                && !quantization.segment_lossless
-                && lossy_wide_chunked_block_supported(block_size)
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideDirectChromaGrid {
-            luma_width,
-            luma_height,
-            luma_tx,
-            luma_txb_skipped: _,
-            luma_transform,
-            sampling,
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (ChromaSampling::Full, BlockSize::B16x64)
-                    | (ChromaSampling::Full, BlockSize::B64x16)
-                    | (ChromaSampling::Full, BlockSize::B32x64)
-                    | (ChromaSampling::Full, BlockSize::B64x32)
-                    | (ChromaSampling::Full, BlockSize::B64x64)
-                    | (ChromaSampling::Subsampled422, BlockSize::B4x8)
-                    | (ChromaSampling::Subsampled422, BlockSize::B4x16)
-                    | (ChromaSampling::Subsampled422, BlockSize::B8x16)
-                    | (ChromaSampling::Subsampled422, BlockSize::B8x32)
-                    | (ChromaSampling::Subsampled422, BlockSize::B16x32)
-                    | (ChromaSampling::Subsampled422, BlockSize::B16x64)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x16)
-                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.transform_mode, 1 | 2)
-                && (tools.transform_mode != 2
-                    || quantization.segment_qindex > 0
-                    || (sampling == ChromaSampling::Subsampled422
-                        && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
-                        && (luma_width, luma_height) == block_size.pixel_dimensions())
-                    || (tools.transform_mode == 2
-                        && quantization.segment_qindex == 0
-                        && sampling == ChromaSampling::Subsampled422
-                        && matches!(
-                            block_size,
-                            BlockSize::B8x16 | BlockSize::B8x32 | BlockSize::B16x32
-                        )
-                        && (luma_width, luma_height) == block_size.pixel_dimensions())
-                    || (tools.transform_mode == 2
-                        && quantization.segment_qindex == 0
-                        && matches!(
-                            sampling,
-                            ChromaSampling::Subsampled422 | ChromaSampling::Full
-                        )
-                        && matches!(
-                            block_size,
-                            BlockSize::B16x64
-                                | BlockSize::B64x16
-                                | BlockSize::B32x64
-                                | BlockSize::B64x32
-                                | BlockSize::B64x64
-                        )
-                        && (luma_width, luma_height) == block_size.pixel_dimensions()))
-                && !quantization.segment_lossless
-                && (!matches!(
-                    (sampling, block_size),
-                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
-                        | (ChromaSampling::Subsampled422, BlockSize::B4x16)
-                ) || matches!(tools.transform_mode, 1 | 2))
-                && matches!(
-                    block_size,
-                    BlockSize::B4x8
-                        | BlockSize::B4x16
-                        | BlockSize::B8x16
-                        | BlockSize::B8x32
-                        | BlockSize::B16x32
-                        | BlockSize::B16x64
-                        | BlockSize::B64x16
-                        | BlockSize::B32x64
-                        | BlockSize::B64x32
-                        | BlockSize::B64x64
-                )
-                && (luma_width, luma_height) == block_size.pixel_dimensions()
-                && luma_tx == block_size.maximum_luma_tx()
-                && match (chroma_sampling, block_size) {
-                    // TX4x8/TX4x16 luma transforms inherit into the
-                    // TX4x4 chroma grid without a transform-type symbol;
-                    // the small inter transform set is already checked by
-                    // the entropy decoder.
-                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
-                    | (ChromaSampling::Subsampled422, BlockSize::B4x16) => true,
-                    (ChromaSampling::Subsampled422, BlockSize::B8x16) => true,
-                    (ChromaSampling::Subsampled422, BlockSize::B8x32)
-                    | (ChromaSampling::Subsampled422, BlockSize::B16x32) => matches!(
-                        luma_transform,
-                        Av1TransformType::DctDct | Av1TransformType::IdentityIdentity
-                    ),
-                    (ChromaSampling::Subsampled422, BlockSize::B16x64)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x16)
-                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
-                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
-                    | (ChromaSampling::Full, BlockSize::B16x64)
-                    | (ChromaSampling::Full, BlockSize::B64x16)
-                    | (ChromaSampling::Full, BlockSize::B32x64)
-                    | (ChromaSampling::Full, BlockSize::B64x32)
-                    | (ChromaSampling::Full, BlockSize::B64x64) => {
-                        luma_transform == Av1TransformType::DctDct
-                    }
-                    _ => false,
-                })
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideMode2Unsplit {
-            luma_width,
-            luma_height,
-            sampling,
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (
-                    ChromaSampling::Subsampled420,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Subsampled422,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Full,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Monochrome,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                // A qindex-zero root is valid only after the parser has
-                // classified this exact plan as all-roots-unsplit. Split,
-                // deep, and mixed plans retain their positive-q validators.
-                && matches!(
-                    block_size,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideMode2Split32 {
-            luma_width,
-            luma_height,
-            sampling,
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (
-                    ChromaSampling::Subsampled420,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Subsampled422,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Full,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Monochrome,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && matches!(
-                    block_size,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideMode2Deep16 {
-            luma_width,
-            luma_height,
-            sampling,
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (
-                    ChromaSampling::Subsampled420,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Subsampled422,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Full,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Monochrome,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && matches!(
-                    block_size,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if let InterTransformPlan::LossyWideMode2Mixed {
-            luma_width,
-            luma_height,
-            sampling,
-            ..
-        } = transform_plan
-        {
-            (matches!(
-                (sampling, block_size),
-                (
-                    ChromaSampling::Subsampled420,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Subsampled422,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Full,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                ) | (
-                    ChromaSampling::Monochrome,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-            ) && sampling == chroma_sampling
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && matches!(
-                    block_size,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
-                && (luma_width, luma_height) == block_size.pixel_dimensions())
-            .then_some(())
-            .portable()?;
-        }
-        if split_b8 {
-            (block_size == BlockSize::B8x8
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16 || split_b16_deep {
-            (block_size == BlockSize::B16x16
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB16Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.iter().flatten().any(|&split| split);
-            let all_children_split = child_splits.iter().flatten().all(|&split| split);
-            (block_size == BlockSize::B16x16
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16x32 {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B16x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x32, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16x32_deep {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B16x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x32, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16x32_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB16x32Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.into_iter().any(|split| split);
-            let all_children_split = child_splits.into_iter().all(|split| split);
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B16x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x32, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b8x16 || split_b16x8 {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B8x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B8x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B8x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x8, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x8, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x8, ChromaSampling::Monochrome)
-                    | (BlockSize::B8x16, ChromaSampling::Full)
-                    | (BlockSize::B16x8, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b8x16_topology || split_b16x8_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB8x16Topology { child_splits }
-                | InterTransformPlan::SplitB16x8Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.into_iter().any(|split| split);
-            let all_children_split = child_splits.into_iter().all(|split| split);
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B8x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B8x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B8x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B8x16, ChromaSampling::Full)
-                    | (BlockSize::B16x8, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x8, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x8, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x8, ChromaSampling::Full)
-            ) && ((split_b8x16_topology
-                && block_size == BlockSize::B8x16
-                && visible_width == 8
-                && visible_height == 16)
-                || (split_b16x8_topology
-                    && block_size == BlockSize::B16x8
-                    && visible_width == 16
-                    && visible_height == 8))
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b8x32 || split_b32x8 {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B8x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B8x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B8x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B32x8, ChromaSampling::Subsampled420)
-                    | (BlockSize::B32x8, ChromaSampling::Subsampled422)
-                    | (BlockSize::B32x8, ChromaSampling::Monochrome)
-                    | (BlockSize::B8x32, ChromaSampling::Full)
-                    | (BlockSize::B32x8, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16x64 || split_b64x16 {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B16x64, ChromaSampling::Subsampled420)
-                    | (BlockSize::B64x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x64, ChromaSampling::Subsampled422)
-                    | (BlockSize::B64x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x64, ChromaSampling::Monochrome)
-                    | (BlockSize::B64x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x64, ChromaSampling::Full)
-                    | (BlockSize::B64x16, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b16x64_deep || split_b64x16_deep {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B16x64, ChromaSampling::Subsampled420)
-                    | (BlockSize::B64x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B16x64, ChromaSampling::Subsampled422)
-                    | (BlockSize::B64x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B16x64, ChromaSampling::Monochrome)
-                    | (BlockSize::B64x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B16x64, ChromaSampling::Full)
-                    | (BlockSize::B64x16, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32x64 || split_b64x32 {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B32x64, ChromaSampling::Subsampled420)
-                    | (BlockSize::B64x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
-                    | (BlockSize::B64x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
-                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B32x64, ChromaSampling::Full)
-                    | (BlockSize::B64x32, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32x64_deep || split_b64x32_deep {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B32x64, ChromaSampling::Subsampled420)
-                    | (BlockSize::B64x32, ChromaSampling::Subsampled420)
-                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
-                    | (BlockSize::B64x32, ChromaSampling::Subsampled422)
-                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
-                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
-                    | (BlockSize::B32x64, ChromaSampling::Full)
-                    | (BlockSize::B64x32, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b64_deep {
-            (block_size == BlockSize::B64x64
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32x16 {
-            (block_size == BlockSize::B32x16
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32x16_deep {
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B32x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B32x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B32x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B32x16, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32x16_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB32x16Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.into_iter().any(|split| split);
-            let all_children_split = child_splits.into_iter().all(|split| split);
-            (matches!(
-                (block_size, chroma_sampling),
-                (BlockSize::B32x16, ChromaSampling::Subsampled420)
-                    | (BlockSize::B32x16, ChromaSampling::Subsampled422)
-                    | (BlockSize::B32x16, ChromaSampling::Monochrome)
-                    | (BlockSize::B32x16, ChromaSampling::Full)
-            ) && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split
-                && prediction_state.obmc.is_none())
-            .then_some(())
-            .portable()?;
-        }
-        if split_b32 || split_b32_deep {
-            (block_size == BlockSize::B32x32
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b32_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB32Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.iter().flatten().any(|&split| split);
-            let all_children_split = child_splits.iter().flatten().all(|&split| split);
-            (block_size == BlockSize::B32x32
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b64 {
-            (block_size == BlockSize::B64x64
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless)
-                .then_some(())
-                .portable()?;
-        }
-        if split_b64_topology {
-            let child_splits = match transform_plan {
-                InterTransformPlan::SplitB64Topology { child_splits } => child_splits,
-                _ => return Err(PortableUnavailable),
-            };
-            let any_child_split = child_splits.iter().flatten().any(|&split| split);
-            let all_children_split = child_splits.iter().flatten().all(|&split| split);
-            (block_size == BlockSize::B64x64
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                )
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.transform_mode == 2
-                && !quantization.segment_lossless
-                && any_child_split
-                && !all_children_split)
-                .then_some(())
-                .portable()?;
-        }
-        let lossless_grid = lossless_b8
-            || lossless_b16
-            || lossless_rect
-            || lossless_small
-            || lossless_large
-            || lossless_partial_grid;
-        let grid_transform = lossless_grid || lossy_wide;
+            block_size,
+            chroma_sampling,
+            tools,
+            quantization,
+            visible_width,
+            visible_height,
+            prediction_state.obmc.is_some(),
+        )?;
+        let (lossless_grid, grid_transform) = Self::inter_grid_transform_flags(transform_plan);
         let lossless_i422 = matches!(
             transform_plan,
             InterTransformPlan::LosslessB8I422
@@ -49179,92 +49818,33 @@ impl Lossy420Decoder {
         );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
         let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
-        let common_geometry = matches!(
+        Self::validate_inter_translation_admission(InterTranslationAdmission {
+            tools,
+            quantization,
+            references,
+            layout,
+            visible_dimensions: (visible_width, visible_height),
+            block_size,
             chroma_sampling,
-            ChromaSampling::Full
-                | ChromaSampling::Subsampled420
-                | ChromaSampling::Subsampled422
-                | ChromaSampling::Monochrome
-        ) && tools.sample_depth == quantization.sample_depth
-            && references.iter().all(|reference| {
-                tools.sample_depth == reference.depth && reference.layout == layout
-            })
-            && visible_width != 0
-            && visible_height != 0
-            && block_size.valid_for_layout(layout);
-        // Segment-lossless residuals in mixed transform-mode frames use the
-        // same fixed TX4x4 WHT grid as mode-0 lossless frames.  Keep this
-        // exception limited to the layouts/depths whose entropy layer admits
-        // the corresponding mixed profile.
-        let mixed_lossless_transform_mode = matches!(tools.transform_mode, 1 | 2)
-            && quantization.segment_lossless
-            && tools.sample_depth == quantization.sample_depth
-            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && matches!(
-                chroma_sampling,
-                ChromaSampling::Monochrome
-                    | ChromaSampling::Subsampled420
-                    | ChromaSampling::Subsampled422
-                    | ChromaSampling::Full
-            )
-            && (tools.sample_depth != SampleDepth::EIGHT
-                || matches!(
-                    chroma_sampling,
-                    ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                ));
-        (common_geometry
-            && if lossless_grid {
-                matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                ) && (if lossless_large {
-                    matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                } else {
-                    tools.sample_depth == SampleDepth::EIGHT
-                }) && (tools.transform_mode == 0 || mixed_lossless_transform_mode)
-                    && quantization.segment_lossless
-                    && quantization.qindex == 0
-                    && quantization.segment_qindex == 0
-                    && !quantization.delta_q_present
-                    && (!quantization.using_matrix || frame_all_lossless)
-                    && quantization.y_dc_delta == 0
-                    && quantization.y_ac_delta == 0
-                    && quantization.u_dc_delta == 0
-                    && quantization.u_ac_delta == 0
-                    && quantization.v_dc_delta == 0
-                    && quantization.v_ac_delta == 0
-            } else {
-                !quantization.segment_lossless
-            })
+            lossless_grid,
+            lossless_large,
+            frame_all_lossless,
+        })?;
+        Self::lossless_small_prediction_supported(
+            lossless_small,
+            prediction_state.compound.is_some(),
+            prediction_state.obmc.is_some(),
+            prediction_state.inter_intra.is_some(),
+        )
         .then_some(())
         .portable()?;
-        (if lossless_small {
-            prediction_state.compound.is_none()
-                && prediction_state.obmc.is_none()
-                && prediction_state.inter_intra.is_none()
-        } else {
-            true
-        })
+        Self::inter_intra_prediction_supported(
+            prediction_state.inter_intra.is_some(),
+            prediction_state.compound.is_some(),
+            prediction_state.obmc.is_some(),
+        )
         .then_some(())
         .portable()?;
-        if prediction_state.inter_intra.is_some() {
-            (matches!(
-                chroma_sampling,
-                ChromaSampling::Full
-                    | ChromaSampling::Subsampled420
-                    | ChromaSampling::Subsampled422
-                    | ChromaSampling::Monochrome
-            ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && prediction_state.compound.is_none()
-                && prediction_state.obmc.is_none())
-            .then_some(())
-            .portable()?;
-        }
         let pending = self.pending_block_geometry.take().portable()?;
         (pending.block_size == block_size)
             .then_some(())
@@ -49295,83 +49875,14 @@ impl Lossy420Decoder {
             visible_width,
             visible_height,
         )?;
-        let plane_count = if monochrome || !has_chroma { 1 } else { 3 };
-        if grid_transform {
-            [y_geometry, u_geometry, v_geometry]
-                .into_iter()
-                .take(plane_count)
-                .all(|(coded_width, coded_height, active_width, active_height)| {
-                    coded_width != 0
-                        && coded_height != 0
-                        && active_width != 0
-                        && active_height != 0
-                        && ((coded_width == active_width && coded_height == active_height)
-                            || (lossless_partial_grid
-                                && active_width <= coded_width
-                                && active_height <= coded_height))
-                        && coded_width.is_multiple_of(4)
-                        && coded_height.is_multiple_of(4)
-                        && (lossless_partial_grid
-                            || (active_width.is_multiple_of(4) && active_height.is_multiple_of(4)))
-                        && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_width / 4))
-                        && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_height / 4))
-                })
-                .then_some(())
-                .portable()?;
-        }
-        if split_b8
-            || split_b4x8
-            || split_b8x4
-            || split_b4x16
-            || split_b4x16_deep
-            || split_b4x16_topology
-            || split_b16x4
-            || split_b16x4_deep
-            || split_b16x4_topology
-            || split_b8x16
-            || split_b8x16_deep
-            || split_b8x16_topology
-            || split_b16x8
-            || split_b16x8_deep
-            || split_b16x8_topology
-            || split_b8x32_topology
-            || split_b8x32
-            || split_b8x32_deep
-            || split_b32x8_topology
-            || split_b32x8
-            || split_b32x8_deep
-            || split_b16x64_topology
-            || split_b16x64
-            || split_b16x64_deep
-            || split_b64x16_topology
-            || split_b64x16
-            || split_b64x16_deep
-            || split_b32x64_topology
-            || split_b32x64
-            || split_b32x64_deep
-            || split_b64x32_topology
-            || split_b64x32
-            || split_b64x32_deep
-            || split_b64_deep
-            || split_b16
-            || split_b16_deep
-            || split_b16_topology
-            || split_b16x32
-            || split_b16x32_deep
-            || split_b16x32_topology
-            || split_b32x16
-            || split_b32x16_deep
-            || split_b32x16_topology
-            || split_b32
-            || split_b32_deep
-            || split_b32_topology
-            || split_b64
-            || split_b64_topology
-            || grid_transform
-            || lossy_direct_chroma_grid
-        {
-            let exact_b8 =
-                block_size == BlockSize::B8x8 && visible_width == 8 && visible_height == 8;
+        let plane_count = Self::validated_inter_grid_plane_count(
+            grid_transform,
+            monochrome,
+            has_chroma,
+            [y_geometry, u_geometry, v_geometry],
+            lossless_partial_grid,
+        )?;
+        if Self::inter_transform_plan_requires_exact_geometry(transform_plan) {
             let exact_b4x8 =
                 block_size == BlockSize::B4x8 && visible_width == 4 && visible_height == 8;
             let exact_b8x4 =
@@ -49426,91 +49937,15 @@ impl Lossy420Decoder {
                 block_size == BlockSize::B32x64 && visible_width == 32 && visible_height == 64;
             let exact_b64x32 =
                 block_size == BlockSize::B64x32 && visible_width == 64 && visible_height == 32;
-            let exact_b16 =
-                block_size == BlockSize::B16x16 && visible_width == 16 && visible_height == 16;
-            let exact_b16x32 =
-                block_size == BlockSize::B16x32 && visible_width == 16 && visible_height == 32;
-            let exact_b32x16 =
-                block_size == BlockSize::B32x16 && visible_width == 32 && visible_height == 16;
-            let exact_b32 =
-                block_size == BlockSize::B32x32 && visible_width == 32 && visible_height == 32;
-            let exact_b64 =
-                block_size == BlockSize::B64x64 && visible_width == 64 && visible_height == 64;
-            let exact_small = matches!(
+            let exact_geometry = Self::inter_transform_plan_geometry_matches(
+                transform_plan,
                 block_size,
-                BlockSize::B4x4
-                    | BlockSize::B4x8
-                    | BlockSize::B8x4
-                    | BlockSize::B4x16
-                    | BlockSize::B16x4
-            ) && (visible_width, visible_height) == block_size.pixel_dimensions();
-            let exact_large =
-                lossless_large && (visible_width, visible_height) == block_size.pixel_dimensions();
-            let exact_lossy_wide =
-                lossy_wide && (visible_width, visible_height) == block_size.pixel_dimensions();
-            let exact_lossy_direct_chroma_grid = lossy_direct_chroma_grid
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Full | ChromaSampling::Subsampled422
-                )
-                && (visible_width, visible_height) == block_size.pixel_dimensions();
-            let exact_geometry = (split_b8 && exact_b8)
-                || (split_b4x8 && exact_b4x8)
-                || (split_b8x4 && exact_b8x4)
-                || (split_b4x16 && exact_b4x16)
-                || (split_b4x16_deep && exact_b4x16)
-                || (split_b4x16_topology && exact_b4x16)
-                || (split_b16x4 && exact_b16x4)
-                || (split_b16x4_deep && exact_b16x4)
-                || (split_b16x4_topology && exact_b16x4)
-                || (split_b8x16 && exact_b8x16)
-                || (split_b8x16_deep && exact_b8x16)
-                || (split_b8x16_topology && exact_b8x16)
-                || (split_b16x8 && exact_b16x8)
-                || (split_b16x8_deep && exact_b16x8)
-                || (split_b16x8_topology && exact_b16x8)
-                || (split_b8x32_topology && exact_b8x32)
-                || (split_b8x32 && exact_b8x32)
-                || (split_b8x32_deep && exact_b8x32)
-                || (split_b32x8_topology && exact_b32x8)
-                || (split_b32x8 && exact_b32x8)
-                || (split_b32x8_deep && exact_b32x8)
-                || (split_b16x64_topology && exact_b16x64)
-                || (split_b16x64 && exact_b16x64)
-                || (split_b16x64_deep && exact_b16x64)
-                || (split_b64x16_topology && exact_b64x16)
-                || (split_b64x16 && exact_b64x16)
-                || (split_b64x16_deep && exact_b64x16)
-                || (split_b32x64_topology && exact_b32x64)
-                || (split_b32x64 && exact_b32x64)
-                || (split_b32x64_deep && exact_b32x64)
-                || (split_b64x32_topology && exact_b64x32)
-                || (split_b64x32 && exact_b64x32)
-                || (split_b64x32_deep && exact_b64x32)
-                || (split_b64_deep && exact_b64)
-                || (split_b16 && exact_b16)
-                || (split_b16_deep && exact_b16)
-                || (split_b16_topology && exact_b16)
-                || (split_b16x32 && exact_b16x32)
-                || (split_b16x32_deep && exact_b16x32)
-                || (split_b16x32_topology && exact_b16x32)
-                || (split_b32x16 && exact_b32x16)
-                || (split_b32x16_deep && exact_b32x16)
-                || (split_b32x16_topology && exact_b32x16)
-                || (split_b32 && exact_b32)
-                || (split_b32_deep && exact_b32)
-                || (split_b32_topology && exact_b32)
-                || (split_b64 && exact_b64)
-                || (split_b64_topology && exact_b64)
-                || (grid_transform
-                    && (lossless_partial_grid
-                        || (lossless_b8 && exact_b8)
-                        || (lossless_b16 && exact_b16)
-                        || (lossless_rect && (exact_b8x16 || exact_b16x8))
-                        || (lossless_small && exact_small)
-                        || exact_large
-                        || exact_lossy_wide))
-                || exact_lossy_direct_chroma_grid;
+                visible_width,
+                visible_height,
+                chroma_sampling,
+                lossless_partial_grid,
+            );
+            let is_split_plan = Self::inter_transform_plan_is_split(transform_plan);
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -49519,54 +49954,7 @@ impl Lossy420Decoder {
                         | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                 )
-                && ((!split_b8
-                    && !split_b4x8
-                    && !split_b8x4
-                    && !split_b4x16
-                    && !split_b4x16_deep
-                    && !split_b4x16_topology
-                    && !split_b16x4
-                    && !split_b16x4_deep
-                    && !split_b16x4_topology
-                    && !split_b8x16
-                    && !split_b8x16_deep
-                    && !split_b8x16_topology
-                    && !split_b16x8
-                    && !split_b16x8_deep
-                    && !split_b16x8_topology
-                    && !split_b8x32_topology
-                    && !split_b8x32
-                    && !split_b8x32_deep
-                    && !split_b32x8_topology
-                    && !split_b32x8
-                    && !split_b32x8_deep
-                    && !split_b16x64_topology
-                    && !split_b16x64
-                    && !split_b16x64_deep
-                    && !split_b64x16_topology
-                    && !split_b64x16
-                    && !split_b64x16_deep
-                    && !split_b32x64_topology
-                    && !split_b32x64
-                    && !split_b32x64_deep
-                    && !split_b64x32_topology
-                    && !split_b64x32
-                    && !split_b64x32_deep
-                    && !split_b64_deep
-                    && !split_b16
-                    && !split_b16_deep
-                    && !split_b16_topology
-                    && !split_b16x32
-                    && !split_b16x32_deep
-                    && !split_b16x32_topology
-                    && !split_b32x16
-                    && !split_b32x16_deep
-                    && !split_b32x16_topology
-                    && !split_b32
-                    && !split_b32_deep
-                    && !split_b32_topology
-                    && !split_b64
-                    && !split_b64_topology)
+                && (!is_split_plan
                     || (matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                         && tools.sample_depth == quantization.sample_depth))
                 && (!lossless_grid
@@ -49577,55 +49965,7 @@ impl Lossy420Decoder {
                     || (!lossless_i422
                         && !lossless_i444
                         && matches!(chroma_sampling, ChromaSampling::Subsampled420)))
-                && ((!split_b8
-                    && !split_b4x8
-                    && !split_b8x4
-                    && !split_b4x16
-                    && !split_b4x16_deep
-                    && !split_b4x16_topology
-                    && !split_b16x4
-                    && !split_b16x4_deep
-                    && !split_b16x4_topology
-                    && !split_b8x16
-                    && !split_b8x16_deep
-                    && !split_b8x16_topology
-                    && !split_b16x8
-                    && !split_b16x8_deep
-                    && !split_b16x8_topology
-                    && !split_b8x32_topology
-                    && !split_b8x32
-                    && !split_b8x32_deep
-                    && !split_b32x8_topology
-                    && !split_b32x8
-                    && !split_b32x8_deep
-                    && !split_b16x64_topology
-                    && !split_b16x64
-                    && !split_b16x64_deep
-                    && !split_b64x16_topology
-                    && !split_b64x16
-                    && !split_b64x16_deep
-                    && !split_b32x64_topology
-                    && !split_b32x64
-                    && !split_b32x64_deep
-                    && !split_b64x32_topology
-                    && !split_b64x32
-                    && !split_b64x32_deep
-                    && !split_b64_deep
-                    && !split_b16
-                    && !split_b16_deep
-                    && !split_b16_topology
-                    && !split_b16x32
-                    && !split_b16x32_deep
-                    && !split_b16x32_topology
-                    && !split_b32x16
-                    && !split_b32x16_deep
-                    && !split_b32x16_topology
-                    && !split_b32
-                    && !split_b32_deep
-                    && !split_b32_topology
-                    && !split_b64
-                    && !split_b64_topology)
-                    || !predecoded_skip))
+                && (!is_split_plan || !predecoded_skip))
                 .then_some(())
                 .portable()?;
             if split_b4x8 || split_b8x4 {
@@ -50035,8 +50375,9 @@ impl Lossy420Decoder {
         } else {
             expected_luma.pixel_dimensions()
         };
-        (u32::try_from(y_geometry.0).map_err(|_| PortableUnavailable)? == tx_luma_width
-            && u32::try_from(y_geometry.1).map_err(|_| PortableUnavailable)? == tx_luma_height
+        (u32::try_from(y_geometry.coded_width).map_err(|_| PortableUnavailable)? == tx_luma_width
+            && u32::try_from(y_geometry.coded_height).map_err(|_| PortableUnavailable)?
+                == tx_luma_height
             && tx_luma_width == luma_width
             && tx_luma_height == luma_height)
             .then_some(())
@@ -50068,7 +50409,8 @@ impl Lossy420Decoder {
             && chroma_sampling == ChromaSampling::Full;
         if let Some(chroma_tx) = chroma_tx {
             let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
-            (u_geometry.0 == v_geometry.0 && u_geometry.1 == v_geometry.1)
+            (u_geometry.coded_width == v_geometry.coded_width
+                && u_geometry.coded_height == v_geometry.coded_height)
                 .then_some(())
                 .portable()?;
             if !grid_transform
@@ -50078,8 +50420,9 @@ impl Lossy420Decoder {
                 && !split_vertical_i422_tx4_chroma_grid
                 && !lossy_direct_chroma_grid
             {
-                (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
-                    && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
+                (u32::try_from(u_geometry.coded_width).map_err(|_| PortableUnavailable)?
+                    == tx_chroma_width
+                    && u32::try_from(u_geometry.coded_height).map_err(|_| PortableUnavailable)?
                         == tx_chroma_height)
                     .then_some(())
                     .portable()?;
@@ -50088,24 +50431,24 @@ impl Lossy420Decoder {
 
         let mut rasters = [
             PrivatePlaneRaster::new(
-                y_geometry.0,
-                y_geometry.1,
-                y_geometry.2,
-                y_geometry.3,
+                y_geometry.coded_width,
+                y_geometry.coded_height,
+                y_geometry.active_width,
+                y_geometry.active_height,
                 tools.sample_depth,
             )?,
             PrivatePlaneRaster::new(
-                u_geometry.0,
-                u_geometry.1,
-                u_geometry.2,
-                u_geometry.3,
+                u_geometry.coded_width,
+                u_geometry.coded_height,
+                u_geometry.active_width,
+                u_geometry.active_height,
                 tools.sample_depth,
             )?,
             PrivatePlaneRaster::new(
-                v_geometry.0,
-                v_geometry.1,
-                v_geometry.2,
-                v_geometry.3,
+                v_geometry.coded_width,
+                v_geometry.coded_height,
+                v_geometry.active_width,
+                v_geometry.active_height,
                 tools.sample_depth,
             )?,
         ];
@@ -50128,6 +50471,10 @@ impl Lossy420Decoder {
         ];
         let geometries = [y_geometry, u_geometry, v_geometry];
         let mut wide_predictions: [Option<Vec<u16>>; 3] = [None, None, None];
+        let mut sub8_chroma = self
+            .pending_sub8_chroma
+            .take()
+            .map(|planes| planes.into_iter());
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
@@ -50139,8 +50486,8 @@ impl Lossy420Decoder {
                 || (lossy_direct_chroma_grid && plane != 0)
             {
                 (
-                    u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
-                    u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
+                    u32::try_from(geometry.coded_width).map_err(|_| PortableUnavailable)?,
+                    u32::try_from(geometry.coded_height).map_err(|_| PortableUnavailable)?,
                 )
             } else {
                 tx_size.pixel_dimensions()
@@ -50174,8 +50521,8 @@ impl Lossy420Decoder {
             let request = PredictionRequest {
                 block_x_b4: chroma_block_x_b4,
                 block_y_b4: chroma_block_y_b4,
-                width: u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
-                height: u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
+                width: u32::try_from(geometry.coded_width).map_err(|_| PortableUnavailable)?,
+                height: u32::try_from(geometry.coded_height).map_err(|_| PortableUnavailable)?,
                 subsampling_x: plane_subsampling.0 == 2,
                 subsampling_y: plane_subsampling.1 == 2,
                 motion: prediction_state.motions[0],
@@ -50183,133 +50530,130 @@ impl Lossy420Decoder {
                 filters,
             };
             let prediction_len = tx_width.checked_mul(tx_height).portable()?;
-            let mut prediction = Vec::new();
-            prediction
-                .try_reserve_exact(prediction_len)
-                .map_err(|_| PortableUnavailable)?;
-            if let Some(compound) = prediction_state.compound {
-                let first_plane = prediction_state.references[0]
-                    .plane(plane)
-                    .map_err(|_| PortableUnavailable)?
-                    .portable()?;
-                {
-                    let scratch = self.ensure_motion_scratch()?;
-                    let first_request = request;
-                    if prediction_state.scales[0].scaled {
-                        scratch
-                            .prep_scaled(0, first_plane, first_request, prediction_state.scales[0])
-                            .map_err(|_| PortableUnavailable)?;
-                    } else {
-                        scratch
-                            .prep_unscaled(0, first_plane, first_request)
-                            .map_err(|_| PortableUnavailable)?;
+            let mut prediction = if plane == 0 {
+                Vec::new()
+            } else {
+                sub8_chroma
+                    .as_mut()
+                    .and_then(Iterator::next)
+                    .unwrap_or_default()
+            };
+            if prediction.is_empty() {
+                prediction
+                    .try_reserve_exact(prediction_len)
+                    .map_err(|_| PortableUnavailable)?;
+                if let Some(compound) = prediction_state.compound {
+                    let first_plane = prediction_state.references[0]
+                        .plane(plane)
+                        .map_err(|_| PortableUnavailable)?
+                        .portable()?;
+                    {
+                        let scratch = self.ensure_motion_scratch()?;
+                        let first_request = request;
+                        if prediction_state.scales[0].scaled {
+                            scratch
+                                .prep_scaled(
+                                    0,
+                                    first_plane,
+                                    first_request,
+                                    prediction_state.scales[0],
+                                )
+                                .map_err(|_| PortableUnavailable)?;
+                        } else {
+                            scratch
+                                .prep_unscaled(0, first_plane, first_request)
+                                .map_err(|_| PortableUnavailable)?;
+                        }
                     }
-                }
-                let second_plane = prediction_state.references[1]
-                    .plane(plane)
-                    .map_err(|_| PortableUnavailable)?
-                    .portable()?;
-                let second_warp = self.pending_global_warps[1];
-                {
-                    let scratch = self.ensure_motion_scratch()?;
-                    let second_request = PredictionRequest {
-                        motion: prediction_state.motions[1],
-                        warp: second_warp,
-                        ..request
-                    };
-                    if prediction_state.scales[1].scaled {
-                        scratch
-                            .prep_scaled(
-                                1,
-                                second_plane,
-                                second_request,
-                                prediction_state.scales[1],
-                            )
-                            .map_err(|_| PortableUnavailable)?;
-                    } else {
-                        scratch
-                            .prep_unscaled(1, second_plane, second_request)
-                            .map_err(|_| PortableUnavailable)?;
+                    let second_plane = prediction_state.references[1]
+                        .plane(plane)
+                        .map_err(|_| PortableUnavailable)?
+                        .portable()?;
+                    let second_warp = self.pending_global_warps[1];
+                    {
+                        let scratch = self.ensure_motion_scratch()?;
+                        let second_request = PredictionRequest {
+                            motion: prediction_state.motions[1],
+                            warp: second_warp,
+                            ..request
+                        };
+                        if prediction_state.scales[1].scaled {
+                            scratch
+                                .prep_scaled(
+                                    1,
+                                    second_plane,
+                                    second_request,
+                                    prediction_state.scales[1],
+                                )
+                                .map_err(|_| PortableUnavailable)?;
+                        } else {
+                            scratch
+                                .prep_unscaled(1, second_plane, second_request)
+                                .map_err(|_| PortableUnavailable)?;
+                        }
                     }
-                }
-                let scratch = self.ensure_motion_scratch()?;
-                let predicted = match compound {
-                    PreparedCompound::Average => scratch
-                        .blend_average(tx_width, tx_height, tools.sample_depth)
-                        .map_err(|_| PortableUnavailable)?,
-                    PreparedCompound::Distance(weight) => scratch
-                        .blend_distance(tx_width, tx_height, weight, tools.sample_depth)
-                        .map_err(|_| PortableUnavailable)?,
-                    PreparedCompound::Difference(inverted) if plane == 0 => {
-                        let subsampling_x = matches!(
-                            chroma_sampling,
-                            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
-                        );
-                        let subsampling_y =
-                            matches!(chroma_sampling, ChromaSampling::Subsampled420);
-                        scratch
+                    let scratch = self.ensure_motion_scratch()?;
+                    let predicted = match compound {
+                        PreparedCompound::Average => scratch
+                            .blend_average(tx_width, tx_height, tools.sample_depth)
+                            .map_err(|_| PortableUnavailable)?,
+                        PreparedCompound::Distance(weight) => scratch
+                            .blend_distance(tx_width, tx_height, weight, tools.sample_depth)
+                            .map_err(|_| PortableUnavailable)?,
+                        PreparedCompound::Difference(inverted) if plane == 0 => scratch
                             .blend_difference(
                                 tx_width,
                                 tx_height,
-                                subsampling_x,
-                                subsampling_y,
+                                chroma_sampling,
                                 inverted,
                                 tools.sample_depth,
                             )
-                            .map_err(|_| PortableUnavailable)?
-                    }
-                    PreparedCompound::Difference(inverted) => scratch
-                        .blend_retained_difference_mask(
-                            tx_width,
-                            tx_height,
-                            inverted,
-                            tools.sample_depth,
-                        )
-                        .map_err(|_| PortableUnavailable)?,
-                    PreparedCompound::Wedge { index, inverted } if plane == 0 => {
-                        let subsampling_x = matches!(
-                            chroma_sampling,
-                            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
-                        );
-                        let subsampling_y =
-                            matches!(chroma_sampling, ChromaSampling::Subsampled420);
-                        scratch
+                            .map_err(|_| PortableUnavailable)?,
+                        PreparedCompound::Difference(inverted) => scratch
+                            .blend_retained_difference_mask(
+                                tx_width,
+                                tx_height,
+                                inverted,
+                                tools.sample_depth,
+                            )
+                            .map_err(|_| PortableUnavailable)?,
+                        PreparedCompound::Wedge { index, inverted } if plane == 0 => scratch
                             .blend_wedge(
                                 tx_luma_width_usize,
                                 tx_luma_height_usize,
                                 index,
                                 inverted,
-                                [subsampling_x, subsampling_y],
+                                chroma_sampling,
                                 tools.sample_depth,
                             )
-                            .map_err(|_| PortableUnavailable)?
-                    }
-                    PreparedCompound::Wedge { inverted, .. } => scratch
-                        .blend_retained_wedge_mask(
-                            tx_width,
-                            tx_height,
-                            inverted,
-                            tools.sample_depth,
-                        )
-                        .map_err(|_| PortableUnavailable)?,
-                };
-                prediction.extend_from_slice(predicted);
-            } else {
-                let reference_plane = prediction_state.references[0]
-                    .plane(plane)
-                    .map_err(|_| PortableUnavailable)?
-                    .portable()?;
-                let scratch = self.ensure_motion_scratch()?;
-                let predicted = if prediction_state.scales[0].scaled {
-                    scratch
-                        .put_scaled(reference_plane, request, prediction_state.scales[0])
-                        .map_err(|_| PortableUnavailable)?
+                            .map_err(|_| PortableUnavailable)?,
+                        PreparedCompound::Wedge { inverted, .. } => scratch
+                            .blend_retained_wedge_mask(
+                                tx_width,
+                                tx_height,
+                                inverted,
+                                tools.sample_depth,
+                            )
+                            .map_err(|_| PortableUnavailable)?,
+                    };
+                    prediction.extend_from_slice(predicted);
                 } else {
-                    scratch
-                        .put_unscaled(reference_plane, request)
+                    let reference_plane = prediction_state.references[0]
+                        .plane(plane)
                         .map_err(|_| PortableUnavailable)?
-                };
-                prediction.extend_from_slice(predicted);
+                        .portable()?;
+                    let scratch = self.ensure_motion_scratch()?;
+                    let predicted = if prediction_state.scales[0].scaled {
+                        scratch
+                            .put_scaled(reference_plane, request, prediction_state.scales[0])
+                            .map_err(|_| PortableUnavailable)?
+                    } else {
+                        scratch
+                            .put_unscaled(reference_plane, request)
+                            .map_err(|_| PortableUnavailable)?
+                    };
+                    prediction.extend_from_slice(predicted);
+                }
             }
             if let Some(inter_intra) = prediction_state.inter_intra {
                 let predictor = inter_intra_predictor(inter_intra.mode)?;
@@ -50331,11 +50675,8 @@ impl Lossy420Decoder {
                         false,
                     )?;
                 }
-                // Chroma wedge masks are reduced from the luma mask. Plane 0
-                // itself is never subsampled, so use a chroma plane's sampling
-                // factors while constructing the retained luma-derived mask.
-                let mask_plane = if plane == 0 { 1 } else { plane };
-                let (subsampling_x, subsampling_y) = chroma_sampling.plane_subsampling(mask_plane);
+                // Chroma wedge masks are reduced from the luma mask using the
+                // frame's chroma layout.
                 let (luma_width, luma_height) = (tx_luma_width_usize, tx_luma_height_usize);
                 let scratch = self.ensure_motion_scratch()?;
                 scratch
@@ -50348,8 +50689,7 @@ impl Lossy420Decoder {
                         plane,
                         luma_width,
                         luma_height,
-                        subsampling_x == 2,
-                        subsampling_y == 2,
+                        chroma_sampling,
                         tools.sample_depth,
                     )
                     .map_err(|_| PortableUnavailable)?;
@@ -51479,8 +51819,8 @@ impl Lossy420Decoder {
                     &mut self.large_coeff_arena,
                     quantization,
                     tx_size,
-                    geometry.0,
-                    geometry.1,
+                    geometry.coded_width,
+                    geometry.coded_height,
                     above,
                     left,
                     predecoded_skip,
@@ -51493,7 +51833,7 @@ impl Lossy420Decoder {
                         decoder,
                         plane,
                         tx_size,
-                        (geometry.0, geometry.1),
+                        (geometry.coded_width, geometry.coded_height),
                         [above, left],
                         predecoded_skip,
                     )?
@@ -51522,7 +51862,15 @@ impl Lossy420Decoder {
                         tx_size,
                         luma_transform,
                     )?
-                } else if (split_b64x16_topology || split_b32x8_topology) && plane != 0 {
+                } else if (split_b16x64_deep
+                    || split_b64x16_deep
+                    || split_b16x64_topology
+                    || split_b64x16_topology
+                    || split_b32x8_topology)
+                    && plane != 0
+                {
+                    // Thin-64 luma children may use non-DCT TX16 types, but
+                    // their TX8x32/TX32x8 chroma still follows get_uv_inter_txtp.
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if (split_b32 || split_b32_deep || split_b32_topology) && plane != 0 {
                     inherited_inter_b32_chroma_transform(chroma_sampling, tx_size, luma_transform)?
@@ -51540,8 +51888,8 @@ impl Lossy420Decoder {
                     &mut self.large_coeff_arena,
                     quantization,
                     tx_size,
-                    geometry.0,
-                    geometry.1,
+                    geometry.coded_width,
+                    geometry.coded_height,
                     above,
                     left,
                     txb_skipped,
@@ -51618,7 +51966,6 @@ impl Lossy420Decoder {
                 [y_prediction, u_prediction, v_prediction],
                 &mut rasters,
                 plane_count,
-                lossless_partial_grid,
                 predecoded_skip,
                 quantization,
                 tools,
@@ -56296,7 +56643,12 @@ impl Lossy420Decoder {
             && raster.active_height == 8
             && matches!(plane, 0..=2)
             && tools.sample_depth == SampleDepth::EIGHT
-            && tools.transform_mode == 0
+            && (tools.transform_mode == 0
+                || Self::mixed_lossless_inter_transform_mode_enabled(
+                    tools,
+                    quantization,
+                    self.chroma_sampling,
+                ))
             && quantization.qindex == 0
             && quantization.segment_qindex == 0)
             .then_some(())
@@ -56414,7 +56766,12 @@ impl Lossy420Decoder {
                 || (raster.active_width == coded_width && raster.active_height == coded_height))
             && matches!(plane, 0..=2)
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.transform_mode == 0
+            && (tools.transform_mode == 0
+                || Self::mixed_lossless_inter_transform_mode_enabled(
+                    tools,
+                    quantization,
+                    self.chroma_sampling,
+                ))
             && quantization.qindex == 0
             && quantization.segment_qindex == 0
             && quantization.y_dc_delta == 0
@@ -56557,7 +56914,12 @@ impl Lossy420Decoder {
             && origin_y.checked_add(active_height).portable()? <= raster.active_height
             && matches!(plane, 0..=2)
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.transform_mode == 0
+            && (tools.transform_mode == 0
+                || Self::mixed_lossless_inter_transform_mode_enabled(
+                    tools,
+                    quantization,
+                    self.chroma_sampling,
+                ))
             && quantization.qindex == 0
             && quantization.segment_qindex == 0
             && quantization.y_dc_delta == 0
@@ -56674,7 +57036,6 @@ impl Lossy420Decoder {
         predictions: [&[u16]; 3],
         rasters: &mut [PrivatePlaneRaster; 3],
         plane_count: usize,
-        allow_clipped: bool,
         block_skipped: bool,
         quantization: LossyQuantization,
         tools: BlockTools,
@@ -56684,6 +57045,7 @@ impl Lossy420Decoder {
         let luma_height = rasters[0].coded_height;
         let chunk_count_x = luma_width / 64;
         let chunk_count_y = luma_height / 64;
+        // The partial-grid exception only admits 32x32 plans; wide grids span their coded raster.
         (matches!(
             (luma_width, luma_height),
             (64, 128) | (128, 64) | (128, 128)
@@ -56694,9 +57056,8 @@ impl Lossy420Decoder {
             && chunk_count_y != 0
             && rasters[0].active_width <= luma_width
             && rasters[0].active_height <= luma_height
-            && (allow_clipped
-                || (rasters[0].active_width == luma_width
-                    && rasters[0].active_height == luma_height)))
+            && rasters[0].active_width == luma_width
+            && rasters[0].active_height == luma_height)
             .then_some(())
             .portable()?;
 
@@ -56711,9 +57072,8 @@ impl Lossy420Decoder {
         for raster in rasters.iter().take(plane_count) {
             (raster.active_width <= raster.coded_width
                 && raster.active_height <= raster.coded_height
-                && (allow_clipped
-                    || (raster.active_width == raster.coded_width
-                        && raster.active_height == raster.coded_height)))
+                && raster.active_width == raster.coded_width
+                && raster.active_height == raster.coded_height)
                 .then_some(())
                 .portable()?;
         }
@@ -59001,24 +59361,24 @@ impl Lossy420Decoder {
         )?;
         let mut rasters = [
             PrivatePlaneRaster::new(
-                y_geometry.0,
-                y_geometry.1,
-                y_geometry.2,
-                y_geometry.3,
+                y_geometry.coded_width,
+                y_geometry.coded_height,
+                y_geometry.active_width,
+                y_geometry.active_height,
                 tools.sample_depth,
             )?,
             PrivatePlaneRaster::new(
-                u_geometry.0,
-                u_geometry.1,
-                u_geometry.2,
-                u_geometry.3,
+                u_geometry.coded_width,
+                u_geometry.coded_height,
+                u_geometry.active_width,
+                u_geometry.active_height,
                 tools.sample_depth,
             )?,
             PrivatePlaneRaster::new(
-                v_geometry.0,
-                v_geometry.1,
-                v_geometry.2,
-                v_geometry.3,
+                v_geometry.coded_width,
+                v_geometry.coded_height,
+                v_geometry.active_width,
+                v_geometry.active_height,
                 tools.sample_depth,
             )?,
         ];
@@ -59263,8 +59623,8 @@ impl Lossy420Decoder {
             chroma_right: [coefficient_state.left[1], coefficient_state.left[2]],
             chroma_bottom: [coefficient_state.above[1], coefficient_state.above[2]],
         };
-        let luma_context_slots = y_geometry.2.div_ceil(4).min(32);
-        let chroma_context_slots = u_geometry.2.div_ceil(4).min(32);
+        let luma_context_slots = y_geometry.active_width.div_ceil(4).min(32);
+        let chroma_context_slots = u_geometry.active_width.div_ceil(4).min(32);
         let luma_context = *wide
             .luma_bottom
             .get(luma_context_slots.saturating_sub(1))

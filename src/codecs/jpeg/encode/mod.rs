@@ -434,7 +434,14 @@ pub(crate) fn encode_with_token(
     let quality = opts.quality.unwrap_or(75);
     let progressive = opts.progressive.unwrap_or(false);
     let optimize = opts.optimize.unwrap_or(false);
-    let subsampling = match opts.subsampling.unwrap_or(JpegSubsampling::Cs420) {
+    // Pillow leaves CMYK unsampled unless the caller requests sampling.
+    // RGB keeps its ordinary 4:2:0 default.
+    let default_subsampling = if num_components == 4 {
+        JpegSubsampling::Cs444
+    } else {
+        JpegSubsampling::Cs420
+    };
+    let subsampling = match opts.subsampling.unwrap_or(default_subsampling) {
         JpegSubsampling::Cs444 => "444",
         JpegSubsampling::Cs422 => "422",
         JpegSubsampling::Cs420 => "420",
@@ -542,7 +549,6 @@ pub(crate) fn encode_with_token(
     let (y_hs, y_vs, cb_hs, cb_vs, cr_hs, cr_vs, max_h, max_v) = match (num_components, subsampling)
     {
         (1, _) => (1u8, 1u8, 0u8, 0u8, 0u8, 0u8, 1u8, 1u8),
-        (4, _) => (1, 1, 1, 1, 1, 1, 1, 1),
         (_, "444") => (1, 1, 1, 1, 1, 1, 1, 1),
         (_, "422") => (2, 1, 1, 1, 1, 1, 2, 1),
         // 4:2:0 (default)
@@ -564,10 +570,12 @@ pub(crate) fn encode_with_token(
     let cr_w = cb_w;
     let cr_h = cb_h;
 
-    // Downsample chroma (jcsample.c h2v2 / h2v1 / identity).
+    // Downsample chroma, or M/Y/K for explicitly sampled Adobe CMYK
+    // (jcsample.c h2v2 / h2v1 / identity). C remains at source resolution.
+    let cmyk_subsampled = num_components == 4 && subsampling != "444";
     let cb_ds = if chroma_already_downsampled || (num_components == 3 && cb_w == w && cb_h == h) {
         std::mem::take(&mut cb_plane)
-    } else if num_components == 3 {
+    } else if num_components == 3 || cmyk_subsampled {
         downsample(
             &cb_plane,
             w,
@@ -583,7 +591,7 @@ pub(crate) fn encode_with_token(
     };
     let cr_ds = if chroma_already_downsampled || (num_components == 3 && cr_w == w && cr_h == h) {
         std::mem::take(&mut cr_plane)
-    } else if num_components == 3 {
+    } else if num_components == 3 || cmyk_subsampled {
         downsample(
             &cr_plane,
             w,
@@ -597,12 +605,27 @@ pub(crate) fn encode_with_token(
     } else {
         Vec::new()
     };
+    let k_ds = if cmyk_subsampled {
+        downsample(
+            &k_plane,
+            w,
+            h,
+            cb_w,
+            cb_h,
+            usize::from(max_h),
+            usize::from(max_v),
+            token,
+        )?
+    } else {
+        Vec::new()
+    };
 
     // Baseline CMYK keeps four adjacent blocks per component in safe packed
     // FDCT form, then writes one C/M/Y/K block packet per MCU. `validate`
     // guarantees the four converted planes have exactly `w * h` samples.
     if token.is_none()
         && num_components == 4
+        && subsampling == "444"
         && !progressive
         && !optimize
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
@@ -771,8 +794,19 @@ pub(crate) fn encode_with_token(
             });
         }
     } else if num_components == 4 {
-        for (plane, id) in [(&cb_plane, b'M'), (&cr_plane, b'Y')] {
-            let blk = fdct_quantize(plane, w, h, &y_quantizer, token)?;
+        let (planes, component_width, component_height) = if cmyk_subsampled {
+            ([&cb_ds, &cr_ds, &k_ds], cb_w, cb_h)
+        } else {
+            ([&cb_plane, &cr_plane, &k_plane], w, h)
+        };
+        for (plane, id) in planes.into_iter().zip(*b"MYK") {
+            let blk = fdct_quantize(
+                plane,
+                component_width,
+                component_height,
+                &y_quantizer,
+                token,
+            )?;
             comps.push(CompData {
                 blocks: blk.0,
                 blocks_per_row: blk.1,
@@ -785,18 +819,6 @@ pub(crate) fn encode_with_token(
                 ac_tbl: 0,
             });
         }
-        let blk = fdct_quantize(&k_plane, w, h, &y_quantizer, token)?;
-        comps.push(CompData {
-            blocks: blk.0,
-            blocks_per_row: blk.1,
-            block_rows: blk.2,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 0,
-            id: b'K',
-            dc_tbl: 0,
-            ac_tbl: 0,
-        });
     }
 
     let mcu_columns = comps[0]
@@ -5124,7 +5146,9 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
             })
             .collect::<Vec<_>>();
         if current_restart_interval != Some(restart_interval) {
-            if restart_interval != 0 || current_restart_interval.is_some() {
+            // `restart_rows` is fixed for this encode, so zero cannot follow a nonzero
+            // interval.
+            if restart_interval != 0 {
                 marker::write_dri(output, restart_interval);
             }
             current_restart_interval = Some(restart_interval);
@@ -5419,10 +5443,11 @@ fn dc_progressive_events<C: ProgressiveScanCheckpoint>(
         .saturating_mul(8)
         .div_ceil(mcu_height);
     let mut predictors = vec![0i32; scan.comps.len()];
+    let mut previous_dc_values = [0i16; 4];
 
-    let mut append = |scan_index: usize, component_index: usize, block: &[i16; 64]| {
+    let mut append = |scan_index: usize, component_index: usize, dc: i16| {
         let component = &components[component_index];
-        let raw = i32::from(block[0]);
+        let raw = i32::from(dc);
         if scan.ah == 0 {
             let transformed = raw.wrapping_shr(u32::from(scan.al));
             let difference = transformed.saturating_sub(predictors[scan_index]);
@@ -5463,14 +5488,15 @@ fn dc_progressive_events<C: ProgressiveScanCheckpoint>(
                             if block_row < component.block_rows
                                 && block_column < component.blocks_per_row
                             {
-                                append(
-                                    scan_index,
-                                    component_index,
-                                    &component.blocks[block_row
-                                        .saturating_mul(component.blocks_per_row)
-                                        .saturating_add(block_column)],
-                                );
+                                let block = &component.blocks[block_row
+                                    .saturating_mul(component.blocks_per_row)
+                                    .saturating_add(block_column)];
+                                previous_dc_values[scan_index] = block[0];
                             }
+                            // Interleaved DC scans include the dummy blocks at
+                            // partial MCU edges. They repeat the preceding DC:
+                            // a zero initial difference and the same refine bit.
+                            append(scan_index, component_index, previous_dc_values[scan_index]);
                             checkpoint.block()?;
                         }
                     }
@@ -5484,7 +5510,7 @@ fn dc_progressive_events<C: ProgressiveScanCheckpoint>(
             if block_index % component.blocks_per_row.max(1) == 0 {
                 checkpoint.row()?;
             }
-            append(0, component_index, block);
+            append(0, component_index, block[0]);
             checkpoint.block()?;
         }
     }
@@ -5667,21 +5693,24 @@ fn append_ac_refine_events<C: ProgressiveScanCheckpoint>(
     correction_bits: &mut Vec<u8>,
     checkpoint: &mut C,
 ) -> CodecResult<()> {
-    let coefficients = (scan.ss..=scan.se)
-        .map(|coefficient| {
-            let raw = i32::from(block[ZIGZAG[usize::from(coefficient)]]);
-            let sign = raw >> 31;
-            let absolute = (raw ^ sign)
-                .wrapping_sub(sign)
-                .wrapping_shr(u32::from(scan.al));
-            (raw, absolute.cast_unsigned())
-        })
-        .collect::<Vec<_>>();
+    // A scan visits at most one 64-coefficient block, and each coefficient
+    // contributes at most one correction bit. Keep both temporaries bounded
+    // on the stack rather than allocating them again for every refined block.
+    let coefficient_storage: [(i32, u32); 64] = std::array::from_fn(|coefficient| {
+        let raw = i32::from(block[ZIGZAG[coefficient]]);
+        let sign = raw >> 31;
+        let absolute = (raw ^ sign)
+            .wrapping_sub(sign)
+            .wrapping_shr(u32::from(scan.al));
+        (raw, absolute.cast_unsigned())
+    });
+    let coefficients = &coefficient_storage[usize::from(scan.ss)..=usize::from(scan.se)];
     let last_new = coefficients
         .iter()
         .rposition(|(_, absolute)| *absolute == 1);
     let mut run = 0usize;
-    let mut block_corrections = Vec::<u8>::new();
+    let mut block_corrections = [0u8; 64];
+    let mut correction_count = 0usize;
     let mut last_nonzero = None;
 
     for (index, &(raw, absolute)) in coefficients.iter().enumerate() {
@@ -5695,10 +5724,12 @@ fn append_ac_refine_events<C: ProgressiveScanCheckpoint>(
             flush_progressive_eob(events, table, eob_run, correction_bits);
             events.push(ProgressiveEvent::Symbol { table, value: 0xf0 });
             run = run.saturating_sub(16);
-            append_correction_events(events, &mut block_corrections);
+            append_correction_events(events, &block_corrections[..correction_count]);
+            correction_count = 0;
         }
         if absolute > 1 {
-            block_corrections.push((absolute & 1).to_le_bytes()[0]);
+            block_corrections[correction_count] = (absolute & 1).to_le_bytes()[0];
+            correction_count = correction_count.saturating_add(1);
             checkpoint.coefficient()?;
             continue;
         }
@@ -5712,14 +5743,15 @@ fn append_ac_refine_events<C: ProgressiveScanCheckpoint>(
             value: u32::from(raw >= 0),
             width: 1,
         });
-        append_correction_events(events, &mut block_corrections);
+        append_correction_events(events, &block_corrections[..correction_count]);
+        correction_count = 0;
         run = 0;
         checkpoint.coefficient()?;
     }
 
-    if last_nonzero != Some(coefficients.len().saturating_sub(1)) || !block_corrections.is_empty() {
+    if last_nonzero != Some(coefficients.len().saturating_sub(1)) || correction_count != 0 {
         *eob_run = eob_run.saturating_add(1);
-        correction_bits.append(&mut block_corrections);
+        correction_bits.extend_from_slice(&block_corrections[..correction_count]);
         if *eob_run == 0x7fff || correction_bits.len() > 937 {
             flush_progressive_eob(events, table, eob_run, correction_bits);
         }
@@ -5749,10 +5781,11 @@ fn flush_progressive_eob(
     }
     *eob_run = 0;
     append_correction_events(events, correction_bits);
+    correction_bits.clear();
 }
 
-fn append_correction_events(events: &mut Vec<ProgressiveEvent>, bits: &mut Vec<u8>) {
-    events.extend(bits.drain(..).map(|value| ProgressiveEvent::Bits {
+fn append_correction_events(events: &mut Vec<ProgressiveEvent>, bits: &[u8]) {
+    events.extend(bits.iter().map(|&value| ProgressiveEvent::Bits {
         value: u32::from(value),
         width: 1,
     }));

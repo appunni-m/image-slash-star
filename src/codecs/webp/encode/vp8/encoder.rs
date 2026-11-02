@@ -19,7 +19,7 @@ use super::{
     analysis::{FrameParams, analyze, segment_params},
     frame::{FrameSelectionOptions, select_frame},
     partition::encode_first_partition,
-    probability::adapt_coefficients,
+    probability::{adapt_coefficients, default_probabilities},
     residual::encode_coefficients,
     tokenize::COEFF_PROBS,
 };
@@ -206,13 +206,19 @@ fn encode_vp8_planes(
         (0, total) => total.min(50),
         _ => decisions.len(),
     };
-    let mut probabilities = adapt_coefficients(
-        &decisions[..statistics_count],
-        macroblock_width,
-        method >= 3,
-        decisions.len(),
-        token,
-    )?;
+    // Methods zero through two leave the statistics pass's header cost at
+    // zero. With one segment, libwebp exits before finalizing probabilities.
+    let mut probabilities = if method <= 2 && params.num_segments == 1 {
+        default_probabilities()
+    } else {
+        adapt_coefficients(
+            &decisions[..statistics_count],
+            macroblock_width,
+            method >= 3,
+            decisions.len(),
+            token,
+        )?
+    };
     crate::codecs::error::check_cancelled(token)?;
     if method >= 6 {
         decisions = select_frame(

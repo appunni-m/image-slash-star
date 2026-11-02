@@ -18,12 +18,11 @@ const MAX_RECORDS: usize = 4_096;
 // bounded independently from the enclosing-box and association budgets so a
 // validly-shaped `ipco` box cannot consume the entire parser budget first.
 const MAX_PROPERTIES: usize = 2_048;
-const MAX_COMPATIBLE_BRANDS: usize = 1_024;
 const VISUAL_SAMPLE_ENTRY_SIZE: usize = 78;
 const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
 
-type FourCc = [u8; 4];
+pub(super) type FourCc = [u8; 4];
 type ParseResult<T> = CodecResult<T>;
 
 macro_rules! parse_failure {
@@ -97,6 +96,70 @@ impl ByteSpan {
 
     pub(super) fn len(self) -> usize {
         self.end.saturating_sub(self.start)
+    }
+}
+
+/// Select extent validation statically so inspection and decoding keep their
+/// distinct bounds behavior without a runtime branch per extent.
+trait ItemExtentPolicy {
+    fn from_file_extent(relative: u64, length: u64, input_len: usize) -> ParseResult<ByteSpan>;
+
+    fn from_idat_extent(start: u64, length: u64, idat_end: usize) -> ParseResult<ByteSpan>;
+
+    fn from_missing_idat_extent(input_len: usize, length: u64) -> ParseResult<ByteSpan>;
+
+    fn on_duplicate_item_id(make_error: impl FnOnce() -> CodecError) -> ParseResult<()>;
+}
+
+struct BoundedItemExtentPolicy;
+
+impl ItemExtentPolicy for BoundedItemExtentPolicy {
+    #[inline]
+    fn from_file_extent(relative: u64, length: u64, input_len: usize) -> ParseResult<ByteSpan> {
+        ByteSpan::from_bounded_offset_size(relative, length, input_len, true)
+    }
+
+    #[inline]
+    fn from_idat_extent(start: u64, length: u64, idat_end: usize) -> ParseResult<ByteSpan> {
+        ByteSpan::from_bounded_offset_size(start, length, idat_end, false)
+    }
+
+    #[inline]
+    fn from_missing_idat_extent(_input_len: usize, _length: u64) -> ParseResult<ByteSpan> {
+        Err(parse_failure!())
+    }
+
+    #[inline]
+    fn on_duplicate_item_id(make_error: impl FnOnce() -> CodecError) -> ParseResult<()> {
+        Err(make_error())
+    }
+}
+
+struct LazyItemExtentPolicy;
+
+impl ItemExtentPolicy for LazyItemExtentPolicy {
+    #[inline]
+    fn from_file_extent(relative: u64, length: u64, _input_len: usize) -> ParseResult<ByteSpan> {
+        ByteSpan::from_offset_size(relative, length)
+    }
+
+    #[inline]
+    fn from_idat_extent(start: u64, length: u64, _idat_end: usize) -> ParseResult<ByteSpan> {
+        ByteSpan::from_offset_size(start, length)
+    }
+
+    #[inline]
+    fn from_missing_idat_extent(input_len: usize, length: u64) -> ParseResult<ByteSpan> {
+        // Pillow defers the missing item-data failure until frame loading.
+        // Keep an out-of-input placeholder so metadata inspection stays lazy;
+        // bounded decode extraction still rejects the absent idat immediately.
+        let start = u64::try_from(input_len).map_err(|_| parse_failure!())?;
+        ByteSpan::from_offset_size(start, length)
+    }
+
+    #[inline]
+    fn on_duplicate_item_id(_make_error: impl FnOnce() -> CodecError) -> ParseResult<()> {
+        Ok(())
     }
 }
 
@@ -295,12 +358,12 @@ fn parse_full_box(reader: &mut Reader<'_>) -> ParseResult<(u8, u32)> {
 }
 
 #[derive(Clone)]
-struct Brands {
-    major: FourCc,
-    minor_version: u32,
-    compatible_brands: Vec<FourCc>,
-    has_avif: bool,
-    has_avis: bool,
+pub(super) struct Brands {
+    pub(super) major: FourCc,
+    pub(super) minor_version: u32,
+    pub(super) compatible_brands: Vec<FourCc>,
+    pub(super) has_avif: bool,
+    pub(super) has_avis: bool,
 }
 
 fn parse_ftyp(input: &[u8], payload: ByteSpan) -> ParseResult<Brands> {
@@ -316,10 +379,12 @@ fn parse_ftyp(input: &[u8], payload: ByteSpan) -> ParseResult<Brands> {
     let compatible = input
         .get(reader.offset..reader.end)
         .ok_or_else(|| parse_failure!())?;
+    compatible_brands
+        .try_reserve_exact(compatible.len() / 4)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate AVIF compatible-brand metadata".to_owned())
+        })?;
     for bytes in compatible.as_chunks::<4>().0 {
-        if compatible_brands.len() >= MAX_COMPATIBLE_BRANDS {
-            return Err(parse_failure!());
-        }
         let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
         has_avif |= brand == *b"avif";
         has_avis |= brand == *b"avis";
@@ -457,7 +522,7 @@ struct Meta {
     locations: Vec<ItemLocation>,
 }
 
-fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
+fn parse_meta<P: ItemExtentPolicy>(
     input: &[u8],
     payload: ByteSpan,
     budget: &mut Budget,
@@ -469,7 +534,10 @@ fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
     }
 
     let mut meta = Meta::default();
-    let mut handler_seen = false;
+    let first_child = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
+    if first_child.kind != *b"hdlr" || parse_handler(input, first_child.payload)? != *b"pict" {
+        return Err(parse_failure!());
+    }
     let mut pitm_seen = false;
     let mut iinf_seen = false;
     let mut iprp_seen = false;
@@ -479,12 +547,8 @@ fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
 
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
-            kind if kind == *b"hdlr" => {
-                if handler_seen || parse_handler(input, child.payload)? != *b"pict" {
-                    return Err(parse_failure!());
-                }
-                handler_seen = true;
-            }
+            // The required first handler was consumed before this loop.
+            kind if kind == *b"hdlr" => return Err(parse_failure!()),
             kind if kind == *b"pitm" => {
                 if pitm_seen {
                     return Err(parse_failure!());
@@ -497,7 +561,7 @@ fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
                     return Err(parse_failure!());
                 }
                 iinf_seen = true;
-                parse_iinf(input, child.payload, &mut meta, budget)?;
+                parse_iinf::<P>(input, child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iprp" => {
                 if iprp_seen {
@@ -528,11 +592,11 @@ fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
         }
     }
 
-    if !handler_seen || !pitm_seen || !iinf_seen || !iprp_seen {
+    if !pitm_seen || !iinf_seen || !iprp_seen {
         return Err(parse_failure!());
     }
     let iloc = iloc.ok_or_else(|| parse_failure!())?;
-    parse_iloc::<CHECK_ITEM_BOUNDS>(input, iloc, idat, &mut meta, budget)?;
+    parse_iloc::<P>(input, iloc, idat, &mut meta, budget)?;
     Ok(meta)
 }
 
@@ -562,7 +626,7 @@ fn parse_pitm(input: &[u8], payload: ByteSpan) -> ParseResult<u32> {
     Ok(item_id)
 }
 
-fn parse_iinf(
+fn parse_iinf<P: ItemExtentPolicy>(
     input: &[u8],
     payload: ByteSpan,
     meta: &mut Meta,
@@ -596,7 +660,10 @@ fn parse_iinf(
         }
         let item = parse_infe(input, child.payload)?;
         if meta.items.iter().any(|existing| existing.id == item.id) {
-            return Err(parse_failure!());
+            P::on_duplicate_item_id(|| parse_failure!())?;
+            // Pillow's lazy inspection retains the first `infe` entry and
+            // defers this duplicate-ID failure until frame decoding.
+            continue;
         }
         meta.items.push(item);
     }
@@ -774,6 +841,7 @@ fn parse_av1c_declaration(payload: &[u8]) -> ParseResult<(u8, AvifChromaSamplePo
     Ok((bit_depth, AvifChromaSamplePosition::from_code(flags & 3)))
 }
 
+// ✅ VERIFIED: libavif 1.4.1 src/read.c:2491-2527. Bounded nclx tail bytes are ignored.
 fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     let mut reader = Reader::new(input, payload);
     let color_type = reader.four_cc()?;
@@ -811,18 +879,12 @@ fn parse_colr(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
             flags & 0x80 != 0
         },
     };
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(Property::Color(color))
 }
 
 fn parse_clli(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     let mut reader = Reader::new(input, payload);
     let content_light_level = AvifContentLightLevel::new(reader.u16()?, reader.u16()?);
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(Property::ContentLightLevel {
         value: content_light_level,
         data: payload,
@@ -873,9 +935,7 @@ fn parse_irot(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
         3 => AvifRotation::CounterClockwise270,
         _ => return Err(parse_failure!()),
     };
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow/libavif uses the leading transform byte and ignores trailing data.
     Ok(Property::Rotation {
         value: rotation,
         data: payload,
@@ -900,7 +960,11 @@ fn parse_pasp(input: &[u8], payload: ByteSpan) -> ParseResult<Property> {
     let h_spacing = reader.u32()?;
     let v_spacing = reader.u32()?;
     if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignores unusable spacing and trailing payload bytes.
+        return Ok(Property::Other {
+            kind: *b"pasp",
+            data: payload.bytes(input)?.to_vec(),
+        });
     }
     Ok(Property::PixelAspectRatio {
         value: AvifPixelAspectRatio::new(h_spacing, v_spacing),
@@ -1006,9 +1070,8 @@ fn parse_ipma(
             });
         }
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Match Pillow's accepted `ipma` behavior: bytes after the declared records
+    // are ignored once every association has been parsed.
     Ok(())
 }
 
@@ -1059,7 +1122,7 @@ fn parse_iref(
 
 // ✅ VERIFIED: libavif 1.4.1 read.c:1979-2103. Field widths,
 // construction methods, and extent arithmetic match the pinned source.
-fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
+fn parse_iloc<P: ItemExtentPolicy>(
     input: &[u8],
     payload: ByteSpan,
     idat: Option<ByteSpan>,
@@ -1168,33 +1231,16 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
                 .ok_or_else(|| parse_failure!())?;
             declared_extents.push(AvifItemExtent::new(relative, extent_length));
             let span = match source {
-                ExtentSource::File => {
-                    if CHECK_ITEM_BOUNDS {
-                        ByteSpan::from_bounded_offset_size(
-                            relative,
-                            extent_length,
-                            input.len(),
-                            true,
-                        )?
-                    } else {
-                        // Inspection keeps file-backed declarations lazy; the
-                        // validated decoder path checks bounds before reading.
-                        ByteSpan::from_offset_size(relative, extent_length)?
-                    }
-                }
+                ExtentSource::File => P::from_file_extent(relative, extent_length, input.len())?,
                 ExtentSource::Idat => {
-                    let idat = idat.ok_or_else(|| parse_failure!())?;
-                    source_end = idat.end;
-                    let start = (idat.start as u64)
-                        .checked_add(relative)
-                        .ok_or_else(|| parse_failure!())?;
-                    if CHECK_ITEM_BOUNDS {
-                        ByteSpan::from_bounded_offset_size(start, extent_length, idat.end, false)?
+                    if let Some(idat) = idat {
+                        source_end = idat.end;
+                        let start = (idat.start as u64)
+                            .checked_add(relative)
+                            .ok_or_else(|| parse_failure!())?;
+                        P::from_idat_extent(start, extent_length, idat.end)?
                     } else {
-                        // libavif checks this payload bound when reading an
-                        // item, after Image.open()/verify() read its metadata.
-                        // Inspection retains the declared span and source bound.
-                        ByteSpan::from_offset_size(start, extent_length)?
+                        P::from_missing_idat_extent(input.len(), extent_length)?
                     }
                 }
             };
@@ -1247,7 +1293,8 @@ impl Meta {
             };
             let location = self.location(item.id).ok_or_else(|| parse_failure!())?;
             if location.extents.is_empty() {
-                return Err(parse_failure!());
+                // Pillow ignores metadata items that declare no payload extents.
+                continue;
             }
             // source_end comes from this input's length or a validated idat
             // box. Validate each extent before reserving its declared size.
@@ -1276,20 +1323,30 @@ impl Meta {
             .filter_map(|association| self.properties.get(association.property_index))
     }
 
+    fn item_dimensions(&self, item_id: u32) -> Option<(u32, u32)> {
+        self.associated(item_id)
+            .find_map(|property| match property {
+                Property::Ispe { width, height } => Some((*width, *height)),
+                _ => None,
+            })
+    }
+
     fn is_alpha(&self, item_id: u32) -> bool {
         self.associated(item_id)
             .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. }))
     }
 
+    fn avif_color(&self, item_id: u32) -> Option<AvifColorProperties> {
+        self.associated(item_id)
+            .find_map(|property| match property {
+                Property::Color(color) => Some(*color),
+                _ => None,
+            })
+    }
+
     fn source_color(&self, input: &[u8]) -> ParseResult<SourceColor> {
         let mut source_color = SourceColor::new();
-        if let Some(color) =
-            self.associated(self.primary_item_id)
-                .find_map(|property| match property {
-                    Property::Color(color) => Some(*color),
-                    _ => None,
-                })
-        {
+        if let Some(color) = self.avif_color(self.primary_item_id) {
             source_color = source_color.with_avif_color(color);
         }
         if let Some(span) = self.associated(self.primary_item_id).find_map(|property| {
@@ -1323,15 +1380,13 @@ impl Meta {
         {
             source_color = source_color.with_avif_content_light_level(content_light_level);
         }
-        let mut mastering_display_color_volume = None;
-        for property in self.associated(self.primary_item_id) {
-            if let Property::MasteringDisplayColorVolume { value, .. } = property
-                && mastering_display_color_volume.replace(*value).is_some()
-            {
-                return Err(parse_failure!());
-            }
-        }
-        if let Some(mastering_display_color_volume) = mastering_display_color_volume {
+        if let Some(mastering_display_color_volume) = self
+            .associated(self.primary_item_id)
+            .find_map(|property| match property {
+                Property::MasteringDisplayColorVolume { value, .. } => Some(*value),
+                _ => None,
+            })
+        {
             source_color = source_color
                 .with_avif_mastering_display_color_volume(mastering_display_color_volume);
         }
@@ -1340,37 +1395,33 @@ impl Meta {
 
     fn transform(&self) -> ParseResult<Option<AvifTransformProperties>> {
         let mut transform = AvifTransformProperties::new();
+        // Pillow/libavif retains the first associated property of each kind.
         for property in self.associated(self.primary_item_id) {
             match property {
                 Property::Rotation {
                     value: rotation, ..
                 } => {
-                    if transform.rotation().is_some() {
-                        return Err(parse_failure!());
+                    if transform.rotation().is_none() {
+                        transform = transform.with_rotation(*rotation);
                     }
-                    transform = transform.with_rotation(*rotation);
                 }
                 Property::Mirror { value: mirror, .. } => {
-                    if transform.mirror().is_some() {
-                        return Err(parse_failure!());
+                    if transform.mirror().is_none() {
+                        transform = transform.with_mirror(*mirror);
                     }
-                    transform = transform.with_mirror(*mirror);
                 }
                 Property::PixelAspectRatio { value: ratio, .. } => {
-                    if transform.pixel_aspect_ratio().is_some() {
-                        return Err(parse_failure!());
+                    if transform.pixel_aspect_ratio().is_none() {
+                        transform = transform.with_pixel_aspect_ratio(*ratio);
                     }
-                    transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
                 Property::CleanAperture {
                     value: clean_aperture,
                     ..
-                } => {
-                    if transform.clean_aperture().is_some() {
-                        return Err(parse_failure!());
-                    }
+                } if transform.clean_aperture().is_none() => {
                     transform = transform.with_clean_aperture(*clean_aperture);
                 }
+                Property::CleanAperture { .. } => {}
                 _ => {}
             }
         }
@@ -1378,20 +1429,16 @@ impl Meta {
     }
 
     fn av1c(&self, item_id: u32) -> ParseResult<ByteSpan> {
-        let mut configs = self.associated(item_id).filter_map(|property| {
-            if let Property::Av1C { data, depth } = property {
-                Some((*data, *depth))
-            } else {
-                None
-            }
-        });
-        let (config, config_depth) = configs.next().ok_or_else(|| parse_failure!())?;
-        if configs.next().is_some() {
-            return Err(parse_failure!());
-        }
+        let (config, config_depth) = self
+            .associated(item_id)
+            .find_map(|property| match property {
+                Property::Av1C { data, depth } => Some((*data, *depth)),
+                _ => None,
+            })
+            .ok_or_else(|| parse_failure!())?;
         // Pillow/libavif validates the first associated pixi property's
-        // depth against av1C before opening the item; later duplicates do not
-        // change that selection. Reuse the already parsed configuration depth.
+        // depth against av1C before opening the item; later av1C and pixi
+        // declarations do not change that selection. Reuse the parsed depth.
         let pixel_depth = self.associated(item_id).find_map(|property| {
             if let Property::Pixi { depth } = property {
                 Some(*depth)
@@ -1417,19 +1464,16 @@ impl Meta {
     }
 
     fn alpha_targeting(&self, item_id: u32) -> ParseResult<Option<u32>> {
-        let mut matches = self
+        let result = self
             .references
             .iter()
-            .filter(|reference| {
+            .find(|reference| {
                 reference.kind == *b"auxl"
                     && reference.to_id == item_id
                     && self.is_alpha(reference.from_id)
             })
             .map(|reference| reference.from_id);
-        let result = matches.next();
-        if matches.next().is_some() {
-            return Err(parse_failure!());
-        }
+        // Pillow retains the first matching auxiliary-alpha relationship.
         Ok(result)
     }
 
@@ -1615,23 +1659,30 @@ impl Meta {
             let mut bit_depth = None;
             for property in self.associated(item.id) {
                 match property {
-                    Property::Ispe { width, height } => {
-                        if dimensions.replace((*width, *height)).is_some() {
-                            return Err(parse_failure!());
-                        }
+                    Property::Ispe { width, height } if dimensions.is_none() => {
+                        dimensions = Some((*width, *height));
                     }
-                    Property::Pixi { depth } if bit_depth.replace(*depth).is_some() => {
-                        return Err(parse_failure!());
+                    Property::Pixi { depth } if bit_depth.is_none() => {
+                        bit_depth = Some(*depth);
                     }
                     _ => {}
                 }
             }
+            // Match Pillow/libavif by retaining the first associated declaration.
+            let missing_alpha_dimensions = dimensions.is_none() && self.is_alpha(item.id);
+            // Match Pillow's pinned libavif strict mode before exposing an
+            // incomplete alpha plane declaration.
             if dimensions.is_some() || bit_depth.is_some() {
+                if missing_alpha_dimensions {
+                    return Err(parse_failure!());
+                }
                 let (width, height) =
                     dimensions.map_or((None, None), |(width, height)| (Some(width), Some(height)));
                 result.push(AvifItemPlaneProperties::new(
                     item.id, width, height, bit_depth,
                 ));
+            } else if missing_alpha_dimensions {
+                return Err(parse_failure!());
             }
         }
         Ok(result)
@@ -1648,11 +1699,11 @@ impl Meta {
                 continue;
             }
             let mut codec = None;
+            // Match Pillow/libavif by keeping the first associated codec declaration.
             for property in self.associated(item.id) {
-                if let Property::Av1C { data: span, .. } = property {
-                    if codec.is_some() {
-                        return Err(parse_failure!());
-                    }
+                if let Property::Av1C { data: span, .. } = property
+                    && codec.is_none()
+                {
                     let data = span.bytes(input)?.to_vec();
                     let (bit_depth, chroma_sample_position) = parse_av1c_declaration(&data)?;
                     codec = Some((data, bit_depth, chroma_sample_position));
@@ -1679,11 +1730,9 @@ impl Meta {
         if item.kind != *b"grid" {
             return Ok(Vec::new());
         }
-        let item_ids = self.dimg_children(primary_item_id);
-        if item_ids.is_empty() {
-            return Err(parse_failure!());
-        }
-        Ok(item_ids)
+        // `still_payload` validates that a grid primary item has at least one
+        // `dimg` child before this metadata projection is constructed.
+        Ok(self.dimg_children(primary_item_id))
     }
 
     fn grid_properties(
@@ -1731,7 +1780,8 @@ impl Meta {
 
         let version = prefix[0];
         if version != 0 {
-            return Err(CodecError::NotImplemented(format!(
+            // Pillow exposes unsupported grid descriptor versions as malformed input.
+            return Err(CodecError::Malformed(format!(
                 "AVIF grid item version {version} is not implemented"
             )));
         }
@@ -1778,6 +1828,7 @@ pub(super) struct EncodedSample {
     pub(super) config: ByteSpan,
     pub(super) sync: bool,
     pub(super) duration: u32,
+    pub(super) color_properties: Option<AvifColorProperties>,
 }
 
 #[derive(Clone)]
@@ -1788,6 +1839,7 @@ pub(super) struct EncodedPlane {
 pub(super) struct StillPayload {
     pub(super) color: EncodedPlane,
     pub(super) alpha: Option<EncodedPlane>,
+    pub(super) alpha_extent_mismatch: bool,
 }
 
 pub(super) struct SequencePayload {
@@ -1797,10 +1849,17 @@ pub(super) struct SequencePayload {
     pub(super) loop_count: AnimationLoop,
 }
 
+struct ParsedAvif<'input> {
+    extracted: ExtractedAvif<'input>,
+    brands: Brands,
+}
+
 pub(super) struct ExtractedAvif<'input> {
     pub(super) input: &'input [u8],
     pub(super) still: Option<StillPayload>,
     pub(super) sequence: Option<SequencePayload>,
+    // AV1 still decoding can proceed without the item extent that Pillow requires.
+    primary_item_dimensions_missing: bool,
     /// Encoded bytes of the parsed top-level BMFF extent.
     pub(super) consumed: usize,
     pub(super) retained_boxes: Vec<crate::types::OpaqueBlock>,
@@ -1826,58 +1885,86 @@ pub(super) struct ExtractedAvif<'input> {
 /// Container projection accepts this wrapper instead of arbitrary bytes, so
 /// it can rely on semantic property checks already performed by the sample
 /// parser.
-pub(super) struct InspectedAvif<'input>(ExtractedAvif<'input>);
+pub(super) struct InspectedAvif<'input> {
+    extracted: ExtractedAvif<'input>,
+    brands: Brands,
+}
 
-impl InspectedAvif<'_> {
-    pub(super) fn input(&self) -> &[u8] {
-        self.0.input
-    }
-
-    pub(super) const fn grid_properties(&self) -> Option<AvifGridProperties> {
-        self.0.grid_properties
-    }
-
+impl<'input> InspectedAvif<'input> {
     pub(super) fn sequence_sample_count(&self) -> Option<usize> {
-        self.0
+        self.extracted
             .sequence
             .as_ref()
             .map(|sequence| sequence.color.samples.len())
     }
+
+    pub(super) fn into_container_parts(self) -> (&'input [u8], Option<AvifGridProperties>, Brands) {
+        (
+            self.extracted.input,
+            self.extracted.grid_properties,
+            self.brands,
+        )
+    }
 }
 
 impl ExtractedAvif<'_> {
-    fn validate<const READ_PAYLOAD: bool>(&self) -> CodecResult<()> {
+    fn validate<P: EncodedPayloadValidation>(&self) -> CodecResult<()> {
         if self.still.is_none() && self.sequence.is_none() {
             return Err(CodecError::Malformed(
                 "AVIF container has neither a still image nor an image sequence".to_owned(),
             ));
         }
         if let Some(still) = &self.still {
-            validate_plane::<READ_PAYLOAD>(self.input, &still.color)?;
+            validate_plane::<P>(self.input, &still.color)?;
             if let Some(alpha) = &still.alpha {
-                validate_plane::<READ_PAYLOAD>(self.input, alpha)?;
-                if alpha.samples.len() != still.color.samples.len() {
-                    return Err(CodecError::Malformed(
-                        "AVIF still color and alpha sample counts differ".to_owned(),
-                    ));
-                }
+                validate_plane::<P>(self.input, alpha)?;
             }
         }
         if let Some(sequence) = &self.sequence {
             let _ = sequence.timescale;
-            validate_plane::<READ_PAYLOAD>(self.input, &sequence.color)?;
+            validate_plane::<P>(self.input, &sequence.color)?;
             if let Some(alpha) = &sequence.alpha {
                 // A short auxiliary track does not invalidate inspection or
                 // first-frame decoding; the full sequence decoder checks that
                 // both sample counts agree before publishing any frames.
-                validate_plane::<READ_PAYLOAD>(self.input, alpha)?;
+                validate_plane::<P>(self.input, alpha)?;
             }
         }
         Ok(())
     }
 }
 
-fn validate_plane<const READ_PAYLOAD: bool>(input: &[u8], plane: &EncodedPlane) -> CodecResult<()> {
+trait EncodedPayloadValidation {
+    fn validate_sample(input: &[u8], sample: &EncodedSample) -> CodecResult<()>;
+}
+
+struct HeaderOnlyPayloadValidation;
+
+impl EncodedPayloadValidation for HeaderOnlyPayloadValidation {
+    #[inline]
+    fn validate_sample(_input: &[u8], _sample: &EncodedSample) -> CodecResult<()> {
+        Ok(())
+    }
+}
+
+struct ReadPayloadValidation;
+
+impl EncodedPayloadValidation for ReadPayloadValidation {
+    #[inline]
+    fn validate_sample(input: &[u8], sample: &EncodedSample) -> CodecResult<()> {
+        for span in &sample.spans {
+            let _ = span
+                .bytes(input)
+                .map_err(|error| error.context("validate AVIF sample payload"))?;
+        }
+        Ok(())
+    }
+}
+
+fn validate_plane<P: EncodedPayloadValidation>(
+    input: &[u8],
+    plane: &EncodedPlane,
+) -> CodecResult<()> {
     if plane.samples.is_empty() {
         return Err(CodecError::Malformed(
             "AVIF sample plane is empty".to_owned(),
@@ -1895,15 +1982,9 @@ fn validate_plane<const READ_PAYLOAD: bool>(input: &[u8], plane: &EncodedPlane) 
             .map_err(|error| error.context("validate AVIF sample configuration"))?;
         let _ = sample.sync;
         let _ = sample.duration;
-        if READ_PAYLOAD {
-            // Decode extraction has already bounded every declared item to its
-            // file/idat source, including items absent from the selected plane.
-            for span in &sample.spans {
-                let _ = span
-                    .bytes(input)
-                    .map_err(|error| error.context("validate AVIF sample payload"))?;
-            }
-        }
+        // Decode extraction has already bounded every declared item to its
+        // file/idat source, including items absent from the selected plane.
+        P::validate_sample(input, sample)?;
     }
     Ok(())
 }
@@ -1920,6 +2001,7 @@ fn item_sample(meta: &Meta, item_id: u32) -> ParseResult<EncodedSample> {
         config: meta.av1c(item_id)?,
         sync: true,
         duration: 1,
+        color_properties: meta.avif_color(item_id),
     })
 }
 
@@ -1960,6 +2042,19 @@ fn still_payload(meta: &Meta) -> ParseResult<StillPayload> {
         }
         ids
     };
+    let alpha_extent_mismatch =
+        alpha_ids
+            .iter()
+            .zip(&color_ids)
+            .any(|(&alpha_id, &color_id)| {
+                match (
+                    meta.item_dimensions(color_id),
+                    meta.item_dimensions(alpha_id),
+                ) {
+                    (Some(color), Some(alpha)) => color != alpha,
+                    _ => false,
+                }
+            });
     let alpha = if alpha_ids.is_empty() {
         None
     } else {
@@ -1973,7 +2068,11 @@ fn still_payload(meta: &Meta) -> ParseResult<StillPayload> {
                 .collect::<ParseResult<Vec<_>>>()?,
         })
     };
-    Ok(StillPayload { color, alpha })
+    Ok(StillPayload {
+        color,
+        alpha,
+        alpha_extent_mismatch,
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -1993,6 +2092,7 @@ struct TimeToSample {
 struct SampleDescription {
     config: Option<ByteSpan>,
     aux_is_alpha: Option<bool>,
+    color_properties: Option<AvifColorProperties>,
 }
 
 #[derive(Default)]
@@ -2062,7 +2162,6 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
     let mut track = Track::default();
     let mut tkhd_seen = false;
     let mut mdia_seen = false;
-    let mut tref_seen = false;
     let mut edit_list = None;
     let mut edts_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
@@ -2084,11 +2183,14 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                 parse_mdia(input, child.payload, &mut track, budget)?;
             }
             kind if kind == *b"tref" => {
-                if tref_seen {
-                    return Err(parse_failure!());
+                // Pillow tolerates repeated track-reference boxes when they
+                // add no second auxiliary-track mapping.
+                if let Some(aux_for_id) = parse_tref(input, child.payload, budget)? {
+                    if track.aux_for_id.is_some() {
+                        return Err(parse_failure!());
+                    }
+                    track.aux_for_id = Some(aux_for_id);
                 }
-                tref_seen = true;
-                track.aux_for_id = parse_tref(input, child.payload, budget)?;
             }
             kind if kind == *b"edts" => {
                 if edts_seen {
@@ -2213,17 +2315,19 @@ fn parse_edit_list_box(input: &[u8], payload: ByteSpan) -> ParseResult<EditList>
 fn parse_tref(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<Option<u32>> {
     let mut reader = Reader::new(input, payload);
     let mut aux_for = None;
+    let mut auxl_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         if child.kind == *b"auxl" {
-            if aux_for.is_some() {
+            if auxl_seen {
                 return Err(parse_failure!());
             }
+            auxl_seen = true;
             let mut ids = Reader::new(input, child.payload);
             let id = ids.u32()?;
-            if id == 0 {
-                return Err(parse_failure!());
+            // Pillow ignores a zero target instead of treating it as a track relation.
+            if id != 0 {
+                aux_for = Some(id);
             }
-            aux_for = Some(id);
         }
     }
     Ok(aux_for)
@@ -2363,7 +2467,7 @@ fn parse_stbl(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     Ok(table)
 }
 
-// ✅ VERIFIED: libavif 1.4.1 read.c:3597-3620.
+// ✅ VERIFIED: libavif 1.4.1 read.c:3597-3620. Trailing bounded payload is ignored.
 fn parse_chunk_offsets(
     input: &[u8],
     child: BoxSpan,
@@ -2384,9 +2488,6 @@ fn parse_chunk_offsets(
         } else {
             u64::from(reader.u32()?)
         });
-    }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
     }
     Ok(offsets)
 }
@@ -2420,9 +2521,11 @@ fn parse_stsc(
         }
         entries.push(entry);
     }
-    if !reader.is_empty() || entries.is_empty() {
+    if entries.is_empty() {
         return Err(parse_failure!());
     }
+    // Pillow and libavif stop after the declared entries and ignore bounded
+    // trailing bytes in the `stsc` box.
     Ok(entries)
 }
 
@@ -2444,9 +2547,11 @@ fn parse_stsz(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
     } else {
         sizes.resize(count, common_size);
     }
-    if !reader.is_empty() || sizes.is_empty() || sizes.contains(&0) {
+    if sizes.is_empty() || sizes.contains(&0) {
         return Err(parse_failure!());
     }
+    // Pillow/libavif stop after the declared entries and ignore bounded
+    // trailing bytes in the `stsz` box.
     Ok(sizes)
 }
 
@@ -2466,13 +2571,11 @@ fn parse_u32_records(
     for _ in 0..count {
         values.push(reader.u32()?);
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow ignores bounded bytes after the declared `stss` entries.
     Ok(values)
 }
 
-// ✅ VERIFIED: libavif 1.4.1 read.c:3696-3712.
+// ✅ VERIFIED: libavif 1.4.1 read.c:3696-3712. Trailing bounded payload is ignored.
 fn parse_stts(
     input: &[u8],
     payload: ByteSpan,
@@ -2491,9 +2594,6 @@ fn parse_stts(
             sample_count: reader.u32()?,
             sample_delta: reader.u32()?,
         });
-    }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
     }
     Ok(entries)
 }
@@ -2517,6 +2617,7 @@ fn parse_stsd(
             descriptions.push(SampleDescription {
                 config: None,
                 aux_is_alpha: None,
+                color_properties: None,
             });
             continue;
         }
@@ -2532,9 +2633,7 @@ fn parse_stsd(
         };
         descriptions.push(parse_sample_description(input, properties, budget)?);
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow parses the declared entries and ignores any trailing bytes.
     Ok(descriptions)
 }
 
@@ -2546,21 +2645,28 @@ fn parse_sample_description(
     let mut reader = Reader::new(input, payload);
     let mut config = None;
     let mut aux_is_alpha = None;
+    let mut color_properties = None;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match parse_property(input, child)? {
             Property::Ispe { .. } | Property::Pixi { .. } => {}
-            Property::Av1C { data: span, .. } => {
-                if config.replace(span).is_some() {
-                    return Err(parse_failure!());
-                }
+            Property::Av1C { data: span, .. } if config.is_none() => {
+                // Pillow selects the first codec configuration and ignores
+                // duplicate av1C children in a track sample description.
+                config = Some(span);
             }
-            Property::AuxC { is_alpha, .. } => {
-                if aux_is_alpha.replace(is_alpha).is_some() {
-                    return Err(parse_failure!());
-                }
+            Property::Av1C { .. } => {}
+            Property::AuxC { is_alpha, .. } if aux_is_alpha.is_none() => {
+                // Keep the first auxiliary type, matching Pillow's sample
+                // description behavior when later auxC/auxi boxes conflict.
+                aux_is_alpha = Some(is_alpha);
             }
-            Property::Color(_)
-            | Property::IccProfile(_)
+            Property::AuxC { .. } => {}
+            Property::Color(color) if color_properties.is_none() => {
+                color_properties = Some(color);
+            }
+            // Pillow rejects repeated color properties in an AV1 sample entry.
+            Property::Color(_) => return Err(parse_failure!()),
+            Property::IccProfile(_)
             | Property::ContentLightLevel { .. }
             | Property::MasteringDisplayColorVolume { .. }
             | Property::Rotation { .. }
@@ -2573,6 +2679,7 @@ fn parse_sample_description(
     Ok(SampleDescription {
         config,
         aux_is_alpha,
+        color_properties,
     })
 }
 
@@ -2615,13 +2722,13 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
             .mappings
             .get(mapping_index)
             .ok_or_else(|| parse_failure!())?;
-        if mapping.first_chunk > chunk_number || mapping.samples_per_chunk == 0 {
+        // `parse_stsc` requires a chunk-one first row and increasing starts;
+        // this walk only selects rows whose start is active for this chunk.
+        if mapping.samples_per_chunk == 0 {
             return Err(parse_failure!());
         }
+        // Pillow/libavif select the first sample description for index zero.
         let description_index = mapping.description_index.saturating_sub(1) as usize;
-        if mapping.description_index == 0 {
-            return Err(parse_failure!());
-        }
         let description = table
             .descriptions
             .get(description_index)
@@ -2649,6 +2756,7 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
                 config,
                 sync: sample_index == 0 || table.sync_samples.contains(&sample_number),
                 duration: duration_at(&table.timings, sample_index)?,
+                color_properties: description.color_properties,
             });
             sample_offset = sample_offset.saturating_add(u64::from(size));
             sample_index = sample_index.saturating_add(1);
@@ -2686,7 +2794,7 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
     let color = track_plane(input, color_track)?;
     // libavif selects alpha tracks by reference and auxiliary properties; older
     // writers may omit or mislabel the track handler.
-    let mut alpha_tracks = movie.tracks.iter().filter(|track| {
+    let alpha_track = movie.tracks.iter().find(|track| {
         track.aux_for_id == Some(color_track.id)
             && track
                 .table
@@ -2699,16 +2807,9 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
                 })
                 .unwrap_or(true)
     });
-    let alpha_track = alpha_tracks.next();
-    if alpha_tracks.next().is_some() {
-        return Err(parse_failure!());
-    }
     let alpha = if let Some(track) = alpha_track {
-        if timescale.is_some() && track.timescale != timescale {
-            return Err(parse_failure!());
-        }
-        // Keep all mapped alpha samples for inspection and the independent
-        // first-frame path. Full-sequence decoding owns track-count parity.
+        // Pillow tolerates repeated auxiliary alpha tracks. Pair the first
+        // matching track by position and retain color-track timing.
         Some(track_plane(input, track)?)
     } else {
         None
@@ -2721,14 +2822,38 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
     })
 }
 
-fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
-    extract_inner_with_metadata::<true>(input, true)
+trait MetadataRetentionPolicy {
+    fn collect(input: &[u8], meta: Option<&Meta>) -> ParseResult<Vec<OpaqueMetadata>>;
 }
 
-fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
+struct RetainMetadataPolicy;
+
+impl MetadataRetentionPolicy for RetainMetadataPolicy {
+    fn collect(input: &[u8], meta: Option<&Meta>) -> ParseResult<Vec<OpaqueMetadata>> {
+        match meta {
+            Some(meta) => meta.metadata(input),
+            None => Ok(Vec::new()),
+        }
+    }
+}
+
+struct OmitMetadataPolicy;
+
+impl MetadataRetentionPolicy for OmitMetadataPolicy {
+    #[inline]
+    fn collect(_input: &[u8], _meta: Option<&Meta>) -> ParseResult<Vec<OpaqueMetadata>> {
+        Ok(Vec::new())
+    }
+}
+
+fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
+    extract_inner_with_metadata::<BoundedItemExtentPolicy, RetainMetadataPolicy>(input)
+        .map(|parsed| parsed.extracted)
+}
+
+fn extract_inner_with_metadata<P: ItemExtentPolicy, M: MetadataRetentionPolicy>(
     input: &[u8],
-    retain_metadata: bool,
-) -> ParseResult<ExtractedAvif<'_>> {
+) -> ParseResult<ParsedAvif<'_>> {
     let mut budget = Budget::default();
     let mut reader = Reader::whole(input);
     let first = next_box(&mut reader, true, &mut budget)
@@ -2740,6 +2865,7 @@ fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
     let brands = parse_ftyp(input, first.payload).map_err(|error| error.at(0, "avif_box"))?;
     let mut meta = None;
     let mut movie = None;
+    let mut media_data_seen = false;
     let mut retained_boxes = Vec::new();
     // Reassigned at the top of every iteration; the initializer only satisfies
     // definite initialization.
@@ -2760,24 +2886,33 @@ fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
                 let box_end = reader.offset;
                 match child.kind {
                     kind if kind == *b"meta" => {
+                        if brands.major == *b"avis" && media_data_seen {
+                            // Pillow ignores AVIS metadata after the media-data box.
+                            continue;
+                        }
                         if meta.is_some() {
+                            if media_data_seen {
+                                // Pillow ignores duplicate top-level metadata after mdat.
+                                continue;
+                            }
                             return Err(parse_failure!());
                         }
                         meta = Some(
-                            parse_meta::<CHECK_ITEM_BOUNDS>(input, child.payload, &mut budget)
+                            parse_meta::<P>(input, child.payload, &mut budget)
                                 .map_err(|error| error.at(box_offset, "avif_box"))?,
                         );
                     }
                     kind if kind == *b"moov" => {
                         if movie.is_some() {
-                            return Err(parse_failure!());
+                            // Pillow inspects the first movie structure and ignores later copies.
+                            continue;
                         }
                         movie = Some(
                             parse_movie(input, child.payload, &mut budget)
                                 .map_err(|error| error.at(box_offset, "avif_box"))?,
                         );
                     }
-                    kind if kind == *b"mdat" => {}
+                    kind if kind == *b"mdat" => media_data_seen = true,
                     kind if kind == *b"free" || kind == *b"skip" => {
                         retained_boxes.push(crate::types::OpaqueBlock {
                             kind: kind.to_vec(),
@@ -2822,14 +2957,7 @@ fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
         .map(|meta| meta.source_color(input))
         .transpose()?
         .unwrap_or_default();
-    let metadata = if retain_metadata {
-        meta.as_ref()
-            .map(|meta| meta.metadata(input))
-            .transpose()?
-            .unwrap_or_default()
-    } else {
-        Vec::new()
-    };
+    let metadata = M::collect(input, meta.as_ref())?;
     let transform = meta.as_ref().map(Meta::transform).transpose()?.flatten();
     let primary_item_id = meta.as_ref().map(|meta| meta.primary_item_id);
     let auxiliary_relationships = meta
@@ -2889,28 +3017,36 @@ fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
         .unwrap_or_default();
 
     let item_locations = meta.as_ref().map(Meta::item_locations).unwrap_or_default();
-    let _ = brands.major;
-    Ok(ExtractedAvif {
-        input,
-        still,
-        sequence,
-        consumed,
-        retained_boxes,
-        metadata,
-        source_color,
-        auxiliary_relationship,
-        auxiliary_relationships,
-        item_relationships,
-        premultiplied_relationships,
-        item_color_properties,
-        item_icc_profiles,
-        item_properties,
-        item_plane_properties,
-        item_codec_properties,
-        item_locations,
-        grid_item_ids,
-        grid_properties,
-        transform,
+    let primary_item_dimensions_missing = meta.as_ref().is_some_and(|meta| {
+        meta.item(meta.primary_item_id).is_some_and(|item| {
+            item.kind == *b"av01" && meta.item_dimensions(meta.primary_item_id).is_none()
+        })
+    });
+    Ok(ParsedAvif {
+        extracted: ExtractedAvif {
+            input,
+            still,
+            sequence,
+            primary_item_dimensions_missing,
+            consumed,
+            retained_boxes,
+            metadata,
+            source_color,
+            auxiliary_relationship,
+            auxiliary_relationships,
+            item_relationships,
+            premultiplied_relationships,
+            item_color_properties,
+            item_icc_profiles,
+            item_properties,
+            item_plane_properties,
+            item_codec_properties,
+            item_locations,
+            grid_item_ids,
+            grid_properties,
+            transform,
+        },
+        brands,
     })
 }
 
@@ -2920,15 +3056,21 @@ pub(super) fn extract(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
 
 pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     let extracted = extract(input)?;
-    extracted.validate::<true>()?;
+    extracted.validate::<ReadPayloadValidation>()?;
+    if extracted.primary_item_dimensions_missing {
+        return Err(CodecError::Malformed(
+            "AVIF primary AV1 item is missing its spatial extent".to_owned(),
+        ));
+    }
     Ok(extracted)
 }
 
 /// Validate inspection metadata without materializing encoded image payloads.
 pub(super) fn inspected(input: &[u8]) -> CodecResult<InspectedAvif<'_>> {
-    let extracted = extract_inner_with_metadata::<false>(input, true)?;
-    extracted.validate::<false>()?;
-    Ok(InspectedAvif(extracted))
+    let ParsedAvif { extracted, brands } =
+        extract_inner_with_metadata::<LazyItemExtentPolicy, RetainMetadataPolicy>(input)?;
+    extracted.validate::<HeaderOnlyPayloadValidation>()?;
+    Ok(InspectedAvif { extracted, brands })
 }
 
 fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> u64 {
@@ -2990,7 +3132,8 @@ fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> u64 {
 /// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
 /// the referenced primary and auxiliary pixel-sample payload spans.
 pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
-    let extracted = extract_inner_with_metadata::<true>(data, false)?;
+    let ParsedAvif { extracted, .. } =
+        extract_inner_with_metadata::<BoundedItemExtentPolicy, OmitMetadataPolicy>(data)?;
     #[allow(
         clippy::cast_possible_truncation,
         reason = "Supported targets have usize no wider than u64."

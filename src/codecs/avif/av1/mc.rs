@@ -18,6 +18,7 @@
 use bytemuck::cast;
 use wide::{i16x8, i32x8, u16x8};
 
+use super::block::ChromaSampling;
 use super::motion::{InterpolationFilter, MotionVector, PreparedGlobalWarp, ScaleFactors};
 use super::sample_depth::SampleDepth;
 use super::surface::PlaneView;
@@ -55,6 +56,14 @@ impl MotionScratch {
     }
 
     fn length(width: usize, height: usize) -> Av1Result<usize> {
+        #[cfg(coverage)]
+        let width = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1MotionPredictorZeroWidth,
+        ) {
+            0
+        } else {
+            width
+        };
         if width == 0 || height == 0 || width > MAX_BLOCK_EDGE || height > MAX_BLOCK_EDGE {
             return Err(malformed("motion predictor has invalid block geometry"));
         }
@@ -274,8 +283,7 @@ impl MotionScratch {
         &mut self,
         width: usize,
         height: usize,
-        subsampling_x: bool,
-        subsampling_y: bool,
+        chroma_sampling: ChromaSampling,
         inverted: bool,
         depth: SampleDepth,
     ) -> Av1Result<&[u16]> {
@@ -287,8 +295,7 @@ impl MotionScratch {
             &mut self.mask,
             width,
             height,
-            subsampling_x,
-            subsampling_y,
+            chroma_sampling,
             inverted,
             depth,
         )?;
@@ -304,10 +311,9 @@ impl MotionScratch {
         height: usize,
         index: u8,
         inverted: bool,
-        subsampling: [bool; 2],
+        chroma_sampling: ChromaSampling,
         depth: SampleDepth,
     ) -> Av1Result<&[u16]> {
-        let [subsampling_x, subsampling_y] = subsampling;
         let length = Self::length(width, height)?;
         fill_wedge_mask(&mut self.mask, width, height, index)?;
         blend_compound(
@@ -318,14 +324,7 @@ impl MotionScratch {
             CompoundBlend::Masked { inverted },
             depth,
         )?;
-        reduce_wedge_mask(
-            &mut self.mask,
-            width,
-            height,
-            subsampling_x,
-            subsampling_y,
-            inverted,
-        )?;
+        reduce_wedge_mask(&mut self.mask, width, height, chroma_sampling, inverted)?;
         Ok(&self.predictor[..length])
     }
 
@@ -376,8 +375,7 @@ impl MotionScratch {
         plane: usize,
         luma_width: usize,
         luma_height: usize,
-        subsampling_x: bool,
-        subsampling_y: bool,
+        chroma_sampling: ChromaSampling,
         depth: SampleDepth,
     ) -> Av1Result<()> {
         let length = Self::length(width, height)?;
@@ -395,14 +393,7 @@ impl MotionScratch {
                     .ok_or_else(|| malformed("luma inter-intra wedge geometry differs"))?;
                 fill_wedge_mask(&mut self.mask, width, height, index)?;
                 blend_inter_intra_samples(inter, intra, &self.mask[..length], depth)?;
-                reduce_wedge_mask(
-                    &mut self.mask,
-                    width,
-                    height,
-                    subsampling_x,
-                    subsampling_y,
-                    false,
-                )?;
+                reduce_wedge_mask(&mut self.mask, width, height, chroma_sampling, false)?;
             } else {
                 let mask = self
                     .mask
@@ -552,8 +543,14 @@ fn wedge_code(width: usize, height: usize, index: u8) -> Option<(WedgeCode, bool
 }
 
 fn wedge_oblique63(row: usize, column: usize) -> u8 {
-    let shift = 16_usize.saturating_sub(row.div_ceil(2));
-    let source_index = column.saturating_sub(shift).min(63);
+    // The master border moves one column left for every two rows. Once the
+    // row passes the center, the offset is negative and therefore advances
+    // the source column; saturating the offset itself would stop the wedge
+    // slope in the lower half of the 64×64 master.
+    let source_index = column
+        .saturating_add(row.div_ceil(2))
+        .saturating_sub(16)
+        .min(63);
     let source = if row & 1 == 0 {
         &WEDGE_MASTER_EVEN
     } else {
@@ -562,22 +559,25 @@ fn wedge_oblique63(row: usize, column: usize) -> u8 {
     source[source_index]
 }
 
-fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -> Av1Result<u8> {
+fn wedge_master_value(direction: u8, sign_flip: bool, row: usize, column: usize) -> Av1Result<u8> {
     let row = row.min(63);
     let column = column.min(63);
     let reversed_column = 63_usize
         .checked_sub(column)
         .ok_or_else(|| malformed("wedge master column exceeds sixty-three"))?;
-    let (value, base_inverse) = match direction {
-        WEDGE_DIRECTION_OBLIQUE27 => (wedge_oblique63(column, row), false),
-        WEDGE_DIRECTION_OBLIQUE63 => (wedge_oblique63(row, column), false),
-        WEDGE_DIRECTION_OBLIQUE117 => (wedge_oblique63(row, reversed_column), true),
-        WEDGE_DIRECTION_OBLIQUE153 => (wedge_oblique63(reversed_column, row), true),
-        WEDGE_DIRECTION_HORIZONTAL => (WEDGE_MASTER_VERTICAL[row], false),
-        WEDGE_DIRECTION_VERTICAL => (WEDGE_MASTER_VERTICAL[column], false),
+    // The direction codebook selects a transformed master template; the
+    // per-index sign-flip table is the only polarity adjustment applied to
+    // that template (matching dav1d's copy2d mask construction).
+    let value = match direction {
+        WEDGE_DIRECTION_OBLIQUE27 => wedge_oblique63(column, row),
+        WEDGE_DIRECTION_OBLIQUE63 => wedge_oblique63(row, column),
+        WEDGE_DIRECTION_OBLIQUE117 => wedge_oblique63(row, reversed_column),
+        WEDGE_DIRECTION_OBLIQUE153 => wedge_oblique63(reversed_column, row),
+        WEDGE_DIRECTION_HORIZONTAL => WEDGE_MASTER_VERTICAL[row],
+        WEDGE_DIRECTION_VERTICAL => WEDGE_MASTER_VERTICAL[column],
         _ => return Ok(32),
     };
-    if inverse ^ base_inverse {
+    if sign_flip {
         64_u8
             .checked_sub(value)
             .ok_or_else(|| malformed("wedge master value exceeds sixty-four"))
@@ -587,6 +587,35 @@ fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -
 }
 
 fn fill_wedge_mask(mask: &mut [u8], width: usize, height: usize, index: u8) -> Av1Result<()> {
+    // These coverage-only faults model invalid geometry and scratch passed
+    // across the private AV1 prediction boundary. Release builds contain no
+    // injection branch or runtime cost.
+    #[cfg(coverage)]
+    let (mask, width, height) = {
+        use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+        let width = if take_fault_point(CoverageFaultPoint::Av1WedgeFillEmptyWidth) {
+            0
+        } else {
+            width
+        };
+        let height = if take_fault_point(CoverageFaultPoint::Av1WedgeFillEmptyHeight) {
+            0
+        } else {
+            height
+        };
+        let mask = if take_fault_point(CoverageFaultPoint::Av1WedgeFillScratchShort) {
+            let short_length = width
+                .checked_mul(height)
+                .unwrap_or_default()
+                .saturating_sub(1)
+                .min(mask.len());
+            &mut mask[..short_length]
+        } else {
+            mask
+        };
+        (mask, width, height)
+    };
     if width == 0 || height == 0 {
         return Err(malformed("wedge mask has empty block geometry"));
     }
@@ -630,10 +659,38 @@ fn reduce_wedge_mask(
     mask: &mut [u8],
     width: usize,
     height: usize,
-    subsampling_x: bool,
-    subsampling_y: bool,
+    chroma_sampling: ChromaSampling,
     inverted: bool,
 ) -> Av1Result<()> {
+    // These coverage-only faults model invalid geometry and scratch passed
+    // across the private AV1 prediction boundary. Release builds contain no
+    // injection branch or runtime cost.
+    #[cfg(coverage)]
+    let (mask, width, height) = {
+        use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+        let width = if take_fault_point(CoverageFaultPoint::Av1WedgeReduceEmptyWidth) {
+            0
+        } else {
+            width
+        };
+        let height = if take_fault_point(CoverageFaultPoint::Av1WedgeReduceEmptyHeight) {
+            0
+        } else {
+            height
+        };
+        let mask = if take_fault_point(CoverageFaultPoint::Av1WedgeReduceScratchShort) {
+            let short_length = width
+                .checked_mul(height)
+                .unwrap_or_default()
+                .saturating_sub(1)
+                .min(mask.len());
+            &mut mask[..short_length]
+        } else {
+            mask
+        };
+        (mask, width, height)
+    };
     if width == 0 || height == 0 {
         return Err(malformed("wedge source mask has empty geometry"));
     }
@@ -643,14 +700,14 @@ fn reduce_wedge_mask(
     if mask.len() < source_length {
         return Err(malformed("wedge source mask exceeds scratch"));
     }
-    if !subsampling_x && !subsampling_y {
-        return Ok(());
-    }
-    let destination_width = if subsampling_x {
-        width.div_ceil(2)
-    } else {
-        width
+    // AV1 chroma layouts either keep the luma mask unchanged or subsample X.
+    // The internal enum cannot represent the unsupported 4:4:0 y-only case.
+    let subsampling_y = match chroma_sampling {
+        ChromaSampling::Full | ChromaSampling::Monochrome => return Ok(()),
+        ChromaSampling::Subsampled420 => true,
+        ChromaSampling::Subsampled422 => false,
     };
+    let destination_width = width.div_ceil(2);
     let destination_height = if subsampling_y {
         height.div_ceil(2)
     } else {
@@ -664,7 +721,7 @@ fn reduce_wedge_mask(
         let source_y_next = source_y.saturating_add(1).min(height.saturating_sub(1));
         for destination_x in 0..destination_width {
             let source_x = destination_x
-                .checked_mul(if subsampling_x { 2 } else { 1 })
+                .checked_mul(2)
                 .ok_or_else(|| malformed("wedge mask source x overflows"))?;
             let source_x_next = source_x.saturating_add(1).min(width.saturating_sub(1));
             let first = mask
@@ -703,31 +760,20 @@ fn reduce_wedge_mask(
                 )
                 .copied()
                 .ok_or_else(|| malformed("wedge mask fourth sample is unavailable"))?;
-            let reduced = match (subsampling_x, subsampling_y) {
-                (true, true) => {
-                    u16::from(first)
-                        .saturating_add(u16::from(second))
-                        .saturating_add(u16::from(third))
-                        .saturating_add(u16::from(fourth))
-                        .saturating_add(2)
-                        .saturating_sub(sign)
-                        >> 2
-                }
-                (true, false) => {
-                    u16::from(first)
-                        .saturating_add(u16::from(second))
-                        .saturating_add(1)
-                        .saturating_sub(sign)
-                        >> 1
-                }
-                (false, true) => {
-                    u16::from(first)
-                        .saturating_add(u16::from(third))
-                        .saturating_add(1)
-                        .saturating_sub(sign)
-                        >> 1
-                }
-                (false, false) => u16::from(first),
+            let reduced = if subsampling_y {
+                u16::from(first)
+                    .saturating_add(u16::from(second))
+                    .saturating_add(u16::from(third))
+                    .saturating_add(u16::from(fourth))
+                    .saturating_add(2)
+                    .saturating_sub(sign)
+                    >> 2
+            } else {
+                u16::from(first)
+                    .saturating_add(u16::from(second))
+                    .saturating_add(1)
+                    .saturating_sub(sign)
+                    >> 1
             };
             let destination = destination_y
                 .checked_mul(destination_width)
@@ -751,6 +797,44 @@ const INTER_INTRA_WEIGHTS: [u8; 32] = [
 ];
 
 fn fill_inter_intra_mask(mask: &mut [u8], width: usize, height: usize, mode: u8) -> Av1Result<()> {
+    // These coverage-only faults model invalid values crossing the private
+    // AV1 prediction boundary. Release builds contain no injection branch or
+    // runtime cost.
+    #[cfg(coverage)]
+    let (mask, width, height, mode) = {
+        use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+        let mode = if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskInvalidMode) {
+            4
+        } else {
+            mode
+        };
+        let width = if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskEmptyWidth) {
+            0
+        } else if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskNonNormativeWidth) {
+            2
+        } else {
+            width
+        };
+        let height = if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskEmptyHeight) {
+            0
+        } else if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskNonNormativeHeight) {
+            2
+        } else {
+            height
+        };
+        let mask = if take_fault_point(CoverageFaultPoint::Av1InterIntraMaskScratchShort) {
+            let short_length = width
+                .checked_mul(height)
+                .unwrap_or_default()
+                .saturating_sub(1)
+                .min(mask.len());
+            &mut mask[..short_length]
+        } else {
+            mask
+        };
+        (mask, width, height, mode)
+    };
     if !(0..=3).contains(&mode) {
         return Err(malformed("inter-intra mode exceeds smooth"));
     }
@@ -1676,6 +1760,12 @@ fn put_unscaled_kernel(
     let maximum = i32::from(depth.maximum());
     let horizontal = filter_coefficients(request.filters[0], geometry.width <= 4, geometry.phase_x);
     let vertical = filter_coefficients(request.filters[1], geometry.height <= 4, geometry.phase_y);
+    if horizontal.is_none()
+        && vertical.is_none()
+        && copy_unfiltered_block_if_in_bounds(reference, geometry, output)?
+    {
+        return Ok(());
+    }
     for y in 0..geometry.height {
         let source_y = geometry
             .source_y
@@ -1728,6 +1818,51 @@ fn put_unscaled_kernel(
         }
     }
     Ok(())
+}
+
+fn copy_unfiltered_block_if_in_bounds(
+    reference: PlaneView<'_>,
+    geometry: PredictionGeometry,
+    output: &mut [u16],
+) -> Av1Result<bool> {
+    let (Ok(source_x), Ok(source_y)) = (
+        usize::try_from(geometry.source_x),
+        usize::try_from(geometry.source_y),
+    ) else {
+        return Ok(false);
+    };
+    // Valid AV1 coordinates cannot reach this overflow, so model it only in
+    // coverage builds while keeping the release path free of fault logic.
+    #[cfg(coverage)]
+    let source_x = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1UnfilteredCopySourceXEndOverflow,
+    ) {
+        usize::MAX
+    } else {
+        source_x
+    };
+    let (Some(source_x_end), Some(source_y_end)) = (
+        source_x.checked_add(geometry.width),
+        source_y.checked_add(geometry.height),
+    ) else {
+        return Ok(false);
+    };
+    if source_x_end > reference.width() || source_y_end > reference.height() {
+        return Ok(false);
+    }
+
+    for (source_y, output_row) in
+        (source_y..source_y_end).zip(output.chunks_exact_mut(geometry.width))
+    {
+        let source_row = reference
+            .row(source_y)
+            .ok_or_else(|| malformed("in-bounds motion row exceeds reference plane"))?;
+        let source_samples = source_row
+            .get(source_x..source_x_end)
+            .ok_or_else(|| malformed("in-bounds motion block exceeds reference row"))?;
+        output_row.copy_from_slice(source_samples);
+    }
+    Ok(true)
 }
 
 fn prep_unscaled_kernel(
@@ -2149,17 +2284,50 @@ fn difference_mask_and_blend(
     mask: &mut [u8],
     width: usize,
     height: usize,
-    subsampling_x: bool,
-    subsampling_y: bool,
+    chroma_sampling: ChromaSampling,
     inverted: bool,
     depth: SampleDepth,
 ) -> Av1Result<()> {
     let length = width
         .checked_mul(height)
         .ok_or_else(|| malformed("difference compound size overflows"))?;
+    // These internal buffer mismatches are unreachable from a valid AV1 block.
+    // Coverage-only fault contracts model them without release-build cost.
+    #[cfg(coverage)]
+    let (first, second, output, mask) = {
+        use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+        let first = if take_fault_point(CoverageFaultPoint::Av1DifferenceMaskFirstPlaneShort) {
+            &first[..first.len().saturating_sub(1)]
+        } else {
+            first
+        };
+        let second = if take_fault_point(CoverageFaultPoint::Av1DifferenceMaskSecondPlaneShort) {
+            &second[..second.len().saturating_sub(1)]
+        } else {
+            second
+        };
+        let output = if take_fault_point(CoverageFaultPoint::Av1DifferenceMaskOutputPlaneShort) {
+            let shortened_length = output.len().saturating_sub(1);
+            &mut output[..shortened_length]
+        } else {
+            output
+        };
+        let mask = if take_fault_point(CoverageFaultPoint::Av1DifferenceMaskScratchShort) {
+            &mut mask[..0]
+        } else {
+            mask
+        };
+        (first, second, output, mask)
+    };
     if first.len() < length || second.len() < length || output.len() < length {
         return Err(malformed("difference compound buffers are too short"));
     }
+    let (subsampling_x, subsampling_y) = match chroma_sampling {
+        ChromaSampling::Subsampled420 => (true, true),
+        ChromaSampling::Subsampled422 => (true, false),
+        ChromaSampling::Full | ChromaSampling::Monochrome => (false, false),
+    };
     let mask_width = if subsampling_x {
         width.div_ceil(2)
     } else {
@@ -2273,15 +2441,14 @@ fn difference_mask_and_blend(
                 }
             }
         } else {
-            let mask_y = y >> u32::from(subsampling_y);
-            if !subsampling_y || y % 2 == 1 || next_y == height {
-                for (x, &sample) in full_row[..width].iter().enumerate() {
-                    let destination = mask_y
-                        .checked_mul(mask_width)
-                        .and_then(|row| row.checked_add(x))
-                        .ok_or_else(|| malformed("difference mask index overflows"))?;
-                    mask[destination] = sample;
-                }
+            // Full-resolution and monochrome layouts retain one mask sample
+            // for each luma sample and row.
+            for (x, &sample) in full_row[..width].iter().enumerate() {
+                let destination = y
+                    .checked_mul(mask_width)
+                    .and_then(|row| row.checked_add(x))
+                    .ok_or_else(|| malformed("difference mask index overflows"))?;
+                mask[destination] = sample;
             }
         }
     }

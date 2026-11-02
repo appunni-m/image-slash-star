@@ -14,7 +14,6 @@ changes in an issue before implementing them.
 make help
 make build
 make verify
-make fmt
 make lint
 ```
 

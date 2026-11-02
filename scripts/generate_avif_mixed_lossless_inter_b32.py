@@ -34,6 +34,12 @@ CLIPPED_ASSET = ASSET.with_name("animated_mixed_lossless_inter_b32_i420_60x60.av
 RESIDUAL_ASSET = ASSET.with_name(
     "animated_mixed_lossless_inter_b32_i420_residual_64x64.avif"
 )
+IMPULSE_RESIDUAL_ASSET = ASSET.with_name(
+    "animated_mixed_lossless_inter_b32_i420_impulse_residual_64x64.avif"
+)
+HI10_IMPULSE_RESIDUAL_ASSET = ASSET.with_name(
+    "animated_mixed_lossless_inter_b32_i420_10bit_impulse_residual_64x64.avif"
+)
 REFERENCE_FRAME_TEMPLATE = (
     ROOT
     / "tests"
@@ -48,6 +54,12 @@ CLIPPED_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
 RESIDUAL_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
     "Decode.avif_animated_mixed_lossless_inter_b32_i420_residual_64x64_avif_frame_{index}.bin"
 )
+IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
+    "Decode.avif_animated_mixed_lossless_inter_b32_i420_impulse_residual_64x64_avif_frame_{index}.bin"
+)
+HI10_IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE = REFERENCE_FRAME_TEMPLATE.with_name(
+    "Decode.avif_animated_mixed_lossless_inter_b32_i420_10bit_impulse_residual_64x64_avif_frame_{index}.bin"
+)
 REFERENCE = REFERENCE_FRAME_TEMPLATE.with_name(
     REFERENCE_FRAME_TEMPLATE.name.format(index=0)
 )
@@ -57,9 +69,22 @@ CLIPPED_REFERENCE = CLIPPED_REFERENCE_FRAME_TEMPLATE.with_name(
 RESIDUAL_REFERENCE = RESIDUAL_REFERENCE_FRAME_TEMPLATE.with_name(
     RESIDUAL_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
 )
+IMPULSE_RESIDUAL_REFERENCE = IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE.with_name(
+    IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
+)
+HI10_IMPULSE_RESIDUAL_REFERENCE = HI10_IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE.with_name(
+    HI10_IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE.name.format(index=0)
+)
 RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_64x64.receipt.json"
 CLIPPED_RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_60x60.receipt.json"
 RESIDUAL_RECEIPT = STAGING_ROOT / "mixed_lossless_inter_b32_i420_residual_64x64.receipt.json"
+IMPULSE_RESIDUAL_RECEIPT = (
+    STAGING_ROOT / "mixed_lossless_inter_b32_i420_impulse_residual_64x64.receipt.json"
+)
+HI10_IMPULSE_RESIDUAL_RECEIPT = (
+    STAGING_ROOT
+    / "mixed_lossless_inter_b32_i420_10bit_impulse_residual_64x64.receipt.json"
+)
 DEFAULT_ENCODER = STAGING_ROOT / "encode-avif-mixed-lossless-inter-b32"
 
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
@@ -69,11 +94,11 @@ PINNED_PILLOW = (
     "1.4.1",
     "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
 )
-EXPECTED_FILE_SHA256 = "ecb244cfa33b1737f09246cf87ad20dbd8156108dc9b93da76a8bbe885007257"
-EXPECTED_PIXEL_SHA256 = "31b29f375f838c9c6249d51fa2e30273fc82168bd6e212f8d5a62da1642adfa5"
+EXPECTED_FILE_SHA256 = "04c15f5bdc0e640fcfa09d22f63378d0655109db67a8f9236942c92dc0d8dbf6"
+EXPECTED_PIXEL_SHA256 = "fb54b15db24fc3d011ec7c95e21578dda2b08904abe484b2955e21c1b8e138d4"
 EXPECTED_FRAME_SHA256 = (
-    "90ce523631e9fd385bcae414317ca29e655e9fa26a022e09d50795e71b32d634",
-    "aa3d0199115d1734da9065059f33f648e4f90151fbce35dc3cd670a5f6b479f4",
+    "dcf046d69b3aa8558665fb2b20eddc466cd6a3c1cacc05104345a251a302b0b2",
+    "bbb6bc2f9c3365db54d3521f75c17faf465430361ec01be9c9374b36d1166872",
 )
 RESIDUAL_EXPECTED_FILE_SHA256 = "58552db6049a5220936acccbb483fd0366224744e7a2f81058a099b4016d5d36"
 RESIDUAL_EXPECTED_PIXEL_SHA256 = "1dd668726550968fd54f7d92264a3a3a15c0aaec7ab866277cead24e2637402d"
@@ -82,13 +107,32 @@ RESIDUAL_EXPECTED_FRAME_SHA256 = (
     "f99f8c1c96218f4dde446f18003ec53ae2c35e57a4f1e1b46ce406a2dbe6ef61",
 )
 RESIDUAL_EXPECTED_FILE_BYTES = 1087
-CLIPPED_EXPECTED_FILE_SHA256 = "618e40d92c2dd80005f841b5af4907e8f328512960621c6f1eb7e267c24b23ce"
-CLIPPED_EXPECTED_PIXEL_SHA256 = "31f32dc03ca4a9cbffe09bf77929c32931d460a97c0dceb236b9254c1284671f"
-CLIPPED_EXPECTED_FRAME_SHA256 = (
-    "a3b4b27575bef66a5eb058529aee5cac545d4d43a9bace07421cea066b4d59b8",
-    "6b6f92c82d4962e2f59502cd76f454527f3a213fafa10130620e601812aa918c",
+IMPULSE_RESIDUAL_EXPECTED_FILE_SHA256 = "321a0c17722c9e3739cf61e1bbc57bf52385b58a5588e185a760f81f00380547"
+IMPULSE_RESIDUAL_EXPECTED_PIXEL_SHA256 = "d80fa2333fccd5ac80bb7dc955ef1def0be1c889e4f705c9fb094f1f46fb7c5a"
+IMPULSE_RESIDUAL_EXPECTED_FRAME_SHA256 = (
+    "dcf046d69b3aa8558665fb2b20eddc466cd6a3c1cacc05104345a251a302b0b2",
+    "e6e77453b8b825b6c44a483c0bcd1d4d39a807c2e19f688ebe3144670f4c8728",
 )
-EXPECTED_FILE_BYTES = 1083
+IMPULSE_RESIDUAL_EXPECTED_FILE_BYTES = 2457
+HI10_IMPULSE_RESIDUAL_EXPECTED_FILE_SHA256 = (
+    "9a136b442ee7f742259cabc9bb1b2ce68004f9831eb4b169f08fa507f6dabbce"
+)
+HI10_IMPULSE_RESIDUAL_EXPECTED_PIXEL_SHA256 = (
+    "3b5081b7c55ca9141d3e2fba32f055278dec9567bb845d65fcaf0a632402de92"
+)
+HI10_IMPULSE_RESIDUAL_EXPECTED_FRAME_SHA256 = (
+    "dcf046d69b3aa8558665fb2b20eddc466cd6a3c1cacc05104345a251a302b0b2",
+    "4d19f63fcc4cbee56812b9cca517b4d27f5fadfb3c75e9dad84543026f430e32",
+)
+HI10_IMPULSE_RESIDUAL_EXPECTED_FILE_BYTES = 2948
+CLIPPED_EXPECTED_FILE_SHA256 = "acdf18ae0fbbaf52cf6b888ab9c1f33b78b06e529bc545736d995c61d6d36ab2"
+CLIPPED_EXPECTED_PIXEL_SHA256 = "dd9328c96829005a2bc504c38dc4692f15d4fdb385d9294a120903ac4c97c3fd"
+CLIPPED_EXPECTED_FRAME_SHA256 = (
+    "55dfd6f4af3caf368ecbfcb0de895a122f7cb85f182d3b82d9079499b0163da5",
+    "8de2b4dfa5e83ae0763c9e96b2bc2dd498d56c6684a5ee6d4e83b53900eee2e3",
+)
+EXPECTED_FILE_BYTES = 2445
+CLIPPED_EXPECTED_FILE_BYTES = 2167
 
 
 def sha256(data: bytes) -> str:
@@ -122,11 +166,21 @@ def patch_receipts() -> dict[str, str]:
 
 
 def run_encoder(
-    encoder: Path, output: Path, canvas_size: int, *, residual_roi: bool = False
+    encoder: Path,
+    output: Path,
+    canvas_size: int,
+    *,
+    residual_roi: bool = False,
+    impulse_residual: bool = False,
+    bit_depth: int = 8,
 ) -> str:
     command = [str(encoder), str(output), str(canvas_size)]
     if residual_roi:
         command.append("--residual-roi")
+    if impulse_residual:
+        command.append("--impulse-residual-roi")
+    if bit_depth == 10:
+        command.append("--bit-depth-10")
     result = subprocess.run(
         command,
         check=False,
@@ -139,16 +193,29 @@ def run_encoder(
             f"pinned encoder failed with status {result.returncode}:\n{result.stdout}"
         )
 
-    required_trace = (
+    block_inter_mode = "inter=0" if residual_roi else "inter=1"
+    block_skip_mode = "skip_txfm=0" if (residual_roi or impulse_residual) else "skip_txfm=1"
+    required_trace_prefix = (
         "AVIF_FIXTURE_INTER_LEAF frame_number=1 frame_type=1 row=8 col=8 "
-        "width=32 height=32 partition=0 segment=1 qindex=0",
+        "width=32 height=32 partition=0 segment=1 qindex=0"
     )
-    for line in required_trace:
-        if line not in result.stdout:
-            raise RuntimeError(
-                "pinned encoder did not prove the frame-one inter-coded B32 leaf "
-                f"({line!r}):\n{result.stdout}"
-            )
+    trace_line = next(
+        (
+            line
+            for line in result.stdout.splitlines()
+            if line.startswith(required_trace_prefix)
+        ),
+        None,
+    )
+    if trace_line is None or any(
+        field not in trace_line for field in (block_inter_mode, block_skip_mode)
+    ):
+        raise RuntimeError(
+            "pinned encoder did not prove the expected prediction mode for the "
+            "frame-one qindex-zero B32 leaf "
+            f"({required_trace_prefix!r}, {block_inter_mode!r}, "
+            f"{block_skip_mode!r}):\n{result.stdout}"
+        )
     return result.stdout
 
 
@@ -211,7 +278,9 @@ def validate_repeatability(first: bytes, second: bytes) -> None:
         )
 
 
-def validate_bitstream(path: Path, canvas_size: int) -> dict[str, Any]:
+def validate_bitstream(
+    path: Path, canvas_size: int, bit_depth: int = 8
+) -> dict[str, Any]:
     container = inspect_container(path)
     if container["ftyp"]["major"] != "avis":
         raise RuntimeError("fixture does not declare an AVIF sequence")
@@ -240,7 +309,7 @@ def validate_bitstream(path: Path, canvas_size: int) -> dict[str, Any]:
         if "sequence_header" in obu
     ]
     expected_sequence = {
-        "bit_depth": 8,
+        "bit_depth": bit_depth,
         "max_width": canvas_size,
         "max_height": canvas_size,
         "monochrome": False,
@@ -380,20 +449,40 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--encoder", type=Path, default=DEFAULT_ENCODER)
     parser.add_argument("--canvas-size", type=int, choices=(60, 64), default=64)
+    parser.add_argument("--bit-depth", type=int, choices=(8, 10), default=8)
     parser.add_argument(
         "--lossless-roi-residual",
         action="store_true",
-        help="change all pixels in the qindex-zero B32 ROI between frames",
+        help="change every pixel in the qindex-zero B32 ROI between frames",
+    )
+    parser.add_argument(
+        "--lossless-roi-impulse-residual",
+        action="store_true",
+        help="add one residual pixel to the qindex-zero B32 ROI",
     )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--reference-output", type=Path)
     parser.add_argument("--receipt-output", type=Path)
     args = parser.parse_args()
     residual_roi = args.lossless_roi_residual
-    if residual_roi and args.canvas_size != 64:
-        parser.error("--lossless-roi-residual requires --canvas-size 64")
+    impulse_residual = args.lossless_roi_impulse_residual
+    if residual_roi and impulse_residual:
+        parser.error("residual options are mutually exclusive")
+    if args.bit_depth == 10 and not impulse_residual:
+        parser.error("the 10-bit mixed-lossless fixture requires --lossless-roi-impulse-residual")
+    if (residual_roi or impulse_residual) and args.canvas_size != 64:
+        parser.error("residual fixtures require --canvas-size 64")
     clipped = args.canvas_size == 60
-    if residual_roi:
+    if args.bit_depth == 10:
+        expected_file_sha256 = HI10_IMPULSE_RESIDUAL_EXPECTED_FILE_SHA256
+        expected_pixel_sha256 = HI10_IMPULSE_RESIDUAL_EXPECTED_PIXEL_SHA256
+        expected_frame_sha256 = HI10_IMPULSE_RESIDUAL_EXPECTED_FRAME_SHA256
+        expected_file_bytes = HI10_IMPULSE_RESIDUAL_EXPECTED_FILE_BYTES
+        output_path = args.output or HI10_IMPULSE_RESIDUAL_ASSET
+        reference_output = args.reference_output or HI10_IMPULSE_RESIDUAL_REFERENCE
+        reference_frame_template = HI10_IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE
+        receipt_output = args.receipt_output or HI10_IMPULSE_RESIDUAL_RECEIPT
+    elif residual_roi:
         expected_file_sha256 = RESIDUAL_EXPECTED_FILE_SHA256
         expected_pixel_sha256 = RESIDUAL_EXPECTED_PIXEL_SHA256
         expected_frame_sha256 = RESIDUAL_EXPECTED_FRAME_SHA256
@@ -402,6 +491,15 @@ def main() -> None:
         reference_output = args.reference_output or RESIDUAL_REFERENCE
         reference_frame_template = RESIDUAL_REFERENCE_FRAME_TEMPLATE
         receipt_output = args.receipt_output or RESIDUAL_RECEIPT
+    elif impulse_residual:
+        expected_file_sha256 = IMPULSE_RESIDUAL_EXPECTED_FILE_SHA256
+        expected_pixel_sha256 = IMPULSE_RESIDUAL_EXPECTED_PIXEL_SHA256
+        expected_frame_sha256 = IMPULSE_RESIDUAL_EXPECTED_FRAME_SHA256
+        expected_file_bytes = IMPULSE_RESIDUAL_EXPECTED_FILE_BYTES
+        output_path = args.output or IMPULSE_RESIDUAL_ASSET
+        reference_output = args.reference_output or IMPULSE_RESIDUAL_REFERENCE
+        reference_frame_template = IMPULSE_RESIDUAL_REFERENCE_FRAME_TEMPLATE
+        receipt_output = args.receipt_output or IMPULSE_RESIDUAL_RECEIPT
     else:
         expected_file_sha256 = (
             CLIPPED_EXPECTED_FILE_SHA256 if clipped else EXPECTED_FILE_SHA256
@@ -412,7 +510,9 @@ def main() -> None:
         expected_frame_sha256 = (
             CLIPPED_EXPECTED_FRAME_SHA256 if clipped else EXPECTED_FRAME_SHA256
         )
-        expected_file_bytes = EXPECTED_FILE_BYTES
+        expected_file_bytes = (
+            CLIPPED_EXPECTED_FILE_BYTES if clipped else EXPECTED_FILE_BYTES
+        )
         output_path = args.output or (CLIPPED_ASSET if clipped else ASSET)
         reference_output = args.reference_output or (
             CLIPPED_REFERENCE if clipped else REFERENCE
@@ -430,10 +530,20 @@ def main() -> None:
         first_path = temporary_root / "first.avif"
         second_path = temporary_root / "second.avif"
         first_trace = run_encoder(
-            encoder, first_path, args.canvas_size, residual_roi=residual_roi
+            encoder,
+            first_path,
+            args.canvas_size,
+            residual_roi=residual_roi,
+            impulse_residual=impulse_residual,
+            bit_depth=args.bit_depth,
         )
         second_trace = run_encoder(
-            encoder, second_path, args.canvas_size, residual_roi=residual_roi
+            encoder,
+            second_path,
+            args.canvas_size,
+            residual_roi=residual_roi,
+            impulse_residual=impulse_residual,
+            bit_depth=args.bit_depth,
         )
         first_raw = first_path.read_bytes()
         second_raw = second_path.read_bytes()
@@ -446,24 +556,32 @@ def main() -> None:
 
         normalized_path = temporary_root / "normalized.avif"
         normalized_path.write_bytes(normalized)
-        bitstream = validate_bitstream(normalized_path, args.canvas_size)
+        bitstream = validate_bitstream(normalized_path, args.canvas_size, args.bit_depth)
         pixels, frame_reports = validate_pillow(
             normalized_path,
             args.canvas_size,
             expected_pixel_sha256,
             expected_frame_sha256,
         )
-        if residual_roi:
-            changed_pixels = sum(
-                pixels[0][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
-                != pixels[1][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
+        if residual_roi or impulse_residual:
+            changed_roi_pixels = [
+                (x, y)
                 for y in range(32, 64)
                 for x in range(32, 64)
+                if pixels[0][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
+                != pixels[1][(y * 64 + x) * 3 : (y * 64 + x) * 3 + 3]
+            ]
+            expected_changed_roi_pixels = (
+                [(x, y) for y in range(32, 64) for x in range(32, 64)]
+                if residual_roi
+                else [(33, 33)]
             )
-            if changed_pixels != 32 * 32:
+            if changed_roi_pixels != expected_changed_roi_pixels:
+                expected_change = "every pixel" if residual_roi else "one pixel at (33, 33)"
                 raise RuntimeError(
-                    "the qindex-zero B32 ROI must change at every Pillow pixel"
+                    f"the qindex-zero B32 ROI must change at {expected_change}"
                 )
+            changed_pixels = len(changed_roi_pixels)
         else:
             changed_pixels = 0
 
@@ -511,6 +629,7 @@ def main() -> None:
         },
         "bitstream": bitstream,
         "lossless_roi_residual_pixels": changed_pixels,
+        "bit_depth": args.bit_depth,
         "encoder_geometry_trace": geometry_trace,
         "repeat_geometry_trace_matches": True,
         "sequence_timestamps_normalized": ["mvhd", "tkhd", "mdhd"],
@@ -528,7 +647,11 @@ def main() -> None:
             f"SHA-256 {frame['sha256']}"
         )
     print(f"Wrote oracle receipt {receipt_output}")
-    print(f"Proved frame-one inter B32 at {bitstream['inter_b32']['pixel_origin']}")
+    block_prediction = "intra" if residual_roi else "inter"
+    print(
+        f"Proved frame-one qindex-zero B32 is {block_prediction}-predicted at "
+        f"{bitstream['inter_b32']['pixel_origin']}"
+    )
 
 
 if __name__ == "__main__":

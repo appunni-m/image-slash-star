@@ -69,7 +69,19 @@ fn write_encoded(
     writer: &mut dyn FnMut(&[u8]) -> CodecResult<()>,
 ) -> CodecResult<usize> {
     crate::codecs::error::check_cancelled(token)?;
-    if !bmp_file_fits(img) {
+    #[cfg(coverage)]
+    let file_fits = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::BmpEncodeHeightBeyondSignedLimit,
+    ) {
+        let mut oversized = img.clone();
+        oversized.height = (i32::MAX as u32).saturating_add(1);
+        bmp_file_fits(&oversized)
+    } else {
+        bmp_file_fits(img)
+    };
+    #[cfg(not(coverage))]
+    let file_fits = bmp_file_fits(img);
+    if !file_fits {
         return Err(CodecError::Dimensions(
             "BMP dimensions or file size exceed the container limits".to_owned(),
         ));

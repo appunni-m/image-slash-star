@@ -8,6 +8,19 @@ mod av1;
 mod container;
 mod samples;
 
+#[cfg(coverage)]
+pub(super) fn inspect_container_for_coverage(
+    data: &[u8],
+) -> super::CodecResult<crate::types::ImageInfo> {
+    let extracted = samples::inspected(data)?;
+    container::inspect(extracted)
+}
+
+#[cfg(coverage)]
+pub(super) fn parse_meta_for_coverage(payload: &[u8]) -> super::CodecResult<()> {
+    container::parse_meta_for_coverage(payload)
+}
+
 #[derive(Clone, Copy)]
 enum PortableYuvMatrix {
     Bt601,
@@ -36,6 +49,11 @@ fn portable_color_conversion(
         // expansion applies.
         ([1, 13, 0], 12, true, (false, false), false) => Some(PortableColorConversion::IdentityRgb),
         ([1, 13, 6], 8 | 10 | 12, true, (false, false) | (true, false) | (true, true), _) => {
+            Some(PortableColorConversion::Yuv(PortableYuvMatrix::Bt601))
+        }
+        // Pillow's ICC fixtures preserve this full-range 8-bit 4:4:4 matrix
+        // declaration while leaving primaries and transfer unspecified.
+        ([2, 2, 6], 8, true, (false, false), false) => {
             Some(PortableColorConversion::Yuv(PortableYuvMatrix::Bt601))
         }
         ([9, 16, 9], 10, true, (false, false), false) => Some(PortableColorConversion::Yuv(

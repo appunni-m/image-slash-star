@@ -4,7 +4,8 @@ use std::sync::{Arc, OnceLock};
 
 use crate::{
     CodecOperation, DecodePolicy, Decoded, DecodedImage, DecodedSequence, ImageError,
-    ImageErrorStage, ImageFormat, ImageInfo, ImageResult, TransferLayout, VerificationScope,
+    ImageErrorStage, ImageFormat, ImageInfo, ImageMode, ImageResult, TransferLayout,
+    VerificationScope,
 };
 
 /// State of one persistent lazy decode cache on an [`EncodedImage`].
@@ -99,6 +100,14 @@ impl<'a> EncodedImageView<'a> {
     #[must_use]
     pub const fn info(&self) -> &ImageInfo {
         &self.info
+    }
+
+    /// Observable pixel/sample mode retained from header inspection.
+    ///
+    /// This does not decode or materialize pixel payloads.
+    #[must_use]
+    pub const fn mode(&self) -> ImageMode {
+        self.info.mode
     }
 
     /// Detected encoded format.
@@ -293,6 +302,14 @@ impl EncodedImage {
     #[must_use]
     pub fn info(&self) -> &ImageInfo {
         &self.inner.info
+    }
+
+    /// Returns the observable pixel/sample mode retained from header inspection.
+    ///
+    /// This reads cached metadata and does not decode or materialize pixels.
+    #[must_use]
+    pub fn mode(&self) -> ImageMode {
+        self.inner.info.mode
     }
 
     /// Returns the detected source container format.

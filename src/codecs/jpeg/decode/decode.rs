@@ -63,7 +63,8 @@ pub(super) fn decode_block(
         let bits = br.read_padded_bits(u32::from(dc_cat));
         *last_dc = last_dc.saturating_add(extend(bits, dc_cat));
     }
-    block_natural[0] = *last_dc;
+    // JCOEF storage is signed 16-bit; the predictor retains full precision.
+    block_natural[0] = last_dc.wrapping_shl(16).wrapping_shr(16);
 
     let mut k = 1usize;
     let mut dc_only = true;
@@ -131,7 +132,8 @@ fn decode_block_fast(
         let bits = br.read_padded_bits(u32::from(dc_category));
         *last_dc = last_dc.saturating_add(extend(bits, dc_category));
     }
-    block_natural[0] = *last_dc;
+    // JCOEF storage is signed 16-bit; the predictor retains full precision.
+    block_natural[0] = last_dc.wrapping_shl(16).wrapping_shr(16);
 
     let mut coefficient = 1usize;
     let mut dc_only = true;
@@ -1109,6 +1111,148 @@ fn reconstruct_baseline_cmyk_direct_safe(
     )))
 }
 
+/// Interleave CMYK planes after IJG upsampling and Pillow's sample inversion.
+pub(super) fn inverted_cmyk_pixels(
+    info: &JpegInfo,
+    comp_buffers: &[Vec<u8>],
+    comp_buf_width: &[usize],
+) -> CodecResult<Vec<u8>> {
+    let width = usize::from(info.width);
+    let height = usize::from(info.height);
+    // Reconstruction derives all four planes from the parsed frame factors.
+    // Retain each plane's own stride and visible extent so MCU padding never
+    // contributes samples to the interpolation filter.
+    let components: [UpsampleComponent<'_>; 4] = std::array::from_fn(|index| {
+        let horizontal_ratio =
+            usize::from(info.max_h_samp.div_euclid(info.components[index].h_samp));
+        let vertical_ratio = usize::from(info.max_v_samp.div_euclid(info.components[index].v_samp));
+        UpsampleComponent {
+            samples: &comp_buffers[index],
+            stride: comp_buf_width[index],
+            width: width.div_ceil(horizontal_ratio),
+            height: height.div_ceil(vertical_ratio),
+            horizontal_ratio,
+            vertical_ratio,
+        }
+    });
+    let output_length = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| CodecError::Dimensions("CMYK JPEG output dimensions overflow".to_owned()))?;
+    let mut pixels = Vec::new();
+    pixels
+        .try_reserve_exact(output_length)
+        .map_err(|_| CodecError::Dimensions("unable to allocate CMYK JPEG output".to_owned()))?;
+
+    if components
+        .iter()
+        .all(|component| (component.horizontal_ratio, component.vertical_ratio) == (1, 1))
+    {
+        // The common 4:4:4 path reads the reconstructed rows directly.
+        for y in 0..height {
+            let rows: [&[u8]; 4] = std::array::from_fn(|index| {
+                let start = y.saturating_mul(components[index].stride);
+                &components[index].samples[start..start.saturating_add(width)]
+            });
+            for x in 0..width {
+                for row in rows {
+                    pixels.push(255u8.saturating_sub(row[x]));
+                }
+            }
+        }
+        return Ok(pixels);
+    }
+
+    // Only four image-width scratch rows are needed, even for tall images.
+    let mut rows: [Vec<u8>; 4] = std::array::from_fn(|_| Vec::new());
+    for row in &mut rows {
+        row.try_reserve_exact(width).map_err(|_| {
+            CodecError::Dimensions("unable to allocate CMYK JPEG component row".to_owned())
+        })?;
+        row.resize(width, 0);
+    }
+    for y in 0..height {
+        for (component, row) in components.iter().zip(&mut rows) {
+            fancy_upsample_row(component, y, row)?;
+        }
+        for x in 0..width {
+            for row in &rows {
+                pixels.push(255u8.saturating_sub(row[x]));
+            }
+        }
+    }
+    Ok(pixels)
+}
+
+/// Assemble three reconstructed component planes with image-width scratch rows.
+pub(super) fn reconstructed_rgb_pixels(
+    info: &JpegInfo,
+    comp_buffers: &[Vec<u8>],
+    comp_buf_width: &[usize],
+    converter: &YccColorConverter,
+) -> CodecResult<Vec<u8>> {
+    let width = usize::from(info.width);
+    let height = usize::from(info.height);
+    let components: [UpsampleComponent<'_>; 3] = std::array::from_fn(|index| {
+        let horizontal_ratio =
+            usize::from(info.max_h_samp.div_euclid(info.components[index].h_samp));
+        let vertical_ratio = usize::from(info.max_v_samp.div_euclid(info.components[index].v_samp));
+        UpsampleComponent {
+            samples: &comp_buffers[index],
+            stride: comp_buf_width[index],
+            width: width.div_ceil(horizontal_ratio),
+            height: height.div_ceil(vertical_ratio),
+            horizontal_ratio,
+            vertical_ratio,
+        }
+    });
+    let row_length = width
+        .checked_mul(3)
+        .ok_or_else(|| CodecError::Dimensions("RGB JPEG row dimensions overflow".to_owned()))?;
+    let output_length = row_length
+        .checked_mul(height)
+        .ok_or_else(|| CodecError::Dimensions("RGB JPEG output dimensions overflow".to_owned()))?;
+    let mut pixels = Vec::new();
+    pixels
+        .try_reserve_exact(output_length)
+        .map_err(|_| CodecError::Dimensions("unable to allocate RGB JPEG output".to_owned()))?;
+    pixels.resize(output_length, 0);
+
+    // Empty scratch rows denote direct borrows of full-resolution planes.
+    let mut scratch: [Vec<u8>; 3] = std::array::from_fn(|_| Vec::new());
+    for (component, row) in components.iter().zip(&mut scratch) {
+        if (component.horizontal_ratio, component.vertical_ratio) != (1, 1) {
+            row.try_reserve_exact(width).map_err(|_| {
+                CodecError::Dimensions("unable to allocate JPEG component row".to_owned())
+            })?;
+            row.resize(width, 0);
+        }
+    }
+    for (y, output) in pixels.chunks_exact_mut(row_length).enumerate() {
+        for (component, row) in components.iter().zip(&mut scratch) {
+            if !row.is_empty() {
+                fancy_upsample_row(component, y, row)?;
+            }
+        }
+        let rows: [&[u8]; 3] = std::array::from_fn(|index| {
+            if scratch[index].is_empty() {
+                let start = y.saturating_mul(components[index].stride);
+                &components[index].samples[start..start.saturating_add(width)]
+            } else {
+                &scratch[index]
+            }
+        });
+        if info.rgb_components {
+            for (x, pixel) in output.as_chunks_mut::<3>().0.iter_mut().enumerate() {
+                *pixel = [rows[0][x], rows[1][x], rows[2][x]];
+            }
+        } else {
+            converter.ycc_to_rgb_batch(rows[0], rows[1], rows[2], output);
+        }
+    }
+    Ok(pixels)
+}
+
 /// Convert Adobe YCCK sample planes into Pillow's CMYK byte convention.
 pub(super) fn ycck_to_cmyk_pixels(
     info: &JpegInfo,
@@ -1331,6 +1475,8 @@ fn reconstruct_baseline_420_direct_safe(
     // Sampling maxima and quant-table count are derived from the checked
     // components and the frame component count, respectively.
     if info.num_components != 3
+        || info.rgb_components
+        || info.width <= 4
         || info.scan_components.len() != 3
         || info.components[0].h_samp != 2
         || info.components[0].v_samp != 2
@@ -1583,6 +1729,8 @@ fn reconstruct_baseline_422_direct_safe(
     converter: &YccColorConverter,
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 3
+        || info.rgb_components
+        || info.width <= 4
         || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 3
         || info.components[0].h_samp != 2
@@ -1739,6 +1887,7 @@ fn reconstruct_baseline_444_direct_safe(
     converter: &YccColorConverter,
 ) -> CodecResult<Option<DecodedImage>> {
     if info.num_components != 3
+        || info.rgb_components
         || info.first_scan_restart_interval != 0
         || info.scan_components.len() != 3
         || info
@@ -1892,6 +2041,22 @@ fn validate_scan_component_order(info: &JpegInfo) -> CodecResult<()> {
                 "JPEG scan components are not in frame order".to_owned(),
             ));
         }
+    }
+    Ok(())
+}
+
+/// Reject ratios that libjpeg cannot expand when loading pixels.
+// Keep frame-only validation out of the reconstruction dispatch's inlining cost.
+#[inline(never)]
+fn validate_sampling_ratios(info: &JpegInfo) -> CodecResult<()> {
+    // The parser already guarantees that every component factor is nonzero.
+    if info.components.iter().any(|component| {
+        !info.max_h_samp.is_multiple_of(component.h_samp)
+            || !info.max_v_samp.is_multiple_of(component.v_samp)
+    }) {
+        return Err(CodecError::Malformed(
+            "fractional JPEG sampling ratios are not supported by the decoder".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -2211,6 +2376,14 @@ fn assemble_baseline_output(
             ColorType::L8,
         ))
     } else if info.num_components == 3 {
+        if info.rgb_components {
+            return Ok(DecodedImage::new(
+                u32::from(info.width),
+                u32::from(info.height),
+                reconstructed_rgb_pixels(info, comp_buffers, comp_buf_width, converter)?,
+                ColorType::Rgb8,
+            ));
+        }
         let y_buf = &comp_buffers[0];
         let y_w = comp_buf_width[0];
         let cb_h_ratio = usize::from(info.max_h_samp.div_euclid(info.components[1].h_samp));
@@ -2299,31 +2472,10 @@ fn assemble_baseline_output(
         // convention even when the Adobe APP14 marker is absent. The
         // no-APP14 CMYK fixture keeps this tied to the oracle instead of the
         // marker alone.
-        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
-        for y in 0..h {
-            for x in 0..w {
-                for component in 0..4 {
-                    let horizontal_ratio = usize::from(
-                        info.max_h_samp
-                            .div_euclid(info.components[component].h_samp),
-                    );
-                    let vertical_ratio = usize::from(
-                        info.max_v_samp
-                            .div_euclid(info.components[component].v_samp),
-                    );
-                    let source_x = x.div_euclid(horizontal_ratio);
-                    let source_y = y.div_euclid(vertical_ratio);
-                    let sample = comp_buffers[component][source_y
-                        .saturating_mul(comp_buf_width[component])
-                        .saturating_add(source_x)];
-                    pixels.push(255u8.saturating_sub(sample));
-                }
-            }
-        }
         Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
-            pixels,
+            inverted_cmyk_pixels(info, comp_buffers, comp_buf_width)?,
             ColorType::Cmyk8,
         ))
     }
@@ -2959,6 +3111,15 @@ pub fn decode(
     // Pillow discovers SOS component-order violations when pixel data is loaded;
     // keep marker-only inspection and verification on the shared parser path.
     validate_scan_component_order(&info)?;
+
+    // libjpeg rejects fractional component ratios when loading pixels. Validate
+    // them before reconstruction can truncate a ratio through integer division;
+    // marker-only inspection and verification still accept the frame header.
+    // With factors limited to 1..=4 by the parser, maxima of one or two
+    // guarantee integral ratios. Only larger layouts need component checks.
+    if info.max_h_samp > 2 || info.max_v_samp > 2 {
+        validate_sampling_ratios(&info)?;
+    }
 
     debug_assert!(!info.scan_components.is_empty());
 

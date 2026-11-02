@@ -265,8 +265,8 @@ pub(super) fn fancy_upsample(
             Ok(out)
         }
         (1, 2) => h1v2_fancy_upsample(src, src_w, src_h),
-        (2, 1) => Ok(h2v1_fancy_upsample(src, src_w, src_h)),
-        (2, 2) => Ok(h2v2_fancy_upsample(src, src_w, src_h)),
+        (2, 1) if src_w > 2 => Ok(h2v1_fancy_upsample(src, src_w, src_h)),
+        (2, 2) if src_w > 2 => Ok(h2v2_fancy_upsample(src, src_w, src_h)),
         _ => {
             // Integer-only nearest-neighbor fallback for other ratios
             let out_w = src_w.saturating_mul(h_ratio);
@@ -297,10 +297,11 @@ pub(super) struct UpsampleComponent<'a> {
 
 /// Upsample one destination row without materializing the full component plane.
 ///
-/// The h1v2, h2v1, and h2v2 branches preserve the same IJG triangle filter and
-/// edge rounding as [`fancy_upsample`]. Other integer ratios use the same
-/// nearest neighbor mapping as its fallback branch. The YCCK caller derives
-/// source dimensions with ceiling division and sizes each output row to the
+/// The h1v2, h2v1, and h2v2 branches preserve the IJG triangle filter and edge
+/// rounding. Like libjpeg's dispatcher, h2v1/h2v2 use replication when the
+/// source width is at most two samples. Other integer ratios also use
+/// replication. CMYK/YCCK callers derive
+/// source dimensions with ceiling division and size each output row to the
 /// image width, so only the final sampling group can be clipped.
 pub(super) fn fancy_upsample_row(
     component: &UpsampleComponent<'_>,
@@ -409,8 +410,8 @@ pub(super) fn fancy_upsample_row(
             let bias = if dst_y.is_multiple_of(2) { 1 } else { 2 };
             upsample_h1v2_row(source_row, adjacent_row, output, bias);
         }
-        (2, 1) => upsample_h2v1_row(source_row, output),
-        (2, 2) => {
+        (2, 1) if src_w > 2 => upsample_h2v1_row(source_row, output),
+        (2, 2) if src_w > 2 => {
             let adjacent_y = if dst_y.is_multiple_of(2) {
                 source_y.saturating_sub(1)
             } else {

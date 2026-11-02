@@ -27,14 +27,16 @@ const FIX_2_562915447: i32 = 20995;
 const FIX_3_072711026: i32 = 25172;
 
 trait FdctVector: Copy + Add<Output = Self> + Mul<Output = Self> + Sub<Output = Self> {
-    fn splat(value: i32) -> Self;
+    fn broadcast<const VALUE: i32>() -> Self;
     fn descale(value: Self, shift: u32) -> Self;
 }
 
 impl FdctVector for i32x4 {
     #[inline(always)]
-    fn splat(value: i32) -> Self {
-        Self::new([value; 4])
+    fn broadcast<const VALUE: i32>() -> Self {
+        // Evaluate the complete broadcast so release kernels load a constant
+        // vector instead of calling a memory-fill helper for each multiplier.
+        const { Self::new([VALUE; 4]) }
     }
 
     #[expect(
@@ -44,10 +46,10 @@ impl FdctVector for i32x4 {
     #[inline(always)]
     fn descale(value: Self, shift: u32) -> Self {
         let bias = match shift {
-            2 => Self::splat(2),
-            11 => Self::splat(1_024),
-            15 => Self::splat(16_384),
-            _ => Self::splat(0),
+            2 => Self::broadcast::<2>(),
+            11 => Self::broadcast::<1_024>(),
+            15 => Self::broadcast::<16_384>(),
+            _ => Self::broadcast::<0>(),
         };
         (value + bias).unbounded_shr_scalar(shift)
     }
@@ -56,8 +58,8 @@ impl FdctVector for i32x4 {
 #[cfg(all(target_arch = "x86_64", target_feature = "avx2"))]
 impl FdctVector for i32x8 {
     #[inline(always)]
-    fn splat(value: i32) -> Self {
-        Self::new([value; 8])
+    fn broadcast<const VALUE: i32>() -> Self {
+        const { Self::new([VALUE; 8]) }
     }
 
     #[expect(
@@ -67,10 +69,10 @@ impl FdctVector for i32x8 {
     #[inline(always)]
     fn descale(value: Self, shift: u32) -> Self {
         let bias = match shift {
-            2 => Self::splat(2),
-            11 => Self::splat(1_024),
-            15 => Self::splat(16_384),
-            _ => Self::splat(0),
+            2 => Self::broadcast::<2>(),
+            11 => Self::broadcast::<1_024>(),
+            15 => Self::broadcast::<16_384>(),
+            _ => Self::broadcast::<0>(),
         };
         (value + bias).unbounded_shr_scalar(shift)
     }
@@ -95,35 +97,38 @@ fn fdct_line<V: FdctVector>(values: [V; 8], first_pass: bool) -> [V; 8] {
     let dc = tmp10 + tmp11;
     let fourth = tmp10 - tmp11;
     let output0 = if first_pass {
-        dc * V::splat(4)
+        dc * V::broadcast::<4>()
     } else {
         V::descale(dc, 2)
     };
     let output4 = if first_pass {
-        fourth * V::splat(4)
+        fourth * V::broadcast::<4>()
     } else {
         V::descale(fourth, 2)
     };
 
-    let z1 = (tmp12 + tmp13) * V::splat(FIX_0_541196100);
+    let z1 = (tmp12 + tmp13) * V::broadcast::<FIX_0_541196100>();
     let even_scale = if first_pass { 11 } else { 15 };
-    let output2 = V::descale(z1 + tmp13 * V::splat(FIX_0_765366865), even_scale);
-    let output6 = V::descale(z1 + tmp12 * V::splat(-FIX_1_847759065), even_scale);
+    let output2 = V::descale(z1 + tmp13 * V::broadcast::<FIX_0_765366865>(), even_scale);
+    let output6 = V::descale(
+        z1 + tmp12 * V::broadcast::<{ -FIX_1_847759065 }>(),
+        even_scale,
+    );
 
     let z1 = tmp4 + tmp7;
     let z2 = tmp5 + tmp6;
     let z3 = tmp4 + tmp6;
     let z4 = tmp5 + tmp7;
-    let z5 = (z3 + z4) * V::splat(FIX_1_175875602);
+    let z5 = (z3 + z4) * V::broadcast::<FIX_1_175875602>();
 
-    let t4 = tmp4 * V::splat(FIX_0_298631336);
-    let t5 = tmp5 * V::splat(FIX_2_053119869);
-    let t6 = tmp6 * V::splat(FIX_3_072711026);
-    let t7 = tmp7 * V::splat(FIX_1_501321110);
-    let z1 = z1 * V::splat(-FIX_0_899976223);
-    let z2 = z2 * V::splat(-FIX_2_562915447);
-    let z3 = z3 * V::splat(-FIX_1_961570560) + z5;
-    let z4 = z4 * V::splat(-FIX_0_390180644) + z5;
+    let t4 = tmp4 * V::broadcast::<FIX_0_298631336>();
+    let t5 = tmp5 * V::broadcast::<FIX_2_053119869>();
+    let t6 = tmp6 * V::broadcast::<FIX_3_072711026>();
+    let t7 = tmp7 * V::broadcast::<FIX_1_501321110>();
+    let z1 = z1 * V::broadcast::<{ -FIX_0_899976223 }>();
+    let z2 = z2 * V::broadcast::<{ -FIX_2_562915447 }>();
+    let z3 = z3 * V::broadcast::<{ -FIX_1_961570560 }>() + z5;
+    let z4 = z4 * V::broadcast::<{ -FIX_0_390180644 }>() + z5;
 
     let output7 = V::descale(t4 + z1 + z3, even_scale);
     let output5 = V::descale(t5 + z2 + z4, even_scale);

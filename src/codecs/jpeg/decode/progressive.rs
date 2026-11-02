@@ -22,7 +22,6 @@ use super::idct::{JPEG_NATURAL_ORDER, YccColorConverter, extend, jpeg_idct_islow
 use super::idct::{dc_only_output, jpeg_idct_islow_dequantized_to_u8_safe};
 use super::implementation::extract_entropy_segments;
 use super::parser::JpegInfo;
-use super::upsample::{crop_component, fancy_upsample};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 use crate::types::{ColorType, DecodedImage};
 
@@ -77,13 +76,12 @@ impl ProgressiveState {
 
 /// Match libjpeg-turbo's signed 16-bit `JCOEF` storage in progressive scans.
 ///
-/// The decoder keeps coefficients in `i32` for reconstruction, but each write
-/// to libjpeg-turbo's coefficient arrays narrows to `JCOEF` (`short`). Decode
-/// the low two bytes explicitly so this matches that storage on every host.
+/// First-scan arithmetic uses `i32`; coefficient arrays retain `JCOEF`
+/// (`short`). Decode the low two bytes explicitly on every host.
 #[inline(always)]
-fn narrow_progressive_coefficient(value: i32) -> i32 {
+fn narrow_progressive_coefficient(value: i32) -> i16 {
     let [low, high, ..] = value.to_le_bytes();
-    i32::from(i16::from_le_bytes([low, high]))
+    i16::from_le_bytes([low, high])
 }
 
 /// Process one DC-first block (decode_mcu_DC_first).
@@ -92,7 +90,7 @@ fn dc_first_block<R: ProgressiveEntropyReader>(
     dc_table: &super::huffman::HuffTable,
     dc_pred: &mut i32,
     al: u8,
-) -> CodecResult<i32> {
+) -> CodecResult<i16> {
     let dc_cat = br.decode_huffman(dc_table)?;
     if dc_cat > 0 {
         if dc_cat > 15 {
@@ -109,9 +107,9 @@ fn dc_first_block<R: ProgressiveEntropyReader>(
 }
 
 /// Process one DC-refinement block (decode_mcu_DC_refine).
-fn dc_refine_block(coeff: &mut i32, p1: i32) {
+fn dc_refine_block(coeff: &mut i16, p1: i16) {
     // One more bit of precision.  The caller reads the bit.
-    *coeff = narrow_progressive_coefficient(*coeff | p1);
+    *coeff |= p1;
 }
 
 /// Process one AC-first block (decode_mcu_AC_first).
@@ -125,7 +123,7 @@ fn ac_first_block<R: ProgressiveEntropyReader>(
     ss: u8,
     se: u8,
     al: u8,
-    coeffs: &mut [i32; 64],
+    coeffs: &mut [i16; 64],
     eobrun: &mut u32,
 ) -> CodecResult<usize> {
     if *eobrun > 0 {
@@ -185,11 +183,11 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
     ss: u8,
     se: u8,
     al: u8,
-    coeffs: &mut [i32; 64],
+    coeffs: &mut [i16; 64],
     eobrun: &mut u32,
 ) -> CodecResult<()> {
-    let p1 = 1i32.wrapping_shl(u32::from(al));
-    let m1 = (-1i32).wrapping_shl(u32::from(al));
+    let p1 = 1i16.wrapping_shl(u32::from(al));
+    let m1 = (-1i16).wrapping_shl(u32::from(al));
     let ss = usize::from(ss);
     let se = usize::from(se);
     let mut k = ss;
@@ -224,9 +222,8 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
                 if coeffs[k] != 0 {
                     let bit = br.read_padded(1);
                     if bit != 0 && (coeffs[k] & p1) == 0 {
-                        coeffs[k] = narrow_progressive_coefficient(
-                            coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 }),
-                        );
+                        // JCOEF writes retain the low 16 bits after refinement.
+                        coeffs[k] = coeffs[k].wrapping_add(if coeffs[k] >= 0 { p1 } else { m1 });
                     }
                 } else {
                     r = r.saturating_sub(1);
@@ -244,7 +241,7 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
                 // to coefficient 63; this buffer is zigzag-indexed, so clamp
                 // that slot to the last coefficient while keeping the write
                 // in bounds.
-                coeffs[k.min(coeffs.len().saturating_sub(1))] = narrow_progressive_coefficient(val);
+                coeffs[k.min(coeffs.len().saturating_sub(1))] = val;
             }
             k = k.saturating_add(1);
         }
@@ -256,9 +253,7 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
             if coeffs[k] != 0 {
                 let bit = br.read_padded(1);
                 if bit != 0 && (coeffs[k] & p1) == 0 {
-                    coeffs[k] = narrow_progressive_coefficient(
-                        coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 }),
-                    );
+                    coeffs[k] = coeffs[k].wrapping_add(if coeffs[k] >= 0 { p1 } else { m1 });
                 }
             }
             k = k.saturating_add(1);
@@ -309,149 +304,256 @@ fn weighted_dc(terms: &[(i32, i32)]) -> i64 {
     })
 }
 
-fn dc_at(blocks: &[[i32; 64]], blocks_x: usize, blocks_y: usize, x: isize, y: isize) -> i32 {
+// Invert the canonical zigzag map at compile time so reconstruction writes
+// the natural-order block contiguously. No lookup table is built per decode.
+const ZIGZAG_POSITION: [usize; 64] = {
+    let mut positions = [0; 64];
+    let mut index = 0usize;
+    while index < JPEG_NATURAL_ORDER.len() {
+        positions[JPEG_NATURAL_ORDER[index]] = index;
+        index = index.saturating_add(1);
+    }
+    positions
+};
+
+#[inline(always)]
+fn natural_coefficients(coefficients: &[i16; 64]) -> [i32; 64] {
+    std::array::from_fn(|index| i32::from(coefficients[ZIGZAG_POSITION[index]]))
+}
+
+#[derive(Clone, Copy)]
+struct CoefficientGrid {
+    stride: usize,
+    width: usize,
+    height: usize,
+    storage_height: usize,
+    rows_per_mcu: usize,
+}
+
+impl CoefficientGrid {
+    fn smoothing_rows(self, row: usize) -> [isize; 5] {
+        let row = row.min(self.height.saturating_sub(1));
+        let mcu = row.div_euclid(self.rows_per_mcu);
+        let total_mcus = self.height.div_ceil(self.rows_per_mcu);
+        let block_rows = if mcu.saturating_add(1) == total_mcus {
+            self.height
+                .saturating_sub(mcu.saturating_mul(self.rows_per_mcu))
+        } else {
+            self.rows_per_mcu
+        };
+        // jdcoefct.c derives its row-edge tests from the current iMCU's
+        // non-dummy row count, including the partial final iMCU. Preserve
+        // that observable selection, which can include a padded DC row.
+        let image_row = mcu
+            .saturating_mul(block_rows)
+            .saturating_add(row.rem_euclid(self.rows_per_mcu));
+        let image_rows = block_rows.saturating_mul(total_mcus);
+        let previous = if image_row > 0 {
+            row.saturating_sub(1)
+        } else {
+            row
+        };
+        let previous_two = if image_row > 1 {
+            row.saturating_sub(2)
+        } else {
+            previous
+        };
+        let next = if image_row < image_rows.saturating_sub(1) {
+            row.saturating_add(1)
+        } else {
+            row
+        };
+        let next_two = if image_row < image_rows.saturating_sub(2) {
+            row.saturating_add(2)
+        } else {
+            next
+        };
+        [previous_two, previous, row, next, next_two].map(bounded_isize)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Smoothing {
+    Disabled,
+    DcOnly { preserve_ac: bool },
+    Partial([i8; 5]),
+}
+
+#[inline(never)]
+fn progressive_smoothing(info: &JpegInfo) -> [Smoothing; 4] {
+    let mut precision = [[-1i8; 10]; 4];
+    let mut ac_received = [false; 4];
+    for scan in &info.scans {
+        for component in &scan.components {
+            ac_received[component.comp_index] |= scan.se > 0;
+            for bits in precision[component.comp_index]
+                .iter_mut()
+                .take(usize::from(scan.se).saturating_add(1))
+                .skip(usize::from(scan.ss))
+            {
+                *bits = scan.al.cast_signed();
+            }
+        }
+    }
+    let mut modes = [Smoothing::Disabled; 4];
+    // Missing tables still fail in the checked reconstruction path below.
+    // Smoothing is optional and requires known DC and nonzero first-ten
+    // quantizers for every component, matching smoothing_ok().
+    for (index, component) in info.components.iter().enumerate() {
+        if precision[index][0] < 0
+            || !info
+                .quant_tables
+                .get(usize::from(component.quant_tbl))
+                .and_then(Option::as_ref)
+                .is_some_and(|quant| quant[..10].iter().all(|&value| value != 0))
+        {
+            return modes;
+        }
+    }
+    for (index, bits) in precision.iter().take(info.components.len()).enumerate() {
+        modes[index] = if bits[1..].iter().all(|&value| value < 0) {
+            Smoothing::DcOnly {
+                preserve_ac: ac_received[index],
+            }
+        } else if bits[1..6].iter().any(|&value| value != 0) {
+            Smoothing::Partial([bits[1], bits[2], bits[3], bits[4], bits[5]])
+        } else {
+            Smoothing::Disabled
+        };
+    }
+    modes
+}
+
+#[inline(always)]
+fn dc_at(blocks: &[[i16; 64]], grid: CoefficientGrid, x: isize, y: isize) -> i32 {
     let clamped_x = x
-        .clamp(0, bounded_isize(blocks_x.saturating_sub(1)))
+        .clamp(0, bounded_isize(grid.width.saturating_sub(1)))
         .cast_unsigned();
     let clamped_y = y
-        .clamp(0, bounded_isize(blocks_y.saturating_sub(1)))
+        .clamp(0, bounded_isize(grid.storage_height.saturating_sub(1)))
         .cast_unsigned();
-    blocks[clamped_y.saturating_mul(blocks_x).saturating_add(clamped_x)][0]
+    i32::from(
+        blocks[clamped_y
+            .saturating_mul(grid.stride)
+            .saturating_add(clamped_x)][0],
+    )
+}
+
+// Non-DC-interpolating estimates from jdcoefct.c, in the first five AC
+// zigzag positions. Each term is (weight, horizontal offset, vertical offset).
+const PARTIAL_SMOOTHING_WEIGHTS: [&[(i32, isize, isize)]; 5] = [
+    &[(-7, -2, 0), (50, -1, 0), (-50, 1, 0), (7, 2, 0)],
+    &[(-7, 0, -2), (50, 0, -1), (-50, 0, 1), (7, 0, 2)],
+    &[
+        (-1, 0, -2),
+        (13, 0, -1),
+        (-24, 0, 0),
+        (13, 0, 1),
+        (-1, 0, 2),
+    ],
+    &[
+        (1, 2, -1),
+        (1, -2, 1),
+        (-10, -1, 1),
+        (10, 1, 1),
+        (-1, -1, -2),
+        (-1, 2, 1),
+        (1, -1, 2),
+        (-1, 1, 2),
+        (1, 1, -2),
+        (-1, -2, -1),
+        (10, -1, -1),
+        (-10, 1, -1),
+    ],
+    &[
+        (-1, -2, 0),
+        (13, -1, 0),
+        (-24, 0, 0),
+        (13, 1, 0),
+        (-1, 2, 0),
+    ],
+];
+
+#[inline(never)]
+fn smooth_partial_block(
+    blocks: &[[i16; 64]],
+    grid: CoefficientGrid,
+    block_idx: usize,
+    quant: &[i32; 64],
+    precision: [i8; 5],
+    block: &mut [i32; 64],
+) {
+    let x = bounded_isize(block_idx.rem_euclid(grid.stride));
+    let rows = grid.smoothing_rows(block_idx.div_euclid(grid.stride));
+    for (index, bits) in precision.into_iter().enumerate() {
+        let natural = JPEG_NATURAL_ORDER[index.saturating_add(1)];
+        if bits == 0 || block[natural] != 0 {
+            continue;
+        }
+        let sum = PARTIAL_SMOOTHING_WEIGHTS[index]
+            .iter()
+            .fold(0i64, |sum, &(weight, dx, dy)| {
+                let y = rows[dy.saturating_add(2).cast_unsigned()];
+                let dc = dc_at(blocks, grid, x.saturating_add(dx), y);
+                sum.saturating_add(i64::from(weight).saturating_mul(i64::from(dc)))
+            });
+        let mut estimate = smooth_pred(
+            i64::from(quant[0]).saturating_mul(sum),
+            i64::from(quant[natural]),
+        );
+        if bits > 0 {
+            let limit = 1i32
+                .wrapping_shl(u32::from(bits.cast_unsigned()))
+                .saturating_sub(1);
+            estimate = estimate.clamp(limit.saturating_neg(), limit);
+        }
+        block[natural] = i32::from(narrow_progressive_coefficient(estimate));
+    }
 }
 
 fn smooth_dc_only_block(
-    blocks: &[[i32; 64]],
-    blocks_x: usize,
-    blocks_y: usize,
+    blocks: &[[i16; 64]],
+    grid: CoefficientGrid,
     block_idx: usize,
     quant_natural: &[i32; 64],
     workspace: &mut [i32; 64],
+    preserve_ac: bool,
 ) {
-    workspace.fill(0);
-    let x = bounded_isize(block_idx.rem_euclid(blocks_x));
-    let y = bounded_isize(block_idx.div_euclid(blocks_x));
+    // AC scans above the first nine zigzag positions do not disable DC
+    // interpolation. Preserve their received coefficients in the copy.
+    if preserve_ac {
+        *workspace = natural_coefficients(&blocks[block_idx]);
+    } else {
+        workspace.fill(0);
+    }
+    let x = bounded_isize(block_idx.rem_euclid(grid.stride));
+    let rows = grid.smoothing_rows(block_idx.div_euclid(grid.stride));
 
-    let dc01 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(2),
-        y.saturating_sub(2),
-    );
-    let dc02 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(1),
-        y.saturating_sub(2),
-    );
-    let dc03 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_sub(2));
-    let dc04 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(1),
-        y.saturating_sub(2),
-    );
-    let dc05 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(2),
-        y.saturating_sub(2),
-    );
-    let dc06 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(2),
-        y.saturating_sub(1),
-    );
-    let dc07 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(1),
-        y.saturating_sub(1),
-    );
-    let dc08 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_sub(1));
-    let dc09 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(1),
-        y.saturating_sub(1),
-    );
-    let dc10 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(2),
-        y.saturating_sub(1),
-    );
-    let dc11 = dc_at(blocks, blocks_x, blocks_y, x.saturating_sub(2), y);
-    let dc12 = dc_at(blocks, blocks_x, blocks_y, x.saturating_sub(1), y);
-    let dc13 = dc_at(blocks, blocks_x, blocks_y, x, y);
-    let dc14 = dc_at(blocks, blocks_x, blocks_y, x.saturating_add(1), y);
-    let dc15 = dc_at(blocks, blocks_x, blocks_y, x.saturating_add(2), y);
-    let dc16 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(2),
-        y.saturating_add(1),
-    );
-    let dc17 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(1),
-        y.saturating_add(1),
-    );
-    let dc18 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_add(1));
-    let dc19 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(1),
-        y.saturating_add(1),
-    );
-    let dc20 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(2),
-        y.saturating_add(1),
-    );
-    let dc21 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(2),
-        y.saturating_add(2),
-    );
-    let dc22 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_sub(1),
-        y.saturating_add(2),
-    );
-    let dc23 = dc_at(blocks, blocks_x, blocks_y, x, y.saturating_add(2));
-    let dc24 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(1),
-        y.saturating_add(2),
-    );
-    let dc25 = dc_at(
-        blocks,
-        blocks_x,
-        blocks_y,
-        x.saturating_add(2),
-        y.saturating_add(2),
-    );
+    let dc01 = dc_at(blocks, grid, x.saturating_sub(2), rows[0]);
+    let dc02 = dc_at(blocks, grid, x.saturating_sub(1), rows[0]);
+    let dc03 = dc_at(blocks, grid, x, rows[0]);
+    let dc04 = dc_at(blocks, grid, x.saturating_add(1), rows[0]);
+    let dc05 = dc_at(blocks, grid, x.saturating_add(2), rows[0]);
+    let dc06 = dc_at(blocks, grid, x.saturating_sub(2), rows[1]);
+    let dc07 = dc_at(blocks, grid, x.saturating_sub(1), rows[1]);
+    let dc08 = dc_at(blocks, grid, x, rows[1]);
+    let dc09 = dc_at(blocks, grid, x.saturating_add(1), rows[1]);
+    let dc10 = dc_at(blocks, grid, x.saturating_add(2), rows[1]);
+    let dc11 = dc_at(blocks, grid, x.saturating_sub(2), rows[2]);
+    let dc12 = dc_at(blocks, grid, x.saturating_sub(1), rows[2]);
+    let dc13 = dc_at(blocks, grid, x, rows[2]);
+    let dc14 = dc_at(blocks, grid, x.saturating_add(1), rows[2]);
+    let dc15 = dc_at(blocks, grid, x.saturating_add(2), rows[2]);
+    let dc16 = dc_at(blocks, grid, x.saturating_sub(2), rows[3]);
+    let dc17 = dc_at(blocks, grid, x.saturating_sub(1), rows[3]);
+    let dc18 = dc_at(blocks, grid, x, rows[3]);
+    let dc19 = dc_at(blocks, grid, x.saturating_add(1), rows[3]);
+    let dc20 = dc_at(blocks, grid, x.saturating_add(2), rows[3]);
+    let dc21 = dc_at(blocks, grid, x.saturating_sub(2), rows[4]);
+    let dc22 = dc_at(blocks, grid, x.saturating_sub(1), rows[4]);
+    let dc23 = dc_at(blocks, grid, x, rows[4]);
+    let dc24 = dc_at(blocks, grid, x.saturating_add(1), rows[4]);
+    let dc25 = dc_at(blocks, grid, x.saturating_add(2), rows[4]);
 
     let q00 = i64::from(quant_natural[0]);
     let q01 = i64::from(quant_natural[1]);
@@ -632,6 +734,9 @@ fn smooth_dc_only_block(
         ])),
         q00,
     );
+    for &index in &JPEG_NATURAL_ORDER[..10] {
+        workspace[index] = i32::from(narrow_progressive_coefficient(workspace[index]));
+    }
 }
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
@@ -734,9 +839,10 @@ pub(super) fn progressive_reconstruct(
         );
     }
 
-    // Coefficient storage: [component][block_idx][64] in zigzag order
-    let mut coeff_storage: Vec<Vec<[i32; 64]>> = (0..component_count)
-        .map(|component_index| vec![[0i32; 64]; comp_num_blocks[component_index]])
+    // Store JCOEF directly: 128 bytes per block, in zigzag order. Widen only
+    // when smoothing or dequantizing, after all scan writes have narrowed.
+    let mut coeff_storage: Vec<Vec<[i16; 64]>> = (0..component_count)
+        .map(|component_index| vec![[0i16; 64]; comp_num_blocks[component_index]])
         .collect();
     let mut comp_buffers: Vec<Vec<u8>> = (0..component_count)
         .map(|component_index| {
@@ -761,7 +867,11 @@ pub(super) fn progressive_reconstruct(
                 "progressive JPEG spectral selection exceeds 63".to_owned(),
             ));
         }
-        let extracted_segments = (scan.restart_interval != 0)
+        // Empty progressive scans still consume padded bits. Keep them on
+        // the single-segment path even with a declared restart interval;
+        // the extractor otherwise drops an empty scan before a normal marker.
+        let extracted_segments = (scan.restart_interval != 0
+            && scan.entropy_start != scan.entropy_end)
             .then(|| extract_entropy_segments(data, scan.entropy_start, scan.entropy_end));
         let single_segment = [(scan.entropy_start, scan.entropy_end)];
         let segments = extracted_segments
@@ -867,7 +977,7 @@ pub(super) fn progressive_reconstruct(
                             )?;
                         }
                     } else if is_dc_refine {
-                        let p1 = 1i32.wrapping_shl(u32::from(scan.al));
+                        let p1 = 1i16.wrapping_shl(u32::from(scan.al));
                         for &block_idx in block_list {
                             // DC refine: read 1 bit, OR into coefficient
                             let bit = br.read_padded(1);
@@ -930,14 +1040,20 @@ pub(super) fn progressive_reconstruct(
     }
 
     // ── Final IDCT + assembly ────────────────────────────────────────────
-    let smooth_dc_only = info.scans.iter().all(|scan| scan.ss == 0 && scan.se == 0);
+    let smoothing = progressive_smoothing(info);
     let mut block_natural = [0i32; 64];
     let mut workspace = [0i32; 64];
     for comp_idx in 0..usize::from(info.num_components) {
         let comp = &info.components[comp_idx];
         let buf_w = comp_buf_width[comp_idx];
         let blocks_x = buf_w.div_euclid(8);
-        let blocks_y = comp_buf_height[comp_idx].div_euclid(8);
+        let grid = CoefficientGrid {
+            stride: blocks_x,
+            width: comp_scan_mcus_x[comp_idx],
+            height: comp_scan_mcus_y[comp_idx],
+            storage_height: comp_buf_height[comp_idx].div_euclid(8),
+            rows_per_mcu: usize::from(comp.v_samp),
+        };
         let quant_table = info
             .quant_tables
             .get(usize::from(comp.quant_tbl))
@@ -950,37 +1066,44 @@ pub(super) fn progressive_reconstruct(
         for (block_idx, coeffs) in coeff_storage[comp_idx].iter().enumerate() {
             let block_y = block_idx.div_euclid(blocks_x).saturating_mul(8);
             let block_x = block_idx.rem_euclid(blocks_x).saturating_mul(8);
-            if smooth_dc_only {
+            if let Smoothing::DcOnly { preserve_ac } = smoothing[comp_idx] {
                 smooth_dc_only_block(
                     &coeff_storage[comp_idx],
-                    blocks_x,
-                    blocks_y,
+                    grid,
                     block_idx,
                     &quant_natural,
                     &mut block_natural,
+                    preserve_ac,
                 );
                 for i in 0..64 {
                     block_natural[i] = block_natural[i].saturating_mul(quant_natural[i]);
                 }
             } else {
-                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-                let mut high_horizontal_nonzero = false;
-                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-                let mut has_ac = false;
-                for i in 0..64 {
-                    let natural_index = JPEG_NATURAL_ORDER[i];
-                    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-                    {
-                        block_natural[natural_index] = coeffs[i];
-                        high_horizontal_nonzero |= coeffs[i] != 0 && natural_index & 4 != 0;
-                        has_ac |= coeffs[i] != 0 && natural_index != 0;
-                    }
-                    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
-                    {
-                        block_natural[natural_index] =
-                            coeffs[i].saturating_mul(quant_natural[natural_index]);
-                    }
+                block_natural = natural_coefficients(coeffs);
+                if let Smoothing::Partial(precision) = smoothing[comp_idx] {
+                    smooth_partial_block(
+                        &coeff_storage[comp_idx],
+                        grid,
+                        block_idx,
+                        &quant_natural,
+                        precision,
+                        &mut block_natural,
+                    );
                 }
+                #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+                for (coefficient, &quantizer) in block_natural.iter_mut().zip(&quant_natural) {
+                    *coefficient = coefficient.saturating_mul(quantizer);
+                }
+                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+                let has_ac = block_natural[1..]
+                    .iter()
+                    .any(|&coefficient| coefficient != 0);
+                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+                let high_horizontal_nonzero = block_natural
+                    .as_chunks::<8>()
+                    .0
+                    .iter()
+                    .any(|row| row[4..].iter().any(|&coefficient| coefficient != 0));
                 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
                 if progressive_dequantize_block(
                     &mut block_natural,
@@ -1031,61 +1154,15 @@ pub(super) fn progressive_reconstruct(
             ColorType::L8,
         ))
     } else if info.num_components == 3 {
-        let y_buf = &comp_buffers[0];
-        let y_w = comp_buf_width[0];
-        let h_ratio = usize::from(info.max_h_samp.div_euclid(info.components[1].h_samp));
-        let v_ratio = usize::from(info.max_v_samp.div_euclid(info.components[1].v_samp));
-        let chroma_src_w = w.div_ceil(h_ratio);
-        let chroma_src_h = h.div_ceil(v_ratio);
-        let cb_cropped = crop_component(
-            &comp_buffers[1],
-            comp_buf_width[1],
-            comp_buf_height[1],
-            chroma_src_w,
-            chroma_src_h,
-        );
-        let cr_cropped = crop_component(
-            &comp_buffers[2],
-            comp_buf_width[2],
-            comp_buf_height[2],
-            chroma_src_w,
-            chroma_src_h,
-        );
-        let cb_up = fancy_upsample(
-            &cb_cropped,
-            chroma_src_w,
-            chroma_src_h,
-            h_ratio,
-            v_ratio,
-            w,
-            h,
-        )?;
-        let cr_up = fancy_upsample(
-            &cr_cropped,
-            chroma_src_w,
-            chroma_src_h,
-            h_ratio,
-            v_ratio,
-            w,
-            h,
-        )?;
-        let chroma_stride = chroma_src_w.saturating_mul(h_ratio);
-        let mut pixels = vec![0u8; w.saturating_mul(h).saturating_mul(3)];
-        for y in 0..h {
-            let y_start = y.saturating_mul(y_w);
-            let chroma_start = y.saturating_mul(chroma_stride);
-            let output_start = y.saturating_mul(w).saturating_mul(3);
-            converter.ycc_to_rgb_batch(
-                &y_buf[y_start..y_start.saturating_add(w)],
-                &cb_up[chroma_start..chroma_start.saturating_add(w)],
-                &cr_up[chroma_start..chroma_start.saturating_add(w)],
-                &mut pixels[output_start..output_start.saturating_add(w.saturating_mul(3))],
-            );
-        }
         Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
-            pixels,
+            super::implementation::reconstructed_rgb_pixels(
+                info,
+                &comp_buffers,
+                &comp_buf_width,
+                converter,
+            )?,
             ColorType::Rgb8,
         ))
     } else {
@@ -1104,33 +1181,10 @@ pub(super) fn progressive_reconstruct(
                 ColorType::Cmyk8,
             ));
         }
-        let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
-        for y in 0..h {
-            for x in 0..w {
-                for component in 0..4 {
-                    let horizontal_ratio = usize::from(
-                        info.max_h_samp
-                            .div_euclid(info.components[component].h_samp),
-                    );
-                    let vertical_ratio = usize::from(
-                        info.max_v_samp
-                            .div_euclid(info.components[component].v_samp),
-                    );
-                    let source_x = x.div_euclid(horizontal_ratio);
-                    let source_y = y.div_euclid(vertical_ratio);
-                    let sample = comp_buffers[component][source_y
-                        .saturating_mul(comp_buf_width[component])
-                        .saturating_add(source_x)];
-                    // Pillow exposes four-component JPEGs through inverted
-                    // CMYK bytes even when Adobe APP14 metadata is absent.
-                    pixels.push(255u8.saturating_sub(sample));
-                }
-            }
-        }
         Ok(DecodedImage::new(
             u32::from(info.width),
             u32::from(info.height),
-            pixels,
+            super::implementation::inverted_cmyk_pixels(info, &comp_buffers, &comp_buf_width)?,
             ColorType::Cmyk8,
         ))
     }

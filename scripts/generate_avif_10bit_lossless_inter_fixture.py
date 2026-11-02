@@ -59,8 +59,23 @@ ASSET_CLIPPED_B32_28X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "av
 ASSET_CLIPPED_B32_56X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
     "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif"
 )
+ASSET_CLIPPED_B32_63X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+    "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_63x64.avif"
+)
 ASSET_CLIPPED_B32_12BIT_56X64 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
     "animated_lossless_inter_420_clipped_b32x32_12bit_partition32_56x64.avif"
+)
+ASSET_CLIPPED_B32_31X32 = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+    "animated_lossless_inter_420_clipped_b32x32_10bit_31x32.avif"
+)
+ASSET_CLIPPED_B32_31X32_PARTITION32 = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "input"
+    / "images"
+    / "avif"
+    / "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32.avif"
 )
 ENCODER_SOURCE = ROOT / "scripts" / "avif_fixture_oracle" / (
     "encode_lossless_inter_10bit.c"
@@ -150,6 +165,34 @@ FIXTURE_SPECS = {
             "15b9ec6a29475ae276ce6c118088943f352ac2b383f83218a0ce133cbd0ac420",
         ),
     },
+    "clipped_b32x32_10bit_31x32": {
+        "asset": ASSET_CLIPPED_B32_31X32,
+        "width": 31,
+        "height": 32,
+        "speed": 8,
+        "partition_size": 0,
+        "expected_file_sha256": (
+            "843526363c1a61d5957ad85aa6e43d32c4fc6ff95f84484ffca4c87a5413defd"
+        ),
+        "expected_frame_sha256": (
+            "101bf9e4f890ca497feee903d558881c36e1dd47d76dc44ae2a718742a86c203",
+            "ed4377be1f8843dd713ff09655aaa531731da368c18965685c2de1616fdb5a8a",
+        ),
+    },
+    "clipped_b32x32_10bit_partition32_31x32": {
+        "asset": ASSET_CLIPPED_B32_31X32_PARTITION32,
+        "width": 31,
+        "height": 32,
+        "speed": 0,
+        "partition_size": 32,
+        "expected_file_sha256": (
+            "3965e171dbbc38077d36b7dbf93ac7cb17aeec94efc99cb3deb8c95b480ea325"
+        ),
+        "expected_frame_sha256": (
+            "101bf9e4f890ca497feee903d558881c36e1dd47d76dc44ae2a718742a86c203",
+            "ed4377be1f8843dd713ff09655aaa531731da368c18965685c2de1616fdb5a8a",
+        ),
+    },
     "clipped_b32x32_10bit_partition32_56x64": {
         "asset": ASSET_CLIPPED_B32_56X64,
         "width": 56,
@@ -167,6 +210,25 @@ FIXTURE_SPECS = {
         "expected_frame_sha256": (
             "8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100",
             "3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6",
+        ),
+    },
+    "clipped_b32x32_10bit_partition32_63x64": {
+        "asset": ASSET_CLIPPED_B32_63X64,
+        "width": 63,
+        "height": 64,
+        "speed": 0,
+        "partition_size": 32,
+        "patch_x": 34,
+        "patch_y": 4,
+        "patch_width": 16,
+        "patch_height": 24,
+        "patch_pattern": "texture",
+        "expected_file_sha256": (
+            "248ea28edff232b792c3f9e71b05ae6762f0f807b9981cd91ba9ea7ff19da42f"
+        ),
+        "expected_frame_sha256": (
+            "6c088ee357ba84f6f0a9f02fa6f7c0bfd1dc8ec4c2e014610152fd239a896d81",
+            "340a4a70b2f0ad892507c68e1302abd01539c4376bd10831e0ea980605a99741",
         ),
     },
     "clipped_b32x32_12bit_partition32_56x64": {
@@ -230,6 +292,27 @@ FIXTURE_SPECS = {
         "expected_frame_sha256": (
             "1fa5eece83c707a1d3c89c7027db4b774a88315352b60bd95ceceabef4972d90",
             "a1c2d65db9e8e6d621462be1bc0567a3ad266856e95b3cb66d3e35f41c399ef6",
+        ),
+    },
+    "clipped_b16x16_10bit_partition16_60x64": {
+        "asset": ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / (
+            "animated_lossless_inter_420_clipped_b16x16_10bit_partition16_60x64.avif"
+        ),
+        "width": 60,
+        "height": 64,
+        "speed": 0,
+        "partition_size": 16,
+        "patch_x": 48,
+        "patch_y": 4,
+        "patch_width": 8,
+        "patch_height": 16,
+        "patch_pattern": "texture",
+        "expected_file_sha256": (
+            "ce481c1839200b05932d69730174d5967973aa7f4b3af874a108f2660f01142f"
+        ),
+        "expected_frame_sha256": (
+            "2810b19fbc170d3fa9a698a92cea1cf7d051b3b5544f0fc9a633f367f269fedf",
+            "587d39793c288e38d41fa9ef5ea92ce84c045b9b31bcac72e30b5869140c26e0",
         ),
     },
 }
@@ -541,7 +624,10 @@ def pillow_frames(
                 or digest != expected_hash
                 or duration != 100
             ):
-                raise RuntimeError(f"Pillow frame {index} differs from its pinned reference")
+                raise RuntimeError(
+                    f"Pillow frame {index} differs from its pinned reference: "
+                    f"sha256={digest}, duration={duration}"
+                )
             frames.append(
                 {
                     "index": index,
@@ -553,6 +639,47 @@ def pillow_frames(
                 }
             )
     return frames
+
+
+def check_fixtures(fixture: str | None) -> None:
+    selected_specs = {
+        name: spec
+        for name, spec in FIXTURE_SPECS.items()
+        if fixture is None or name == fixture
+    }
+    reports = []
+    for name, spec in selected_specs.items():
+        asset = spec["asset"]
+        encoded = asset.read_bytes()
+        asset_hash = sha256(encoded)
+        if asset_hash != spec["expected_file_sha256"]:
+            raise RuntimeError(f"{name} normalized fixture hash differs from pin: {asset_hash}")
+        obu_sample_hashes = validate_bitstream(
+            asset,
+            spec["width"],
+            spec["height"],
+            spec.get("bit_depth", 10),
+            spec.get("monochrome", False),
+        )
+        reports.append(
+            {
+                "fixture": name,
+                "asset": asset.relative_to(ROOT).as_posix(),
+                "asset_bytes": len(encoded),
+                "asset_sha256": asset_hash,
+                "obu_sample_hashes": [
+                    {"sample": sample, "sha256": digest}
+                    for sample, digest in obu_sample_hashes
+                ],
+                "frames": pillow_frames(
+                    asset,
+                    spec["width"],
+                    spec["height"],
+                    spec["expected_frame_sha256"],
+                ),
+            }
+        )
+    print(json.dumps({"assets": reports}, indent=2, sort_keys=True))
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -751,8 +878,8 @@ def generate(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--aom-source", type=Path, required=True)
-    parser.add_argument("--libavif-source", type=Path, required=True)
+    parser.add_argument("--aom-source", type=Path)
+    parser.add_argument("--libavif-source", type=Path)
     parser.add_argument("--cmake", default="cmake")
     parser.add_argument("--ninja", default="ninja")
     parser.add_argument("--cc", default=os.environ.get("CC", "cc"))
@@ -763,10 +890,22 @@ def main() -> None:
         type=Path,
         help="Optional staging output for exactly one selected --fixture",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Verify committed fixture hashes, AV1 headers, and pinned Pillow pixels",
+    )
     args = parser.parse_args()
     if not 1 <= args.jobs <= 64:
         parser.error("--jobs must be in the range 1..64")
     try:
+        if args.check:
+            if args.output is not None:
+                parser.error("--output cannot be used with --check")
+            check_fixtures(args.fixture)
+            return
+        if args.aom_source is None or args.libavif_source is None:
+            parser.error("--aom-source and --libavif-source are required unless --check is used")
         generate(args)
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         parser.exit(1, f"error: {error}\n")

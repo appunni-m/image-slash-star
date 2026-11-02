@@ -1,9 +1,10 @@
 //! Forward VP8L spatial predictor selection.
 //!
-//! This is the lossless method-four path through libwebp 1.6.0's
-//! `VP8LResidualImage` (`src/enc/predictor_enc.c:34-840`). The pinned Pillow
-//! profile has one initial sampling (`bits = 3`), reducing the general routine
-//! to per-tile mode selection plus uniform-map sampling optimization.
+//! Implements libwebp 1.6.0's `VP8LResidualImage` selection for the pinned
+//! Pillow encoder. Method four selects modes on its initial tile grid;
+//! methods five and six also search bounded sampling grids. Both paths retain
+//! the reference entropy arithmetic, mode tie order and map optimization.
+//! Internal ALPH streams preserve hidden RGB through the predictor config.
 
 #![warn(clippy::all)]
 #![deny(
@@ -27,7 +28,8 @@
     clippy::cast_sign_loss
 )]
 
-use super::cross_color::{combined_shannon_entropy, optimize_sampling, prediction_bias};
+use super::backward_refs::fast_slog;
+use super::cross_color::{optimize_sampling, prediction_bias};
 
 const ARGB_BLACK: u32 = 0xff00_0000;
 const MODE_COUNT: usize = 14;
@@ -38,6 +40,84 @@ const MAX_INITIAL_TRANSFORM_BITS: u8 = 6;
 const MAX_TRANSFORM_BITS: u8 = 9;
 const MAX_PREDICTOR_IMAGE_SIZE: usize = 1 << 14;
 
+// Track populated symbols alongside counts so entropy evaluation can skip
+// empty bins. Both arrays remain local and reusable across predictor modes.
+struct TileHistogram {
+    counts: [u32; HISTOGRAM_SIZE],
+    symbols: [[u8; 256]; 4],
+    symbol_counts: [u16; 4],
+}
+
+impl TileHistogram {
+    fn new() -> Self {
+        Self {
+            counts: [0; HISTOGRAM_SIZE],
+            symbols: [[0; 256]; 4],
+            symbol_counts: [0; 4],
+        }
+    }
+
+    fn clear(&mut self) {
+        self.counts.fill(0);
+        self.symbol_counts.fill(0);
+    }
+
+    #[inline]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "four byte planes each contain at most 256 distinct symbols and validated tile geometry bounds every population"
+    )]
+    fn add_pixel(&mut self, pixel: u32) {
+        for (plane, symbol) in pixel.to_le_bytes().into_iter().rev().enumerate() {
+            let index = plane * 256 + usize::from(symbol);
+            if self.counts[index] == 0 {
+                // Record a symbol only on its first occurrence. Clearing
+                // the lengths makes earlier entries unreachable next trial.
+                self.symbols[plane][usize::from(self.symbol_counts[plane])] = symbol;
+                self.symbol_counts[plane] += 1;
+            }
+            self.counts[index] += 1;
+        }
+    }
+}
+
+// The accumulated population is unchanged while a tile's fourteen modes
+// compete. Retain its exact slog terms and replace only the winning bins.
+struct AccumulatedHistogram {
+    counts: [u32; HISTOGRAM_SIZE],
+    slog_terms: [u64; HISTOGRAM_SIZE],
+    entropy_terms: [u64; 4],
+    samples: u32,
+}
+
+impl AccumulatedHistogram {
+    fn new() -> Self {
+        Self {
+            counts: [0; HISTOGRAM_SIZE],
+            slog_terms: [0; HISTOGRAM_SIZE],
+            entropy_terms: [0; 4],
+            samples: 0,
+        }
+    }
+
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "validated WebP geometry bounds populations and entropy sums; each removed slog term is already present in its plane sum"
+    )]
+    fn add_tile(&mut self, tile: &TileHistogram, samples: u32) {
+        for plane in 0..4 {
+            for &symbol in &tile.symbols[plane][..usize::from(tile.symbol_counts[plane])] {
+                let index = plane * 256 + usize::from(symbol);
+                self.entropy_terms[plane] -= self.slog_terms[index];
+                self.counts[index] += tile.counts[index];
+                self.slog_terms[index] = fast_slog(self.counts[index]);
+                self.entropy_terms[plane] += self.slog_terms[index];
+            }
+        }
+        self.samples += samples;
+    }
+}
+
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
@@ -46,6 +126,12 @@ struct PixelPosition {
     x: usize,
     y: usize,
     row_width: usize,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct PredictorConfig {
+    pub(crate) bits: u8,
+    pub(crate) preserve_hidden_rgb: bool,
 }
 
 /// Reusable storage for the predictor transform's tile and row work.
@@ -164,15 +250,6 @@ fn subtract_pixels(pixel: u32, prediction: u32) -> u32 {
     }))
 }
 
-#[inline]
-fn update_histogram(histogram: &mut [u32; HISTOGRAM_SIZE], pixel: u32) {
-    let bytes = pixel.to_le_bytes();
-    for (plane, byte) in bytes.into_iter().rev().enumerate() {
-        let index = plane.wrapping_mul(256).wrapping_add(usize::from(byte));
-        histogram[index] = histogram[index].wrapping_add(1);
-    }
-}
-
 // Dimensions and tile origins come from validated encoder geometry. Keeping
 // direct index arithmetic here mirrors libwebp's tile traversal.
 #[allow(
@@ -181,7 +258,7 @@ fn update_histogram(histogram: &mut [u32; HISTOGRAM_SIZE], pixel: u32) {
 )]
 #[allow(
     clippy::too_many_arguments,
-    reason = "tile geometry, mode, reusable row buffers, and cancellation are independent inputs to the reference histogram scan"
+    reason = "tile geometry, mode, reusable row buffers, histogram output, and cancellation are independently consumed by the reference scan"
 )]
 fn tile_histogram(
     source: &[u32],
@@ -191,13 +268,15 @@ fn tile_histogram(
     start_y: usize,
     tile_size: usize,
     mode: usize,
+    preserve_hidden_rgb: bool,
     upper: &mut Vec<u32>,
     current: &mut Vec<u32>,
+    histogram: &mut TileHistogram,
     token: CheckpointToken<'_>,
-) -> CheckpointResult<[u32; HISTOGRAM_SIZE]> {
+) -> CheckpointResult<()> {
     let end_x = (start_x + tile_size).min(width);
     let end_y = (start_y + tile_size).min(height);
-    let mut histogram = [0_u32; HISTOGRAM_SIZE];
+    histogram.clear();
     let max_x = end_x - start_x;
     let have_left = usize::from(start_x > 0);
     let context_start_x = start_x - have_left;
@@ -231,42 +310,62 @@ fn tile_histogram(
                 predict(mode, current[x - 1], upper[x - 1], upper[x], upper[x + 1])
             };
             let mut residual = subtract_pixels(current[x], prediction);
-            if current[x] >> 24 == 0 {
+            if !preserve_hidden_rgb && current[x] >> 24 == 0 {
                 residual &= 0xff00_0000;
                 current[x] = prediction & 0x00ff_ffff;
                 if x == 0 && y != 0 {
                     upper[width] = current[0];
                 }
             }
-            update_histogram(&mut histogram, residual);
+            histogram.add_pixel(residual);
         }
         std::mem::swap(upper, current);
     }
-    Ok(histogram)
+    Ok(())
 }
 
-// Both inputs are fixed 4×256 arrays, so every plane conversion is exact.
-// Cost arithmetic is intentionally signed and bounded by four histograms.
+// Each histogram has four fixed 256-bin planes, so every conversion is exact.
+// Validated tile cardinalities bound signed cost arithmetic and zero-bin proofs.
 #[allow(
     clippy::arithmetic_side_effects,
     clippy::unwrap_used,
-    reason = "fixed-size histogram arrays bound the cost arithmetic and make each four-plane conversion exact"
+    reason = "validated tile cardinalities bound cost arithmetic and fixed-size histogram arrays make each plane conversion exact"
 )]
 fn spatial_cost(
-    accumulated: &[u32; HISTOGRAM_SIZE],
-    tile: &[u32; HISTOGRAM_SIZE],
+    accumulated: &AccumulatedHistogram,
+    tile: &TileHistogram,
+    tile_samples: u32,
     mode: usize,
     left_mode: Option<usize>,
     above_mode: Option<usize>,
 ) -> i64 {
     let mut cost = 0_i64;
+    let population_cost = fast_slog(tile_samples) + fast_slog(tile_samples + accumulated.samples);
     for plane in 0..4 {
-        let tile_plane: &[u32; 256] = tile[plane * 256..(plane + 1) * 256].try_into().unwrap();
-        let accumulated_plane: &[u32; 256] = accumulated[plane * 256..(plane + 1) * 256]
+        let tile_plane: &[u32; 256] = tile.counts[plane * 256..(plane + 1) * 256]
             .try_into()
             .unwrap();
-        cost += prediction_bias(tile_plane, 1, 94);
-        cost += combined_shannon_entropy(tile_plane, accumulated_plane).cast_signed();
+        let accumulated_plane = &accumulated.counts[plane * 256..(plane + 1) * 256];
+        if tile_plane[0] == tile_samples && accumulated_plane[0] == accumulated.samples {
+            // Each histogram has exactly the caller's pixel count. If bin
+            // zero contains that count, every other bin is empty: combined
+            // entropy is exactly zero and the prediction bias simplifies
+            // to the same positive-value rounding used by prediction_bias.
+            cost -= ((i64::from(tile_samples) << 23) + 5) / 10;
+        } else {
+            cost += prediction_bias(tile_plane, 1, 94);
+            // Start with the previous population's terms. Empty tile bins
+            // retain them; populated bins replace slog(previous) with the
+            // same two terms used by the complete combined entropy scan.
+            let mut entropy_terms = accumulated.entropy_terms[plane];
+            for &symbol in &tile.symbols[plane][..usize::from(tile.symbol_counts[plane])] {
+                let index = plane * 256 + usize::from(symbol);
+                let count = tile.counts[index];
+                entropy_terms -= accumulated.slog_terms[index];
+                entropy_terms += fast_slog(count) + fast_slog(count + accumulated.counts[index]);
+            }
+            cost += (population_cost - entropy_terms).cast_signed();
+        }
     }
     if left_mode == Some(mode) {
         cost -= 15_i64 << 23;
@@ -283,11 +382,12 @@ fn spatial_cost(
     clippy::arithmetic_side_effects,
     reason = "the caller validates the source length and matching mode grid before this reference traversal"
 )]
-fn apply_modes<const LOW_EFFORT: bool>(
+fn apply_modes(
     source: &mut [u32],
     width: usize,
     height: usize,
     bits: u8,
+    preserve_hidden_rgb: bool,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
@@ -362,7 +462,7 @@ fn apply_modes<const LOW_EFFORT: bool>(
                 };
                 let source_residual = subtract_pixels(current[x], prediction);
                 let residual = clean_hidden_rgb(
-                    LOW_EFFORT,
+                    preserve_hidden_rgb,
                     PixelPosition {
                         x,
                         y,
@@ -389,20 +489,20 @@ fn apply_modes<const LOW_EFFORT: bool>(
 }
 
 // Keep this mode branch shared across const-generic predictor specializations.
-// Release builds inline it and fold `low_effort`, preserving the original loop.
+// Release builds inline it and fold the fixed preservation policy.
 #[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn clean_hidden_rgb(
-    low_effort: bool,
+    preserve_hidden_rgb: bool,
     position: PixelPosition,
     prediction: u32,
     current_pixel: &mut u32,
     upper: &mut [u32],
     mut residual: u32,
 ) -> u32 {
-    // libwebp's low-effort path uses `PredictBatch` directly and skips the
-    // hidden-RGB cleanup performed by `GetResidual`.
-    if !low_effort && *current_pixel >> 24 == 0 {
+    // Both low-effort prediction and exact internal ALPH streams retain RGB
+    // beneath zero alpha. Ordinary lossless images retain Pillow's cleanup.
+    if !preserve_hidden_rgb && *current_pixel >> 24 == 0 {
         residual &= 0xff00_0000;
         *current_pixel = prediction & 0x00ff_ffff;
         if position.x == 0 && position.y != 0 {
@@ -429,7 +529,7 @@ pub(crate) fn select_and_apply(
     source: &mut [u32],
     width: usize,
     height: usize,
-    bits: u8,
+    config: PredictorConfig,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u8> {
@@ -437,7 +537,7 @@ pub(crate) fn select_and_apply(
         source,
         width,
         height,
-        bits,
+        config,
         MAX_TRANSFORM_BITS,
         scratch,
         token,
@@ -453,15 +553,21 @@ fn select_and_apply_with_sampling_limit(
     source: &mut [u32],
     width: usize,
     height: usize,
-    bits: u8,
+    config: PredictorConfig,
     max_sampling_bits: u8,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u8> {
+    let bits = config.bits;
     let tile_size = 1_usize << bits;
     let tiles_per_row = (width + tile_size - 1) >> bits;
     let tiles_per_column = (height + tile_size - 1) >> bits;
-    let mut accumulated = [0_u32; HISTOGRAM_SIZE];
+    let mut accumulated = AccumulatedHistogram::new();
+    // Swap borrowed buffers when a mode wins; retain counts and symbol lists.
+    let mut trial_counts = TileHistogram::new();
+    let mut selected_counts = TileHistogram::new();
+    let mut histogram = &mut trial_counts;
+    let mut best_histogram = &mut selected_counts;
     {
         let modes = &mut scratch.modes;
         modes.resize(tiles_per_row * tiles_per_column, ARGB_BLACK);
@@ -475,11 +581,13 @@ fn select_and_apply_with_sampling_limit(
                     .then(|| ((modes[tile_y * tiles_per_row + tile_x - 1] >> 8) & 0xff) as usize);
                 let above_mode = (tile_y > 0)
                     .then(|| ((modes[(tile_y - 1) * tiles_per_row + tile_x] >> 8) & 0xff) as usize);
+                let tile_samples = ((width - tile_x * tile_size).min(tile_size)
+                    * (height - tile_y * tile_size).min(tile_size))
+                    as u32;
                 let mut best_mode = 0;
                 let mut best_cost = i64::MAX;
-                let mut best_histogram = [0_u32; HISTOGRAM_SIZE];
                 for mode in 0..MODE_COUNT {
-                    let histogram = tile_histogram(
+                    tile_histogram(
                         source,
                         width,
                         height,
@@ -487,25 +595,40 @@ fn select_and_apply_with_sampling_limit(
                         tile_y * tile_size,
                         tile_size,
                         mode,
+                        config.preserve_hidden_rgb,
                         &mut scratch.upper,
                         &mut scratch.current,
+                        histogram,
                         token,
                     )?;
-                    let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
+                    let cost = spatial_cost(
+                        &accumulated,
+                        histogram,
+                        tile_samples,
+                        mode,
+                        left_mode,
+                        above_mode,
+                    );
                     if cost < best_cost {
                         best_cost = cost;
                         best_mode = mode;
-                        best_histogram = histogram;
+                        std::mem::swap(&mut histogram, &mut best_histogram);
                     }
                 }
-                for (total, selected) in accumulated.iter_mut().zip(best_histogram) {
-                    *total += selected;
-                }
+                accumulated.add_tile(best_histogram, tile_samples);
                 modes[tile_y * tiles_per_row + tile_x] = ARGB_BLACK | ((best_mode as u32) << 8);
             }
         }
     }
-    apply_modes::<false>(source, width, height, bits, scratch, token)?;
+    apply_modes(
+        source,
+        width,
+        height,
+        bits,
+        config.preserve_hidden_rgb,
+        scratch,
+        token,
+    )?;
     let modes = &mut scratch.modes;
     let best_bits = optimize_sampling(modes, width, height, bits, max_sampling_bits, token)?;
     modes.truncate(
@@ -558,6 +681,7 @@ fn select_sampling(
     width: usize,
     height: usize,
     bits: u8,
+    preserve_hidden_rgb: bool,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u64> {
@@ -573,7 +697,12 @@ fn select_sampling(
     modes.resize(tiles_per_row * tiles_per_column, ARGB_BLACK);
     modes.fill(ARGB_BLACK);
 
-    let mut accumulated = [0_u32; HISTOGRAM_SIZE];
+    let mut accumulated = AccumulatedHistogram::new();
+    // Swap borrowed buffers when a mode wins; retain counts and symbol lists.
+    let mut trial_counts = TileHistogram::new();
+    let mut selected_counts = TileHistogram::new();
+    let mut histogram = &mut trial_counts;
+    let mut best_histogram = &mut selected_counts;
     let mut predictor_counts = [0_u32; MODE_COUNT];
     for tile_y in 0..tiles_per_column {
         for tile_x in 0..tiles_per_row {
@@ -582,11 +711,13 @@ fn select_sampling(
             let left_mode = (tile_x > 0).then(|| ((modes[index - 1] >> 8) & 0xff) as usize);
             let above_mode =
                 (tile_y > 0).then(|| ((modes[index - tiles_per_row] >> 8) & 0xff) as usize);
+            let tile_samples = ((width - tile_x * tile_size).min(tile_size)
+                * (height - tile_y * tile_size).min(tile_size))
+                as u32;
             let mut best_mode = 0;
             let mut best_cost = i64::MAX;
-            let mut best_histogram = [0_u32; HISTOGRAM_SIZE];
             for mode in 0..MODE_COUNT {
-                let histogram = tile_histogram(
+                tile_histogram(
                     source,
                     width,
                     height,
@@ -594,20 +725,27 @@ fn select_sampling(
                     tile_y * tile_size,
                     tile_size,
                     mode,
+                    preserve_hidden_rgb,
                     upper,
                     current,
+                    histogram,
                     token,
                 )?;
-                let cost = spatial_cost(&accumulated, &histogram, mode, left_mode, above_mode);
+                let cost = spatial_cost(
+                    &accumulated,
+                    histogram,
+                    tile_samples,
+                    mode,
+                    left_mode,
+                    above_mode,
+                );
                 if cost < best_cost {
                     best_cost = cost;
                     best_mode = mode;
-                    best_histogram = histogram;
+                    std::mem::swap(&mut histogram, &mut best_histogram);
                 }
             }
-            for (total, selected) in accumulated.iter_mut().zip(best_histogram) {
-                *total += selected;
-            }
+            accumulated.add_tile(best_histogram, tile_samples);
             modes[index] = ARGB_BLACK | ((best_mode as u32) << 8);
             predictor_counts[best_mode] += 1;
         }
@@ -616,7 +754,7 @@ fn select_sampling(
     let mut cost = shannon_entropy(&predictor_counts);
     for plane in 0..4 {
         cost = cost.saturating_add(shannon_entropy(
-            &accumulated[plane * 256..(plane + 1) * 256],
+            &accumulated.counts[plane * 256..(plane + 1) * 256],
         ));
     }
     Ok(cost)
@@ -632,12 +770,12 @@ pub(crate) fn select_and_apply_for_method(
     source: &mut [u32],
     width: usize,
     height: usize,
-    bits: u8,
+    config: PredictorConfig,
     method: u8,
     scratch: &mut PredictorScratch,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<u8> {
-    let max_bits = clamp_transform_bits(width, height, bits);
+    let max_bits = clamp_transform_bits(width, height, config.bits);
     let min_hint = max_bits.saturating_sub(2_u8.saturating_mul(method.saturating_sub(4)));
     let min_bits = clamp_transform_bits(width, height, min_hint);
     if min_bits == max_bits {
@@ -645,7 +783,10 @@ pub(crate) fn select_and_apply_for_method(
             source,
             width,
             height,
-            max_bits,
+            PredictorConfig {
+                bits: max_bits,
+                ..config
+            },
             MAX_TRANSFORM_BITS,
             scratch,
             token,
@@ -655,7 +796,15 @@ pub(crate) fn select_and_apply_for_method(
     let mut best_bits = min_bits;
     let mut best_cost = u64::MAX;
     for candidate_bits in min_bits..=max_bits {
-        let cost = select_sampling(source, width, height, candidate_bits, scratch, token)?;
+        let cost = select_sampling(
+            source,
+            width,
+            height,
+            candidate_bits,
+            config.preserve_hidden_rgb,
+            scratch,
+            token,
+        )?;
         if cost < best_cost {
             best_cost = cost;
             best_bits = candidate_bits;
@@ -673,7 +822,15 @@ pub(crate) fn select_and_apply_for_method(
     scratch
         .modes
         .truncate(subsample_size(width, best_bits) * subsample_size(height, best_bits));
-    apply_modes::<false>(source, width, height, best_bits, scratch, token)?;
+    apply_modes(
+        source,
+        width,
+        height,
+        best_bits,
+        config.preserve_hidden_rgb,
+        scratch,
+        token,
+    )?;
     Ok(best_bits)
 }
 
@@ -704,7 +861,7 @@ pub(crate) fn apply_fixed<const LOW_EFFORT: bool, const RESAMPLE_MODES: bool>(
         );
         modes.fill(ARGB_BLACK | ((mode as u32) << 8));
     }
-    apply_modes::<LOW_EFFORT>(source, width, height, bits, scratch, token)?;
+    apply_modes(source, width, height, bits, LOW_EFFORT, scratch, token)?;
     let modes = &mut scratch.modes;
     let best_bits = if RESAMPLE_MODES {
         optimize_sampling(modes, width, height, bits, MAX_TRANSFORM_BITS, token)?

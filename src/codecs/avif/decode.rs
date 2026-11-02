@@ -5,8 +5,9 @@ use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
 use crate::types::{
-    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
-    FrameDuration, FrameRect, ImageMode, SequenceKind, SourceColor, SourceDescriptor,
+    AvifColorProperties, ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend,
+    FrameDisposal, FrameDuration, FrameRect, ImageMode, SequenceKind, SourceColor,
+    SourceDescriptor,
 };
 use wide::{i32x8, u16x8};
 
@@ -18,12 +19,22 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
+    if extracted
+        .still
+        .as_ref()
+        .is_some_and(|still| still.alpha_extent_mismatch)
+    {
+        return Err(CodecError::Malformed(
+            "AVIF still color and alpha spatial extents differ".to_owned(),
+        ));
+    }
     if let Some(sequence) = &extracted.sequence {
         require_sequence_timescale(sequence)?;
     }
+    let color_properties = first_color_properties(&extracted);
     let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    let image = decode_portable_with_error(&validated)?.ok_or_else(|| {
+    let image = decode_portable_with_error(&validated, color_properties)?.ok_or_else(|| {
         CodecError::NotImplemented(
             "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
         )
@@ -256,16 +267,18 @@ pub fn decode_sequence(
         let image = super::av1::ValidatedAv1 {
             portable_still: Some(portable),
         };
-        let image = decode_portable_with_error(&image)?.ok_or_else(|| {
-            CodecError::NotImplemented(
-                "AVIF sequence frame is outside the supported pure-Rust color subset".to_owned(),
-            )
-        })?;
-        let image = image.with_source_descriptor(source_template.clone());
         let sample =
             sequence_payload.color.samples.get(index).ok_or_else(|| {
                 CodecError::Malformed("AVIF sequence sample disappeared".to_owned())
             })?;
+        let image =
+            decode_portable_with_error(&image, sample.color_properties)?.ok_or_else(|| {
+                CodecError::NotImplemented(
+                    "AVIF sequence frame is outside the supported pure-Rust color subset"
+                        .to_owned(),
+                )
+            })?;
+        let image = image.with_source_descriptor(source_template.clone());
         frames.push(DecodedFrame::rendered_canvas(
             image,
             FrameRect {
@@ -384,6 +397,24 @@ fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
+fn first_color_properties(
+    extracted: &super::samples::ExtractedAvif<'_>,
+) -> Option<AvifColorProperties> {
+    if let Some(still) = &extracted.still {
+        still
+            .color
+            .samples
+            .first()
+            .and_then(|sample| sample.color_properties)
+    } else {
+        extracted
+            .sequence
+            .as_ref()
+            .and_then(|sequence| sequence.color.samples.first())
+            .and_then(|sample| sample.color_properties)
+    }
+}
+
 fn read_avif_file_type(data: &[u8]) -> CodecResult<crate::types::AvifFileTypeProperties> {
     super::samples::file_type(data)
         .map_err(|error| error.context("AVIF container validation failed"))
@@ -397,6 +428,7 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 
 fn decode_portable_with_error(
     validated: &super::av1::ValidatedAv1,
+    color_properties: Option<AvifColorProperties>,
 ) -> CodecResult<Option<DecodedImage>> {
     let mut portable_error = None;
     #[cfg(coverage)]
@@ -410,12 +442,12 @@ fn decode_portable_with_error(
         let faulted = super::av1::ValidatedAv1 {
             portable_still: Some(still),
         };
-        decode_portable_inner(&faulted, &mut portable_error)
+        decode_portable_inner(&faulted, color_properties, &mut portable_error)
     } else {
-        decode_portable_inner(validated, &mut portable_error)
+        decode_portable_inner(validated, color_properties, &mut portable_error)
     };
     #[cfg(not(coverage))]
-    let image = decode_portable_inner(validated, &mut portable_error);
+    let image = decode_portable_inner(validated, color_properties, &mut portable_error);
     match (image, portable_error) {
         (Some(image), _) => Ok(Some(image)),
         (None, Some(error)) => Err(error),
@@ -510,16 +542,36 @@ fn inject_monochrome_portable_fault(
 
 #[cfg(any(test, coverage))]
 pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
-    decode_portable_with_error(validated).ok().flatten()
+    decode_portable_with_error(validated, None).ok().flatten()
 }
 
 fn decode_portable_inner(
     validated: &super::av1::ValidatedAv1,
+    color_properties: Option<AvifColorProperties>,
     portable_error: &mut Option<CodecError>,
 ) -> Option<DecodedImage> {
+    #[cfg(coverage)]
+    let faulted_still = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifPortableAlphaPlaneLengthMismatch,
+    ) {
+        let mut still = validated.portable_still.clone()?;
+        let alpha_plane = still.alpha_plane.as_mut()?;
+        let _ = alpha_plane.samples.pop();
+        Some(still)
+    } else {
+        None
+    };
+    #[cfg(coverage)]
+    let still = faulted_still
+        .as_ref()
+        .or(validated.portable_still.as_ref())?;
+    #[cfg(not(coverage))]
     let still = validated.portable_still.as_ref()?;
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
+    if width == 0 || height == 0 {
+        return None;
+    }
     let plane_length = width.checked_mul(height)?;
     if !matches!(still.bit_depth, 8 | 10 | 12) {
         return None;
@@ -533,35 +585,43 @@ fn decode_portable_inner(
         (true, false) => false,
         (false, true) => return None,
     };
+    let (cicp, full_range) = color_properties.map_or_else(
+        || {
+            (
+                [
+                    still.color_primaries,
+                    still.transfer_characteristics,
+                    still.matrix_coefficients,
+                ],
+                still.color_range,
+            )
+        },
+        |color| {
+            (
+                [
+                    u32::from(color.color_primaries),
+                    u32::from(color.transfer_characteristics),
+                    u32::from(color.matrix_coefficients),
+                ],
+                color.full_range,
+            )
+        },
+    );
     let conversion = super::portable_color_conversion(
-        [
-            still.color_primaries,
-            still.transfer_characteristics,
-            still.matrix_coefficients,
-        ],
+        cicp,
         still.bit_depth,
-        still.color_range,
+        full_range,
         (still.subsampling_x, still.subsampling_y),
         still.alpha_plane.is_some(),
     )?;
-    let mut canvas = super::av1::FrameCanvas::new(
-        still.width,
-        still.height,
-        still.subsampling_x,
-        still.subsampling_y,
-    )
-    .ok()?;
-    if still.width.is_multiple_of(4) && still.height.is_multiple_of(4) {
-        canvas
-            .place_partition_leaf(0, 0, still.width / 4, still.height / 4, &still.planes)
-            .ok()?;
+    #[cfg(coverage)]
+    let conversion = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifSubsampledIdentityConversion,
+    ) {
+        PortableColorConversion::IdentityRgb
     } else {
-        canvas
-            .place_planes(still.width, still.height, &still.planes, 0, 0)
-            .ok()?;
-    }
-    let planes = canvas.finish().ok()?;
-    let [y_plane, u_plane, v_plane] = &planes;
+        conversion
+    };
     let chroma_width = if subsampled || still.subsampling_x {
         width.div_ceil(2)
     } else {
@@ -573,6 +633,44 @@ fn decode_portable_inner(
         height
     };
     let chroma_sample_count = chroma_width.checked_mul(chroma_height)?;
+    // Reconstruction supplies complete, origin-aligned planes here. Check
+    // their exact extents and borrow them directly instead of copying every
+    // sample through a second full-frame canvas.
+    if still.planes[0].samples.len() != plane_length
+        || still.planes[1].samples.len() != chroma_sample_count
+        || still.planes[2].samples.len() != chroma_sample_count
+    {
+        return None;
+    }
+    #[cfg(coverage)]
+    let faulted_planes = {
+        let plane_index = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifPortableYPlaneLengthMismatch,
+        ) {
+            Some(0)
+        } else if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifPortableUPlaneLengthMismatch,
+        ) {
+            Some(1)
+        } else if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::AvifPortableVPlaneLengthMismatch,
+        ) {
+            Some(2)
+        } else {
+            None
+        };
+        if let Some(index) = plane_index {
+            let mut planes = still.planes.clone();
+            planes.get_mut(index)?.samples.pop()?;
+            Some(planes)
+        } else {
+            None
+        }
+    };
+    #[cfg(not(coverage))]
+    let faulted_planes = None;
+    let planes = faulted_planes.as_ref().unwrap_or(&still.planes);
+    let [y_plane, u_plane, v_plane] = planes;
     if y_plane.samples.len() != plane_length
         || u_plane.samples.len() != chroma_sample_count
         || v_plane.samples.len() != chroma_sample_count
@@ -617,26 +715,56 @@ fn decode_portable_inner(
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if high_depth_12bit_420_alpha {
-        let alpha_plane = still.alpha_plane.as_ref()?.samples.as_slice();
-        // The validated 12-bit I420 path normally supplies one alpha sample
-        // per luma sample. Keep the mismatch injection out of release builds.
+        let y_samples = y_plane.samples.as_slice();
+        let u_samples = u_plane.samples.as_slice();
+        let v_samples = v_plane.samples.as_slice();
+        let alpha_samples = still.alpha_plane.as_ref()?.samples.as_slice();
+        // These impossible post-validation shapes exercise the converter's
+        // public fallback contract only in instrumented coverage builds.
         #[cfg(coverage)]
-        let alpha_plane = if crate::coverage_support::take_fault_point(
-            crate::coverage_support::CoverageFaultPoint::Avif12BitI420AlphaSampleCountMismatch,
-        ) {
-            &alpha_plane[..alpha_plane.len().saturating_sub(1)]
-        } else {
-            alpha_plane
+        let (y_samples, u_samples, v_samples, alpha_samples, width) = {
+            use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+            let mut y_samples = y_samples;
+            let mut u_samples = u_samples;
+            let mut v_samples = v_samples;
+            let mut alpha_samples = alpha_samples;
+            let mut width = width;
+
+            if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaZeroWidth) {
+                width = 0;
+            } else if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaNondivisibleLumaLength)
+            {
+                let length = y_samples.len().saturating_sub(1);
+                y_samples = &y_samples[..length];
+                alpha_samples = &alpha_samples[..length];
+            } else if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaZeroHeight) {
+                y_samples = &[];
+                alpha_samples = &[];
+            } else if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaUPlaneLengthMismatch) {
+                u_samples = &u_samples[..u_samples.len().saturating_sub(1)];
+            } else if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaVPlaneLengthMismatch) {
+                v_samples = &v_samples[..v_samples.len().saturating_sub(1)];
+            } else if take_fault_point(CoverageFaultPoint::Avif12BitI420AlphaSampleCountMismatch) {
+                alpha_samples = &alpha_samples[..alpha_samples.len().saturating_sub(1)];
+            }
+
+            (y_samples, u_samples, v_samples, alpha_samples, width)
         };
+        #[cfg(not(coverage))]
+        let (y_samples, u_samples, v_samples, alpha_samples, width) =
+            (y_samples, u_samples, v_samples, alpha_samples, width);
         convert_subsampled_420_12bit_alpha(
-            &y_plane.samples,
-            &u_plane.samples,
-            &v_plane.samples,
-            alpha_plane,
+            y_samples,
+            u_samples,
+            v_samples,
+            alpha_samples,
             width,
             portable_error,
         )?
-    } else if !still.subsampling_x && !still.subsampling_y {
+    // `subsampled` distinguishes 4:2:0 from 4:2:2 and 4:4:4; horizontal
+    // subsampling then separates 4:2:2 from the full-resolution 4:4:4 path.
+    } else if !subsampled && !still.subsampling_x {
         match conversion {
             PortableColorConversion::IdentityRgb => convert_full_resolution_identity_rgb(
                 &y_plane.samples,
@@ -676,6 +804,11 @@ fn decode_portable_inner(
             return None;
         };
         let shift = sample_depth.bits().checked_sub(8)?;
+        let chroma_shift = if high_depth_10bit_subsampled_alpha {
+            0
+        } else {
+            shift
+        };
         let mut pixels = match reserve_subsampled_rgb_output(pixel_capacity) {
             Ok(pixels) => pixels,
             Err(error) => {
@@ -683,73 +816,75 @@ fn decode_portable_inner(
                 return None;
             }
         };
+        // Advance coordinates with the output stream instead of dividing and
+        // taking the remainder of a flat index for every luma sample. The
+        // validated plane length is width * height, so width == 0 implies
+        // this loop is empty.
+        let mut row = 0_usize;
+        let mut column = 0_usize;
+        let chroma_height = height.div_ceil(2);
+        let mut vertical_rows = (0_usize, 0_usize);
+        let mut vertical_weights = (4_u32, 0_u32);
+        let mut previous_vertical = (0_u32, 0_u32);
+        let mut current_vertical = (0_u32, 0_u32);
+        let vectorize_420_rgb = subsampled && !has_alpha && width >= 8 && width.is_multiple_of(8);
+        let mut y_lanes = [0_u16; 8];
+        let mut u_lanes = [0_u16; 8];
+        let mut v_lanes = [0_u16; 8];
         for (index, &y_sample) in y_plane.samples.iter().enumerate() {
             let (u_sample, v_sample) = if subsampled {
-                #[allow(
-                    clippy::arithmetic_side_effects,
-                    reason = "Validated nonzero plane width bounds the pixel-index quotient."
-                )]
-                let row = index.wrapping_div(width);
-                // `width` is validated nonzero; remainder matches euclidean
-                // semantics for non-negative operands without an intrinsic branch.
-                #[allow(
-                    clippy::arithmetic_side_effects,
-                    reason = "Validated nonzero plane width bounds the pixel-index remainder."
-                )]
-                let column = index.wrapping_rem(width);
+                if column == 0 {
+                    let (top_row, bottom_row, top_weight, bottom_weight) =
+                        libyuv_420_vertical_geometry(row, height, chroma_height);
+                    vertical_rows = (top_row, bottom_row);
+                    vertical_weights = (top_weight, bottom_weight);
+                    current_vertical = libyuv_420_vertical_samples_at_depth(
+                        &u_plane.samples,
+                        &v_plane.samples,
+                        (chroma_width, chroma_height),
+                        0,
+                        vertical_rows,
+                        vertical_weights,
+                        chroma_shift,
+                    );
+                    previous_vertical = current_vertical;
+                } else if !column.is_multiple_of(2) {
+                    let source_column = column.saturating_add(1).div_euclid(2);
+                    previous_vertical = current_vertical;
+                    current_vertical = libyuv_420_vertical_samples_at_depth(
+                        &u_plane.samples,
+                        &v_plane.samples,
+                        (chroma_width, chroma_height),
+                        source_column,
+                        vertical_rows,
+                        vertical_weights,
+                        chroma_shift,
+                    );
+                }
+                // Even output columns reuse the source sums cached by the
+                // previous odd column.
+                let (left_weight, right_weight) = if column == 0 {
+                    (4_u32, 0_u32)
+                } else if !width.is_multiple_of(2) && column == width.saturating_sub(1) {
+                    (0_u32, 4_u32)
+                } else if column.is_multiple_of(2) {
+                    (1_u32, 3_u32)
+                } else {
+                    (3_u32, 1_u32)
+                };
+                let weighted_u = previous_vertical
+                    .0
+                    .saturating_mul(left_weight)
+                    .saturating_add(current_vertical.0.saturating_mul(right_weight));
+                let weighted_v = previous_vertical
+                    .1
+                    .saturating_mul(left_weight)
+                    .saturating_add(current_vertical.1.saturating_mul(right_weight));
                 (
-                    if high_depth_10bit_subsampled_alpha || shift == 0 {
-                        libyuv_420_bilinear_sample(
-                            &u_plane.samples,
-                            chroma_width,
-                            width,
-                            height,
-                            column,
-                            row,
-                        )
-                    } else {
-                        libyuv_420_bilinear_sample_at_depth(
-                            &u_plane.samples,
-                            chroma_width,
-                            width,
-                            height,
-                            column,
-                            row,
-                            shift,
-                        )
-                    },
-                    if high_depth_10bit_subsampled_alpha || shift == 0 {
-                        libyuv_420_bilinear_sample(
-                            &v_plane.samples,
-                            chroma_width,
-                            width,
-                            height,
-                            column,
-                            row,
-                        )
-                    } else {
-                        libyuv_420_bilinear_sample_at_depth(
-                            &v_plane.samples,
-                            chroma_width,
-                            width,
-                            height,
-                            column,
-                            row,
-                            shift,
-                        )
-                    },
+                    u16::try_from(weighted_u.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX),
+                    u16::try_from(weighted_v.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX),
                 )
             } else {
-                #[allow(
-                    clippy::arithmetic_side_effects,
-                    reason = "Validated nonzero plane width bounds the pixel-index quotient."
-                )]
-                let row = index.wrapping_div(width);
-                #[allow(
-                    clippy::arithmetic_side_effects,
-                    reason = "Validated nonzero plane width bounds the pixel-index remainder."
-                )]
-                let column = index.wrapping_rem(width);
                 libyuv_422_bilinear_samples_at_depth(
                     &u_plane.samples,
                     &v_plane.samples,
@@ -764,24 +899,44 @@ fn decode_portable_inner(
                     },
                 )
             };
-            let rgb = if high_depth_10bit_subsampled_alpha {
-                libyuv_bt601_full_range_rgb_10bit(y_sample, u_sample, v_sample)?
+            if vectorize_420_rgb {
+                // Chroma is already filtered into byte-domain samples here.
+                // Reuse the eight-lane color kernel for even-width RGB 4:2:0;
+                // row tails and auxiliary-alpha paths keep the scalar route.
+                let lane = column % 8;
+                y_lanes[lane] = u16::from(super::av1::truncate_to_u8(y_sample, still.bit_depth)?);
+                u_lanes[lane] = u16::from(u8::try_from(u_sample).ok()?);
+                v_lanes[lane] = u16::from(u8::try_from(v_sample).ok()?);
+                if lane == 7 {
+                    let [red, green, blue] =
+                        convert_i444_rgb_lanes(&y_lanes, &u_lanes, &v_lanes, 0, 0, matrix)?;
+                    append_rgb24_lanes(&mut pixels, red, green, blue);
+                }
             } else {
-                let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
-                // The depth-aware samplers already performed the source-plane
-                // downshift before interpolation; truncating these filtered
-                // values a second time would incorrectly divide high-depth
-                // chroma by another factor of four or sixteen.
-                let u = u8::try_from(u_sample).ok()?;
-                let v = u8::try_from(v_sample).ok()?;
-                libyuv_rgb(y, u, v, matrix)
-            };
-            pixels.extend_from_slice(&rgb);
-            if let Some(alpha_plane) = &still.alpha_plane {
-                pixels.push(super::av1::truncate_to_u8(
-                    alpha_plane.samples[index],
-                    still.bit_depth,
-                )?);
+                let rgb = if high_depth_10bit_subsampled_alpha {
+                    libyuv_bt601_full_range_rgb_10bit(y_sample, u_sample, v_sample)?
+                } else {
+                    let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
+                    // The depth-aware samplers already performed the
+                    // source-plane downshift before interpolation; truncating
+                    // these filtered values again would divide high-depth
+                    // chroma by another factor of four or sixteen.
+                    let u = u8::try_from(u_sample).ok()?;
+                    let v = u8::try_from(v_sample).ok()?;
+                    libyuv_rgb(y, u, v, matrix)
+                };
+                pixels.extend_from_slice(&rgb);
+                if let Some(alpha_plane) = &still.alpha_plane {
+                    pixels.push(super::av1::truncate_to_u8(
+                        alpha_plane.samples[index],
+                        still.bit_depth,
+                    )?);
+                }
+            }
+            column = column.wrapping_add(1);
+            if column == width {
+                column = 0;
+                row = row.wrapping_add(1);
             }
         }
         pixels
@@ -1452,6 +1607,20 @@ fn convert_i444_rgb_lanes(
     ])
 }
 
+#[inline]
+fn append_rgb24_lanes(pixels: &mut Vec<u8>, red: [u8; 8], green: [u8; 8], blue: [u8; 8]) {
+    let mut interleaved = [0_u8; 24];
+    for (pixel, ((red, green), blue)) in interleaved
+        .as_chunks_mut::<3>()
+        .0
+        .iter_mut()
+        .zip(red.iter().zip(green.iter()).zip(blue.iter()))
+    {
+        pixel.copy_from_slice(&[*red, *green, *blue]);
+    }
+    pixels.extend_from_slice(&interleaved);
+}
+
 // Callers validate the complete nominal sample domain before allocation.
 // Supported AVIF depths here are 8, 10, and 12 bits, so the supplied shifts
 // are 0, 2, or 4 and all remain below the 16-bit lane width.
@@ -1629,117 +1798,67 @@ fn libyuv_422_bilinear_samples_at_depth(
 // first and last output rows use horizontal 3:1 interpolation. Interior rows
 // are produced in pairs using libyuv's four-tap 3:1/1:3 vertical and
 // horizontal weights with one combined rounding operation.
-fn libyuv_420_bilinear_sample(
-    plane: &[u16],
-    chroma_width: usize,
-    width: usize,
-    height: usize,
-    column: usize,
+/// Preserve libyuv's upscaler row phase and boundary behavior for one output
+/// row. The returned vertical weights sum to four; boundary rows reuse one
+/// source row and therefore reduce to a horizontal-only filter.
+fn libyuv_420_vertical_geometry(
     row: usize,
-) -> u16 {
-    libyuv_420_bilinear_sample_at_depth(plane, chroma_width, width, height, column, row, 0)
+    height: usize,
+    chroma_height: usize,
+) -> (usize, usize, u32, u32) {
+    if row == 0 {
+        return (0, 0, 4, 0);
+    }
+    if height.is_multiple_of(2) && row == height.saturating_sub(1) {
+        let last_source_row = chroma_height.saturating_sub(1);
+        return (last_source_row, last_source_row, 4, 0);
+    }
+    if row.is_multiple_of(2) {
+        let source_row = row.div_euclid(2);
+        (source_row.saturating_sub(1), source_row, 1, 3)
+    } else {
+        let source_row = row.div_euclid(2);
+        (source_row, source_row.saturating_add(1), 3, 1)
+    }
 }
 
-/// Downshift source samples before the 4:2:0 filter.  This is observable for
-/// nonzero discarded low bits and is required by libavif's 10/12-bit RGB8
-/// fallback; applying the shift after interpolation can differ by one byte.
-fn libyuv_420_bilinear_sample_at_depth(
-    plane: &[u16],
-    chroma_width: usize,
-    width: usize,
-    height: usize,
-    column: usize,
-    row: usize,
+/// Downshift before filtering, then cache each vertically filtered U/V source
+/// column for the two adjacent output columns that consume it.
+fn libyuv_420_vertical_samples_at_depth(
+    u_plane: &[u16],
+    v_plane: &[u16],
+    chroma_size: (usize, usize),
+    source_column: usize,
+    source_rows: (usize, usize),
+    vertical_weights: (u32, u32),
     shift: u32,
-) -> u16 {
-    let chroma_height = height.div_ceil(2);
-    if plane.is_empty() || chroma_width == 0 || chroma_height == 0 || width == 0 {
-        return 0;
-    }
-
-    let sample = |source_row: usize, source_column: usize| {
-        let source_row = source_row.min(chroma_height.saturating_sub(1));
-        let source_column = source_column.min(chroma_width.saturating_sub(1));
-        plane
-            .get(
-                source_row
-                    .saturating_mul(chroma_width)
-                    .saturating_add(source_column),
-            )
+) -> (u32, u32) {
+    let (chroma_width, chroma_height) = chroma_size;
+    let source_column = source_column.min(chroma_width.saturating_sub(1));
+    let top_row = source_rows.0.min(chroma_height.saturating_sub(1));
+    let bottom_row = source_rows.1.min(chroma_height.saturating_sub(1));
+    let top_index = top_row
+        .saturating_mul(chroma_width)
+        .saturating_add(source_column);
+    let bottom_index = bottom_row
+        .saturating_mul(chroma_width)
+        .saturating_add(source_column);
+    let filter = |plane: &[u16]| {
+        let top = plane
+            .get(top_index)
             .copied()
-            .map(|sample| sample.wrapping_shr(shift))
             .unwrap_or_default()
+            .wrapping_shr(shift);
+        let bottom = plane
+            .get(bottom_index)
+            .copied()
+            .unwrap_or_default()
+            .wrapping_shr(shift);
+        u32::from(top)
+            .saturating_mul(vertical_weights.0)
+            .saturating_add(u32::from(bottom).saturating_mul(vertical_weights.1))
     };
-    let source_column = column.saturating_sub(1).div_euclid(2);
-    let next_source_column = source_column.saturating_add(1);
-    // libyuv's two-row scaler starts the interpolated stream at output
-    // column one. Column zero is the vertically filtered source sample at
-    // column zero; thereafter odd output columns use 3:1 and even output
-    // columns use 1:3 horizontal weights. Keeping that phase is observable
-    // at chroma edges (and is different from a generic centered 2x filter).
-    let (left_weight, right_weight) = if column == 0 {
-        (4_u32, 0_u32)
-    } else if !width.is_multiple_of(2) && column == width.saturating_sub(1) {
-        // libyuv's ScaleRowUp2_Linear wrapper copies the final source sample
-        // into the last output column when the destination width is odd.
-        (0_u32, 4_u32)
-    } else if column.is_multiple_of(2) {
-        (1_u32, 3_u32)
-    } else {
-        (3_u32, 1_u32)
-    };
-
-    // `I420ToRGB24MatrixBilinear` starts with ScaleRowUp2_Linear and uses the
-    // same horizontal-only operation for the final row of an even-height
-    // image. This is intentionally not the generic separable boundary rule.
-    if row == 0 || (height.is_multiple_of(2) && row == height.saturating_sub(1)) {
-        let source_row = if row == 0 {
-            0
-        } else {
-            chroma_height.saturating_sub(1)
-        };
-        let weighted = u32::from(sample(source_row, source_column))
-            .saturating_mul(left_weight)
-            .saturating_add(
-                u32::from(sample(source_row, next_source_column)).saturating_mul(right_weight),
-            );
-        return u16::try_from(weighted.saturating_add(2).wrapping_shr(2)).unwrap_or(u16::MAX);
-    }
-
-    let (source_row, next_source_row, top_weight, bottom_weight) = if row.is_multiple_of(2) {
-        (
-            row.div_euclid(2).saturating_sub(1),
-            row.div_euclid(2),
-            1_u32,
-            3_u32,
-        )
-    } else {
-        (
-            row.div_euclid(2),
-            row.div_euclid(2).saturating_add(1),
-            3_u32,
-            1_u32,
-        )
-    };
-    let weighted = u32::from(sample(source_row, source_column))
-        .saturating_mul(top_weight)
-        .saturating_mul(left_weight)
-        .saturating_add(
-            u32::from(sample(source_row, next_source_column))
-                .saturating_mul(top_weight)
-                .saturating_mul(right_weight),
-        )
-        .saturating_add(
-            u32::from(sample(next_source_row, source_column))
-                .saturating_mul(bottom_weight)
-                .saturating_mul(left_weight),
-        )
-        .saturating_add(
-            u32::from(sample(next_source_row, next_source_column))
-                .saturating_mul(bottom_weight)
-                .saturating_mul(right_weight),
-        );
-    u16::try_from(weighted.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX)
+    (filter(u_plane), filter(v_plane))
 }
 
 struct YuvCoefficients {
