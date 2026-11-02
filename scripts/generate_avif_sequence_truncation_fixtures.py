@@ -18,6 +18,7 @@ from generate_avif_sequence_header_parity import (
     ILOC_PATH, SOURCE_ILOC, STSZ_PATH, bits_from_bytes, pack_bits, pack_obu,
     parse_obus, unsigned_bits,
 )
+from inspect_av1_obus import Bits
 from inspect_avif_bitstreams import inspect as inspect_container
 
 
@@ -82,6 +83,19 @@ SOURCE_ERROR_RESILIENT = Source(
 )
 
 
+SOURCE_TWELVE_BIT_420 = Source(
+    'animated_lossy_inter_420_12bit_b4x16_q99_16x64.avif',
+    'fab0e71887d8e8130e729d9449bd42fe951b045170a66f72db5dfa31eb54dca6',
+    (468, 1146), 13, 1,
+)
+
+SOURCE_MONOCHROME_SUPERRES = Source(
+    'animated_monochrome_neutral_superres_8bit_80x48.avif',
+    'b7daf431bafe9eb89a9c2b4f34eda3ac50d8477f9591ec85a8fd4cbf8c398f30',
+    (34, 766), 13, 1,
+)
+
+
 @dataclass(frozen=True)
 class Recipe:
     field: str
@@ -90,6 +104,7 @@ class Recipe:
     source: Source = DEFAULT_SOURCE
     accepted: bool = False
     operating_point_count: int = 1
+    ticks_per_picture: int | None = None
 
     @property
     def filename(self) -> str:
@@ -145,23 +160,81 @@ RECIPES = (
            "eca158f245799141948211490e72c64c99c5219fbc22889b2021c91cb58ec9cf", source=SOURCE_ERROR_RESILIENT),
     Recipe("additional_frame_id_width", 15,
            "ec450a7afd0f79a66969a9e98930adb877ea4a05a1d8d8656c90bf1489c7764b", source=SOURCE_ERROR_RESILIENT, operating_point_count=5),
+    Recipe('frame_presentation_delay_width', 15,
+           '2b714076d200ec274c242e5244227b827f01b56019757b7078a7ec7a6abb1dcf', source=SOURCE_DECODER_MODEL_PARAMETERS_CHANGE, operating_point_count=1, ticks_per_picture=2),
+    Recipe('decoder_buffer_delay_width', 10,
+           '8271821951182c35a492be0f178da0c29621795b508a0156e34ef209fc06812c', source=SOURCE_DECODER_MODEL_PARAMETERS_CHANGE, operating_point_count=1, ticks_per_picture=4),
+    Recipe('low_delay_mode_flag', 19,
+           '357d89c101f57fc3e19c3c18fd7df4badcf498610fe7081a9f5a3767cfe4e00f', source=SOURCE_DECODER_MODEL_PARAMETERS_CHANGE, operating_point_count=1, ticks_per_picture=8),
+    Recipe('initial_display_delay_value', 15,
+           '163429f0c27d498bc3136efb1d8fb7fa872f5cd34eab4a8002db5dac28756407', source=SOURCE_INITIAL_DISPLAY_DELAY_10, operating_point_count=2, ticks_per_picture=1),
+    Recipe('subsampling_y_flag', 12,
+           '25d24d4ff14dd6d08d1932e49d4145afe232587bfa8091e8c9f2d8648b665fca', source=SOURCE_TWELVE_BIT_420, operating_point_count=1),
+    Recipe('subsampling_x_flag', 14,
+           '51cdaa6b30c50b0d367f7fe952b7aa468df09dea8112015097ea44b7730a06ac', source=SOURCE_TWELVE_BIT_420, operating_point_count=2),
+    Recipe('twelve_bit_flag', 19,
+           '4689be9776acf48b13c3a15bb08390000ecaf60dbbcec5cc3797b514b00d1f9f', source=SOURCE_TWELVE_BIT_420, operating_point_count=6),
+    Recipe('monochrome_color_range_flag', 12,
+           'dd699adbdd38c6d3e9b67922ee9dcc47705392c84a9afc24648f08b458b2cb79', source=SOURCE_MONOCHROME_SUPERRES, operating_point_count=1),
 )
 
 
-def repeated_operating_points(payload: bytes, count: int) -> bytes:
-    """Shift later syntax using complete, identical default operating points."""
-    if count == 1:
+def repeated_operating_points(
+    payload: bytes, count: int, ticks_per_picture: int | None = None,
+) -> bytes:
+    """Align later syntax using complete operating points and valid timing UVLC."""
+    if count == 1 and ticks_per_picture is None:
         return payload
-    if not 2 <= count <= 32:
+    if not 1 <= count <= 32:
         raise RuntimeError("operating-point count is outside the AV1 limit")
-    syntax = bits_from_bytes(payload.rstrip(b"\0"))
-    if len(syntax) < 30 or syntax[:29] != [0] * 29:
-        raise RuntimeError("pinned default operating-point layout changed")
+    bits = Bits(payload)
+    bits.read(3)  # seq_profile
+    bits.bit()  # still_picture
+    if bits.bit():
+        raise RuntimeError("pinned alignment source requires an ordinary sequence header")
+    ticks_start = ticks_end = None
+    decoder_model_present = False
+    decoder_delay_length = 0
+    if bits.bit():
+        bits.read(32)  # num_units_in_display_tick
+        bits.read(32)  # time_scale
+        if bits.bit():
+            ticks_start = bits.position
+            bits.uvlc()
+            ticks_end = bits.position
+        decoder_model_present = bool(bits.bit())
+        if decoder_model_present:
+            decoder_delay_length = bits.read(5) + 1
+            bits.read(32)  # num_units_in_decoding_tick
+            bits.read(5)  # buffer_removal_time_length_minus_1
+            bits.read(5)  # frame_presentation_time_length_minus_1
+    display_model_present = bool(bits.bit())
+    count_start = bits.position
+    if bits.read(5) != 0:
+        raise RuntimeError("pinned alignment source no longer has one operating point")
+    point_start = bits.position
+    bits.read(12)  # operating_point_idc
+    if bits.read(5) > 7:
+        bits.bit()  # seq_tier
+    if decoder_model_present and bits.bit():
+        bits.read(decoder_delay_length)
+        bits.read(decoder_delay_length)
+        bits.bit()  # low_delay_mode_flag
+    if display_model_present and bits.bit():
+        bits.read(4)  # initial_display_delay_minus_1
+    point_end = bits.position
+    syntax = bits_from_bytes(payload)
     trailing_one = max(index for index, value in enumerate(syntax) if value)
-    return pack_bits(
-        syntax[:7] + unsigned_bits(count - 1, 5)
-        + syntax[12:29] * count + syntax[29:trailing_one] + [1]
+    syntax = (
+        syntax[:count_start] + unsigned_bits(count - 1, 5)
+        + syntax[point_start:point_end] * count + syntax[point_end:trailing_one]
     )
+    if ticks_per_picture is not None:
+        if ticks_start is None or ticks_end is None or ticks_per_picture <= 0:
+            raise RuntimeError("timing alignment requires an existing positive picture interval")
+        value = unsigned_bits(ticks_per_picture, ticks_per_picture.bit_length())
+        syntax = syntax[:ticks_start] + [0] * (len(value) - 1) + value + syntax[ticks_end:]
+    return pack_bits(syntax + [1])
 
 
 def candidate_bytes(recipe: Recipe) -> tuple[bytes, tuple[int, ...]]:
@@ -182,7 +255,9 @@ def candidate_bytes(recipe: Recipe) -> tuple[bytes, tuple[int, ...]]:
                 if sequence_count == 0:
                     if len(payload) != spec.sequence_bytes:
                         raise RuntimeError("pinned first sequence-header size changed")
-                payload = repeated_operating_points(payload, recipe.operating_point_count)
+                payload = repeated_operating_points(
+                    payload, recipe.operating_point_count, recipe.ticks_per_picture,
+                )
                 if sequence_count == 0:
                     if not 0 < recipe.retained_bytes < len(payload):
                         raise RuntimeError("retained prefix does not truncate the sequence header")
