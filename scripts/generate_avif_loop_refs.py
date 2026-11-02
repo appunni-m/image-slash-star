@@ -32,6 +32,18 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
+    'animated_buffer_removal_time_zero': ('animated_buffer_removal_time_zero.avif', '3079d08c334b737716c5571317e711130da028fc0d8e6e4a3e9ab85b1d9f7de6'),
+    'animated_buffer_removal_time_one': ('animated_buffer_removal_time_one.avif', '950f342512092d6cbc051e649acd23bbb9d31d1bbccb43fc5ae87ecb096a5347'),
+    'animated_buffer_removal_time_without_point_parameters': ('animated_buffer_removal_time_without_point_parameters.avif', '0906822ac392ecb8be54e5306d68690490c1f10db3266551ec45efa74504dbd4'),
+    'animated_buffer_removal_time_mixed_point_parameters': ('animated_buffer_removal_time_mixed_point_parameters.avif', 'd5348e5c71841e293fbd7aaeea49a222f1d6b26eaa957457596461ec86f293f9'),
+    'animated_buffer_removal_time_ignored_temporal_point': ('animated_buffer_removal_time_ignored_temporal_point.avif', 'adaf92da2b6d3a7336b66020f1ff844f1868e774479170d950fb1bb17cfa8fcb'),
+    'animated_buffer_removal_time_ignored_spatial_point': ('animated_buffer_removal_time_ignored_spatial_point.avif', '53aed64c97e99732dc538a951234dc42b73136974bdad09cabfebafad107d8a0'),
+    'animated_buffer_removal_time_ignored_temporal_spatial_point': ('animated_buffer_removal_time_ignored_temporal_spatial_point.avif', 'a46d624562637894c530d4320012aa233a7082da9d04ec1196e478bbdb4dc044'),
+    'animated_buffer_removal_time_two_admitted_points': ('animated_buffer_removal_time_two_admitted_points.avif', '42a160e63388a938c4534a9463a26b28b7381ceff076675207e21282e342b6c4'),
+    'animated_buffer_removal_time_selected_explicit_layer': ('animated_buffer_removal_time_selected_explicit_layer.avif', 'ab87e6dfdd7d5cc36eccc6a9d579fdbe3cdfc6c32bc69c87617921ca00070b34'),
+    'animated_buffer_removal_time_two_bit': ('animated_buffer_removal_time_two_bit.avif', 'c55d5dd6433ae1fbdb4117f519db7ed0a9d17a8fe394d857c91fb0b061d236a7'),
+    'animated_buffer_removal_time_selected_implicit_layer': ('animated_buffer_removal_time_selected_implicit_layer.avif', 'b5e3afc51c87eea23087acea01163c0e257d06b94cc3ad0bda64ca87bd1e9fc8'),
+    'animated_buffer_removal_time_selected_temporal_one': ('animated_buffer_removal_time_selected_temporal_one.avif', '0c5041bcbf6f64652e1d500acaca510ff5f1138f04aca648e13bb3e5426273cd'),
     "animated_sequence_without_extra_zero_padding": (
         "animated_sequence_without_extra_zero_padding.avif",
         "94eff1c2a3171c570e8eb9000436ba4f1d2d62cf271b00a602054a689ed25819",

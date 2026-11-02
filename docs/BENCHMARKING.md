@@ -216,6 +216,21 @@ Pillow parity and an architecture policy before adopting source changes.
 The earlier failed ARM64 reservoir screen remains recorded in the plan; it
 does not establish x86 latency or justify changing ARM64 shipping code.
 
+The native reservoir-capacity experiment was also rejected in
+[run 41533813985](https://github.com/appunni-m/image-slash-star/actions/runs/41533813985).
+Across six paired cohorts, SSE2 primary gain was -1.0652% (zero cohorts faster)
+and AVX2 gain was 1.0000% (six cohorts faster). Worst guard slowdowns were
+2.1212% and 4.0758%, respectively. Neither architecture met the declared gates.
+All fourteen complete JPEG pairs matched. The artifact audit reconciled 336
+samples, 84 ABBA cohorts, four executables and 676 archived-source comparisons.
+Execution revision `5c9f3273f470439325e971020f9e4c49c14cfd8a` is the GitHub test
+merge with the same complete tree as PR #165's head `69ec5f624`; original
+receipts retain the execution revision. The original artifact ZIP has SHA-256
+`2cc0906baffa319183ffc6cb98a975d7022c019104540fe0c425625b052881e4`.
+No shipping JPEG optimization was adopted. The original artifact and audit
+remain in
+`.coverage-mcp/local-evidence/performance/jpeg-native-patch-69ec5f624-20261103/`.
+
 For local verification of the experiment runner, the revision tool accepts
 `--candidate-patch` and explicit `--variants native`. Native diagnostics on
 ARM64 do not establish SSE2/AVX2 timing. The default variants remain SSE2 and
