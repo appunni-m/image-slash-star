@@ -1294,7 +1294,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 3110,
           "status": "active",
           "asset_sha256": "0390a339020a54aa4ddb7600b988407c10efdc21ec0bdff762a793b7a1217e6c",
           "execution": {
@@ -1372,7 +1372,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 3110,
           "status": "active",
           "asset_sha256": "02a2791f3c182f175019224d62d658ed1c5b7654bb15eed98840b38628e81584",
           "execution": {
@@ -8584,7 +8584,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 379,
           "status": "active",
           "rust_expected_metadata": [],
           "asset_sha256": "ebd1e037026559f6a2f7dc12271c94a7440b2c06c79843eed5380afb92072d64",
@@ -8741,7 +8741,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 3078,
           "status": "active",
           "ref_path": "tests/fixtures/outputs/raws/Decode.avif_baseline_avif.bin",
           "ref_bytes": 49152,
@@ -8897,7 +8897,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 2960,
           "status": "active",
           "asset_sha256": "2279761c577c985f0c3ccfbe19a02a89f05c5fa16fb3dc1516bd5ebeb3c6702d",
           "execution": {
@@ -65358,7 +65358,7 @@
           "rust_sequence_error_kind": null,
           "rust_sequence_error_reason": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
+          "rust_decode_with_metadata_limit": 1964,
           "status": "active",
           "asset_sha256": "f88aa18f6c19d1f29431dfec69eff4ac0f4cc5b91e56c4c84206d0ab629e59b5",
           "execution": {
