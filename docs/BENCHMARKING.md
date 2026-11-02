@@ -161,13 +161,35 @@ outputs must match before timing. Each sample records its executable SHA-256;
 the summary retains all cohort ratios and reports their paired median at
 `revision-abba/summary.json`. These remain focused hosted-runner observations.
 
-The control builds from a retained Git source archive in a temporary directory
-under the output directory. It creates no worktree and leaves Git state
-unchanged. The archive digest, source-file hashes, immutable revision, and tree
-identity accompany the measurements. Local output must stay inside the
-repository. The runner accepts `--cases` for exact matrix workloads and
-`--cohorts` for one to twenty repeated quartets; its default remains one
-quartet, while CI explicitly selects six.
+Both revisions build sequentially from retained Git source archives at the
+same absolute source path, in a temporary directory under the output directory.
+Fresh target directories prevent stale reuse when archive timestamps predate
+an earlier build. The runner creates no worktree and leaves Git state
+unchanged. The archive digests, source-file
+hashes, immutable revisions, tree identities, actual build commands, compiler
+versions, and logs accompany the measurements. Identical archived source must
+produce identical executable hashes before timing can start.
+
+The `image-slash-star/jpeg-revision-abba@3` report retains both actual timed
+executables under `revision-abba/executables/`, plus the producer scripts and
+workflow. Optional `--sse2-target-dir` and `--avx2-target-dir` directories supply
+prebuilt binaries for untimed exact-output checks; these are retained and
+compared with the freshly archived candidate. Revision timings always use the
+two archived builds. Local output must stay inside the repository. The runner
+accepts `--cases` for exact matrix workloads and `--cohorts` for one to twenty
+repeated quartets; its default remains one quartet, while CI explicitly selects
+six. Existing version-2 reports retain their original build policy and meaning.
+
+This policy follows a source-identical native x86 calibration that observed
+candidate/control differences from -0.07% to +2.39%. A separate ARM64 probe
+built identical archived bytes three times: two builds at one source path had
+identical executable hashes, while a build at a different source path did not.
+All seven production JPEG workloads matched live pinned Pillow bytes on all
+three executables. This exposes a build-identity confound; it does not establish
+an x86 speedup or attribute every timing difference to source paths. The
+original calibration and build-path probe remain under
+`.coverage-mcp/local-evidence/ci/pr159-final-x86-benchmark-20261102/` and
+`.coverage-mcp/local-evidence/performance/jpeg-build-identity-20261102/`.
 
 A 2026-11-02 AVX2 eight-block reciprocal experiment was rejected by this
 procedure. On the AMD EPYC 7763 host, RGB 512×512 Q85 4:2:0 gained 0.19%
