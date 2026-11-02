@@ -1,0 +1,36 @@
+--- a/src/codecs/jpeg/encode/mod.rs
++++ b/src/codecs/jpeg/encode/mod.rs
+@@ -3721 +3721 @@
+-    valid_bits: u8,
++    available_bits: u8,
+@@ -3730 +3730 @@
+-            valid_bits: 0,
++            available_bits: 64,
+@@ -3738 +3738 @@
+-        self.valid_bits = 0;
++        self.available_bits = 64;
+@@ -3749 +3749,3 @@
+-        let available = 64u8.saturating_sub(self.valid_bits);
++        // Complete words are published immediately, so 1..=64 bits remain.
++        debug_assert!((1..=64).contains(&self.available_bits));
++        let available = self.available_bits;
+@@ -3752,2 +3754,2 @@
+-            self.valid_bits += width;
+-            if self.valid_bits == 64 {
++            self.available_bits -= width;
++            if self.available_bits == 0 {
+@@ -3762 +3764 @@
+-        self.valid_bits = 64;
++        self.available_bits = 0;
+@@ -3766 +3768 @@
+-        self.valid_bits = suffix_width;
++        self.available_bits = 64 - suffix_width;
+@@ -3778 +3780 @@
+-        self.valid_bits = 0;
++        self.available_bits = 64;
+@@ -3786,2 +3788,3 @@
+-        if self.valid_bits != 0 {
+-            scan.write(self.reservoir, self.valid_bits);
++        if self.available_bits != 64 {
++            // Occupied width is needed only once per block; capacity is bounded.
++            scan.write(self.reservoir, 64u8.saturating_sub(self.available_bits));

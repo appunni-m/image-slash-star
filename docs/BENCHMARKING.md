@@ -197,6 +197,32 @@ accepts `--cases` for exact matrix workloads and `--cohorts` for one to twenty
 repeated quartets; its default remains one quartet, while CI explicitly selects
 six. Existing version-2 reports retain their original build policy and meaning.
 
+Explicit patch experiments keep unaccepted implementation changes out of the
+shipping Rust sources. `scripts/benchmark_jpeg_patch_experiment.py` consumes a
+committed plan and patch, builds the same immutable revision twice, and applies
+the patch only inside the candidate's private source archive. The runner
+retains the original archive inventory separately from the patched compiled
+file hashes and complete changed source files. Version-4 reports identify the
+experimental patch explicitly; patched bytes are never represented as committed
+Rust blobs. Complete JPEG outputs must match before timing starts.
+
+The native x86 workflow measures the reservoir-capacity experiment when that
+plan or patch changes in a pull request. Its predeclared gate requires at least
+3% primary paired gain in both SSE2 and AVX2, all six primary cohorts faster,
+and no guard median slowdown above 2%. `experiment-result.json` records the
+result separately from CI success. A rejected candidate is a completed
+diagnostic experiment. A successful timing gate still requires exact pinned
+Pillow parity and an architecture policy before adopting source changes.
+The earlier failed ARM64 reservoir screen remains recorded in the plan; it
+does not establish x86 latency or justify changing ARM64 shipping code.
+
+For local verification of the experiment runner, the revision tool accepts
+`--candidate-patch` and explicit `--variants native`. Native diagnostics on
+ARM64 do not establish SSE2/AVX2 timing. The default variants remain SSE2 and
+AVX2 and require an x86-64 host. Untracked user files are preserved and excluded
+from both Git archives; tracked producer changes must be committed before
+execution. Neither mode creates a worktree or changes the shipping sources.
+
 This policy follows a source-identical native x86 calibration that observed
 candidate/control differences from -0.07% to +2.39%. A separate ARM64 probe
 built identical archived bytes three times: two builds at one source path had

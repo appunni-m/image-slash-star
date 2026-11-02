@@ -1,8 +1,37 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,774 total rows: 3,100 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,100 decode rows are
+The current public evidence matrix contains 3,782 total rows: 3,108 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,108 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF timing, display-delay and depth EOF neighbors — 2026-11-03
+
+Eight additional complete-container inputs stop inside decoder-buffer and
+frame-presentation delay widths, the low-delay-mode flag, initial-display-delay
+value, twelve-bit selector, monochrome color range, and horizontal or vertical
+subsampling selectors. Valid picture-interval UVLC values and complete repeated
+operating points align these fields without changing the frame payloads. The
+pinned Pillow oracle and public Rust decoder match all 92 complete frame
+buffers from 28 healthy layouts. Header verification accepts the eight bounded
+neighbors; decoding rejects each one at its intended sequence-field EOF path.
+
+A fresh canonical selection passes all eight new cases and four existing
+healthy controls. Its actual executable, two profiles, 139 source files, 32
+fixtures and eight producer files are retained. Coverage MCP reports source
+`matches_receipt` and tests `passed` through an explicitly locally derived
+context. This is not managed MCP execution. The unchanged sequence-parser
+region mapping gains eight observed regions: the compatible retained union is
+487/492, up from 479/492. This is not a fresh full run or a new global coverage
+percentage; five regions in this mapping remain unobserved.
+
+The fixture producer preserves all 29 preceding generated input files exactly.
+All 3,774 preceding matrix rows, 1,322 preceding AVIF JSON rows, 7,666 preceding
+output artifacts, the native-loop index and 167 target-only fault rows are
+unchanged. Pinned producers, fixture integrity and repository verification
+pass. These additions change no production Rust and add no codec unit tests,
+new fault rows, coverage exclusions or lower coverage floors. Original execution
+receipts remain in
+`.coverage-mcp/local-evidence/parity/avif-sequence-timing-depth-alignment-20261103/`.
 
 ## AVIF operating-point alignment and EOF neighbors — 2026-11-02
 
@@ -16426,7 +16455,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `691dafd9aa3f04e799369d0cc36a9b597158fd0d393203752bd89a8e1e35affb`; matrix `5590d3e98f576b02f4e9e793c09971df8f0c37199416889e11e3df97d2964f9f`.
+- Current fixture integrity only: manifest `f066cdca7fa47bff44b5bd066b44de15a09deba3b72ce462b491910b80ea901d`; matrix `0ef3655cccb70ac78536fb66d862cddc30bf7b660d9ee41d05788ff2062d7cd1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

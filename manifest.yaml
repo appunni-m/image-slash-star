@@ -15540,6 +15540,62 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_frame_presentation_delay_width
+      description: Complete AVIF animation ends its first sequence payload at the frame-presentation delay width; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_frame_presentation_delay_width.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_decoder_buffer_delay_width
+      description: Complete AVIF animation ends its first sequence payload at the decoder-buffer delay width; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_decoder_buffer_delay_width.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_low_delay_mode_flag
+      description: Complete AVIF animation ends its first sequence payload at the low-delay-mode flag; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_low_delay_mode_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_initial_display_delay_value
+      description: Complete AVIF animation ends its first sequence payload at the initial-display-delay value; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_initial_display_delay_value.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_subsampling_y_flag
+      description: Complete AVIF animation ends its first sequence payload at the vertical subsampling selector; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_subsampling_y_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_subsampling_x_flag
+      description: Complete AVIF animation ends its first sequence payload at the horizontal subsampling selector; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_subsampling_x_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_twelve_bit_flag
+      description: Complete AVIF animation ends its first sequence payload at the twelve-bit-depth selector; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_twelve_bit_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_monochrome_color_range_flag
+      description: Complete AVIF animation ends its first sequence payload at the monochrome color-range flag; valid timing and operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_monochrome_color_range_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_order_hint_disabled
       description: Five-frame AVIF sequence uses ordinary AV1 headers with order hints disabled
       test_assets:

@@ -148,6 +148,20 @@ jobs:
             --cases rgb-128-q10-420 rgb-512-q10-420 rgb-128-q85-420 \
               rgb-512-q85-420 rgb-1024-q85-420 rgb-128-q100-420 rgb-63x65-q85-420 \
             --output target/benchmarks/jpeg/simd-x86_64/revision-abba/summary.json
+      - name: Measure an explicit candidate patch when its plan or patch changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          experiment_plan=benchmarks/jpeg-production/experiments/reservoir-capacity.json
+          experiment_patch=benchmarks/jpeg-production/experiments/reservoir-capacity.patch
+          if git diff --quiet "$BASE_REVISION" HEAD -- "$experiment_plan" "$experiment_patch"; then
+            exit 0
+          fi
+          python3 scripts/benchmark_jpeg_patch_experiment.py \
+            --plan "$experiment_plan" \
+            --output target/benchmarks/jpeg/simd-x86_64/patch-experiment/summary.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
