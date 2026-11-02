@@ -643,3 +643,7 @@ Pinned Pillow observes both frames; the native observer records frame syntax.
 Nine integer-motion mixed-key sequences cover I420/I422/I444 at 8/10/12 bits
 with screen-content tuning, integer-only inter motion precision and coded width 102.
 Pinned Pillow observes both frames; the native observer records frame syntax.
+
+## Complete sequence header without extra zero padding
+
+`animated_sequence_without_extra_zero_padding` removes one redundant zero byte after the complete sequence header in `animated_integer_mv_disabled.avif`. The full container retains all five frames and timing tables. A fresh repeated libavif 1.4.1 observation reports signed repetition count -1 (infinite repetition), decodes all five frames, and agrees with repeated Pillow 12.2.0 frame bytes and durations. The new complete-file input and five pixel buffers are retained; existing observation records are unchanged.

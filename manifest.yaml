@@ -15422,6 +15422,124 @@ formats:
       status: active
       expect_error: true
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_operating_point_count
+      description: Complete five-frame AVIF container ends its first sequence payload before the operating-point count; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_operating_point_count.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_screen_content_tools_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the screen-content-tools selector; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_screen_content_tools_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_warped_motion_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the warped-motion enable flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_warped_motion_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_operating_point_display_model_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the operating-point display-model flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_operating_point_display_model_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_filter_intra_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the intra-filter enable flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_filter_intra_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_reference_frame_mvs_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the reference-frame motion-vector flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_reference_frame_mvs_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_masked_compound_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the masked-compound enable flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_masked_compound_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_dual_filter_flag
+      description: Complete five-frame AVIF container ends its first sequence payload before the dual-filter enable flag; header verification succeeds while still and sequence decoding reject the bounded field
+      test_assets:
+      - error_sequence_truncated_dual_filter_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_sequence_without_extra_zero_padding
+      description: Five-frame AVIF animation removes one redundant zero byte after the complete sequence-header trailing bits; Pillow preserves every frame and duration
+      test_assets:
+      - animated_sequence_without_extra_zero_padding.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_joint_compound_flag
+      description: Complete AVIF animation ends its first sequence payload at the joint-compound enable flag; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_joint_compound_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_cdef_flag
+      description: Complete AVIF animation ends its first sequence payload at the constrained directional enhancement filter flag; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_cdef_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_interintra_compound_flag
+      description: Complete AVIF animation ends its first sequence payload at the inter/intra compound enable flag; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_interintra_compound_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_integer_mv_selector
+      description: Complete AVIF animation ends its first sequence payload at the integer-motion-vector selector; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_integer_mv_selector.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_monochrome_flag
+      description: Complete AVIF animation ends its first sequence payload at the monochrome selector; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_monochrome_flag.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_screen_content_tools_value
+      description: Complete AVIF animation ends its first sequence payload at the explicit screen-content-tools value; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_screen_content_tools_value.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_delta_frame_id_width
+      description: Complete AVIF animation ends its first sequence payload at the delta frame-ID width; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_delta_frame_id_width.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_additional_frame_id_width
+      description: Complete AVIF animation ends its first sequence payload at the additional frame-ID width; valid operating-point layouts align the bounded field while Pillow header verification succeeds and decode rejects it
+      test_assets:
+      - error_sequence_truncated_additional_frame_id_width.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_order_hint_disabled
       description: Five-frame AVIF sequence uses ordinary AV1 headers with order hints disabled
       test_assets:
