@@ -134,7 +134,7 @@ jobs:
               raise SystemExit(f"expected 40 encode/decode workloads, found {len(summaries['sse2'])}")
           print("SSE2 and AVX2 output hashes and byte lengths match for all 40 workloads")
           PY
-      - name: Compare PR base and candidate with matched A-B-B-A workloads
+      - name: Build both revision archives at one source path and measure matched A-B-B-A cohorts
         if: github.event_name == 'pull_request'
         env:
           BASE_REVISION: ${{ github.event.pull_request.base.sha }}
@@ -154,5 +154,6 @@ jobs:
           name: x86-simd-benchmarks-${{ github.run_id }}
           overwrite: true
           path: target/benchmarks/jpeg/simd-x86_64/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 90

@@ -10,6 +10,7 @@ import io
 import json
 import os
 import platform
+import shutil
 import statistics
 import subprocess
 import sys
@@ -23,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BENCHMARK_MANIFEST = Path("benchmarks/jpeg-production/rust/Cargo.toml")
 BINARY_NAME = "jpeg-production-matrix-rust"
-CONTROL_SOURCE_PATHS = (
+BUILD_SOURCE_PATHS = (
     "Cargo.toml",
     "Cargo.lock",
     "rust-toolchain.toml",
@@ -69,12 +70,12 @@ def resolve_path(path: Path) -> Path:
     return (path if path.is_absolute() else ROOT / path).resolve()
 
 
-def prepare_control_source(revision: str, destination: Path, archive_path: Path) -> dict:
+def prepare_revision_source(revision: str, destination: Path, archive_path: Path) -> dict:
     """Extract immutable build inputs inside the checkout without changing Git state."""
-    paths = git("ls-tree", "-r", "--name-only", revision, "--", *CONTROL_SOURCE_PATHS).splitlines()
+    paths = git("ls-tree", "-r", "--name-only", revision, "--", *BUILD_SOURCE_PATHS).splitlines()
     required = {"Cargo.toml", "Cargo.lock", "src/lib.rs", BENCHMARK_MANIFEST.as_posix()}
     if missing := sorted(required.difference(paths)):
-        raise RuntimeError(f"control revision omits required build inputs: {missing}")
+        raise RuntimeError(f"revision omits required build inputs: {missing}")
     archived = subprocess.run(
         ["git", "archive", "--format=tar", revision, "--", *paths],
         cwd=ROOT,
@@ -83,7 +84,7 @@ def prepare_control_source(revision: str, destination: Path, archive_path: Path)
         stderr=subprocess.PIPE,
     ).stdout
     if archive_path.exists() and archive_path.read_bytes() != archived:
-        raise RuntimeError("control source archive differs; use a fresh output directory")
+        raise RuntimeError("source archive differs; use a fresh output directory")
     archive_path.write_bytes(archived)
     with tarfile.open(fileobj=io.BytesIO(archived), mode="r:") as source:
         source.extractall(destination, filter="data")
@@ -102,10 +103,16 @@ def prepare_control_source(revision: str, destination: Path, archive_path: Path)
     }
 
 
-def build_control(source: Path, target_dir: Path, rustflags: str) -> Path:
+def build_revision(
+    source: Path, target_dir: Path, rustflags: str, log_path: Path
+) -> tuple[Path, dict]:
     cargo_env = os.environ.copy()
     cargo_env["CARGO_TARGET_DIR"] = str(target_dir)
     cargo_env["RUSTFLAGS"] = rustflags
+    # The declared variant flags must win over an inherited encoded override.
+    cargo_env.pop("CARGO_ENCODED_RUSTFLAGS", None)
+    cargo_env["CARGO_INCREMENTAL"] = "0"
+    cargo_env["RUSTC_WRAPPER"] = ""
     toolchain = os.environ.get("RUST_TOOLCHAIN")
     cargo_command = ["cargo"]
     if toolchain:
@@ -118,11 +125,75 @@ def build_control(source: Path, target_dir: Path, rustflags: str) -> Path:
         "--release",
         "--locked",
     ]
-    subprocess.run(command, cwd=source, env=cargo_env, check=True)
+    started = datetime.now(timezone.utc).isoformat()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as log:
+        completed = subprocess.run(command, cwd=source, env=cargo_env, stdout=log, stderr=subprocess.STDOUT)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"revision build failed ({completed.returncode}); {log_path}:\n"
+            f"{log_path.read_text(encoding='utf-8')[-5000:]}"
+        )
     binary = target_dir / "release" / BINARY_NAME
     if not binary.is_file():
-        raise RuntimeError(f"baseline benchmark binary was not produced: {binary}")
-    return binary
+        raise RuntimeError(f"revision benchmark binary was not produced: {binary}")
+    return binary, {
+        "command": command,
+        "cwd": str(source),
+        "rustflags": rustflags,
+        "incremental": False,
+        "compiler_wrapper": "",
+        "log": str(log_path),
+        "rustc": subprocess.check_output(
+            ["rustc", *([f"+{toolchain}"] if toolchain else []), "-Vv"],
+            cwd=source, env=cargo_env, text=True,
+        ).strip(),
+        "started_at_utc": started,
+        "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def build_revision_pair(
+    baseline_revision: str,
+    candidate_revision: str,
+    variant: str,
+    rustflags: str,
+    temporary_root: Path,
+    output: Path,
+) -> dict:
+    """Build both immutable revisions at one source path, retaining timed binaries."""
+    source = temporary_root / "source"
+    pair = {}
+    for subject, revision in (("control", baseline_revision), ("candidate", candidate_revision)):
+        # Only this invocation's private source extraction is replaced. Each
+        # subject gets a fresh target directory so archive mtimes cannot make
+        # Cargo reuse the other revision's executable.
+        if source.exists():
+            shutil.rmtree(source)
+        receipt = prepare_revision_source(revision, source, output / f"{subject}-source.tar")
+        binary, build = build_revision(
+            source, temporary_root / "targets" / variant / subject, rustflags,
+            output / "build-logs" / variant / f"{subject}.log",
+        )
+        retained = output / "executables" / variant / subject / BINARY_NAME
+        retained.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(binary, retained)
+        pair[subject] = {
+            "source": receipt,
+            "build": build,
+            "binary": str(retained),
+            "binary_sha256": hashlib.sha256(retained.read_bytes()).hexdigest(),
+        }
+    source_identical = pair["control"]["source"]["files"] == pair["candidate"]["source"]["files"]
+    binary_identical = pair["control"]["binary_sha256"] == pair["candidate"]["binary_sha256"]
+    if source_identical and not binary_identical:
+        raise RuntimeError(
+            f"source-identical {variant} builds produced different executables; "
+            "investigate build identity before timing"
+        )
+    pair["source_identical"] = source_identical
+    pair["binary_identical"] = binary_identical
+    return pair
 
 
 def run_sample(binary: Path, case: dict[str, object], matrix) -> dict[str, str]:
@@ -171,8 +242,14 @@ def load_average() -> list[float] | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline-revision", required=True)
-    parser.add_argument("--sse2-target-dir", type=Path, required=True)
-    parser.add_argument("--avx2-target-dir", type=Path, required=True)
+    parser.add_argument(
+        "--sse2-target-dir", type=Path,
+        help="optional prebuilt SSE2 directory for untimed exact-output comparison",
+    )
+    parser.add_argument(
+        "--avx2-target-dir", type=Path,
+        help="optional prebuilt AVX2 directory for untimed exact-output comparison",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cases", nargs="+", default=CASES, help="exact matrix workload names")
     parser.add_argument("--cohorts", type=int, default=1, help="A-B-B-A quartets per workload (1–20)")
@@ -181,6 +258,8 @@ def main() -> int:
         parser.error("--cohorts must be between 1 and 20")
     if len(set(args.cases)) != len(args.cases):
         parser.error("--cases cannot repeat a workload")
+    if platform.machine().lower() not in {"x86_64", "amd64"}:
+        raise RuntimeError("SSE2/AVX2 revision timing requires a native x86-64 host")
 
     candidate_revision = git("rev-parse", "HEAD")
     if git("status", "--porcelain"):
@@ -195,21 +274,42 @@ def main() -> int:
     if missing_cases:
         raise RuntimeError(f"benchmark matrix is missing required cases: {missing_cases}")
 
-    candidate_targets = {
-        "sse2": resolve_path(args.sse2_target_dir),
-        "avx2": resolve_path(args.avx2_target_dir),
+    prebuilt_targets = {
+        variant: resolve_path(path)
+        for variant, path in (("sse2", args.sse2_target_dir), ("avx2", args.avx2_target_dir))
+        if path is not None
     }
-    for variant, target_dir in candidate_targets.items():
+    for variant, target_dir in prebuilt_targets.items():
         binary = target_dir / "release" / BINARY_NAME
         if not binary.is_file():
-            raise RuntimeError(f"{variant} candidate benchmark binary is missing: {binary}")
+            raise RuntimeError(f"{variant} prebuilt benchmark binary is missing: {binary}")
 
     output = resolve_path(args.output)
     if not output.is_relative_to(ROOT):
         raise RuntimeError("benchmark output must stay inside the repository")
+    if output.exists():
+        raise RuntimeError("benchmark report already exists; use a fresh output directory")
+    if output.parent.exists() and any(output.parent.iterdir()):
+        raise RuntimeError("benchmark output directory is not empty; use a fresh directory")
     output.parent.mkdir(parents=True, exist_ok=True)
-    build_root = output.parent / "control-targets"
-    build_root.mkdir(parents=True, exist_ok=True)
+    producer_sources = {}
+    for path in (
+        Path(__file__), Path(matrix.__file__), ROOT / ".github/workflows/benchmark-x86.yml"
+    ):
+        relative = path.resolve().relative_to(ROOT)
+        retained = output.parent / "producer" / relative
+        retained.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, retained)
+        producer_sources[relative.as_posix()] = hashlib.sha256(retained.read_bytes()).hexdigest()
+    prebuilt_binaries = {}
+    for variant, target_dir in prebuilt_targets.items():
+        retained = output.parent / "executables" / variant / "prebuilt" / BINARY_NAME
+        retained.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target_dir / "release" / BINARY_NAME, retained)
+        prebuilt_binaries[variant] = {
+            "binary": str(retained),
+            "binary_sha256": hashlib.sha256(retained.read_bytes()).hexdigest(),
+        }
 
     started_at = datetime.now(timezone.utc).isoformat()
     records: list[dict[str, object]] = []
@@ -217,22 +317,18 @@ def main() -> int:
     exact_outputs: list[dict[str, object]] = []
     cohort_summaries: list[dict[str, object]] = []
     binary_identities: dict[str, dict[str, str]] = {}
+    revision_builds = {}
     with tempfile.TemporaryDirectory(prefix="jpeg-abba-", dir=output.parent) as temporary:
-        control_source = Path(temporary) / "control"
-        control_receipt = prepare_control_source(
-            baseline_revision, control_source, output.parent / "control-source.tar"
-        )
-
         for variant, rustflags in VARIANTS.items():
-            control_binary = build_control(
-                control_source,
-                build_root / variant,
-                rustflags,
+            pair = build_revision_pair(
+                baseline_revision, candidate_revision, variant, rustflags,
+                Path(temporary), output.parent,
             )
-            candidate_binary = candidate_targets[variant] / "release" / BINARY_NAME
+            revision_builds[variant] = pair
+            control_binary = Path(pair["control"]["binary"])
+            candidate_binary = Path(pair["candidate"]["binary"])
             binary_identities[variant] = {
-                "control": hashlib.sha256(control_binary.read_bytes()).hexdigest(),
-                "candidate": hashlib.sha256(candidate_binary.read_bytes()).hexdigest(),
+                subject: pair[subject]["binary_sha256"] for subject in ("control", "candidate")
             }
             for case_name in args.cases:
                 case = case_by_name[case_name]
@@ -246,6 +342,17 @@ def main() -> int:
                     raise RuntimeError(
                         f"baseline and candidate JPEG bytes differ for {variant}/{case_name}"
                     )
+                prebuilt_match = None
+                if variant in prebuilt_binaries:
+                    prebuilt_output = exact_dir / f"{case_name}-prebuilt.jpg"
+                    prebuilt_bytes = emit_output(
+                        Path(prebuilt_binaries[variant]["binary"]), case, prebuilt_output, matrix
+                    )
+                    if prebuilt_bytes != candidate_bytes:
+                        raise RuntimeError(
+                            f"prebuilt and archived candidate JPEG bytes differ for {variant}/{case_name}"
+                        )
+                    prebuilt_match = True
                 exact_outputs.append(
                     {
                         "variant": variant,
@@ -253,6 +360,7 @@ def main() -> int:
                         "bytes": len(control_bytes),
                         "sha256": hashlib.sha256(control_bytes).hexdigest(),
                         "byte_for_byte_match": True,
+                        "prebuilt_matches_archived_candidate": prebuilt_match,
                     }
                 )
 
@@ -353,12 +461,14 @@ def main() -> int:
 
     completed_at = datetime.now(timezone.utc).isoformat()
     report = {
-        "schema": "image-slash-star/jpeg-revision-abba@2",
+        "schema": "image-slash-star/jpeg-revision-abba@3",
         "status": "completed",
         "scope": "public JPEG encoder, same-host interleaved A-B-B-A",
         "started_at_utc": started_at,
         "finished_at_utc": completed_at,
         "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+        "runner_argv": sys.orig_argv,
+        "runner_cwd": str(ROOT),
         "baseline_revision": baseline_revision,
         "candidate_revision": candidate_revision,
         "candidate_dirty": False,
@@ -372,7 +482,10 @@ def main() -> int:
         "workloads": args.cases,
         "cohorts_per_workload": args.cohorts,
         "aggregation": "median of within-cohort candidate/control ratios",
-        "control_source": control_receipt,
+        "build_policy": "both Git archives at one absolute source path, independent fresh target directories",
+        "producer_sources": producer_sources,
+        "revision_builds": revision_builds,
+        "prebuilt_binaries": prebuilt_binaries,
         "binary_sha256": binary_identities,
         "correctness_policy": "Baseline and candidate JPEG outputs are byte-for-byte compared before timing; x86 coverage CI separately runs exact Pillow parity cases.",
         "exact_outputs": exact_outputs,

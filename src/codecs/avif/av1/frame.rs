@@ -939,7 +939,9 @@ impl FrameState {
                 "layer-specific OBU appears before a sequence header",
             ));
         }
-        if self.has_nonzero_operating_point_idc != has_extension {
+        // A nonzero operating point requires layer IDs. Pillow also accepts
+        // a redundant extension when every operating point covers all OBUs.
+        if self.has_nonzero_operating_point_idc && !has_extension {
             return Err(malformed(
                 "layer OBU extension disagrees with sequence operating points",
             ));

@@ -14927,11 +14927,298 @@ formats:
       status: active
       pixel_reference_case: hdr
       pure_rust_work_item: AVF-COLOR-001
+    - id: obu_temporal_delimiter_flags_80
+      description: Complete baseline AVIF sets OBU header bits 0x80 on the temporal delimiter; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_flags_80.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_flags_01
+      description: Complete baseline AVIF sets OBU header bits 0x01 on the temporal delimiter; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_flags_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_flags_81
+      description: Complete baseline AVIF sets OBU header bits 0x81 on the temporal delimiter; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_flags_81.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_flags_80
+      description: Complete baseline AVIF sets OBU header bits 0x80 on the sequence header; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_sequence_header_flags_80.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_flags_01
+      description: Complete baseline AVIF sets OBU header bits 0x01 on the sequence header; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_sequence_header_flags_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_flags_81
+      description: Complete baseline AVIF sets OBU header bits 0x81 on the sequence header; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_sequence_header_flags_81.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_flags_80
+      description: Complete baseline AVIF sets OBU header bits 0x80 on the frame; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_frame_flags_80.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_flags_01
+      description: Complete baseline AVIF sets OBU header bits 0x01 on the frame; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_frame_flags_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_flags_81
+      description: Complete baseline AVIF sets OBU header bits 0x81 on the frame; Pillow tolerates them with exact baseline pixels
+      test_assets:
+      - obu_frame_flags_81.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_00
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x00; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_00.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_01
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x01; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_02
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x02; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_02.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_03
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x03; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_03.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_04
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x04; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_04.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_05
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x05; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_05.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_06
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x06; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_06.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_temporal_delimiter_extension_07
+      description: Complete baseline AVIF adds a temporal delimiter extension header with zero layer IDs and reserved bits 0x07; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_temporal_delimiter_extension_07.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_temporal_delimiter_flags_81_truncated_frame
+      description: Complete AVIF with tolerated temporal delimiter header flags and a bounded item extent still rejects a one-byte-short final frame
+      test_assets:
+      - error_obu_temporal_delimiter_flags_81_truncated_frame.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_00
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x00; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_00.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_01
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x01; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_02
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x02; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_02.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_03
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x03; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_03.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_04
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x04; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_04.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_05
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x05; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_05.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_06
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x06; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_06.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_sequence_header_extension_07
+      description: Complete baseline AVIF adds a sequence header extension header with zero layer IDs and reserved bits 0x07; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_sequence_header_extension_07.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_sequence_header_flags_81_truncated_frame
+      description: Complete AVIF with tolerated sequence header header flags and a bounded item extent still rejects a one-byte-short final frame
+      test_assets:
+      - error_obu_sequence_header_flags_81_truncated_frame.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_00
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x00; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_00.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_01
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x01; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_01.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_02
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x02; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_02.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_03
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x03; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_03.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_04
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x04; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_04.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_05
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x05; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_05.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_06
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x06; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_06.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_07
+      description: Complete baseline AVIF adds a frame extension header with zero layer IDs and reserved bits 0x07; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_07.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_frame_flags_81_truncated_frame
+      description: Complete AVIF with tolerated frame header flags and a bounded item extent still rejects a one-byte-short final frame
+      test_assets:
+      - error_obu_frame_flags_81_truncated_frame.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: padding_4096_obus
       description: RGB AVIF with 4093 empty padding OBUs before the original temporal delimiter, sequence header, and frame preserves exact baseline pixels
       test_assets:
       - padding_4096_obus.avif
       status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_no_size_field
+      description: Complete baseline AVIF omits the final frame OBU size field; the remaining bounded sample preserves exact baseline pixels
+      test_assets:
+      - obu_frame_no_size_field.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: obu_frame_extension_07_no_size_field
+      description: Complete baseline AVIF adds a zero-layer-ID frame extension with reserved bits 0x07 and omits its size field; Pillow preserves exact baseline pixels
+      test_assets:
+      - obu_frame_extension_07_no_size_field.avif
+      status: active
+      pixel_reference_case: baseline
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_temporal_delimiter_no_size_field
+      description: An unsized temporal delimiter consumes the remaining bounded AVIF sample; Pillow verifies the container but rejects pixel decoding without a frame
+      test_assets:
+      - error_obu_temporal_delimiter_no_size_field.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_sequence_header_no_size_field
+      description: An unsized sequence header consumes the remaining bounded AVIF sample; Pillow verifies the container but rejects pixel decoding without a frame
+      test_assets:
+      - error_obu_sequence_header_no_size_field.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_obu_frame_no_size_field_truncated
+      description: Complete AVIF omits the final frame size field and removes its final payload byte with a bounded item extent; Pillow still rejects pixel decoding
+      test_assets:
+      - error_obu_frame_no_size_field_truncated.avif
+      status: active
+      expect_error: true
       pure_rust_work_item: AVF-STILL-001
     - id: padding_4097_obus
       description: RGB AVIF with 4097 total OBUs remains valid and preserves exact baseline pixels beyond the former arbitrary count limit

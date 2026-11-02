@@ -115,16 +115,15 @@ fn validate_sample_and_return_temporal_unit(
     let data = SegmentedData::new(input, &sample.spans)?;
     let mut offset = 0_usize;
     let mut frame_bearing = false;
-    // Each accepted OBU consumes at least its header and size byte. The
+    // Each accepted OBU consumes at least its header byte. The
     // bounded sample therefore limits this loop, including empty padding
     // OBUs; an extra count cap would reject otherwise valid Pillow inputs.
     while offset < data.len() {
         // The loop condition proves the logical OBU header byte is present.
         let header = data.validated_byte(offset);
         offset = offset.saturating_add(1);
-        if header & 0x80 != 0 || header & 1 != 0 {
-            return Err(malformed("OBU header reserved bits are set"));
-        }
+        // Pinned Pillow/dav1d tolerates the forbidden and reserved header
+        // bits. Mask only the fields used below; bounds remain checked.
         let obu_type = (header >> 3) & 0x0f;
         let has_extension = header & 4 != 0;
         let has_size_field = header & 2 != 0;
@@ -133,25 +132,25 @@ fn validate_sample_and_return_temporal_unit(
         if has_extension {
             let extension = data.byte(offset)?;
             offset = offset.saturating_add(1);
-            if extension & 7 != 0 {
-                return Err(malformed("OBU extension reserved bits are set"));
-            }
+            // The low three reserved bits do not affect layer identity.
             temporal_id = u32::from(extension >> 5);
             spatial_id = u32::from((extension >> 3) & 3);
         }
-        if !has_size_field {
-            return Err(malformed("OBU omits its payload-size field"));
-        }
-        let payload_size = read_uleb128(&data, &mut offset)? as usize;
+        let payload_size = if has_size_field {
+            read_uleb128(&data, &mut offset)? as usize
+        } else {
+            // Pillow/dav1d treats an unsized OBU as the rest of this sample,
+            // including any bytes that could otherwise resemble more OBUs.
+            data.len().saturating_sub(offset)
+        };
         let payload_start = offset;
         let remaining = data.len().saturating_sub(payload_start);
         if payload_size > remaining {
             return Err(malformed("OBU payload exceeds its sample"));
         }
         let payload_end = payload_start.saturating_add(payload_size);
-        if matches!(obu_type, 1 | 2 | 8) && has_extension {
-            return Err(malformed("non-layer-specific OBU has an extension header"));
-        }
+        // Pillow accepts extension headers on non-layer-specific OBUs;
+        // their layer IDs do not participate in operating-point selection.
         if matches!(obu_type, 3 | 4 | 6 | 7) {
             frame_bearing = true;
             if !state.admits_layer_specific_obu(has_extension, temporal_id, spatial_id)? {
