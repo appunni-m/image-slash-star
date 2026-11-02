@@ -1428,6 +1428,52 @@
       "case_names": [
         "lossy_inter_420_b16x64_reduced_transform_set_64x64"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "09a2f3f98696fd35a9f48620e1d8fa08172f166562af58fcba3b12a0a0114313",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_ignored_temporal_layer"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "7a64a0193a3431749b55a7531887cd9d1a3853eded660db666c50f778aba93be",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_ignored_spatial_layer"
+      ]
     }
   ],
   "artifacts": [
@@ -1520,6 +1566,16 @@
       "bytes": 25475,
       "path": "inputs/animated_identity_matrix_profile2_12bit_444.avif",
       "sha256": "d0079f47a1f7709a373191d2248d42daec16d01132b6aaf1cdb1d7dc613fb1da"
+    },
+    {
+      "bytes": 1245,
+      "path": "inputs/animated_ignored_spatial_layer.avif",
+      "sha256": "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e"
+    },
+    {
+      "bytes": 1245,
+      "path": "inputs/animated_ignored_temporal_layer.avif",
+      "sha256": "1ba3cb1481a80a6e776b5c42199defca0c51f82a6c92ccbebe044a7ff2ad3276"
     },
     {
       "bytes": 1244,
@@ -4705,6 +4761,56 @@
       "bytes": 12288,
       "path": "pixels/animated_identity_matrix_profile2_12bit_444/frame_4.bin",
       "sha256": "66b09b44e63acc9869bbf6a10c12df4890a9c26b1143ae39f9ef128866120ffb"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_spatial_layer/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_spatial_layer/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_spatial_layer/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_spatial_layer/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_spatial_layer/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_temporal_layer/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_temporal_layer/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_temporal_layer/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_temporal_layer/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/animated_ignored_temporal_layer/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
     },
     {
       "bytes": 67500,
@@ -43856,6 +43962,170 @@
       "repeat_equal": true,
       "source": "lossy_inter_420_b16x64_reduced_transform_set_64x64",
       "source_sha256": "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e"
+    },
+    {
+      "input_bytes": 1245,
+      "input_path": "inputs/animated_ignored_temporal_layer.avif",
+      "input_sha256": "1ba3cb1481a80a6e776b5c42199defca0c51f82a6c92ccbebe044a7ff2ad3276",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_ignored_temporal_layer",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "09a2f3f98696fd35a9f48620e1d8fa08172f166562af58fcba3b12a0a0114313",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_ignored_temporal_layer",
+      "source_sha256": "1ba3cb1481a80a6e776b5c42199defca0c51f82a6c92ccbebe044a7ff2ad3276"
+    },
+    {
+      "input_bytes": 1245,
+      "input_path": "inputs/animated_ignored_spatial_layer.avif",
+      "input_sha256": "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_ignored_spatial_layer",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "7a64a0193a3431749b55a7531887cd9d1a3853eded660db666c50f778aba93be",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_ignored_spatial_layer",
+      "source_sha256": "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e"
     }
   ],
   "oracle": {

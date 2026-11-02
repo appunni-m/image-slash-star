@@ -15311,6 +15311,27 @@ formats:
       - animated_operating_point_high_tier.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_ignored_temporal_layer
+      description: Five-frame AVIF ignores an empty frame OBU on unselected temporal layer one while preserving every original frame and duration
+      test_assets:
+      - animated_ignored_temporal_layer.avif
+      status: active
+      pixel_reference_case: animated
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_ignored_spatial_layer
+      description: Five-frame AVIF ignores an empty frame OBU on unselected spatial layer one while preserving every original frame and duration
+      test_assets:
+      - animated_ignored_spatial_layer.avif
+      status: active
+      pixel_reference_case: animated
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_animated_ignored_layer_payload_exceeds_sample
+      description: Five-frame AVIF with an ignored temporal-layer OBU whose declared payload exceeds its bounded sample passes header verification but rejects still and sequence decoding
+      test_assets:
+      - error_animated_ignored_layer_payload_exceeds_sample.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_decoder_model_without_operating_point_parameters
       description: Five-frame AVIF sequence enables decoder-model timing while its operating-point parameter flag remains clear
       test_assets:
