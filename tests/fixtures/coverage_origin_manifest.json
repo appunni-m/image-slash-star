@@ -1,12 +1,99 @@
 {
   "entries": [
     {
-      "guard_count": 12,
-      "origin": "independent_implementation",
+      "guard_count": 13,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 3,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 4,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 5,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 6,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 7,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 8,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 9,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 10,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 11,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 12,
+          "origin": "independent_implementation"
+        },
+        {
+          "index": 13,
+          "origin": "independent_implementation"
+        }
+      ],
       "path": "src/codecs/avif/av1/block.rs"
     },
     {
-      "guard_count": 26,
+      "guard_count": 7,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 3,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 6,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 7,
+          "origin": "defensive_model"
+        }
+      ],
+      "path": "src/codecs/avif/av1/cdef.rs"
+    },
+    {
+      "guard_count": 27,
       "guards": [
         {
           "index": 1,
@@ -111,6 +198,10 @@
         {
           "index": 26,
           "origin": "independent_implementation"
+        },
+        {
+          "index": 27,
+          "origin": "defensive_model"
         }
       ],
       "path": "src/codecs/avif/av1/entropy.rs"
@@ -195,6 +286,36 @@
       "path": "src/codecs/avif/av1/frame.rs"
     },
     {
+      "guard_count": 6,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 3,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 6,
+          "origin": "defensive_model"
+        }
+      ],
+      "path": "src/codecs/avif/av1/mc.rs"
+    },
+    {
       "guard_count": 13,
       "guards": [
         {
@@ -253,7 +374,7 @@
       "path": "src/codecs/avif/av1/mod.rs"
     },
     {
-      "guard_count": 3,
+      "guard_count": 5,
       "guards": [
         {
           "index": 1,
@@ -266,9 +387,59 @@
         {
           "index": 3,
           "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
         }
       ],
       "path": "src/codecs/avif/av1/motion.rs"
+    },
+    {
+      "guard_count": 9,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 3,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 6,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 7,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 8,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 9,
+          "origin": "defensive_model"
+        }
+      ],
+      "path": "src/codecs/avif/av1/raster.rs"
     },
     {
       "guard_count": 7,
@@ -300,9 +471,33 @@
       "path": "src/codecs/avif/av1/tile_state.rs"
     },
     {
-      "guard_count": 20,
+      "guard_count": 1,
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/container.rs"
+    },
+    {
+      "guard_count": 24,
       "origin": "defensive_model",
       "path": "src/codecs/avif/decode.rs"
+    },
+    {
+      "guard_count": 2,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "independent_implementation"
+        }
+      ],
+      "path": "src/codecs/avif/encode.rs"
+    },
+    {
+      "guard_count": 6,
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/mod.rs"
     },
     {
       "guard_count": 3,
@@ -324,27 +519,13 @@
     },
     {
       "guard_count": 2,
-      "guards": [
-        {
-          "index": 1,
-          "origin": "defensive_model"
-        },
-        {
-          "index": 2,
-          "origin": "independent_implementation"
-        }
-      ],
-      "path": "src/codecs/avif/encode.rs"
-    },
-    {
-      "guard_count": 4,
-      "origin": "defensive_model",
-      "path": "src/codecs/avif/mod.rs"
-    },
-    {
-      "guard_count": 2,
       "origin": "defensive_model",
       "path": "src/codecs/bmp/decode.rs"
+    },
+    {
+      "guard_count": 1,
+      "origin": "defensive_model",
+      "path": "src/codecs/bmp/encode.rs"
     },
     {
       "guard_count": 2,
@@ -387,7 +568,7 @@
       "path": "src/codecs/png/inspect.rs"
     },
     {
-      "guard_count": 18,
+      "guard_count": 23,
       "guards": [
         {
           "index": 1,
@@ -460,6 +641,26 @@
         {
           "index": 18,
           "origin": "defensive_model"
+        },
+        {
+          "index": 19,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 20,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 21,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 22,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 23,
+          "origin": "defensive_model"
         }
       ],
       "path": "src/codecs/tiff/decode.rs"
@@ -470,12 +671,35 @@
       "path": "src/codecs/tiff/encode.rs"
     },
     {
+      "guard_count": 3,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 3,
+          "origin": "defensive_model"
+        }
+      ],
+      "path": "src/codecs/webp/encode/mod.rs"
+    },
+    {
+      "guard_count": 1,
+      "origin": "defensive_model",
+      "path": "src/codecs/webp/native/encoder/backward_refs.rs"
+    },
+    {
       "guard_count": 2,
       "origin": "defensive_model",
       "path": "src/encode_options.rs"
     },
     {
-      "guard_count": 4,
+      "guard_count": 6,
       "guards": [
         {
           "index": 1,
@@ -492,12 +716,20 @@
         {
           "index": 4,
           "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 6,
+          "origin": "defensive_model"
         }
       ],
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 50,
+      "guard_count": 52,
       "guards": [
         {
           "index": 1,
@@ -698,6 +930,14 @@
         {
           "index": 50,
           "origin": "defensive_model"
+        },
+        {
+          "index": 51,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 52,
+          "origin": "independent_implementation"
         }
       ],
       "path": "tests/coverage_matrix_tests.rs"
@@ -706,29 +946,6 @@
       "guard_count": 1,
       "origin": "independent_implementation",
       "path": "tests/support/av1_short_references.rs"
-    },
-    {
-      "guard_count": 1,
-      "origin": "defensive_model",
-      "path": "src/codecs/webp/native/encoder/backward_refs.rs"
-    },
-    {
-      "guard_count": 3,
-      "guards": [
-        {
-          "index": 1,
-          "origin": "defensive_model"
-        },
-        {
-          "index": 2,
-          "origin": "defensive_model"
-        },
-        {
-          "index": 3,
-          "origin": "defensive_model"
-        }
-      ],
-      "path": "src/codecs/webp/encode/mod.rs"
     }
   ],
   "format_version": 2,

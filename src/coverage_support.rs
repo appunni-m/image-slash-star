@@ -37,6 +37,12 @@ pub(crate) fn require_some<T>(value: Option<T>, context: &str) -> T {
 pub enum CoverageFaultPoint {
     /// Force AV1 segment-map allocation to fail during segmented frame setup.
     Av1SegmentMapReservation,
+    /// Mismatch AV1 frame and lossless-segment block depths during validation.
+    Av1InterTranslationSampleDepthMismatch,
+    /// Set AV1 motion-predictor width to zero before scratch geometry validation.
+    Av1MotionPredictorZeroWidth,
+    /// Sweep invalid AV1 reference-MV geometry through its public decode error.
+    Av1ReferenceMvGeometryGuardSweep,
     /// Report the AV1 display-plane copy allocation failure before reserving
     /// its output sample buffer.
     Av1DisplayPlaneCopyAllocation,
@@ -56,6 +62,26 @@ pub enum CoverageFaultPoint {
     AvifI444AlphaPlaneLengthMismatch,
     /// Shorten a valid AVIF 12-bit I420 alpha plane before color conversion.
     Avif12BitI420AlphaSampleCountMismatch,
+    /// Pass a zero width to the AVIF 12-bit I420 alpha converter.
+    Avif12BitI420AlphaZeroWidth,
+    /// Shorten matching AVIF 12-bit I420 luma and alpha planes to a non-row length.
+    Avif12BitI420AlphaNondivisibleLumaLength,
+    /// Pass empty AVIF 12-bit I420 luma and alpha planes to the converter.
+    Avif12BitI420AlphaZeroHeight,
+    /// Shorten a valid AVIF 12-bit I420 U plane before color conversion.
+    Avif12BitI420AlphaUPlaneLengthMismatch,
+    /// Shorten a valid AVIF 12-bit I420 V plane before color conversion.
+    Avif12BitI420AlphaVPlaneLengthMismatch,
+    /// Shorten a reconstructed AVIF Y plane after canvas assembly.
+    AvifPortableYPlaneLengthMismatch,
+    /// Shorten a reconstructed AVIF U plane after canvas assembly.
+    AvifPortableUPlaneLengthMismatch,
+    /// Shorten a reconstructed AVIF V plane after canvas assembly.
+    AvifPortableVPlaneLengthMismatch,
+    /// Shorten a validated AVIF alpha plane before portable decoding.
+    AvifPortableAlphaPlaneLengthMismatch,
+    /// Force identity color conversion on subsampled AVIF planes.
+    AvifSubsampledIdentityConversion,
     /// Shorten a valid AVIF monochrome alpha plane to test its dimension guard.
     AvifMonochromeAlphaPlaneLengthMismatch,
     /// Clear AVIF monochrome horizontal subsampling after validation.
@@ -140,6 +166,8 @@ pub enum CoverageFaultPoint {
     BmpPaletteReservation,
     /// Force the BMP 24-bit decoded-pixel output reservation to fail.
     BmpDecodedPixelsReservation,
+    /// Present a height beyond BMP's signed dimension limit to the encoder guard.
+    BmpEncodeHeightBeyondSignedLimit,
     /// Force PNG decoded-sample reservation to fail before scanline unpacking.
     PngDecodedSampleBufferReservation,
     /// Inject a PNG chunk-iteration failure and exercise the iterator's failed state.
@@ -154,6 +182,8 @@ pub enum CoverageFaultPoint {
     WebpRiffSignatureMismatch,
     /// Corrupt the WEBP form type before WebP sink header validation.
     WebpRiffFormTypeMismatch,
+    /// Corrupt the declared RIFF size before WebP sink header validation.
+    WebpRiffDeclaredSizeMismatch,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.
@@ -176,6 +206,16 @@ pub enum CoverageFaultPoint {
     TiffYcbcrHorizontalSubsamplingZero,
     /// Report zero vertical subsampling after TIFF YCbCr layout validation.
     TiffYcbcrVerticalSubsamplingZero,
+    /// Reach TIFF YCbCr rational bounds validation during inspection.
+    TiffYcbcrRationalIndexOutOfRange,
+    /// Reach TIFF YCbCr floating-point bounds validation during inspection.
+    TiffYcbcrFloatingIndexOutOfRange,
+    /// Model an inconsistent TIFF numeric-entry byte width during inspection.
+    TiffDirectoryNumericValueWidthInvalid,
+    /// Model a numeric-entry byte length that is not divisible by its count.
+    TiffDirectoryNumericValueWidthRemainder,
+    /// Model a trailing byte in a TIFF numeric-entry value during inspection.
+    TiffDirectoryNumericValueRemainderNonEmpty,
     /// Report zero row bytes while compacting TIFF ignored samples.
     TiffIgnoredSampleRowBytesZero,
     /// Shorten TIFF ignored-sample pixels to test the assembly-length guard.
@@ -200,6 +240,22 @@ pub enum CoverageFaultPoint {
     Av1AssembledMonochromeCdefRegionMapReservation,
     /// Force assembled AV1 monochrome CDEF active-map reservation to fail.
     Av1AssembledMonochromeCdefActiveMapReservation,
+    /// Set AV1 CDEF sample depth outside its supported range before filtering.
+    Av1CdefInvalidSampleDepth,
+    /// Set AV1 CDEF direction sample depth outside its supported range.
+    Av1CdefDirectionInvalidSampleDepth,
+    /// Run AV1 CDEF private input guards with malformed geometry in a coverage build.
+    Av1CdefInputGuardSweep,
+    /// Shorten the color AV1 CDEF active map to exercise its public extent error.
+    Av1CdefActiveMapExtentMismatch,
+    /// Set one active color CDEF region index beyond its Y and UV strength counts.
+    Av1CdefActiveStrengthIndexOutOfRange,
+    /// Set the color AV1 CDEF luma strength count outside the syntax range.
+    Av1CdefInvalidYStrengthCount,
+    /// Set the color AV1 CDEF chroma strength count outside the syntax range.
+    Av1CdefInvalidUvStrengthCount,
+    /// Skip one primary and secondary CDEF tap in a coverage-only guard sweep.
+    Av1CdefMissingTapSamples,
     /// Force AV1 per-tile luma cell storage reservation to fail.
     Av1TileCellReservation,
     /// Force AV1 per-tile chroma cell storage reservation to fail.
@@ -230,6 +286,42 @@ pub enum CoverageFaultPoint {
     Av1RestorationStripeScratchReservation,
     /// Force AV1 striped restoration output reservation to fail.
     Av1RestorationStripeOutputReservation,
+    /// Route an all-lossless I444 frame through first-partition fallback validation.
+    Av1LosslessI444FirstPartitionFallback,
+    /// Shorten AV1 difference-compound reference 0 before its length guard.
+    Av1DifferenceMaskFirstPlaneShort,
+    /// Shorten AV1 difference-compound reference 1 before its length guard.
+    Av1DifferenceMaskSecondPlaneShort,
+    /// Shorten AV1 difference-compound output before its length guard.
+    Av1DifferenceMaskOutputPlaneShort,
+    /// Shorten AV1 difference-compound scratch before its length guard.
+    Av1DifferenceMaskScratchShort,
+    /// Set the AV1 wedge-fill width to zero before its geometry guard.
+    Av1WedgeFillEmptyWidth,
+    /// Set the AV1 wedge-fill height to zero before its geometry guard.
+    Av1WedgeFillEmptyHeight,
+    /// Shorten AV1 wedge-fill scratch before its length guard.
+    Av1WedgeFillScratchShort,
+    /// Set the AV1 wedge-reduction width to zero before its geometry guard.
+    Av1WedgeReduceEmptyWidth,
+    /// Set the AV1 wedge-reduction height to zero before its geometry guard.
+    Av1WedgeReduceEmptyHeight,
+    /// Shorten AV1 wedge-reduction scratch before its length guard.
+    Av1WedgeReduceScratchShort,
+    /// Set the AV1 inter-intra mask mode outside its normative range.
+    Av1InterIntraMaskInvalidMode,
+    /// Set the AV1 inter-intra mask width to zero before its geometry guard.
+    Av1InterIntraMaskEmptyWidth,
+    /// Set the AV1 inter-intra mask height to zero before its geometry guard.
+    Av1InterIntraMaskEmptyHeight,
+    /// Shorten AV1 inter-intra mask scratch before its length guard.
+    Av1InterIntraMaskScratchShort,
+    /// Set the AV1 inter-intra mask width outside normative block sizes.
+    Av1InterIntraMaskNonNormativeWidth,
+    /// Set the AV1 inter-intra mask height outside normative block sizes.
+    Av1InterIntraMaskNonNormativeHeight,
+    /// Force the unfiltered AV1 copy helper's source-end addition to overflow.
+    Av1UnfilteredCopySourceXEndOverflow,
 }
 
 thread_local! {

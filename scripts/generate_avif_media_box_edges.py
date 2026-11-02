@@ -39,6 +39,8 @@ SUCCESS_FRAME_SHA256 = (
 
 DUPLICATE_MINF_FILENAME = "error_animated_duplicate_minf.avif"
 DUPLICATE_MINF_SHA256 = "cfc1d8068dc74494499a8a6edec5d84a95d0d621c0eb5206b5664de872fe0cff"
+DUPLICATE_STBL_FILENAME = "error_animated_duplicate_stbl.avif"
+DUPLICATE_STBL_SHA256 = "82117e58d5518cead7a53bc76cb705b3b02261558c6d5b34cf90328700b8bb4d"
 DUPLICATE_STCO_FILENAME = "error_animated_duplicate_stco.avif"
 DUPLICATE_STCO_SHA256 = "85f8cc8cc87af8748399bece4a318996ae73c6152d7f4551556ab9be1f7d1c61"
 MISSING_HANDLER_FILENAME = "animated_missing_hdlr.avif"
@@ -117,6 +119,7 @@ def verify_rebased_offsets(
     growth: int,
     *,
     duplicate_minf: bool = False,
+    duplicate_stbl: bool = False,
     duplicate_stco: bool = False,
 ) -> None:
     """Check absolute sample and primary-item offsets against the new mdat."""
@@ -135,6 +138,25 @@ def verify_rebased_offsets(
             boxes_at_path(complete, (b"minf", b"stbl", b"stco"))[1]
             for _, complete, _ in minf_boxes
         ]
+    elif duplicate_stbl:
+        mdia = boxes_at_path(candidate, MDIA_PATH)[1]
+        minf_boxes = [box for box in read_boxes(mdia, 0, len(mdia)) if box[0] == b"minf"]
+        if len(minf_boxes) != 1:
+            raise RuntimeError("duplicate-stbl fixture must retain one minf box")
+        stbl_boxes = [
+            box for box in read_boxes(minf_boxes[0][2], 0, len(minf_boxes[0][2]))
+            if box[0] == b"stbl"
+        ]
+        if len(stbl_boxes) != 2:
+            raise RuntimeError("duplicate-stbl fixture must contain two stbl boxes")
+        stco_tables = [
+            payload
+            for _, _, stbl_payload in stbl_boxes
+            for kind, _, payload in read_boxes(stbl_payload, 0, len(stbl_payload))
+            if kind == b"stco"
+        ]
+        if len(stco_tables) != 2:
+            raise RuntimeError("both duplicate stbl boxes must retain their stco table")
     else:
         stbl = boxes_at_path(candidate, STBL_PATH)[1]
         stco_tables = [
@@ -245,6 +267,33 @@ def duplicate_minf_candidate(source: bytes) -> bytes:
     if sha256(candidate).hexdigest() != DUPLICATE_MINF_SHA256:
         raise RuntimeError("generated duplicate-minf AVIF hash changed")
     verify_rebased_offsets(source, candidate, growth, duplicate_minf=True)
+    return candidate
+
+
+def duplicate_stbl_candidate(source: bytes) -> bytes:
+    """Build a Pillow-rejected file with two sample tables in one minf box."""
+    growth = len(boxes_at_path(source, STBL_PATH)[0])
+    source_stbl = boxes_at_path(source, STBL_PATH)[0]
+    duplicate_stbl = rewrite_boxes(
+        source_stbl,
+        lambda path, payload: adjust_stco(payload, growth)
+        if path == (b"stbl", b"stco")
+        else payload,
+    )
+
+    def transform(path: tuple[bytes, ...], payload: bytes) -> bytes:
+        if path == STCO_PATH:
+            return adjust_stco(payload, growth)
+        if path == ILOC_PATH:
+            return adjust_iloc(payload, growth)
+        if path == MINF_PATH:
+            return payload + duplicate_stbl
+        return payload
+
+    candidate = rewrite_boxes(source, transform)
+    if sha256(candidate).hexdigest() != DUPLICATE_STBL_SHA256:
+        raise RuntimeError("generated duplicate-stbl AVIF hash changed")
+    verify_rebased_offsets(source, candidate, growth, duplicate_stbl=True)
     return candidate
 
 
@@ -374,7 +423,7 @@ def verify_pillow_decode_fails(candidate: bytes, name: str) -> None:
 
 
 def generate(check: bool) -> None:
-    """Validate pinned oracle behavior and create or check all six fixtures."""
+    """Validate pinned oracle behavior and create or check all seven fixtures."""
     manifest = yaml.safe_load((ROOT / "manifest.yaml").read_bytes())
     verify_primary_oracle(manifest)
     source = SOURCE.read_bytes()
@@ -398,6 +447,7 @@ def generate(check: bool) -> None:
             missing_mdia_child_candidate(source, b"mdhd", MISSING_MDHD_SHA256),
         ),
         (MISSING_MINF_FILENAME, missing_minf_candidate(source)),
+        (DUPLICATE_STBL_FILENAME, duplicate_stbl_candidate(source)),
     )
     verify_success_with_pillow(source, fixtures[0][1])
     verify_pillow_rejects(fixtures[1][1], DUPLICATE_MINF_FILENAME)
@@ -405,6 +455,7 @@ def generate(check: bool) -> None:
     verify_success_with_pillow(source, fixtures[3][1])
     verify_pillow_decode_fails(fixtures[4][1], MISSING_MDHD_FILENAME)
     verify_pillow_rejects(fixtures[5][1], MISSING_MINF_FILENAME)
+    verify_pillow_rejects(fixtures[6][1], DUPLICATE_STBL_FILENAME)
 
     for filename, data in fixtures:
         path = ASSETS / filename

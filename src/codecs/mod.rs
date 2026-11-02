@@ -387,6 +387,19 @@ pub(crate) fn inspect_png_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     into_image_result(inspected, ImageFormat::Png, ImageErrorStage::Inspection)
 }
 
+#[cfg(all(coverage, feature = "avif"))]
+pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected =
+        avif::inspect_container_for_coverage(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Avif, ImageErrorStage::Inspection)
+}
+
+#[cfg(all(coverage, feature = "avif"))]
+pub(crate) fn parse_avif_meta_for_coverage(payload: &[u8]) -> ImageResult<()> {
+    let parsed = avif::parse_meta_for_coverage(payload).map_err(|error| error.context("inspect"));
+    into_image_result(parsed, ImageFormat::Avif, ImageErrorStage::Inspection)
+}
+
 /// Invoke the format's header-only inspector below the public dispatcher.
 fn inspect_basic_codec(_data: &[u8], format: ImageFormat) -> error::CodecResult<ImageInfo> {
     let inspected: CodecResult<ImageInfo> = match format {

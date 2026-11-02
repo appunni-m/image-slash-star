@@ -241,34 +241,6 @@
       {
         "former_native_only": true,
         "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
-        "id": "enc_invalid_subsampling",
-        "status": "planned",
-        "work_item": "AVF-ENCODE-001"
-      },
-      {
-        "former_native_only": true,
-        "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
-        "id": "enc_invalid_subsampling_alias",
-        "status": "planned",
-        "work_item": "AVF-ENCODE-001"
-      },
-      {
-        "former_native_only": true,
-        "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
-        "id": "enc_invalid_range",
-        "status": "planned",
-        "work_item": "AVF-ENCODE-001"
-      },
-      {
-        "former_native_only": true,
-        "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
-        "id": "enc_decoder_only_codec",
-        "status": "planned",
-        "work_item": "AVF-ENCODE-001"
-      },
-      {
-        "former_native_only": true,
-        "gap": "Pure safe Rust AVIF encoding is not wired; no native fallback may satisfy this row.",
         "id": "enc_invalid_advanced",
         "status": "planned",
         "work_item": "AVF-ENCODE-001"
@@ -327,7 +299,7 @@
         "status": "implemented_for_fixture"
       },
       "AVF-ENCODE-001": {
-        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. A separate ten-file native encoder corpus binds twelve tile streams to exact entropy traces and unmodified native replay. Rust AV1 compression remains unimplemented; invalid quality validation is active parity, and the remaining 31 public encode rows remain planned.",
+        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. A separate ten-file native encoder corpus binds twelve tile streams to exact entropy traces and unmodified native replay. Rust AV1 compression remains unimplemented; invalid quality validation is active parity, and the remaining 27 public encode rows remain planned.",
         "current_slice_update_2026_09_17_encoder_oracle": {
           "boundary_scope": "Separate valid native algorithm models cover alphabets 2..16, Q15 probabilities 1 and 32767, valid plateaus, frozen adaptation, count 15->16/31->32/32->32 and empty/short termination. These are not independent full-file syntax witnesses.",
           "checks": [
@@ -645,7 +617,7 @@
         "status": "partial"
       },
       "AVF-SEQUENCE-001": {
-        "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets. The repeated-ID fixture now has exact first-frame RGB8 evidence: ordinary decode publishes its independent first sample while sequence decode rejects the later repeated ID before publishing partial state. The valid error-resilient fixture also has exact first-frame RGB8 evidence while its full multi-frame presentation remains a typed Unsupported gap. The active animated_opidc_0x101 parity row exercises a nonzero 0x101 operating-point IDC with explicit T0/S0 layer-specific OBU headers and exact five-frame Pillow parity; native loop evidence confirms its complete five-frame sequence. Broader sequence timing, references, disposal, blend, and operating-point combinations remain planned.",
+        "current_evidence": "Safe validation rejects repeated current frame IDs, unique IDs at the 15-bit half-range continuity boundary, and wrapped IDs with a modulo difference of 32,767, while also reserving sequence byte budgets. The repeated-ID fixture now has exact first-frame RGB8 evidence: ordinary decode publishes its independent first sample while sequence decode rejects the later repeated ID before publishing partial state. The frame-ID boundary and wrap fixtures preserve exact first-frame RGB8 parity and reject frame 1 before publishing partial sequence state. The valid error-resilient fixture also has exact first-frame RGB8 evidence while its full multi-frame presentation remains a typed Unsupported gap. The active animated_opidc_0x101 parity row exercises a nonzero 0x101 operating-point IDC with explicit T0/S0 layer-specific OBU headers and exact five-frame Pillow parity; native loop evidence confirms its complete five-frame sequence. Broader sequence timing, references, disposal, blend, and operating-point combinations remain planned.",
         "current_slice_update_2026_08_29_first_frame_sequence_policy": {
           "behavior": {
             "animated_error_resilient": "decode() publishes exact 16x16 RGB8 sample zero; decode_sequence() returns Unsupported with format AVIF, stage SequenceDecode, and UnsupportedReason::NotImplemented.",
@@ -931,8 +903,212 @@
           "animated",
           "animated_error_resilient"
         ],
+        "integer_motion_precision_followup": {
+          "evidence": ".coverage-mcp/local-evidence/parity/avif-integer-motion-20261102/",
+          "next_action": "Continue reachable public codec gaps and the missing AVIF semantic encoder; measure x86 runtime on matching hardware.",
+          "public_behavior": "Exact live pinned Pillow still and complete sequence output. Input-only native screen tuning reaches integer-only motion precision.",
+          "scope": "Nine complete I420/I422/I444 8/10/12-bit mixed-key sequences with screen-content integer motion and inter super-resolution; parent remains planned.",
+          "status": "done",
+          "validation": {
+            "alpha_floors": "pass",
+            "case_attribution": "unknown",
+            "coverage": {
+              "branches": {
+                "count": 31992,
+                "covered": 20938,
+                "percent": 65.44761190297574,
+                "uncovered": 11054
+              },
+              "functions": {
+                "count": 9128,
+                "covered": 5660,
+                "percent": 62.00701139351446,
+                "uncovered": 3468
+              },
+              "lines": {
+                "count": 142071,
+                "covered": 102327,
+                "percent": 72.02525497814473,
+                "uncovered": 39744
+              },
+              "regions": {
+                "count": 220198,
+                "covered": 155766,
+                "percent": 70.73906211682213,
+                "uncovered": 64432
+              }
+            },
+            "existing_fault_contracts_passed_separately": 167,
+            "full_parity_passed": 3657,
+            "full_report": ".coverage-mcp/local-evidence/full/20261102-integer-motion/",
+            "integer_precision_true_count": 432,
+            "integration_checks_passed": 139,
+            "native_wasm_wasi_features": "passed",
+            "selected_public_parity_passed": 9,
+            "source_denominator_change": "Owner-approved concurrent source.rs mode getters add six lines, two functions and six regions; preserved and freshly checked.",
+            "source_status": "local_unverified",
+            "sse2_avx2": "compile_passed_on_arm64",
+            "strict_100_percent": "not_met",
+            "strict_clippy": "passed",
+            "unchanged_codec_covered_delta": {
+              "branches": 2,
+              "functions": 0,
+              "lines": 1,
+              "regions": 4
+            }
+          }
+        },
+        "mixed_color_coded_tail_followup": {
+          "accepted_runtime_sha256": "a06302a334a0da53bcf8d03589ef277b49403f17f5663da880ba68214b0af991",
+          "evidence": ".coverage-mcp/local-evidence/parity/avif-color-coded-tail-20261102/",
+          "next_action": "Continue broader sequence/reference, codec coverage and performance work; closure is limited to these 54 declared color cases.",
+          "previous_accepted_runtime_sha256": "babffc16eaf3a265210f7fa1bb275b4bc58faa7a15d0bba13677706fbec1970a",
+          "public_behavior": "54 flat/varied mixed-key color sequences across I420/I422/I444, 8/10/12 bits and coded widths 71/100/102 match live pinned Pillow for still and both sequence frames; accepted-before source passes ten.",
+          "root_causes": [
+            "Neutral non-four-aligned color coded widths were excluded despite preserved physical source padding.",
+            "I422 intra reconstruction rejected all segmented keys; strict mixed segment-map and quantization proof is now reused with frame-kind policy owned by each caller.",
+            "The fixed 8-bit B8 WHT helper allowed only frame mode zero; a lossless segment uses this same fixed grammar in mixed frame modes."
+          ],
+          "status": "closed",
+          "validation": {
+            "alpha_floors": "passed",
+            "existing_fault_contracts_passed": 167,
+            "full_metrics": {
+              "branches": {
+                "count": 31992,
+                "covered": 20935,
+                "percent": 65.43823455863966,
+                "uncovered": 11057
+              },
+              "functions": {
+                "count": 9126,
+                "covered": 5660,
+                "percent": 62.020600482138946,
+                "uncovered": 3466
+              },
+              "lines": {
+                "count": 142065,
+                "covered": 102323,
+                "percent": 72.02548129377398,
+                "uncovered": 39742
+              },
+              "regions": {
+                "count": 220192,
+                "covered": 155758,
+                "percent": 70.73735648888243,
+                "uncovered": 64434
+              }
+            },
+            "full_public_parity_passed": 3639,
+            "full_report": ".coverage-mcp/local-evidence/full/20261102-color-coded-tail/",
+            "integration_checks": 139,
+            "named_case_coverage_attribution": "unknown",
+            "native_wasm_wasi": "final_feature_matrix_passed_with_stable_case_indexes",
+            "performance": {
+              "gate": "passed",
+              "maximum_median_slowdown_percent": 1.6060594159069908,
+              "samples": 648,
+              "successful_before_workloads": 54
+            },
+            "selected_public_parity_passed": 54,
+            "source_status": "local_unverified",
+            "strict_100": "failed_goal_remains_open",
+            "style": "strict_Clippy_passed",
+            "x86_simd": "SSE2_AVX2_compile_passed"
+          }
+        },
+        "mixed_key_two_pixel_tail_followup": {
+          "accepted_runtime_sha256": "babffc16eaf3a265210f7fa1bb275b4bc58faa7a15d0bba13677706fbec1970a",
+          "evidence": ".coverage-mcp/local-evidence/parity/avif-coded-tail-20261102/",
+          "inputs": {
+            "10": "1551d1351886eb0cafd4c3ab1aeb72da3049488f3f014ee4407b5da2402c4127",
+            "12": "e509be8ff85da0bb8b9553c9db58819349e8751cd5bab789a2e683685e4b79ff",
+            "8": "ec9f489ed9eec383c1a333988a5e3b61e6efbc9373bb6808612e6ce8024cda55"
+          },
+          "next_action": "Continue broader sequence/reference reconstruction and coverage gaps; this closure is limited to the twelve declared coded-tail cases.",
+          "previous_accepted_runtime_sha256": "7bdc1ab7268a0164c82bac6395630a4622ae377abcfe13f91bdec7a8c74ff408",
+          "previous_evidence": ".coverage-mcp/local-evidence/parity/avif-mixed-key-boundaries-20261102/",
+          "public_behavior": "Twelve 8/10/12-bit mixed-key monochrome sequences at coded widths 71, 100 and 102 match live pinned Pillow exactly for still output and both sequence frames. The accepted-before source rejects ten sequences and returns incorrect edge pixels for two.",
+          "rejected_trial": "Removing only the neutral monochrome width alignment restriction left 8-bit unsupported and produced unequal right-edge pixels at 10/12 bits. All runtime source was restored.",
+          "root_cause": "Resizer phase needs logical width while taps need the reconstructed eight-pixel padded tail. The 8-bit mixed WHT path also had an unnecessary monochrome exclusion.",
+          "status": "closed",
+          "validation": {
+            "existing_fault_contracts_passed": 167,
+            "full_coverage": {
+              "alpha_floors": "passed",
+              "metrics": {
+                "branches": {
+                  "count": 31970,
+                  "covered": 20900,
+                  "percent": 65.3737879261808,
+                  "uncovered": 11070
+                },
+                "functions": {
+                  "count": 9125,
+                  "covered": 5657,
+                  "percent": 61.99452054794521,
+                  "uncovered": 3468
+                },
+                "lines": {
+                  "count": 142040,
+                  "covered": 102223,
+                  "percent": 71.96775556181358,
+                  "uncovered": 39817
+                },
+                "regions": {
+                  "count": 220169,
+                  "covered": 155640,
+                  "percent": 70.69115088863555,
+                  "uncovered": 64529
+                }
+              },
+              "path": ".coverage-mcp/local-evidence/full/20261102-coded-tail/",
+              "strict_100": "failed_goal_remains_open"
+            },
+            "full_parity_passed": 3585,
+            "integration_checks_passed": 139,
+            "named_case_attribution": "unknown",
+            "native_wasm_wasi_features": "passed",
+            "performance": {
+              "final_executable_identical_to_measured": true,
+              "gate": "passed",
+              "maximum_median_slowdown_percent": 1.9949265867016175,
+              "samples": 384,
+              "workloads": 32
+            },
+            "public_parity_cases": 12,
+            "selected_passed": 12,
+            "source_status": "local_unverified",
+            "sse2_avx2": "compile_passed_on_arm64",
+            "strict_clippy": "passed"
+          }
+        },
         "next": "Complete remaining reference reconstruction, mixed reference histories, broader frame-ID policy and resource accounting before final behavioral and managed coverage verification.",
-        "status": "planned"
+        "status": "planned",
+        "translated_source_scaled_motion_followup": {
+          "evidence": ".coverage-mcp/local-evidence/parity/avif-translated-mixed-key-20261102/",
+          "next_action": "Continue reachable public codec gaps and the missing AVIF semantic encoder; native x86 runtime performance remains unmeasured.",
+          "public_behavior": "All still and sequence pixels match live pinned Pillow; unchanged Rust handles negative scaled-motion coordinates with exact rounding.",
+          "scope": "Nine complete translated-source I420/I422/I444 8/10/12-bit mixed-key sequences; parent sequence item remains planned.",
+          "status": "done",
+          "validation": {
+            "alpha_floors": "pass",
+            "case_attribution": "unknown",
+            "covered_delta": {
+              "branches": 1,
+              "functions": 0,
+              "lines": 3,
+              "regions": 4
+            },
+            "existing_fault_contracts_passed_separately": 167,
+            "full_parity_passed": 3648,
+            "full_report": ".coverage-mcp/local-evidence/full/20261102-translated-mixed-key/",
+            "integration_checks_passed": 139,
+            "selected_public_parity_passed": 9,
+            "source_status": "local_unverified",
+            "strict_100_percent": "not_met"
+          }
+        }
       },
       "AVF-STILL-001": {
         "bounded_witnesses": {
@@ -5688,13 +5864,13 @@
       "transport_prefix": "__image_slash_star_av1_fixture_selector__="
     },
     "avif": {
-      "decode_active": 637,
+      "decode_active": 1243,
       "decode_planned": 0,
-      "decode_rows": 637,
-      "encode_active": 1,
-      "encode_planned": 31,
+      "decode_rows": 1243,
+      "encode_active": 5,
+      "encode_planned": 27,
       "encode_rows": 32,
-      "former_native_remaining": 31
+      "former_native_remaining": 27
     },
     "coverage": {
       "branch": {
@@ -5704,8 +5880,8 @@
         "uncovered": 1385
       },
       "coverage_origin_inventory": {
-        "files": 31,
-        "guards": 224
+        "files": 36,
+        "guards": 267
       },
       "function": {
         "covered": 5125,
@@ -6737,13 +6913,13 @@
       "status": "open_until_all_four_metrics_are_100_percent"
     },
     "matrix": {
-      "decode_active": 2137,
+      "decode_active": 3016,
       "decode_planned": 0,
-      "decode_rows": 2137,
-      "encode_active": 536,
-      "encode_planned": 31,
-      "encode_rows": 567,
-      "total_rows": 2704
+      "decode_rows": 3016,
+      "encode_active": 641,
+      "encode_planned": 27,
+      "encode_rows": 668,
+      "total_rows": 3684
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
@@ -10359,8 +10535,8 @@
       "done_when": "Every claimed operation has fixture evidence, portable bytes have independent compatibility evidence, and all former-native cases are active or explicitly justified.",
       "id": "RN-006",
       "remaining": [
-        "3 decode rows",
-        "32 encode rows",
+        "0 planned decode rows",
+        "27 planned encode rows",
         "sequence presentation",
         "broader grid/tile composition",
         "10/12-bit and HDR",

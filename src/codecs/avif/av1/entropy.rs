@@ -150,7 +150,7 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
     }
 
     // ✅ VERIFIED: dav1d 1.5.3 src/msac.c:80-97 (`ctx_norm`).
-    fn normalize(&mut self, difference: u64, range: u32) {
+    fn normalize<const OUTLINE_REFILL: bool>(&mut self, difference: u64, range: u32) {
         // Every caller derives a nonzero at-most-16-bit partition range from
         // the current normalized state, exactly as dav1d's `ctx_norm` does.
         let shift = 15 ^ (31 ^ range.leading_zeros());
@@ -168,8 +168,19 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             reason = "the conversion is guarded by previous_count >= 0"
         )]
         if previous_count >= 0 && (previous_count as u32) < shift {
-            self.refill();
+            if OUTLINE_REFILL {
+                self.refill_outlined();
+            } else {
+                self.refill();
+            }
         }
+    }
+
+    // The equiprobable-bit reader has little arithmetic to hide refill-only
+    // register saves. General symbol readers keep their inlined refill path.
+    #[inline(never)]
+    fn refill_outlined(&mut self) {
+        self.refill();
     }
 
     // ✅ VERIFIED: dav1d 1.5.3 src/msac.c:99-112
@@ -188,7 +199,7 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             // incorrectly rejects cases where `2 * v > r`.
             candidate = current_range.wrapping_sub(candidate);
         }
-        self.normalize(difference, candidate);
+        self.normalize::<true>(difference, candidate);
         let value = !upper_partition;
 
         #[cfg(coverage)]
@@ -214,7 +225,7 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             // underflow failure.
             candidate = current_range.wrapping_sub(candidate);
         }
-        self.normalize(difference, candidate);
+        self.normalize::<false>(difference, candidate);
         let value = !upper_partition;
         #[cfg(coverage)]
         self.record_operation(
@@ -257,7 +268,7 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
         let difference = self
             .difference
             .wrapping_sub(u64::from(lower) << (u64::BITS - WINDOW_OUTPUT_BITS));
-        self.normalize(difference, upper.wrapping_sub(lower));
+        self.normalize::<false>(difference, upper.wrapping_sub(lower));
 
         if self.allow_update_cdf {
             let count = cdf[symbol_count_minus_one];
@@ -284,6 +295,18 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
         )]
         let value = value as u32;
 
+        self.finish_adaptive_symbol(value, cdf, symbol_count_minus_one)
+    }
+
+    #[inline]
+    fn finish_adaptive_symbol(
+        &mut self,
+        value: u32,
+        cdf: &[u16],
+        symbol_count_minus_one: usize,
+    ) -> u32 {
+        // Trace arguments disappear from release code with the observer.
+        let _ = (cdf, symbol_count_minus_one);
         #[cfg(coverage)]
         self.record_operation(
             "adaptive_symbol",
@@ -292,6 +315,64 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             &cdf[..=symbol_count_minus_one],
         );
         value
+    }
+
+    /// Decode a four-symbol AV1 table without a variable-length scan.
+    /// Its three probabilities descend toward an implicit zero boundary; the
+    /// fourth slot holds the adaptation count, bounded to 32 by AV1 CDF updates.
+    #[inline]
+    pub(super) fn adaptive_symbol4(&mut self, cdf: &mut [u16; 4]) -> u32 {
+        let code = (self.difference >> (u64::BITS - WINDOW_OUTPUT_BITS)) as u32;
+        let scaled_range = self.range >> 8;
+        let boundary = |probability: u16, remaining: u32| {
+            (scaled_range.wrapping_mul(u32::from(probability) >> PROBABILITY_SHIFT)
+                >> (7 - PROBABILITY_SHIFT))
+                .wrapping_add(MIN_PROBABILITY.wrapping_mul(remaining))
+        };
+        let first = boundary(cdf[0], 3);
+        let (value, lower, upper) = if code >= first {
+            (0_usize, first, self.range)
+        } else {
+            let second = boundary(cdf[1], 2);
+            if code >= second {
+                (1, second, first)
+            } else {
+                let third = boundary(cdf[2], 1);
+                if code >= third {
+                    (2, third, second)
+                } else {
+                    (3, 0, third)
+                }
+            }
+        };
+        let difference = self
+            .difference
+            .wrapping_sub(u64::from(lower) << (u64::BITS - WINDOW_OUTPUT_BITS));
+        self.normalize::<false>(difference, upper.wrapping_sub(lower));
+        if self.allow_update_cdf {
+            let count = cdf[3];
+            let rate = 5_u32.wrapping_add(u32::from(count >> 4));
+            for (index, probability) in cdf[..3].iter_mut().enumerate() {
+                if index < value {
+                    let increase = 32_768_u32.wrapping_sub(u32::from(*probability)) >> rate;
+                    #[expect(
+                        clippy::cast_possible_truncation,
+                        reason = "the fixed four-symbol CDF update increases a u16 probability by at most 1024"
+                    )]
+                    let increase = increase as u16;
+                    *probability = probability.wrapping_add(increase);
+                } else {
+                    *probability = probability.wrapping_sub(*probability >> rate);
+                }
+            }
+            cdf[3] = count.wrapping_add(u16::from(count < 32));
+        }
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "the fixed four-symbol decision tree returns a value in 0..=3"
+        )]
+        let value = value as u32;
+        self.finish_adaptive_symbol(value, cdf, 3)
     }
 
     // ✅ VERIFIED: dav1d 1.5.3 src/msac.c:168-185
@@ -314,7 +395,6 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
             }
             cdf[1] = count.wrapping_add(u16::from(count < 32));
         }
-
         #[cfg(coverage)]
         self.record_operation("adaptive_bool", 1, i32::from(bit), cdf);
         bit
@@ -323,16 +403,16 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
     // ✅ VERIFIED: dav1d 1.5.3 src/msac.c:187-201
     // (`dav1d_msac_decode_hi_tok_c`).
     pub(super) fn high_token(&mut self, cdf: &mut [u16; 4]) -> u32 {
-        let mut branch = self.adaptive_symbol(cdf, 3);
+        let mut branch = self.adaptive_symbol4(cdf);
         let mut token = 3_u32.wrapping_add(branch);
         if branch == 3 {
-            branch = self.adaptive_symbol(cdf, 3);
+            branch = self.adaptive_symbol4(cdf);
             token = 6_u32.wrapping_add(branch);
             if branch == 3 {
-                branch = self.adaptive_symbol(cdf, 3);
+                branch = self.adaptive_symbol4(cdf);
                 token = 9_u32.wrapping_add(branch);
                 if branch == 3 {
-                    token = 12_u32.wrapping_add(self.adaptive_symbol(cdf, 3));
+                    token = 12_u32.wrapping_add(self.adaptive_symbol4(cdf));
                 }
             }
         }
@@ -1966,7 +2046,8 @@ struct PartitionWalker<'decoder, 'data, 'input, 'spans> {
     monochrome: bool,
     subsampling_x: bool,
     subsampling_y: bool,
-    nodes: Vec<PartitionNode>,
+    node_count: usize,
+    last_node: Option<PartitionNode>,
 }
 
 /// Recursive square-node availability used to reproduce AV1's static intra
@@ -2118,7 +2199,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             monochrome: context.monochrome,
             subsampling_x: context.subsampling_x,
             subsampling_y: context.subsampling_y,
-            nodes: Vec::new(),
+            node_count: 0,
+            last_node: None,
         })
     }
 
@@ -2126,10 +2208,11 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         // dav1d's above/left partition contexts belong to the tile, not to
         // an individual superblock.  They therefore carry the right and
         // bottom edge state from one root into the next root.  Only the
-        // diagnostic node list is per-root; clearing `contexts` here would
-        // erase the left neighbor needed by the next horizontal root and the
-        // above neighbor needed by the next root row.
-        self.nodes.clear();
+        // node budget is per-root; clearing `contexts` here would erase the
+        // left neighbor needed by the next horizontal root and the above
+        // neighbor needed by the next root row.
+        self.node_count = 0;
+        self.last_node = None;
     }
 
     fn set_root_bounds(&mut self, x: u32, y: u32, root_size: u32) -> Av1Result<()> {
@@ -2213,23 +2296,19 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
     }
 
     fn push(&mut self, node: PartitionNode) -> Av1Result<()> {
-        if self.nodes.len() >= MAX_PARTITION_NODES {
+        if self.node_count >= MAX_PARTITION_NODES {
             return Err(malformed("partition tree exceeds the safe node limit"));
         }
         #[cfg(coverage)]
-        let reservation_count = if crate::coverage_support::take_fault_point(
+        if crate::coverage_support::take_fault_point(
             crate::coverage_support::CoverageFaultPoint::Av1PartitionNodeReservation,
         ) {
-            usize::MAX
-        } else {
-            1
-        };
-        #[cfg(not(coverage))]
-        let reservation_count = 1;
-        self.nodes.try_reserve(reservation_count).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 partition nodes".to_owned())
-        })?;
-        self.nodes.push(node);
+            return Err(CodecError::Dimensions(
+                "unable to allocate AV1 partition nodes".to_owned(),
+            ));
+        }
+        self.node_count = self.node_count.saturating_add(1);
+        self.last_node = Some(node);
         Ok(())
     }
 
@@ -2403,19 +2482,19 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             else {
                 return Ok(PartitionVisitControl::Continue);
             };
-            if let Some(node) = self.nodes.last_mut() {
+            let node = {
+                let node = self
+                    .last_node
+                    .as_mut()
+                    .ok_or_else(|| malformed("terminal partition node was not recorded"))?;
                 node.x = geometry.x;
                 node.y = geometry.y;
                 node.width = geometry.width;
                 node.height = geometry.height;
-            }
+                *node
+            };
             self.contexts
                 .record(level, kind, x, y, full_width, full_height)?;
-            let node = self
-                .nodes
-                .last()
-                .copied()
-                .ok_or_else(|| malformed("terminal partition node was not recorded"))?;
             return visit(self.decoder, node);
         }
 
@@ -2749,7 +2828,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
 /// layout.
 pub(super) struct Lossy420Reconstruction {
     pub(super) leaf: super::block::FirstLeaf,
-    /// Plane storage extent may include the padded coded tail used by AV1
+    /// Plane storage includes the padded coded tail needed by CDEF and
     /// super-resolution. `leaf.width` remains the visible coded width.
     pub(super) source_width: u32,
     pub(super) source_height: u32,
@@ -3322,13 +3401,19 @@ fn mixed_8bit_color_lossless_segmentation_common(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
 ) -> bool {
-    mixed_8bit_color_lossless_segmentation_common_with_policy(context, expected_layout, false)
+    !context.intra_frame
+        && mixed_8bit_color_lossless_segmentation_common_with_policy(
+            context,
+            expected_layout,
+            false,
+        )
 }
 
 /// Structural mixed 8-bit segmentation proof with an explicit policy for the
 /// syntax-moving segment-global feature. Only the active-restoration wrapper
 /// enables that policy after it proves exact unscaled reference geometry; all
-/// neutral/postfilter callers retain the strict post-skip map grammar.
+/// neutral/postfilter callers retain the strict post-skip map grammar. Frame
+/// kind belongs to the caller; the neutral I422 intra wrapper shares this proof.
 fn mixed_8bit_color_lossless_segmentation_common_with_policy(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
@@ -3342,8 +3427,7 @@ fn mixed_8bit_color_lossless_segmentation_common_with_policy(
         return false;
     };
     let segmentation = context.frame_tools.segmentation;
-    if context.intra_frame
-        || context.all_lossless
+    if context.all_lossless
         || context.bit_depth != 8
         || layout != expected_layout
         || !matches!(
@@ -3446,7 +3530,12 @@ fn mixed_8bit_color_lossless_restoration_supported(
     inter_context: &InterFrameContext<'_>,
     expected_layout: PixelLayout,
 ) -> bool {
-    if !mixed_8bit_color_lossless_segmentation_common_with_policy(context, expected_layout, true)
+    if context.intra_frame
+        || !mixed_8bit_color_lossless_segmentation_common_with_policy(
+            context,
+            expected_layout,
+            true,
+        )
         || context.skip_mode_enabled
         || context.allow_intrabc
         || !context.frame_tools.restoration_present
@@ -3527,13 +3616,15 @@ fn mixed_8bit_color_lossless_restoration_supported(
 /// tranche above while keeping the extension isolated from monochrome and
 /// from the all-lossless mode-0 profiles.
 fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
-    mixed_high_depth_color_lossless_segmentation_common_with_policy(context, false)
+    !context.intra_frame
+        && mixed_high_depth_color_lossless_segmentation_common_with_policy(context, false)
 }
 
 /// High-depth mixed segmentation proof with the same narrowly scoped
 /// segment-global policy as the 8-bit color tranche. The policy is enabled
 /// only by the active-restoration wrapper below, after exact unscaled
-/// references and depth/layout parity have been established.
+/// references and depth/layout parity have been established. The caller checks
+/// frame kind so neutral I422 intra reconstruction can share the segment proof.
 fn mixed_high_depth_color_lossless_segmentation_common_with_policy(
     context: &FirstBlockContext,
     allow_segment_global_motion: bool,
@@ -3546,8 +3637,7 @@ fn mixed_high_depth_color_lossless_segmentation_common_with_policy(
         return false;
     };
     let segmentation = context.frame_tools.segmentation;
-    if context.intra_frame
-        || context.all_lossless
+    if context.all_lossless
         || !matches!(context.bit_depth, 10 | 12)
         || !matches!(
             layout,
@@ -3651,7 +3741,8 @@ fn mixed_high_depth_color_lossless_restoration_supported(
     ) else {
         return false;
     };
-    if !mixed_high_depth_color_lossless_segmentation_common_with_policy(context, true)
+    if context.intra_frame
+        || !mixed_high_depth_color_lossless_segmentation_common_with_policy(context, true)
         || !matches!(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
@@ -3744,7 +3835,7 @@ fn mixed_segment_superres_structure_common(context: &FirstBlockContext) -> bool 
     ) else {
         return false;
     };
-    let segmentation = context.frame_tools.segmentation;
+    let segmentation = &context.frame_tools.segmentation;
     if context.intra_frame
         || !context.superres_enabled
         || context.upscaled_width < context.frame_width
@@ -3763,7 +3854,11 @@ fn mixed_segment_superres_structure_common(context: &FirstBlockContext) -> bool 
         || context.block_height != context.frame_block_height
         || context.frame_width < 4
         || context.frame_height < 4
-        || !context.frame_width.is_multiple_of(4)
+        || !(context.frame_width.is_multiple_of(4)
+            || (mixed_segment_neutral_filters(context)
+                && !context.frame_tools.film_grain_present
+                && !context.frame_tools.restoration_present
+                && context.restoration_types == [None; 3]))
         || !context.frame_height.is_multiple_of(4)
         || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
         || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
@@ -4154,7 +4249,15 @@ fn mixed_segment_superres_restoration_profile(
     grain_requirement: MixedSuperresFilmGrainRequirement,
     filter_requirement: MixedSuperresFilterRequirement,
 ) -> bool {
-    let filter_selection = mixed_segment_superres_filter_selection(context);
+    if !mixed_segment_superres_structure_common(context)
+        || PixelLayout::from_sequence(
+            context.monochrome,
+            context.subsampling_x,
+            context.subsampling_y,
+        ) != Some(expected_layout)
+    {
+        return false;
+    }
     let filters_supported = match filter_requirement {
         MixedSuperresFilterRequirement::Neutral => {
             context.frame_tools.loop_filter.level_y == [0; 2]
@@ -4162,17 +4265,10 @@ fn mixed_segment_superres_restoration_profile(
                 && context.frame_tools.loop_filter.level_v == 0
                 && context.frame_tools.cdef.is_none()
         }
-        MixedSuperresFilterRequirement::Active => {
-            filter_selection.is_some_and(|selection| selection != MixedSuperresPostfilter::Neutral)
-        }
+        MixedSuperresFilterRequirement::Active => mixed_segment_superres_filter_selection(context)
+            .is_some_and(|selection| selection != MixedSuperresPostfilter::Neutral),
     };
-    if !mixed_segment_superres_structure_common(context)
-        || PixelLayout::from_sequence(
-            context.monochrome,
-            context.subsampling_x,
-            context.subsampling_y,
-        ) != Some(expected_layout)
-        || !filters_supported
+    if !filters_supported
         || !context.frame_tools.restoration_present
         || context.restoration_types[1].is_some()
         || context.restoration_types[2].is_some()
@@ -4495,20 +4591,20 @@ fn mixed_i444_lossless_superres_restoration_postfilter_film_grain_supported(
 /// the same segment proof therefore cannot accidentally diverge between the
 /// neutral, postfilter, and active-restoration paths.
 fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
-    mixed_monochrome_lossless_segmentation_common_with_policy(context, false)
+    !context.intra_frame
+        && mixed_monochrome_lossless_segmentation_common_with_policy(context, false)
 }
 
 /// Monochrome mixed segmentation proof with an explicit segment-global
 /// policy. Only the active-restoration path enables the syntax-moving feature;
-/// neutral and postfilter monochrome callers continue using the strict
-/// post-skip segmentation grammar.
+/// neutral intra/inter and postfilter callers use the strict post-skip
+/// segmentation grammar. Callers own the frame-kind and finish-profile checks.
 fn mixed_monochrome_lossless_segmentation_common_with_policy(
     context: &FirstBlockContext,
     allow_segment_global_motion: bool,
 ) -> bool {
     let segmentation = context.frame_tools.segmentation;
-    if context.intra_frame
-        || !context.monochrome
+    if !context.monochrome
         || !matches!(context.bit_depth, 8 | 10 | 12)
         || context.all_lossless
         || context.superres_enabled
@@ -4611,7 +4707,7 @@ enum MixedMonochromePostfilter {
     LoopAndCdef,
 }
 
-fn mixed_monochrome_neutral_filters(context: &FirstBlockContext) -> bool {
+fn mixed_segment_neutral_filters(context: &FirstBlockContext) -> bool {
     context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -5436,6 +5532,9 @@ fn inter_lossless_grid_clipped_b32_geometry_supported(geometry: InterLosslessGri
         && visible_height != 0
         && visible_width <= 32
         && visible_height <= 32
+        // High-depth I420 lossless grids reconstruct the full padded B32
+        // transform before the display surface clips its right or bottom
+        // edge. This includes valid odd AV1 dimensions with rounded-up chroma.
         && visible_width.is_multiple_of(4)
         && visible_height.is_multiple_of(4)
         && (layout != PixelLayout::I422 || frame_width.is_multiple_of(2))
@@ -5626,7 +5725,7 @@ fn decode_interintra_syntax(
         .inter
         .interintra_mode_for(size_group)
         .ok_or_else(|| malformed("inter-intra mode context exceeds four rows"))?;
-    let mode = decoder.adaptive_symbol(&mut interintra_mode.0, 3);
+    let mode = decoder.adaptive_symbol4(&mut interintra_mode.0);
     if mode > 3 {
         return Err(malformed("inter-intra mode symbol is invalid"));
     }
@@ -6434,7 +6533,7 @@ fn decode_inter_single_reference(
                         &mut cdfs
                             .inter
                             .reference
-                            .get_mut(3)
+                            .get_mut(5)
                             .and_then(|row| row.get_mut(usize::from(backward_one_ctx)))
                             .ok_or_else(|| malformed("backward-reference leaf CDF is unavailable"))?
                             .0,
@@ -6496,7 +6595,7 @@ fn decode_mv_component(
     let (up, fractional, high_precision) = if class == 0 {
         let up = u16::from(decoder.adaptive_bool(&mut cdf.class_zero.0));
         let fractional = if mv_precision >= 0 {
-            decoder.adaptive_symbol(&mut cdf.class_zero_fractional[usize::from(up)].0, 3)
+            decoder.adaptive_symbol4(&mut cdf.class_zero_fractional[usize::from(up)].0)
         } else {
             3
         };
@@ -6528,7 +6627,7 @@ fn decode_mv_component(
                 .ok_or_else(|| malformed("motion-vector class bit shift overflows"))?;
         }
         let fractional = if mv_precision >= 0 {
-            decoder.adaptive_symbol(&mut cdf.class_n_fractional.0, 3)
+            decoder.adaptive_symbol4(&mut cdf.class_n_fractional.0)
         } else {
             3
         };
@@ -6564,7 +6663,7 @@ fn decode_mv_residual(
     force_integer_mv: bool,
     high_precision_mv: bool,
 ) -> Av1Result<()> {
-    let joint = decoder.adaptive_symbol(&mut cdfs.joint.0, 3);
+    let joint = decoder.adaptive_symbol4(&mut cdfs.joint.0);
     let precision = match (high_precision_mv, force_integer_mv) {
         (true, false) => 1,
         (false, true) => -1,
@@ -7276,16 +7375,13 @@ fn decode_inter_transform_size(
                     .y
                     .checked_add(offset_y)
                     .ok_or(super::block::PortableUnavailable)?;
-                let above_small = if offset_y == 0 {
-                    false
-                } else {
-                    child_splits[0]
-                };
+                // TX4x8's width context is zero, even after its preceding
+                // child splits. No above transform can have a smaller width.
                 let left_small = child_x
                     .checked_sub(1)
                     .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                     .is_some_and(|(_, tx_height)| tx_height < 1);
-                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                let context = usize::from(left_small);
                 child_splits[index] =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
             }
@@ -7319,12 +7415,9 @@ fn decode_inter_transform_size(
                     .checked_sub(1)
                     .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                     .is_some_and(|(tx_width, _)| tx_width < 1);
-                let left_small = if offset_x == 0 {
-                    false
-                } else {
-                    child_splits[0]
-                };
-                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                // TX8x4's height context is zero, even after its preceding
+                // child splits. No left transform can have a smaller height.
+                let context = usize::from(above_small);
                 child_splits[index] =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
             }
@@ -8336,6 +8429,110 @@ enum DecodedFrameLeaf {
     },
 }
 
+/// Chroma carried by a sub-eight block combines the causal luma owners when
+/// all are inter coded. An intra neighbor instead selects the complete checked
+/// predictor for the current block (dav1d 1.5.3 `recon_tmpl.c`).
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "closed BlockSize dimensions are at most 32 MI and the two-by-two owner grid bounds every product by 256 and the owner count by four"
+)]
+fn prepare_sub8_chroma(
+    block_decoder: &mut super::block::Lossy420Decoder,
+    tile_state: &TileState,
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    current: super::tile_state::InterBlockMeta,
+) -> Av1Result<super::block::PortableResult<()>> {
+    use super::block::Sub8ChromaPart;
+    use super::mc::PredictionRequest;
+    use super::tile_state::BlockCoding;
+
+    let (width_b4, height_b4) = node.block_size.mi_dimensions();
+    let split_x = context.subsampling_x && width_b4 == 1;
+    let split_y = context.subsampling_y && height_b4 == 1;
+    // BlockSize is a closed enum with at most 32 MI per axis; multiplying
+    // by a four-pixel step and at most two owners remains bounded by 256.
+    let part_width = width_b4 * (4 >> u32::from(context.subsampling_x));
+    let part_height = height_b4 * (4 >> u32::from(context.subsampling_y));
+    let columns = 1 + u32::from(split_x);
+    let rows = 1 + u32::from(split_y);
+    let start_x = node
+        .x
+        .checked_sub(u32::from(split_x))
+        .ok_or_else(|| malformed("sub-eight chroma left owner precedes the tile"))?;
+    let start_y = node
+        .y
+        .checked_sub(u32::from(split_y))
+        .ok_or_else(|| malformed("sub-eight chroma top owner precedes the tile"))?;
+    let first = inter_context.reference(current.references.first);
+    let mut parts = [Sub8ChromaPart {
+        reference: first.surface,
+        scale: first.scale,
+        request: PredictionRequest {
+            block_x_b4: 0,
+            block_y_b4: 0,
+            width: part_width,
+            height: part_height,
+            subsampling_x: context.subsampling_x,
+            subsampling_y: context.subsampling_y,
+            motion: current.motion_vectors[0],
+            warp: None,
+            filters: current.filters,
+        },
+        output_x: 0,
+        output_y: 0,
+    }; 4];
+    let mut count = 0;
+    for row in 0..rows {
+        for column in 0..columns {
+            let x = start_x
+                .checked_add(column)
+                .ok_or_else(|| malformed("sub-eight chroma column overflows"))?;
+            let y = start_y
+                .checked_add(row)
+                .ok_or_else(|| malformed("sub-eight chroma row overflows"))?;
+            let metadata = if (x, y) == (node.x, node.y) {
+                current
+            } else {
+                let Some((_, neighbor)) = tile_state.block_at_checked(x, y)? else {
+                    return Ok(Ok(()));
+                };
+                let BlockCoding::Inter(metadata) = neighbor.coding else {
+                    return Ok(Ok(()));
+                };
+                metadata
+            };
+            let reference = inter_context.reference(metadata.references.first);
+            let part = parts
+                .get_mut(count)
+                .ok_or_else(|| malformed("sub-eight chroma has more than four owners"))?;
+            part.reference = reference.surface;
+            part.scale = reference.scale;
+            part.request.block_x_b4 = context
+                .tile_origin_b4_x
+                .checked_add(x)
+                .ok_or_else(|| malformed("sub-eight chroma frame column overflows"))?;
+            part.request.block_y_b4 = context
+                .tile_origin_b4_y
+                .checked_add(y)
+                .ok_or_else(|| malformed("sub-eight chroma frame row overflows"))?;
+            part.request.motion = metadata.motion_vectors[0];
+            part.request.filters = metadata.filters;
+            part.output_x = usize::try_from(column * part_width)
+                .map_err(|_| malformed("sub-eight chroma output column exceeds usize"))?;
+            part.output_y = usize::try_from(row * part_height)
+                .map_err(|_| malformed("sub-eight chroma output row exceeds usize"))?;
+            count += 1;
+        }
+    }
+    let width = usize::try_from(columns * part_width)
+        .map_err(|_| malformed("sub-eight chroma width exceeds usize"))?;
+    let height = usize::try_from(rows * part_height)
+        .map_err(|_| malformed("sub-eight chroma height exceeds usize"))?;
+    Ok(block_decoder.prepare_sub8_chroma_prediction(&parts[..count], width, height))
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "the inter leaf boundary carries syntax, tile state, frame references, geometry, and block tools explicitly"
@@ -9241,11 +9438,17 @@ fn decode_inter_leaf(
         && visible_height > 0
         && visible_height <= coded_height
         && node.block_size.valid_for_layout(layout);
+    let global_warp_disables_motion_mode_syntax = matches!(mode, InterMode::Global)
+        && !inter_context.force_integer_mv
+        && matches!(
+            first_state.global_motion.kind,
+            GlobalMotionType::RotZoom | GlobalMotionType::Affine,
+        );
     let (motion_mode, local_warp) = if compound {
         (MotionMode::Translation, None)
     } else if interintra.is_none()
         && !skip_mode
-        && !matches!(mode, InterMode::Global)
+        && !global_warp_disables_motion_mode_syntax
         && inter_context.motion_mode_switchable
         && block_width_b4.min(block_height_b4) >= 2
         && has_overlappable_neighbor(tile_state, node)?
@@ -9692,16 +9895,22 @@ fn decode_inter_leaf(
         transform_plan,
         InterTransformPlan::LossyWideDirectChromaGrid { .. }
     );
+    // Mixed trees traverse the same complete chroma grid as uniform splits;
+    // later terminals must retain the remaining above/left edge contexts.
     let split_rect64_i444_chroma_grid = matches!(
         transform_plan,
         InterTransformPlan::SplitB16x64
             | InterTransformPlan::SplitB16x64Deep
+            | InterTransformPlan::SplitB16x64Topology { .. }
             | InterTransformPlan::SplitB64x16
             | InterTransformPlan::SplitB64x16Deep
+            | InterTransformPlan::SplitB64x16Topology { .. }
             | InterTransformPlan::SplitB32x64
             | InterTransformPlan::SplitB32x64Deep
+            | InterTransformPlan::SplitB32x64Topology { .. }
             | InterTransformPlan::SplitB64x32
             | InterTransformPlan::SplitB64x32Deep
+            | InterTransformPlan::SplitB64x32Topology { .. }
     ) && layout == PixelLayout::I444;
     // Mode-2 vertical I422 roots retain a TX4 chroma grid while luma is
     // represented by two vertically stacked transform children. Load the
@@ -9826,9 +10035,13 @@ fn decode_inter_leaf(
     } else {
         None
     };
+    // Deep luma trees traverse the same complete chroma grid as shallow and
+    // mixed trees; lower terminals still need the remaining neighbor edges.
     let split_b64_chroma_grid = matches!(
         transform_plan,
-        InterTransformPlan::SplitB64 | InterTransformPlan::SplitB64Topology { .. }
+        InterTransformPlan::SplitB64
+            | InterTransformPlan::SplitB64Deep
+            | InterTransformPlan::SplitB64Topology { .. }
     ) && !matches!(
         block_chroma_sampling,
         Some(super::block::ChromaSampling::Subsampled420)
@@ -9845,7 +10058,7 @@ fn decode_inter_leaf(
             {
                 let chroma_sampling = block_chroma_sampling
                     .ok_or_else(|| malformed("inter lossless chroma sampling is unavailable"))?;
-                let (chroma_width, chroma_height, _, _) = super::block::generic_plane_geometry(
+                let geometry = super::block::generic_plane_geometry(
                     node.block_size,
                     chroma_sampling,
                     1,
@@ -9853,6 +10066,7 @@ fn decode_inter_leaf(
                     visible_height,
                 )
                 .map_err(|_| malformed("inter lossless chroma geometry is unavailable"))?;
+                let (chroma_width, chroma_height) = (geometry.coded_width, geometry.coded_height);
                 (
                     u32::try_from(chroma_width.checked_div(4).ok_or_else(|| {
                         malformed("inter lossless chroma width is not four-aligned")
@@ -9956,6 +10170,32 @@ fn decode_inter_leaf(
             };
             (txb_skipped, transform)
         };
+    let metadata = super::tile_state::InterBlockMeta {
+        references,
+        motion_vectors: motions,
+        mode,
+        compound_type,
+        motion_mode,
+        filters,
+        global,
+        new_mv,
+    };
+    block_decoder.clear_sub8_chroma_prediction();
+    if has_chroma
+        && !compound
+        && context.subsampling_x
+        && (block_width_b4 == 1 || (context.subsampling_y && block_height_b4 == 1))
+        && let Err(error) = prepare_sub8_chroma(
+            block_decoder,
+            tile_state,
+            context,
+            inter_context,
+            node,
+            metadata,
+        )?
+    {
+        return Ok(Err(error));
+    }
     let leaf = match if transform_split {
         let decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>, tx_size: TxSize| {
             decode_inter_transform_type(
@@ -10096,11 +10336,6 @@ fn decode_inter_leaf(
     } else if lossy_wide_chunked {
         let wide_sampling =
             block_chroma_sampling.unwrap_or(super::block::ChromaSampling::Monochrome);
-        let wide_obmc = if wide_sampling == super::block::ChromaSampling::Monochrome {
-            obmc
-        } else {
-            None
-        };
         let split32 = matches!(
             transform_plan,
             InterTransformPlan::LossyWideMode2Split32 { .. }
@@ -10187,7 +10422,7 @@ fn decode_inter_leaf(
                 deep16,
                 topology,
                 wide_sampling,
-                wide_obmc,
+                obmc,
             )
         }
     } else if lossy_direct_chroma_grid {
@@ -10294,16 +10529,7 @@ fn decode_inter_leaf(
     };
     Ok(Ok(DecodedFrameLeaf::Inter {
         leaf,
-        metadata: super::tile_state::InterBlockMeta {
-            references,
-            motion_vectors: motions,
-            mode,
-            compound_type,
-            motion_mode,
-            filters,
-            global,
-            new_mv,
-        },
+        metadata,
         tx_cells,
     }))
 }
@@ -10387,6 +10613,7 @@ impl Lossy420Reconstruction {
     /// Apply this tile's filters in isolation for the single-tile path.
     pub(super) fn into_filtered_leaf(
         self,
+        preserve_padding: bool,
         striped_restoration: Option<(RestorationPlan, super::sample_depth::SampleDepth)>,
     ) -> Av1Result<FilteredColorLeaf> {
         let Lossy420Reconstruction {
@@ -10417,6 +10644,7 @@ impl Lossy420Reconstruction {
             source_height,
             subsampling_x,
             subsampling_y,
+            false,
         )?;
         canvas.place_planes(source_width, source_height, &leaf.planes, 0, 0)?;
         if let Some((plan, depth)) = striped_restoration {
@@ -10454,20 +10682,37 @@ impl Lossy420Reconstruction {
                 subsampling_y,
             )?;
             return Ok(FilteredColorLeaf {
+                source_width: leaf.width,
+                source_height: leaf.height,
                 leaf,
-                source_width,
-                source_height,
             });
         }
-        leaf.planes = canvas.finish_with_filters_preserving_padding(
-            loop_parameters,
-            &filter_blocks,
-            None,
-            None,
-            cdef_parameters,
-            &cdef_indices,
-            &cdef_active,
-        )?;
+        leaf.planes = if preserve_padding {
+            canvas.finish_with_filters_preserving_padding(
+                loop_parameters,
+                &filter_blocks,
+                None,
+                None,
+                cdef_parameters,
+                &cdef_indices,
+                &cdef_active,
+            )?
+        } else {
+            canvas.finish_with_filters(
+                loop_parameters,
+                &filter_blocks,
+                None,
+                None,
+                cdef_parameters,
+                &cdef_indices,
+                &cdef_active,
+            )?
+        };
+        let (source_width, source_height) = if preserve_padding {
+            (source_width, source_height)
+        } else {
+            (leaf.width, leaf.height)
+        };
         Ok(FilteredColorLeaf {
             leaf,
             source_width,
@@ -10589,13 +10834,14 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_single_tile_loop_cdef_reconstruction_context(context);
     let monochrome_single_tile_loop_restoration =
         complete_monochrome_single_tile_loop_restoration_reconstruction_context(context);
-    let monochrome_lossy_active_restoration = if context.intra_frame {
-        lossy_monochrome_intra_superres_restoration_supported(context)
-    } else {
-        inter_context.is_some_and(|inter_context| {
-            lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
-        })
-    };
+    let monochrome_lossy_active_restoration = context.frame_tools.restoration_present
+        && if context.intra_frame {
+            lossy_monochrome_intra_superres_restoration_supported(context)
+        } else {
+            inter_context.is_some_and(|inter_context| {
+                lossy_monochrome_inter_superres_supported(context, inter_context)
+            })
+        };
     let monochrome_mixed_lossless_postfilter = inter_context.and_then(|inter_context| {
         complete_monochrome_mixed_lossless_inter_postfilter(context, inter_context)
     });
@@ -11133,6 +11379,15 @@ pub(super) fn validate_complete_lossy_420_partition(
     {
         return Ok(None);
     }
+    #[cfg(coverage)]
+    if streamed_lossless_color
+        && complete_lossless_444_reconstruction_context(context)
+        && crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1LosslessI444FirstPartitionFallback,
+        )
+    {
+        return Ok(None);
+    }
     let chroma_sampling = if context.monochrome {
         super::block::ChromaSampling::Monochrome
     } else {
@@ -11280,6 +11535,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         padded_height,
         context.subsampling_x,
         context.subsampling_y,
+        context.monochrome,
     )?;
     let mut tile_state = TileState::new(
         context.block_width,
@@ -12037,6 +12293,15 @@ pub(super) fn validate_complete_lossy_420_partition(
     }
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
+    let preserve_color_padding = context.superres_enabled || cdef_frame_parameters.is_some();
+    // Super-resolution taps read the reconstructed eight-pixel coded tail,
+    // not repetitions of the last visible sample. Retain that padding for
+    // neutral mixed-monochrome frames whose logical width ends within it.
+    let preserve_monochrome_padding = context.monochrome
+        && context.single_tile
+        && context.superres_enabled
+        && !context.frame_width.is_multiple_of(8)
+        && mixed_segment_superres_neutral(context);
     let (planes, monochrome) = if context.monochrome {
         // A multi-tile monochrome CDEF tranche retains these maps for the
         // frame compositor. Only a complete single-tile canvas may filter in
@@ -12184,6 +12449,12 @@ pub(super) fn validate_complete_lossy_420_partition(
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome loop-filter sample depth is unsupported"))?;
             canvas.finish_monochrome_with_loop_filter(loop_parameters, &filter_blocks, depth)?
+        } else if preserve_monochrome_padding {
+            let depth =
+                super::sample_depth::SampleDepth::new(context.bit_depth).ok_or_else(|| {
+                    malformed("monochrome super-resolution sample depth is unsupported")
+                })?;
+            canvas.finish_monochrome_coded(depth)?
         } else {
             canvas.finish_monochrome()?
         };
@@ -12196,7 +12467,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         let planes = [plane, empty_plane.clone(), empty_plane];
         (planes, true)
     } else {
-        let planes = if context.superres_enabled {
+        let planes = if preserve_color_padding {
             canvas.finish_preserving_padding()?
         } else {
             canvas.finish()?
@@ -12286,12 +12557,16 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     Ok(Some(Lossy420Reconstruction {
         leaf,
-        source_width: if context.superres_enabled && !context.monochrome {
+        source_width: if (preserve_color_padding && !context.monochrome)
+            || preserve_monochrome_padding
+        {
             padded_width
         } else {
             context.frame_width
         },
-        source_height: if context.superres_enabled && !context.monochrome {
+        source_height: if (preserve_color_padding && !context.monochrome)
+            || preserve_monochrome_padding
+        {
             padded_height
         } else {
             context.frame_height
@@ -12779,8 +13054,9 @@ fn lossy_i420_superres_restoration_supported(
 /// quantization path; staged inter reference/mode metadata supplies the
 /// per-block filter-level class before publication.
 /// Checked frame deblocking and bounded CDEF are applied after complete tile
-/// assembly; active super-resolution restoration is limited to the separate
-/// one-unit profile below. Validated film grain is applied only to a full
+/// assembly. Horizontal super-resolution resizes the complete coded frame;
+/// active restoration is limited to the separate one-unit profile below.
+/// Validated film grain is applied only to a full
 /// assembled display copy after each tile is reconstructed.
 /// Screen-content-enabled inter leaves use the parsed force-integer-MV path;
 /// frame-level skip mode is supported on the existing transform-mode 1/2
@@ -12813,14 +13089,10 @@ fn complete_inter_422_reconstruction_context(
             inter_context,
         );
     let dimensions_supported = if context.superres_enabled {
-        active_restoration
-            || mixed_lossless_superres
-            || mixed_lossless_superres_film_grain
-            || mixed_lossless_superres_postfilter.is_some()
-            || mixed_lossless_superres_restoration_film_grain
-            || mixed_lossless_superres_restoration_postfilter.is_some()
-            || mixed_lossless_superres_restoration_postfilter_film_grain.is_some()
-            || mixed_lossless_superres_restoration
+        context.frame_width >= 4
+            && context.frame_height >= 4
+            && context.frame_width.div_ceil(8).checked_mul(2) == Some(context.block_width)
+            && context.frame_height.div_ceil(8).checked_mul(2) == Some(context.block_height)
     } else {
         context.upscaled_width == context.frame_width
     };
@@ -17268,7 +17540,15 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// Plane-zero quantization matrices remain on the generic depth-aware
 /// coefficient path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
-    complete_monochrome_lossy_base(context)
+    // Neutral single-tile frames use the shared multi-superblock walker and
+    // checked frame canvas. Grain, active post-filters and independently
+    // decoded tiles retain their existing 128-pixel admission.
+    let dimension_limit = if context.single_tile && !context.frame_tools.film_grain_present {
+        256
+    } else {
+        128
+    };
+    complete_monochrome_lossy_base_with_dimension_limit(context, false, dimension_limit)
         && complete_monochrome_cdef_inactive(context)
         && context.restoration_types == [None; 3]
 }
@@ -17281,12 +17561,20 @@ fn complete_monochrome_lossy_base_with_partial_edges(
     context: &FirstBlockContext,
     allow_partial_visible_edges: bool,
 ) -> bool {
+    complete_monochrome_lossy_base_with_dimension_limit(context, allow_partial_visible_edges, 128)
+}
+
+fn complete_monochrome_lossy_base_with_dimension_limit(
+    context: &FirstBlockContext,
+    allow_partial_visible_edges: bool,
+    dimension_limit: u32,
+) -> bool {
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
-        && context.frame_width <= 128
-        && context.frame_height <= 128
+        && context.frame_width <= dimension_limit
+        && context.frame_height <= dimension_limit
         && (allow_partial_visible_edges
             || (context.frame_width.is_multiple_of(4) && context.frame_height.is_multiple_of(4)))
         && padded_block_width == Some(context.block_width)
@@ -17816,7 +18104,12 @@ fn complete_monochrome_multitile_loop_cdef_reconstruction_context(
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
-    (context.intra_frame && complete_monochrome_lossy_common(context))
+    (context.intra_frame
+        && (complete_monochrome_lossy_common(context)
+            || (mixed_monochrome_lossless_segmentation_common_with_policy(context, false)
+                && mixed_segment_neutral_filters(context)
+                && !context.frame_tools.restoration_present
+                && context.restoration_types == [None; 3])))
         || lossy_monochrome_intra_superres_restoration_supported(context)
 }
 
@@ -17850,7 +18143,7 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
     (!context.intra_frame
         && complete_monochrome_lossy_common(context)
         && complete_monochrome_references(context, inter_context))
-        || lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
+        || lossy_monochrome_inter_superres_supported(context, inter_context)
         || mixed_monochrome_lossless_superres_supported(context, inter_context)
         || mixed_lossless_superres_film_grain
         || mixed_lossless_superres_postfilter.is_some()
@@ -17869,7 +18162,7 @@ fn complete_monochrome_mixed_lossless_inter_reconstruction_context(
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     mixed_monochrome_lossless_segmentation_supported(context)
-        && mixed_monochrome_neutral_filters(context)
+        && mixed_segment_neutral_filters(context)
         && complete_monochrome_references(context, inter_context)
 }
 
@@ -17895,7 +18188,8 @@ fn complete_monochrome_mixed_lossless_inter_restoration(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    if !mixed_monochrome_lossless_segmentation_common_with_policy(context, true)
+    if context.intra_frame
+        || !mixed_monochrome_lossless_segmentation_common_with_policy(context, true)
         || !context.frame_tools.restoration_present
         || context.restoration_types[1].is_some()
         || context.restoration_types[2].is_some()
@@ -17942,11 +18236,10 @@ fn complete_monochrome_mixed_lossless_inter_restoration(
     true
 }
 
-/// Common frame-level proof for the lossy monochrome super-resolution
-/// restoration tranche. Monochrome owns only plane zero, so the active
-/// restoration plan is intentionally luma-only and is applied after the
-/// existing frame-wide resize compositor.
-fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> bool {
+/// Common frame-level proof for lossy monochrome super-resolution with
+/// neutral filters or luma-only restoration. Both profiles use the checked
+/// frame-wide resize compositor; active restoration runs afterward.
+fn lossy_monochrome_superres_common(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
@@ -18003,12 +18296,14 @@ fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> 
         || context.frame_tools.delta_lf_present
         || context.allow_intrabc
         || context.skip_mode_enabled
-        || !context.frame_tools.restoration_present
         || !segmentation_closed
         || context.restoration_types[1].is_some()
         || context.restoration_types[2].is_some()
     {
         return false;
+    }
+    if !context.frame_tools.restoration_present {
+        return context.restoration_types == [None; 3];
     }
     let Some(restoration_type) = context.restoration_types[0] else {
         return false;
@@ -18041,19 +18336,21 @@ fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> 
 }
 
 fn lossy_monochrome_intra_superres_restoration_supported(context: &FirstBlockContext) -> bool {
-    context.intra_frame && lossy_monochrome_superres_restoration_common(context)
+    context.intra_frame
+        && context.frame_tools.restoration_present
+        && lossy_monochrome_superres_common(context)
 }
 
-/// Admit the luma-only inter super-resolution/restoration profile. Inter-intra
+/// Admit neutral or restored luma-only inter super-resolution. Inter-intra
 /// compound is supported for the AV1 size-eligible single-transform blocks by
 /// the coded-resolution one-plane compositor; mixed transform topologies and
 /// all other motion variations remain transactional in the block decoder.
-fn lossy_monochrome_inter_superres_restoration_supported(
+fn lossy_monochrome_inter_superres_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     if context.intra_frame
-        || !lossy_monochrome_superres_restoration_common(context)
+        || !lossy_monochrome_superres_common(context)
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
@@ -19515,8 +19812,10 @@ fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContex
 /// Admit the bounded high-depth all-lossless inter profile. The generic
 /// streamed decoder carries the same TX4x4/WHT sentence for 10/12-bit
 /// samples, but this tranche keeps the surrounding frame state closed and
-/// single-tile so reference geometry is frame-global and every visited grid
-/// cell has a complete four-pixel extent. The super-resolution extension is
+/// single-tile so reference geometry is frame-global. Grid cells normally
+/// have complete four-pixel extents; the bounded non-superres I420 profile
+/// also admits edge-clipped B32 transforms that reconstruct their padded
+/// samples before display-surface clipping. The super-resolution extension is
 /// limited to monochrome/I420/I422/I444, whose coded result is resized once
 /// after reconstruction. Monochrome, I420, I422, and I444 additionally admit a
 /// horizontally tiled, full-height layout so frame-wide resize taps remain
@@ -19616,10 +19915,18 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
                     && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
             })
         && matches!(context.level, 0 | 1);
+    let clipped_high_depth_lossless_b32 = context.all_lossless
+        && layout == PixelLayout::I420
+        && !context.superres_enabled
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 64
+        && context.frame_height <= 64
+        && (context.frame_width < 64 || context.frame_height < 64);
     let single_tile_dimensions_supported = context.frame_width != 0
         && context.frame_height != 0
-        && context.frame_width.is_multiple_of(4)
-        && context.frame_height.is_multiple_of(4)
+        && ((context.frame_width.is_multiple_of(4) && context.frame_height.is_multiple_of(4))
+            || clipped_high_depth_lossless_b32)
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && (superres_layout
@@ -20088,10 +20395,7 @@ fn high_depth_lossless_monochrome_superres_restoration_supported(
 /// on planes whose frame-level base filter is enabled; header-disabled planes
 /// remain a zero-level no-op.
 fn complete_high_depth_cdef_supported(context: &FirstBlockContext) -> bool {
-    context.frame_tools.cdef.is_none()
-        || (context.frame_width.is_multiple_of(8)
-            && context.frame_height.is_multiple_of(8)
-            && bounded_i444_cdef_supported(context))
+    context.frame_tools.cdef.is_none() || bounded_i444_cdef_supported(context)
 }
 
 fn complete_high_depth_loop_filter_supported(context: &FirstBlockContext) -> bool {
@@ -20133,7 +20437,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
 /// path. Its coefficient dispatcher carries the plane-specific matrix level
 /// and depth-aware dequantizer for every reachable I420 transform shape, while
 /// IDTX and one-dimensional transforms disable matrix use per AV1 syntax.
-/// Bounded CDEF is admitted only when the luma raster has complete 8x8 units.
+/// CDEF retains the reconstructed block-rounded raster through filtering.
 /// Dynamic delta-LF levels share the validated frame-filter metadata path.
 fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
@@ -20359,8 +20663,8 @@ fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.block_x == 0
         && context.block_y == 0
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && ((!context.segmentation_enabled && !context.frame_tools.segmentation.enabled)
+            || mixed_i422_intra_segmentation_supported(context))
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && if context.superres_enabled {
@@ -20377,6 +20681,28 @@ fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> boo
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && matches!(context.level, 0 | 1)
+}
+
+/// Reuse the strict mixed-segment map and quantization grammar for a neutral
+/// I422 key. Per-block losslessness selects the existing fixed TX4x4 WHT path;
+/// active frame filters, restoration and segment-global syntax stay separate.
+fn mixed_i422_intra_segmentation_supported(context: &FirstBlockContext) -> bool {
+    context.intra_frame
+        && context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && mixed_segment_neutral_filters(context)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && if context.bit_depth == 8 {
+            mixed_8bit_color_lossless_segmentation_common_with_policy(
+                context,
+                PixelLayout::I422,
+                false,
+            )
+        } else {
+            mixed_high_depth_color_lossless_segmentation_common_with_policy(context, false)
+        }
 }
 
 /// Admit active Wiener/SGR restoration for one lossy I422 intra
@@ -22398,7 +22724,7 @@ pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
     let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), false)?;
     records.push(decoder.trace_state("adaptive_symbol", 0, -1, &cdf));
     for step in 1..=16 {
-        let value = i32::try_from(decoder.adaptive_symbol(&mut cdf, 3))
+        let value = i32::try_from(decoder.adaptive_symbol4(&mut cdf))
             .map_err(|error| CodecError::Dimensions(format!("adaptive symbol value: {error}")))?;
         records.push(decoder.trace_state("adaptive_symbol", step, value, &cdf));
     }
@@ -22407,7 +22733,7 @@ pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
     let mut decoder = RangeDecoder::new(&data, 0, INPUT.len(), true)?;
     records.push(decoder.trace_state("frozen_symbol", 0, -1, &cdf));
     for step in 1..=8 {
-        let value = i32::try_from(decoder.adaptive_symbol(&mut cdf, 3))
+        let value = i32::try_from(decoder.adaptive_symbol4(&mut cdf))
             .map_err(|error| CodecError::Dimensions(format!("frozen symbol value: {error}")))?;
         records.push(decoder.trace_state("frozen_symbol", step, value, &cdf));
     }

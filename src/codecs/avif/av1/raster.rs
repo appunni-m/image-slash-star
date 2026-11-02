@@ -29,6 +29,138 @@ pub(super) struct IntraEdgeRequest {
 }
 
 /// A checked row-major canvas for one AV1 frame.
+///
+/// Coverage bits are kept in machine words so overlap checks can inspect a
+/// whole aligned range at once instead of decoding one `Vec<bool>` bit per
+/// sample.
+#[derive(Debug)]
+struct CoverageMask {
+    words: Vec<u64>,
+    bit_len: usize,
+}
+
+impl CoverageMask {
+    fn empty() -> Self {
+        Self {
+            words: Vec::new(),
+            bit_len: 0,
+        }
+    }
+
+    fn zeroed(dimensions: (usize, usize), label: &str) -> Av1Result<Self> {
+        let bit_len = dimensions
+            .0
+            .checked_mul(dimensions.1)
+            .ok_or_else(|| malformed("frame canvas size overflows usize"))?;
+        let word_count = bit_len.div_ceil(u64::BITS as usize);
+        let words = allocate_zeroed((word_count, 1), label)?;
+        Ok(Self { words, bit_len })
+    }
+
+    fn get(&self, index: usize) -> Option<bool> {
+        if index >= self.bit_len {
+            return None;
+        }
+        let bits_per_word = u64::BITS as usize;
+        let word_index = index.checked_div(bits_per_word)?;
+        let bit_index = index.checked_rem(bits_per_word)?;
+        let shift = u32::try_from(bit_index).ok()?;
+        let word = self.words.get(word_index)?;
+        let bit = 1_u64.checked_shl(shift)?;
+        Some(word & bit != 0)
+    }
+
+    fn any_written(&self, start: usize, end: usize) -> Option<bool> {
+        if start > end || end > self.bit_len {
+            return None;
+        }
+        if start == end {
+            return Some(false);
+        }
+        let (first_word, last_word, first_mask, last_mask) = self.range_masks(start, end)?;
+        let first = *self.words.get(first_word)?;
+        if first_word == last_word {
+            return Some(first & first_mask & last_mask != 0);
+        }
+        if first & first_mask != 0
+            || self
+                .words
+                .get(first_word.checked_add(1)?..last_word)?
+                .iter()
+                .any(|&word| word != 0)
+        {
+            return Some(true);
+        }
+        Some(self.words.get(last_word)? & last_mask != 0)
+    }
+
+    fn any_unwritten(&self, start: usize, end: usize) -> Option<bool> {
+        if start > end || end > self.bit_len {
+            return None;
+        }
+        if start == end {
+            return Some(false);
+        }
+        let (first_word, last_word, first_mask, last_mask) = self.range_masks(start, end)?;
+        let first = *self.words.get(first_word)?;
+        if first_word == last_word {
+            let mask = first_mask & last_mask;
+            return Some(first & mask != mask);
+        }
+        if first & first_mask != first_mask
+            || self
+                .words
+                .get(first_word.checked_add(1)?..last_word)?
+                .iter()
+                .any(|&word| word != u64::MAX)
+        {
+            return Some(true);
+        }
+        let last = *self.words.get(last_word)?;
+        Some(last & last_mask != last_mask)
+    }
+
+    fn set_range(&mut self, start: usize, end: usize) -> Option<()> {
+        if start > end || end > self.bit_len {
+            return None;
+        }
+        if start == end {
+            return Some(());
+        }
+        let (first_word, last_word, first_mask, last_mask) = self.range_masks(start, end)?;
+        if first_word == last_word {
+            *self.words.get_mut(first_word)? |= first_mask & last_mask;
+            return Some(());
+        }
+        *self.words.get_mut(first_word)? |= first_mask;
+        self.words
+            .get_mut(first_word.checked_add(1)?..last_word)?
+            .fill(u64::MAX);
+        *self.words.get_mut(last_word)? |= last_mask;
+        Some(())
+    }
+
+    fn range_masks(&self, start: usize, end: usize) -> Option<(usize, usize, u64, u64)> {
+        if start >= end || end > self.bit_len {
+            return None;
+        }
+        let bits_per_word = u64::BITS as usize;
+        let first_word = start.checked_div(bits_per_word)?;
+        let last_bit = end.checked_sub(1)?;
+        let last_word = last_bit.checked_div(bits_per_word)?;
+        let first_shift = u32::try_from(start.checked_rem(bits_per_word)?).ok()?;
+        let last_shift = u32::try_from(
+            bits_per_word
+                .checked_sub(1)?
+                .checked_sub(last_bit.checked_rem(bits_per_word)?)?,
+        )
+        .ok()?;
+        let first_mask = u64::MAX.checked_shl(first_shift)?;
+        let last_mask = u64::MAX.checked_shr(last_shift)?;
+        Some((first_word, last_word, first_mask, last_mask))
+    }
+}
+
 pub(in crate::codecs::avif) struct FrameCanvas {
     visible_width: usize,
     visible_height: usize,
@@ -37,7 +169,11 @@ pub(in crate::codecs::avif) struct FrameCanvas {
     subsampling_x: bool,
     subsampling_y: bool,
     planes: [Vec<u16>; 3],
-    written: [Vec<bool>; 3],
+    written: [CoverageMask; 3],
+    // Placement rejects overlaps before copying, so counts prove completeness
+    // without rescanning the bitmap. The bitmap also supplies intra-edge state.
+    written_counts: [usize; 3],
+    visible_written_counts: [usize; 3],
 }
 
 /// A checked canvas for a complete monochrome auxiliary plane.
@@ -52,7 +188,9 @@ pub(super) struct MonochromeFrameCanvas {
     width: usize,
     height: usize,
     samples: Vec<u16>,
-    written: Vec<bool>,
+    written: CoverageMask,
+    written_count: usize,
+    visible_written_count: usize,
 }
 
 impl MonochromeFrameCanvas {
@@ -90,7 +228,9 @@ impl MonochromeFrameCanvas {
             width,
             height,
             samples: allocate_zeroed(dimensions, "alpha canvas")?,
-            written: allocate_zeroed(dimensions, "alpha coverage")?,
+            written: CoverageMask::zeroed(dimensions, "alpha coverage")?,
+            written_count: 0,
+            visible_written_count: 0,
         })
     }
 
@@ -148,10 +288,24 @@ impl MonochromeFrameCanvas {
             let end = start
                 .checked_add(visible_width)
                 .ok_or_else(|| malformed("alpha leaf row end overflows usize"))?;
-            if self.written[start..end].iter().any(|written| *written) {
+            if self
+                .written
+                .any_written(start, end)
+                .ok_or_else(|| malformed("alpha coverage exceeds the frame canvas"))?
+            {
                 return Err(malformed("alpha leaves overlap"));
             }
         }
+        let written_count = visible_width
+            .checked_mul(visible_height)
+            .and_then(|count| self.written_count.checked_add(count))
+            .ok_or_else(|| malformed("alpha coverage count overflows usize"))?;
+        let display_width = self.visible_width.saturating_sub(x).min(visible_width);
+        let display_height = self.visible_height.saturating_sub(y).min(visible_height);
+        let visible_written_count = display_width
+            .checked_mul(display_height)
+            .and_then(|count| self.visible_written_count.checked_add(count))
+            .ok_or_else(|| malformed("visible alpha coverage count overflows usize"))?;
         for row in 0..visible_height {
             let source_start = row
                 .checked_mul(source_width)
@@ -167,10 +321,14 @@ impl MonochromeFrameCanvas {
             let destination_end = destination_start
                 .checked_add(visible_width)
                 .ok_or_else(|| malformed("alpha destination row end overflows usize"))?;
+            self.written
+                .set_range(destination_start, destination_end)
+                .ok_or_else(|| malformed("alpha coverage exceeds the frame canvas"))?;
             self.samples[destination_start..destination_end]
                 .copy_from_slice(&plane.samples[source_start..source_end]);
-            self.written[destination_start..destination_end].fill(true);
         }
+        self.written_count = written_count;
+        self.visible_written_count = visible_written_count;
         Ok(())
     }
 
@@ -228,13 +386,24 @@ impl MonochromeFrameCanvas {
             let destination_end = destination_start
                 .checked_add(visible_width)
                 .ok_or_else(|| malformed("alpha cell destination end overflows"))?;
-            if self.written[destination_start..destination_end]
-                .iter()
-                .any(|written| *written)
+            if self
+                .written
+                .any_written(destination_start, destination_end)
+                .ok_or_else(|| malformed("alpha coverage exceeds the frame canvas"))?
             {
                 return Err(malformed("alpha grid cells overlap"));
             }
         }
+        let written_count = visible_width
+            .checked_mul(visible_height)
+            .and_then(|count| self.written_count.checked_add(count))
+            .ok_or_else(|| malformed("alpha coverage count overflows usize"))?;
+        let visible_width_count = self.visible_width.saturating_sub(x).min(visible_width);
+        let visible_height_count = self.visible_height.saturating_sub(y).min(visible_height);
+        let visible_written_count = visible_width_count
+            .checked_mul(visible_height_count)
+            .and_then(|count| self.visible_written_count.checked_add(count))
+            .ok_or_else(|| malformed("visible alpha coverage count overflows usize"))?;
         for row in 0..visible_height {
             let source_start = row
                 .checked_mul(source_width)
@@ -250,10 +419,14 @@ impl MonochromeFrameCanvas {
             let destination_end = destination_start
                 .checked_add(visible_width)
                 .ok_or_else(|| malformed("alpha cell destination end overflows"))?;
+            self.written
+                .set_range(destination_start, destination_end)
+                .ok_or_else(|| malformed("alpha coverage exceeds the frame canvas"))?;
             self.samples[destination_start..destination_end]
                 .copy_from_slice(&plane.samples[source_start..source_end]);
-            self.written[destination_start..destination_end].fill(true);
         }
+        self.written_count = written_count;
+        self.visible_written_count = visible_written_count;
         Ok(())
     }
 
@@ -267,8 +440,8 @@ impl MonochromeFrameCanvas {
                 .ok_or_else(|| malformed("alpha canvas row end overflows"))?;
             if self
                 .written
-                .get(start..end)
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                .any_unwritten(start, end)
+                .is_none_or(|has_unwritten| has_unwritten)
             {
                 return Err(malformed("alpha canvas is missing reconstructed samples"));
             }
@@ -307,7 +480,9 @@ impl MonochromeFrameCanvas {
             subsampling_x: false,
             subsampling_y: false,
             planes: [self.samples, Vec::new(), Vec::new()],
-            written: [self.written, Vec::new(), Vec::new()],
+            written: [self.written, CoverageMask::empty(), CoverageMask::empty()],
+            written_counts: [self.written_count, 0, 0],
+            visible_written_counts: [self.visible_written_count, 0, 0],
         };
         canvas.finish_monochrome_with_cdef(
             frame_parameters,
@@ -352,7 +527,7 @@ impl MonochromeFrameCanvas {
         cdef_active: &[bool],
         sample_depth: SampleDepth,
     ) -> Av1Result<ReconstructedPlane> {
-        if self.written.iter().any(|written| !written) {
+        if self.written_count != self.samples.len() {
             return Err(malformed(
                 "monochrome canvas is missing reconstructed samples",
             ));
@@ -389,7 +564,15 @@ impl FrameCanvas {
         subsampling_x: bool,
         subsampling_y: bool,
     ) -> Av1Result<Self> {
-        Self::new_padded(width, height, width, height, subsampling_x, subsampling_y)
+        Self::new_padded(
+            width,
+            height,
+            width,
+            height,
+            subsampling_x,
+            subsampling_y,
+            false,
+        )
     }
 
     /// Allocate a coded/padded tile canvas while retaining the raw-visible
@@ -399,6 +582,8 @@ impl FrameCanvas {
     /// frame boundary. Keeping those samples until all filters complete lets
     /// the tile-state path drop reconstructed leaves without losing the
     /// invisible edge pixels needed by later blocks.
+    /// Monochrome tiles retain the shared walker and luma coverage checks but
+    /// leave their absent chroma planes and coverage masks unallocated.
     pub(super) fn new_padded(
         visible_width: u32,
         visible_height: u32,
@@ -406,6 +591,7 @@ impl FrameCanvas {
         padded_height: u32,
         subsampling_x: bool,
         subsampling_y: bool,
+        monochrome: bool,
     ) -> Av1Result<Self> {
         let visible_width = usize::try_from(visible_width)
             .map_err(|_| malformed("visible frame width exceeds usize"))?;
@@ -434,20 +620,21 @@ impl FrameCanvas {
         } else {
             height
         };
-        let dimensions = [
-            (width, height),
-            (chroma_width, chroma_height),
-            (chroma_width, chroma_height),
-        ];
+        let chroma_dimensions = if monochrome {
+            (0, 0)
+        } else {
+            (chroma_width, chroma_height)
+        };
+        let dimensions = [(width, height), chroma_dimensions, chroma_dimensions];
         let planes = [
             allocate_zeroed(dimensions[0], "luma canvas")?,
             allocate_zeroed(dimensions[1], "first chroma canvas")?,
             allocate_zeroed(dimensions[2], "second chroma canvas")?,
         ];
         let written = [
-            allocate_zeroed(dimensions[0], "luma coverage")?,
-            allocate_zeroed(dimensions[1], "first chroma coverage")?,
-            allocate_zeroed(dimensions[2], "second chroma coverage")?,
+            CoverageMask::zeroed(dimensions[0], "luma coverage")?,
+            CoverageMask::zeroed(dimensions[1], "first chroma coverage")?,
+            CoverageMask::zeroed(dimensions[2], "second chroma coverage")?,
         ];
         Ok(Self {
             visible_width,
@@ -458,6 +645,8 @@ impl FrameCanvas {
             subsampling_y,
             planes,
             written,
+            written_counts: [0; 3],
+            visible_written_counts: [0; 3],
         })
     }
 
@@ -517,8 +706,8 @@ impl FrameCanvas {
             if self
                 .written
                 .get(plane)
-                .and_then(|coverage| coverage.get(source_start..source_end))
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                .and_then(|coverage| coverage.any_unwritten(source_start, source_end))
+                .is_none_or(|has_unwritten| has_unwritten)
             {
                 return Err(malformed("intraBC source contains undecoded samples"));
             }
@@ -668,7 +857,6 @@ impl FrameCanvas {
                 .ok_or(PortableUnavailable)?;
             self.written[0]
                 .get(index)
-                .copied()
                 .filter(|written| *written)
                 .ok_or(PortableUnavailable)?;
             let sample = self.planes[0]
@@ -764,7 +952,6 @@ impl FrameCanvas {
                 .written
                 .get(plane)
                 .and_then(|written| written.get(index))
-                .copied()
                 .unwrap_or(false)
             {
                 return Err(PortableUnavailable);
@@ -820,7 +1007,6 @@ impl FrameCanvas {
                 .written
                 .get(plane)
                 .and_then(|written| written.get(index))
-                .copied()
                 .unwrap_or(false)
                 && let Some(value) = self
                     .planes
@@ -859,11 +1045,11 @@ impl FrameCanvas {
             .and_then(|row| row.checked_add(x))
             .ok_or(PortableUnavailable)?;
         let end = start.checked_add(COUNT).ok_or(PortableUnavailable)?;
-        if !self
+        if self
             .written
             .get(plane)
-            .and_then(|written| written.get(start..end))
-            .is_some_and(|written| written.iter().all(|value| *value))
+            .and_then(|written| written.any_unwritten(start, end))
+            .is_none_or(|has_unwritten| has_unwritten)
         {
             return Err(PortableUnavailable);
         }
@@ -910,7 +1096,6 @@ impl FrameCanvas {
                 .written
                 .get(plane)
                 .and_then(|written| written.get(index))
-                .copied()
                 .unwrap_or(false)
             {
                 return Err(PortableUnavailable);
@@ -932,9 +1117,9 @@ impl FrameCanvas {
                     let end = row.checked_mul(plane_width)?.checked_add(end)?;
                     self.written
                         .get(plane)
-                        .and_then(|written| written.get(start..end))
+                        .and_then(|written| written.any_unwritten(start, end))
                 })
-                .is_some_and(|written| written.iter().all(|value| *value))
+                .is_some_and(|has_unwritten| !has_unwritten)
         };
         let column_is_written = |column: usize, start_y: usize, length: usize| {
             start_y
@@ -949,7 +1134,6 @@ impl FrameCanvas {
                                     .get(plane)
                                     .and_then(|written| written.get(index))
                             })
-                            .copied()
                             .unwrap_or(false)
                     })
                 })
@@ -1450,8 +1634,8 @@ impl FrameCanvas {
                 .checked_add(visible_dimensions.0)
                 .ok_or_else(|| malformed("monochrome canvas row end overflows"))?;
             if self.written[0]
-                .get(start..end)
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                .any_unwritten(start, end)
+                .is_none_or(|has_unwritten| has_unwritten)
             {
                 return Err(malformed(
                     "monochrome canvas is missing reconstructed samples",
@@ -1469,7 +1653,7 @@ impl FrameCanvas {
         self,
         sample_depth: SampleDepth,
     ) -> Av1Result<ReconstructedPlane> {
-        if self.written[0].iter().any(|written| !written) {
+        if self.written_counts[0] != self.planes[0].len() {
             return Err(malformed(
                 "monochrome canvas is missing reconstructed coded samples",
             ));
@@ -1509,8 +1693,8 @@ impl FrameCanvas {
                 .checked_add(required_dimensions.0)
                 .ok_or_else(|| malformed("monochrome loop-filter row end overflows"))?;
             if self.written[0]
-                .get(start..end)
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                .any_unwritten(start, end)
+                .is_none_or(|has_unwritten| has_unwritten)
             {
                 return Err(malformed(
                     "monochrome canvas is missing reconstructed samples",
@@ -1565,8 +1749,8 @@ impl FrameCanvas {
                 .checked_add(required_dimensions.0)
                 .ok_or_else(|| malformed("monochrome loop-filter row end overflows"))?;
             if self.written[0]
-                .get(start..end)
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                .any_unwritten(start, end)
+                .is_none_or(|has_unwritten| has_unwritten)
             {
                 return Err(malformed(
                     "monochrome canvas is missing reconstructed samples",
@@ -1620,21 +1804,19 @@ impl FrameCanvas {
         } else {
             visible_dimensions
         };
-        for row in 0..required_dimensions.1 {
-            let start = row
-                .checked_mul(coded_width)
-                .ok_or_else(|| malformed("monochrome coverage row offset overflows"))?;
-            let end = start
-                .checked_add(required_dimensions.0)
-                .ok_or_else(|| malformed("monochrome coverage row end overflows"))?;
-            if self.written[0]
-                .get(start..end)
-                .is_none_or(|coverage| coverage.iter().any(|written| !written))
-            {
-                return Err(malformed(
-                    "monochrome canvas is missing reconstructed samples",
-                ));
-            }
+        let required_samples = required_dimensions
+            .0
+            .checked_mul(required_dimensions.1)
+            .ok_or_else(|| malformed("monochrome coverage extent overflows"))?;
+        let written_samples = if frame_parameters.is_some() {
+            self.written_counts[0]
+        } else {
+            self.visible_written_counts[0]
+        };
+        if written_samples != required_samples {
+            return Err(malformed(
+                "monochrome canvas is missing reconstructed samples",
+            ));
         }
         if self.planes[0]
             .iter()
@@ -1768,6 +1950,16 @@ impl FrameCanvas {
                     bit_depth: frame.bit_depth,
                 };
                 if primary_strength != 0 {
+                    let direction_bit_depth = frame.bit_depth;
+                    #[cfg(coverage)]
+                    let direction_bit_depth =
+                        if crate::coverage_support::take_fault_point(
+                            crate::coverage_support::CoverageFaultPoint::Av1CdefDirectionInvalidSampleDepth,
+                        ) {
+                            7
+                        } else {
+                            direction_bit_depth
+                        };
                     let (direction, variance) = cdef::direction_for_block(
                         source,
                         coded_dimensions,
@@ -1777,7 +1969,7 @@ impl FrameCanvas {
                             width: 8,
                             height: 8,
                         },
-                        frame.bit_depth,
+                        direction_bit_depth,
                     )
                     .ok_or_else(|| malformed("monochrome CDEF direction is unavailable"))?;
                     parameters.direction =
@@ -1795,6 +1987,26 @@ impl FrameCanvas {
                     width: 8,
                     height: 8,
                 };
+                #[cfg(coverage)]
+                if crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::Av1CdefInputGuardSweep,
+                ) {
+                    let rejected_cases = cdef::coverage_guard_rejection_count(
+                        source,
+                        coded_dimensions,
+                        block,
+                        parameters,
+                    );
+                    return Err(CodecError::Malformed(format!(
+                        "invalid AV1 bitstream: CDEF guard sweep rejected {rejected_cases} invalid inputs"
+                    )));
+                }
+                #[cfg(coverage)]
+                if crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::Av1CdefInvalidSampleDepth,
+                ) {
+                    parameters.bit_depth = 7;
+                }
                 cdef::filter_block_into(
                     source,
                     coded_dimensions,
@@ -1843,10 +2055,9 @@ impl FrameCanvas {
 
     /// Finish the canvas while retaining its complete coded plane extents.
     ///
-    /// AV1 super-resolution scales from the visible coded width but filters
-    /// against reconstructed samples through the padded block boundary. This
-    /// path is only used by the single-tile super-resolution pipeline; normal
-    /// frame assembly continues to publish the visible crop.
+    /// CDEF reads reconstructed neighbors through the padded block boundary.
+    /// Super-resolution also needs that tail after filtering; other frame
+    /// paths publish the visible crop only after their filters complete.
     #[expect(
         clippy::too_many_arguments,
         reason = "the canvas filter API keeps independent filter maps explicit"
@@ -1921,24 +2132,22 @@ impl FrameCanvas {
             || chroma_parameters.is_some();
         for (plane, &visible_dimensions) in visible_dimensions.iter().enumerate() {
             let coded_dimensions = self.plane_dimensions(plane);
-            let (required_width, required_height) = if filters_present || preserve_padding {
+            let requires_coded_coverage = filters_present || preserve_padding;
+            let (required_width, required_height) = if requires_coded_coverage {
                 coded_dimensions
             } else {
                 visible_dimensions
             };
-            for row in 0..required_height {
-                let start = row
-                    .checked_mul(coded_dimensions.0)
-                    .ok_or_else(|| malformed("frame coverage row offset overflows"))?;
-                let end = start
-                    .checked_add(required_width)
-                    .ok_or_else(|| malformed("frame coverage row end overflows"))?;
-                if self.written[plane]
-                    .get(start..end)
-                    .is_none_or(|coverage| coverage.iter().any(|written| !written))
-                {
-                    return Err(malformed("frame canvas is missing reconstructed samples"));
-                }
+            let required_samples = required_width
+                .checked_mul(required_height)
+                .ok_or_else(|| malformed("frame coverage extent overflows"))?;
+            let written_samples = if requires_coded_coverage {
+                self.written_counts[plane]
+            } else {
+                self.visible_written_counts[plane]
+            };
+            if written_samples != required_samples {
+                return Err(malformed("frame canvas is missing reconstructed samples"));
             }
         }
 
@@ -1992,25 +2201,117 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<()> {
+        let visible_dimensions = self.visible_plane_dimensions();
+        let chroma_block_width = if self.subsampling_x { 4 } else { 8 };
+        let chroma_block_height = if self.subsampling_y { 4 } else { 8 };
+        let edge_padding = [
+            cdef::EdgePadding::for_frame(visible_dimensions[0], (8, 8))
+                .ok_or_else(|| malformed("CDEF visible plane extent is empty"))?,
+            cdef::EdgePadding::for_frame(
+                visible_dimensions[1],
+                (chroma_block_width, chroma_block_height),
+            )
+            .ok_or_else(|| malformed("CDEF visible plane extent is empty"))?,
+            cdef::EdgePadding::for_frame(
+                visible_dimensions[2],
+                (chroma_block_width, chroma_block_height),
+            )
+            .ok_or_else(|| malformed("CDEF visible plane extent is empty"))?,
+        ];
+        if edge_padding
+            .iter()
+            .any(|padding| padding.extends_partial_block())
+        {
+            self.apply_cdef_inner::<true>(
+                luma_parameters,
+                chroma_parameters,
+                frame_parameters,
+                cdef_indices,
+                cdef_active,
+                edge_padding,
+            )
+        } else {
+            self.apply_cdef_inner::<false>(
+                luma_parameters,
+                chroma_parameters,
+                frame_parameters,
+                cdef_indices,
+                cdef_active,
+                edge_padding,
+            )
+        }
+    }
+
+    fn apply_cdef_inner<const EXTEND_FRAME_EDGES: bool>(
+        &mut self,
+        luma_parameters: Option<CdefParameters>,
+        chroma_parameters: Option<CdefParameters>,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        edge_padding: [cdef::EdgePadding; 3],
+    ) -> Av1Result<()> {
         let luma_dimensions = self.plane_dimensions(0);
         let active_width = luma_dimensions.0.div_ceil(8);
         let active_height = luma_dimensions.1.div_ceil(8);
         let region_width = self.width.div_ceil(64);
         let region_height = self.height.div_ceil(64);
+        #[cfg(coverage)]
+        let mut injected_cdef_indices = None;
         if let Some(frame) = frame_parameters {
+            #[cfg(coverage)]
+            let frame = if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1CdefInvalidYStrengthCount,
+            ) {
+                cdef::FrameParameters {
+                    y_strength_count: 0,
+                    ..frame
+                }
+            } else if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1CdefInvalidUvStrengthCount,
+            ) {
+                cdef::FrameParameters {
+                    uv_strength_count: 0,
+                    ..frame
+                }
+            } else {
+                frame
+            };
+            #[cfg(coverage)]
+            if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1CdefActiveStrengthIndexOutOfRange,
+            ) {
+                let mut indices = cdef_indices.to_vec();
+                let Some(first_index) = indices.first_mut() else {
+                    return Err(malformed("CDEF metadata maps have invalid extents"));
+                };
+                *first_index = Some(frame.y_strength_count.max(frame.uv_strength_count));
+                injected_cdef_indices = Some(indices);
+            }
             let active_length = active_width
                 .checked_mul(active_height)
                 .ok_or_else(|| malformed("CDEF active-map size overflows"))?;
             let region_length = region_width
                 .checked_mul(region_height)
                 .ok_or_else(|| malformed("CDEF index-map size overflows"))?;
+            #[cfg(coverage)]
+            let cdef_active = if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1CdefActiveMapExtentMismatch,
+            ) {
+                match cdef_active.split_last() {
+                    Some((_, shortened)) => shortened,
+                    None => cdef_active,
+                }
+            } else {
+                cdef_active
+            };
+            #[cfg(coverage)]
+            let cdef_indices = injected_cdef_indices.as_deref().unwrap_or(cdef_indices);
             if cdef_active.len() != active_length || cdef_indices.len() != region_length {
                 return Err(malformed("CDEF metadata maps have invalid extents"));
             }
-            if !(1..=4).contains(&frame.y_strength_count)
-                || !(1..=4).contains(&frame.uv_strength_count)
-                || frame.y_strength_count > frame.y_strengths.len()
-                || frame.uv_strength_count > frame.uv_strengths.len()
+            if !(1..=frame.y_strengths.len()).contains(&frame.y_strength_count)
+                || !(1..=frame.uv_strengths.len()).contains(&frame.uv_strength_count)
             {
                 return Err(malformed("CDEF strength counts are invalid"));
             }
@@ -2041,6 +2342,8 @@ impl FrameCanvas {
                 }
             }
         }
+        #[cfg(coverage)]
+        let cdef_indices = injected_cdef_indices.as_deref().unwrap_or(cdef_indices);
 
         let mut source: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
         let mut output: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
@@ -2134,17 +2437,28 @@ impl FrameCanvas {
                             },
                             frame.bit_depth,
                         )?;
-                        let direction = cdef::direction_for_block(
-                            &source[0],
-                            luma_dimensions,
-                            CdefBlock {
-                                x: luma_x,
-                                y: luma_y,
-                                width: 8,
-                                height: 8,
-                            },
-                            base.bit_depth,
-                        );
+                        let luma_block = CdefBlock {
+                            x: luma_x,
+                            y: luma_y,
+                            width: 8,
+                            height: 8,
+                        };
+                        let direction = if EXTEND_FRAME_EDGES {
+                            cdef::direction_for_block_with_edge_padding(
+                                &source[0],
+                                luma_dimensions,
+                                luma_block,
+                                base.bit_depth,
+                                edge_padding[0],
+                            )
+                        } else {
+                            cdef::direction_for_block(
+                                &source[0],
+                                luma_dimensions,
+                                luma_block,
+                                base.bit_depth,
+                            )
+                        };
                         let Some((direction, variance)) = direction else {
                             continue;
                         };
@@ -2177,12 +2491,23 @@ impl FrameCanvas {
                         };
                         let base = scale_cdef_parameters(base, base.bit_depth)?;
                         if plane == 0 {
-                            let Some((direction, variance)) = cdef::direction_for_block(
-                                &source[0],
-                                luma_dimensions,
-                                block,
-                                base.bit_depth,
-                            ) else {
+                            let direction = if EXTEND_FRAME_EDGES {
+                                cdef::direction_for_block_with_edge_padding(
+                                    &source[0],
+                                    luma_dimensions,
+                                    block,
+                                    base.bit_depth,
+                                    edge_padding[0],
+                                )
+                            } else {
+                                cdef::direction_for_block(
+                                    &source[0],
+                                    luma_dimensions,
+                                    block,
+                                    base.bit_depth,
+                                )
+                            };
+                            let Some((direction, variance)) = direction else {
                                 continue;
                             };
                             let primary =
@@ -2193,17 +2518,29 @@ impl FrameCanvas {
                                 ..base
                             }
                         } else {
-                            let Some((direction, _)) = cdef::direction_for_block(
-                                &source[0],
-                                luma_dimensions,
-                                CdefBlock {
-                                    x: luma_x,
-                                    y: luma_y,
-                                    width: 8,
-                                    height: 8,
-                                },
-                                base.bit_depth,
-                            ) else {
+                            let luma_block = CdefBlock {
+                                x: luma_x,
+                                y: luma_y,
+                                width: 8,
+                                height: 8,
+                            };
+                            let direction = if EXTEND_FRAME_EDGES {
+                                cdef::direction_for_block_with_edge_padding(
+                                    &source[0],
+                                    luma_dimensions,
+                                    luma_block,
+                                    base.bit_depth,
+                                    edge_padding[0],
+                                )
+                            } else {
+                                cdef::direction_for_block(
+                                    &source[0],
+                                    luma_dimensions,
+                                    luma_block,
+                                    base.bit_depth,
+                                )
+                            };
+                            let Some((direction, _)) = direction else {
                                 continue;
                             };
                             CdefParameters {
@@ -2223,16 +2560,28 @@ impl FrameCanvas {
                         .width
                         .checked_mul(block.height)
                         .ok_or_else(|| malformed("CDEF block size overflows"))?;
-                    cdef::filter_block_into(
-                        &source[plane],
-                        dimensions,
-                        block,
-                        parameters,
-                        block_output
-                            .get_mut(..block_length)
-                            .ok_or_else(|| malformed("CDEF block exceeds scratch"))?,
-                    )
-                    .ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
+                    let block_output = block_output
+                        .get_mut(..block_length)
+                        .ok_or_else(|| malformed("CDEF block exceeds scratch"))?;
+                    let filtered = if EXTEND_FRAME_EDGES {
+                        cdef::filter_block_into_with_edge_padding(
+                            &source[plane],
+                            dimensions,
+                            block,
+                            parameters,
+                            block_output,
+                            edge_padding[plane],
+                        )
+                    } else {
+                        cdef::filter_block_into(
+                            &source[plane],
+                            dimensions,
+                            block,
+                            parameters,
+                            block_output,
+                        )
+                    };
+                    filtered.ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
                     for row in 0..block.height {
                         let source_start = row.saturating_mul(block.width);
                         let source_end = source_start.saturating_add(block.width);
@@ -2278,7 +2627,6 @@ impl FrameCanvas {
         if end_x > canvas_width || end_y > canvas_height {
             return Err(malformed("reconstructed leaf exceeds the frame canvas"));
         }
-        let coverage = &self.written[plane];
         for row in 0..height {
             let row_start = y
                 .checked_add(row)
@@ -2288,7 +2636,10 @@ impl FrameCanvas {
             let row_end = row_start
                 .checked_add(width)
                 .ok_or_else(|| malformed("leaf plane row end overflows usize"))?;
-            if coverage[row_start..row_end].iter().any(|written| *written) {
+            if self.written[plane]
+                .any_written(row_start, row_end)
+                .ok_or_else(|| malformed("leaf plane coverage exceeds the frame canvas"))?
+            {
                 return Err(malformed("reconstructed leaves overlap"));
             }
         }
@@ -2304,6 +2655,21 @@ impl FrameCanvas {
         source: &ReconstructedPlane,
     ) -> Av1Result<()> {
         let (canvas_width, _) = self.plane_dimensions(plane);
+        let written_count = width
+            .checked_mul(height)
+            .ok_or_else(|| malformed("leaf plane coverage extent overflows usize"))?;
+        let written_count = self.written_counts[plane]
+            .checked_add(written_count)
+            .ok_or_else(|| malformed("leaf plane coverage count overflows usize"))?;
+        let visible_dimensions = self.visible_plane_dimensions()[plane];
+        let visible_width = visible_dimensions.0.saturating_sub(x).min(width);
+        let visible_height = visible_dimensions.1.saturating_sub(y).min(height);
+        let visible_count = visible_width
+            .checked_mul(visible_height)
+            .ok_or_else(|| malformed("visible leaf coverage extent overflows usize"))?;
+        let visible_count = self.visible_written_counts[plane]
+            .checked_add(visible_count)
+            .ok_or_else(|| malformed("visible leaf coverage count overflows usize"))?;
         let destination = &mut self.planes[plane];
         let coverage = &mut self.written[plane];
         for row in 0..height {
@@ -2321,10 +2687,14 @@ impl FrameCanvas {
             let destination_end = destination_start
                 .checked_add(width)
                 .ok_or_else(|| malformed("leaf destination row end overflows usize"))?;
+            coverage
+                .set_range(destination_start, destination_end)
+                .ok_or_else(|| malformed("leaf plane coverage exceeds the frame canvas"))?;
             destination[destination_start..destination_end]
                 .copy_from_slice(&source.samples[source_start..source_end]);
-            coverage[destination_start..destination_end].fill(true);
         }
+        self.written_counts[plane] = written_count;
+        self.visible_written_counts[plane] = visible_count;
         Ok(())
     }
 

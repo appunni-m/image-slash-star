@@ -579,6 +579,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
         "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
         "lossy_interintra_420_wedge_b16x16_64x64",
+        "lossy_interintra_420_wedge_idx2_no_flip_b16x16_64x64",
         "lossless_inter_420_b32x32",
         "lossless_inter_420_b32x32_10bit",
         "lossless_inter_420_b32x32_10bit_64x64",
@@ -608,6 +609,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossy_wide_i444_b128x128",
         "lossy_wide_i444_mode2_unsplit_b128x128",
         "lossy_wide_i444_mode2_split32_b128x128",
+        "lossy_wide_i444_mode2_deep16_b128x128",
         "lossy_global_rotzoom_compound_i444_b128x128",
         "lossy_global_halfblend_spatial_i444_b256x256",
         "motion_chroma",
@@ -623,10 +625,12 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossy_inter_i444_compound_split_b16x32_mode2",
         "lossy_inter_422_compound_refs_b64x32",
         "lossy_inter_i444_obmc_mixed_b16x32",
+        "lossy_inter_444_direct_grid_mode_select_mixed_b128x64",
         "motion_large_420",
         "highdepth",
         "lo8_superres_sgr_inter_160x56",
         "hi10_superres_sgr_inter_160x56",
+        "hi10_i444_superres_sgr_inter_160x56",
         "hi10_superres_select_inter_160x56",
         "no_edit_list",
         "no_edit_list_zero_duration",
@@ -664,6 +668,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
         "animated_primary_item_irot",
         "lossless_inter_420_clipped_b32x32_12bit_partition32_56x64",
+        "lossless_inter_monochrome_clipped_wide_b128x128_124x128",
         "lossy_wide_i444_mode2_mixed_b128x128",
     ];
     let expected_name_set: std::collections::HashSet<_> = expected_names.iter().copied().collect();
@@ -782,6 +787,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "lossy_interintra_420_wedge_b16x16_64x64" => {
                 matrix_sequence_case("animated_lossy_interintra_420_wedge_b16x16_64x64")
             }
+            "lossy_interintra_420_wedge_idx2_no_flip_b16x16_64x64" => matrix_sequence_case(
+                "animated_lossy_interintra_420_wedge_idx2_no_flip_b16x16_64x64",
+            ),
             "lossless_inter_420_b32x32" => {
                 matrix_sequence_case("animated_lossless_inter_420_b32x32")
             }
@@ -802,6 +810,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             }
             "lossless_inter_420_b128x128_10bit" => {
                 matrix_sequence_case("animated_lossless_inter_420_b128x128_10bit")
+            }
+            "lossless_inter_monochrome_clipped_wide_b128x128_124x128" => {
+                matrix_sequence_case("animated_lossless_inter_monochrome_clipped_b128x128_124x128")
             }
             "lossless_inter_420_clipped_b32x32_10bit_28x28" => {
                 matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_10bit_28x28")
@@ -879,6 +890,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "lossy_wide_i444_mode2_split32_b128x128" => {
                 matrix_sequence_case("animated_lossy_wide_i444_mode2_split32_b128x128")
             }
+            "lossy_wide_i444_mode2_deep16_b128x128" => {
+                matrix_sequence_case("animated_lossy_wide_i444_mode2_deep16_b128x128")
+            }
             "lossy_wide_i444_mode2_mixed_b128x128" => {
                 matrix_sequence_case("animated_lossy_wide_i444_mode2_mixed_b128x128")
             }
@@ -919,6 +933,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "lossy_inter_i444_obmc_mixed_b16x32" => {
                 matrix_sequence_case("animated_lossy_inter_i444_obmc_mixed_b16x32")
             }
+            "lossy_inter_444_direct_grid_mode_select_mixed_b128x64" => matrix_sequence_case(
+                "animated_lossy_inter_444_direct_grid_mode_select_mixed_b128x64",
+            ),
             "motion_large_420" => matrix_sequence_case("animated_motion_large_420"),
             "highdepth" => highdepth(),
             "lo8_superres_sgr_inter_160x56" => {
@@ -926,6 +943,12 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             }
             "hi10_superres_sgr_inter_160x56" => {
                 matrix_sequence_case("animated_lossy_inter_420_superres_sgr_10bit_160x56")
+            }
+            "hi10_i444_superres_sgr_inter_160x56" => {
+                matrix_sequence_case("animated_lossy_inter_444_superres_sgr_10bit_160x56")
+            }
+            "hi10_i422_superres_sgr_inter_160x56" => {
+                matrix_sequence_case("animated_lossy_inter_422_superres_sgr_10bit_160x56")
             }
             "hi10_superres_select_inter_160x56" => {
                 matrix_sequence_case("animated_lossy_inter_420_superres_select_10bit_160x56")

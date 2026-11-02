@@ -1,5 +1,5720 @@
 # Versioned compatibility evidence
 
+The current public evidence matrix contains 3,684 total rows: 3,016 decode /
+inspect / verify rows and 668 encode rows. Of those, 3,016 decode rows are
+active and 641 encode rows are active; 27 encode rows remain planned.
+
+## Publication and canonical x86 JPEG word boundaries — 2026-11-02
+
+The accumulated work is committed to the existing `develop` branch in
+[PR #154](https://github.com/appunni-m/image-slash-star/pull/154). GitHub requires
+its `Required CI checks` status before publication to `main`. No new local
+branch or worktree is created. The fixture-integrity job now supplies the same
+hash-locked Python/Pillow environment on Apple ARM64 as the primary oracle;
+its complete regeneration and observation checks remain intact. Fixture setup
+steps have distinct names so the existing workflow-policy mutation checks
+continue to target the quality job.
+
+Initial native x86 Linux SSE2 and Windows MSVC execution both find the same
+38 JPEG mismatches among 570 decode rows. The affected complete grayscale
+inputs cover sequential/progressive signed-word dequantization, wide
+quantizers, partial blocks, both column halves and dense coefficients.
+Their pinned Pillow outputs are unchanged. The preceding ARM64-only parity
+and x86 compile checks had not established native x86 behavior.
+
+The SIMD IDCT now uses the pinned ARM64 oracle's signed-word truncation and
+four-column zero-vertical-AC grouping on every SIMD target. SSE2/AVX2 workspace
+clamping no longer changes canonical pixels for extreme values. When an AVX2
+DC workspace wraps, an outlined complete four-column transform handles each
+half independently; the normal eight-lane transform retains its existing
+admission test. No scalar fallback, unsafe code, dependency, production fault
+hook or codec unit test is added. Native x86 parity remains a required CI gate;
+this change makes no latency or world-ranking claim.
+
+Local ARM64 JPEG decode parity passes all 570 rows. Strict stable/default/
+all-feature/release/coverage Clippy and SSE2/AVX2 compile checks pass. The complete
+local workflow/release tooling, formatting, verification, parity and feature
+lanes pass before the x86 correction; package verification requires a clean
+checkout and is deferred to CI because pending changes and pre-existing local
+files are preserved. The full coverage report below predates the x86 correction
+and retains its exact source identity; it is not relabeled as a new measurement.
+Raw CI failures, local checks and source comparisons are retained locally in
+`target/jpeg-x86-word-parity-20261102/` and the publication evidence directory.
+All 3,657 active parity cases and 167 separate fault contracts remain required;
+strict 100% and the 27 planned AVIF encoder rows remain open.
+
+## AVIF integer-motion precision parity — 2026-11-02
+
+Nine complete public input sequences cover I420/I422/I444 at 8/10/12 bits,
+with mixed lossless/lossy key segments and inter-frame super-resolution from
+coded width 102. Native screen-content tuning on equal varied source frames
+selects integer-only motion precision. Palette and intra-block copy stay
+disabled. The recipe contains only input and encoder settings; the standard
+collectors obtain exact still and sequence output from live pinned Pillow.
+Both frame headers independently confirm screen-content tools and integer
+motion precision. All 72 maintained color recipes reproduce complete pinned
+bytes twice, preserving the preceding 63 inputs.
+
+Coverage MCP 0.16.0's installed CLI identified the unobserved true side of
+`MotionVector::reduce_precision` at `motion.rs:35`. The nine-case selected
+run passes exactly nine cases and records 432 true evaluations. The fresh
+full run preserves the preceding 53,424 false evaluations and records the
+same 432 true evaluations. The unchanged motion file gains one covered line,
+one branch and four regions; the unchanged frame parser gains another branch.
+Imported source remains locally unverified and individual-case attribution
+unknown. Queries, raw overlapping branch rows and both full report identities
+are retained; counters are not summed across overlapping rows.
+
+The full campaign passes 139 integration checks in six executables, all 3,657
+active parity cases and 167 separately reported existing fault contracts.
+Twenty-seven planned AVIF encode rows remain unexecuted. Source and fixtures
+stay stable throughout measurement. A runner completion interleaved one GIF
+case marker; reconciliation retains the raw log and joins only the observed
+fragments of a declared active identifier. All case markers reconcile exactly.
+No private unit-test executable runs.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 102,327 / 142,071 | 72.0253% |
+| Branches | 20,938 / 31,992 | 65.4476% |
+| Functions | 5,660 / 9,128 | 62.0070% |
+| Regions | 155,766 / 220,198 | 70.7391% |
+
+Alpha floors pass; strict 100% remains unmet. Global denominators differ from
+the preceding translated-source run: concurrent, owner-approved `mode()`
+getters in `src/source.rs` add six lines, two functions and six regions, which
+remain uncovered. Those edits are preserved. An initial const getter through
+`Arc` failed compilation and was corrected by the other editor before the
+successful campaign. This fixture work changes no Rust codec algorithm.
+Fresh strict Clippy (including coverage configuration), SSE2/AVX2 compile and
+native/WASM/WASI feature gates pass against the final stable source. A fresh
+source-bound release executable also matches all nine complete inputs through
+public still and sequence APIs. No runtime speed measurement is claimed;
+SSE2/AVX2 execution still needs matching hardware.
+
+All 3,675 previous matrix rows, 7,296 canonical outcomes, 564 native observations
+and 10,823 preceding fixture paths are preserved. Nine rows add 63 fixture
+files; shared index identities and metadata receipts refresh without changing
+old outcomes. The native index now contains 573 cases and 1,980 artifacts.
+The current matrix has 3,684 rows, including 1,243 active AVIF decode rows.
+The parent `AVF-SEQUENCE-001` remains planned. AVIF encoder completion, broader
+reconstruction, all-four 100% coverage and native x86 speed comparisons remain
+unfinished.
+
+The source-bound full evidence is
+`.coverage-mcp/local-evidence/full/20261102-integer-motion/`; the selected report
+is `.coverage-mcp/local-evidence/selected/20261102T060331.725547Z-38b4ef6978a8461aa4dde2b3075ba9b8/`.
+The retained parity checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-integer-motion-20261102/`.
+Local inventories, profiles, native observations, repeated recipes, failed
+validation attempts and final checks remain outside `target/` in that checkpoint.
+Local reports and build artifacts are excluded from the source commit. All work
+uses `/Users/lazytrot/work/image-slash-star` and the existing `develop` branch;
+no branch or worktree is created. Publication to `main` is owner-authorized.
+
+## AVIF fixed-four CDF shared-shift trial — 2026-11-02
+
+The fixed-four adaptive-symbol reader accounts for 1,240 of 4,602 leaf samples
+in the retained lossy compound profile. Its three CDF adaptation branches
+motivated a bounded shared-shift experiment. Writing a probability as
+`p = q * 2^r + t`, the upward adjustment is exactly
+`2^(15-r) - q - [t != 0]` for AV1 rates 5 through 7. The candidate shares
+`p >> r` between both directions, with an explicit remainder correction;
+symbol selection, normalization, count updates and failure handling stay intact.
+It adds no unsafe Rust, dependency, public API or runtime hook.
+
+Native ARM64 assembly replaces all three adaptation branches with conditional
+selections. Each matching routine has 133 instructions instead of 135, while
+the 96-byte stack frame and refill path stay the same. This does not establish
+a performance gain: more of the arithmetic executes on common downward updates.
+Both source-bound binaries match live pinned Pillow pixels and shapes on all
+13 complete still/sequence workloads before timing, including translated motion
+and split/disjoint extent controls.
+
+One predeclared independent cohort retains 156 process samples: three A-B-B-A
+cycles over 13 workloads, ten warmup calls and a three-second sample target,
+with 30 to 500,000 iterations. Complete public decode and result destruction
+are timed after reading the input. No Cargo build or test campaign overlaps
+the measurements. The shared Apple M3 Pro ARM64 host runs macOS 15.7.7 and
+Rust 1.96.1. This cohort is not pooled with earlier experiments.
+
+| Workload | Overall median latency change | Changes in the three cycles |
+| --- | ---: | --- |
+| Lossy compound sequence | -1.104% | -1.127%, -1.630%, -0.640% |
+| Lossless compound sequence | +1.879% | +1.443%, +2.215%, +0.819% |
+| Ordinary 10-bit monochrome super-resolution control | -4.254% | -4.079%, -3.672%, -3.801% |
+
+The admission rule requires at least a 3% overall gain and a 3% gain in at least
+two cycles on either profiled compound workload, with no control repeatedly
+more than 3% slower overall. Neither profiled workload qualifies. The ordinary
+monochrome control's repeatable improvement cannot replace that declared gate.
+One noise-monochrome cycle has a +55.674% ratio excursion and an OBMC cycle
+has +6.486%; all samples remain included. No outlier is discarded, threshold
+changed or follow-up cohort used to seek a pass. The runtime candidate is
+rejected and `entropy.rs` is restored byte for byte. The full 129-file accepted
+runtime/build identity matches the preceding translated-source checkpoint.
+
+No selected/full codec or SIMD campaign is run for the reverted candidate.
+Fresh formatting, documentation, no-source-unit-test, roadmap, claim-ledger and
+capability-document checks pass. The unchanged implementation retains the
+previous exact-source style/feature checks and complete coverage evidence at
+`.coverage-mcp/local-evidence/full/20261102-translated-mixed-key/`: 139 integration
+checks, 3,648 parity cases and 167 separate fault contracts pass. Its measured
+figures remain 102,326/142,065 lines (72.0276%), 20,936/31,992 branches (65.4414%),
+5,660/9,126 functions (62.0206%) and 155,762/220,192 regions (70.7392%). Alpha
+floors pass; strict 100% remains unmet. All 10,823 fixtures remain byte-identical.
+
+Coverage MCP 0.16.0 queries of that source-matched full report, raw fixed-four
+branch rows, exact candidate/baseline source, disassembly, arithmetic review,
+live parity, environment, timing samples and the failed gate are retained at
+`.coverage-mcp/local-evidence/performance/avif-cdf-shared-update-20261102/`.
+The connector is unavailable; the installed CLI is used. Imported source status
+remains locally unverified and named-case attribution unknown. Further entropy
+work needs a different measured cause; branch removal by itself is insufficient
+for these profiled requests. Native SSE2/AVX2 execution, world rankings, the AVIF
+semantic encoder and all-four 100% coverage remain unfinished. Work stays local
+and uncommitted in the sole `develop` checkout; no branch or worktree is created.
+
+## AVIF translated-source scaled-motion parity — 2026-11-02
+
+Nine new public parity cases cover I420/I422/I444 at 8/10/12 bits with distinct
+source patterns in two 128x48 frames. The second source samples the pattern at
+luma offsets (+4, +2), with corresponding chroma offsets. Mixed lossless/lossy
+segments and neutral filters are retained; the inter frame uses horizontal
+super-resolution from logical coded width 102. The encoder chooses motion
+vectors and residuals. This adds ordinary complete-file stimuli, with no
+expected output in recipes and no forced decoder paths.
+
+All nine inputs are deterministic across two native encodes after timestamp
+normalization, and both public still and sequence APIs match live pinned
+Pillow exactly. The maintained color generator now has 63 named recipes;
+all 54 existing recipes reproduce their complete pinned bytes twice as well.
+Standard Pillow collectors own decoded references; the independent native
+observer records both frame headers, pixels, timing and repetitions.
+
+Coverage MCP's installed CLI guided the preceding encoder-gap review. The
+reviewed JPEG/GIF gaps are internal geometry/histogram invariants, and AVIF's
+27 planned encode rows still require a Rust semantic compressor. Native
+entropy replay is not an image encoder. Those findings are retained rather
+than adding private tests for unreachable states. The translated-source
+family addresses a missing temporal input pattern in the prior AVIF corpus.
+No Rust runtime, integration-test source, Cargo configuration or Makefile
+changes are needed.
+
+The focused run executes exactly nine selected cases, all passing, with
+stable source and fixtures. Its retained report is `.coverage-mcp/local-evidence/selected/20261102T051954.392794Z-78868a886a474d3a8115cd7b47c6e9a1`.
+The fresh complete run passes 139 integration checks in six executables,
+3,648 active parity cases and 167 separately reported existing fault contracts;
+all case markers reconcile. The 27 planned encode rows remain unexecuted.
+All four denominators match the preceding complete report. Coverage gains
+3 lines, 1 branch and 4 regions, with no function gain:
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 102,326/142,065 | 72.0276% |
+| Branches | 20,936/31,992 | 65.4414% |
+| Functions | 5,660/9,126 | 62.0206% |
+| Regions | 155,762/220,192 | 70.7392% |
+
+The new branch is the negative-coordinate sign path in scaled motion
+compensation at `motion.rs:1275`; raw before/after branch rows and source spans
+are retained without summing overlaps. The gains also include two lines in
+`block.rs`. This is family-level full-report evidence, with no named-case
+attribution. Coverage MCP's local source status is unverified; separate hashes
+bind unchanged runtime source and stable measured fixtures. Alpha floors pass;
+`make coverage-complete` exits 2 solely because strict 100% remains unmet.
+The full report is `.coverage-mcp/local-evidence/full/20261102-translated-mixed-key/`,
+SHA-256 `d2e633db6b21e1197d30f2c80a4d7da33b3ee1ecfc4ee1d02fe53c5524296134`. It retains six instrumented executables,
+six raw profiles, one merged profile and 152 frozen source/setup files.
+
+All 3,666 preceding matrix rows, 7,278 canonical outcomes and 555 native cases
+are preserved; shared native-index receipts update on 530 prior outcomes.
+There are now 3,675 matrix rows, 3,007 active decode rows, 641 active encode rows
+and 27 planned encode rows. AVIF has 1,234 active decode cases. The native
+bundle has 564 cases and 1,953 artifacts. All 10,760 preceding fixture paths
+remain, with 63 additions and seven metadata/receipt documents refreshed.
+
+Fresh fixture integrity, documentation, roadmap, claim-ledger, formatting and
+no-source-unit-test checks pass. Strict Clippy, SSE2/AVX2 compile and feature-lane
+implementation results are reused from the exact unchanged Rust/build source
+at the color coded-tail checkpoint; this does not claim fresh cross-target
+execution of the new inputs. The first fixture-integrity failure from stale
+roadmap counts is retained alongside the corrected successful run. Final
+roadmap documentation refreshes only the claim-ledger roadmap receipt after
+measurement, with the measured fixture identities preserved separately.
+
+The immutable checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-translated-mixed-key-20261102/`.
+It retains independent inputs and observations, repeated encodes, exact pixels,
+source identities, all validation attempts, selected profiles and full-report
+bindings outside `target/`. There is no new unit test, runtime fault hook,
+coverage exclusion, relaxed threshold, unsafe Rust or dependency. There is no
+new runtime timing claim because runtime source is byte-identical. Strict
+100%, AVIF encoding, broader reconstruction and native SSE2/AVX2/world-ranking
+performance remain unfinished. Work remains local and uncommitted in the sole
+`/Users/lazytrot/work/image-slash-star` checkout on existing `develop`.
+
+## AVIF compound-decoder profiling and rejected trials — 2026-11-02
+
+Two complete three-frame 256x256 public AVIF sequences match live pinned Pillow
+before native sampling. The lossy sequence attributes 1,240 of 4,602 samples
+to fixed-four-symbol decoding and another 936 to the general adaptive-symbol
+reader. The lossless sequence also identifies the Golomb bit loops embedded in
+dequantization as material work. Retained-frame validation checks metadata and
+buffer geometry; it does not scan every retained sample. Sampling is diagnostic,
+separate from the paired timing measurements.
+
+Four independent timing cohorts retain 432 process samples in total. Each uses
+the same nine material public still/sequence inputs, exact live pinned Pillow
+comparisons for both source-bound release binaries, three A-B-B-A cycles and
+ten warmup calls on the shared Apple M3 Pro ARM64 host running macOS 15.7.7
+and Rust 1.96.1.
+The first three cohorts target one second per process sample;
+the last targets five seconds. Complete public decoding and result destruction
+are timed after reading input bytes. Cohorts are never pooled.
+
+| Trial | Lossy compound median change | Admission |
+| --- | ---: | --- |
+| Fixed-four window-refill outline | -0.61% | Failed |
+| Golomb helper outline | -1.28% | Failed |
+| Existing fixed-four helper at generic AC/DC base-token sites, short | -4.43% | Failed cycle rule |
+| Same two call sites, independent longer cohort | -2.92% | Failed magnitude rule |
+
+The declared rule requires at least a 3% overall gain and a 3% gain in at least
+two of three cycles on a profiled compound workload, with no repeated overall
+regression above 3% on any control. The short third cohort's lossy compound
+cycle changes are -2.62%, -4.68% and -1.27%. The longer cohort shows roughly
+5–6% lower latency on two other sequences, while every measured row is faster;
+those bounded observations do not satisfy the declared profiled-workload gate.
+All trial source changes are restored exactly. Smaller instruction counts and
+stack frames did not justify keeping either outlining trial.
+
+At the profiling checkpoint, runtime, fixtures and test setup matched the color
+coded-tail checkpoint. Its complete coverage and style/feature results remained
+reusable; no codec campaign was repeated for that evidence-only update. Coverage MCP
+0.16.0 queries of that retained full report are stored with the profiles because
+the connector is unavailable. Imported source status is unverified and named-case
+attribution is unknown; separate hashes bind the local source and binaries.
+This work adds no tests, runtime hooks, exclusions, dependencies or unsafe Rust.
+Further work should address the measured coefficient/entropy cost with new causal
+evidence rather than repeat these trials. The 100% coverage, AVIF encoder and
+native SSE2/AVX2 performance objectives remain unfinished.
+
+The reproducible plans, failed gates, exact source snapshots, raw profiles,
+assembly, live parity receipts and timings are retained in
+`.coverage-mcp/local-evidence/performance/avif-compound-profile-20261102/`.
+
+## AVIF color mixed-key and coded-tail parity — 2026-11-02
+
+Fifty-four new public parity cases match live pinned Pillow exactly for still
+output and both sequence frames. They cover I420/I422/I444 at 8/10/12 bits,
+flat and varied keys, and inter logical coded widths 71, 100 and 102. Display
+sizes are 80x20 and 112x20 with denominator 9, and 128x48 with denominator 10.
+The 20-row cases also exercise padded bottom edges. Varied keys require
+nonconstant residual reconstruction. The previous decoder passed ten complete
+cases; the other 44 sequences and all eighteen I422 first frames were
+unsupported. The bounded color follow-up under AVF-SEQUENCE-001 is closed;
+its parent sequence work item remains unfinished.
+
+The retained public probes distinguish three causes. First, the mixed neutral
+super-resolution admission excluded non-four-aligned color coded widths even
+though color reconstruction already preserves physical padding and separates
+logical resize phase from source extent. That neutral profile now admits these
+widths; active filters, grain and restoration retain their prior restrictions.
+Second, I422 intra reconstruction rejected all segmented keys. It now reuses
+the existing strict mixed segment-map and quantization proof, while existing
+inter and restoration wrappers explicitly retain their frame-kind checks.
+The neutral-filter helper is named for its shared segment role.
+
+Third, the first candidate was exact on 42/54 cases but failed twelve 8-bit
+sequences. Existing debug traces stopped at B8x8 inter blocks. Their legacy
+fixed 2x2 WHT helper required frame transform mode zero, despite segment
+losslessness selecting the same fixed TX4x4 grammar in mixed modes 1/2.
+It now uses the existing checked mixed-lossless mode predicate, retaining
+buffer, depth, plane, geometry and zero-quantizer checks. No transform or
+resize arithmetic, native runtime fallback or allocation strategy changes.
+Both runtime changes are limited to `entropy.rs` and `block.rs`.
+
+The new input-only color generator has 54 named recipes, all encoded twice
+through the unchanged pinned mixed-key producer. Both complete files match
+pinned digests and independently parsed sequence/frame features. Existing
+inter-only and monochrome generators and complete input files remain unchanged.
+A single additional `--check` command joins ordinary Makefile fixture
+verification. Standard live Pillow collectors own expected pixels; independent
+native observers record complete frames, syntax, timing and repetitions.
+
+Coverage MCP 0.16.0 queried the preceding and current full reports using its
+installed CLI because the connector is unavailable. Its ranked entropy gaps
+led to bounded source inspection and public profile probes. Raw branch rows
+for the shared segment proofs and new I422 intra selector are retained without
+summing overlapping spans or assigning observations to individual cases.
+Local LLVM source identity remains unverified and named-case attribution is
+unknown. The final selected run passed exactly 54 declared public cases with
+stable source and fixtures. Its report is `.coverage-mcp/local-evidence/selected/20261102T035845.945500Z-74964e30acd241f8bf0c77af13313abc`.
+
+A fresh complete campaign passed all 139 integration checks in six executables,
+3,639 active parity cases and 167 separately reported existing fault contracts.
+All case markers reconcile; 27 planned encode rows were not executed. Source
+and fixtures stayed stable. Alpha floors pass. `make coverage-complete` exits
+2 only because the strict 100% target remains unmet:
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 102,323/142,065 | 72.0255% |
+| Branches | 20,935/31,992 | 65.4382% |
+| Functions | 5,660/9,126 | 62.0206% |
+| Regions | 155,758/220,192 | 70.7374% |
+
+The report is `.coverage-mcp/local-evidence/full/20261102-color-coded-tail/`,
+SHA-256 `4b6edd30c765df8f71424946a51a1770e69b6bf6dd08b722703ab7664e13e032`.
+It retains six instrumented executables, six raw profiles, one merged profile
+and 152 frozen source/input files. The preceding full report at the prior
+coded-tail checkpoint contains 3,585 parity cases. This refresh adds 54 rows
+and changes two runtime files, with different denominators; global changes
+are not assigned solely to individual new fixtures. No source is excluded,
+defensive check hidden or threshold reduced.
+
+Fresh strict Clippy, release/coverage-cfg lanes, SSE2/AVX2 compile checks and the
+final native/WASM/WASI feature matrix pass. The initial feature-matrix campaign
+overlapped fixture registration: all execution lanes passed and its generated
+document check failed. That failure is retained. Capability docs were
+regenerated and the complete feature matrix passed again with stable case
+index identities. Fixture and final documentation checks also pass. No new
+unit test, test executable, unsafe Rust, dependency or runtime fault hook is
+introduced.
+
+The source-bound whole-call latency comparison passed 648 samples across
+54 unchanged successful workloads using three ABBA cycles and the declared
+repeated 3% review threshold. Its largest median slowdown was 1.606%.
+All ten successful-before new cases are included as timing controls; the other
+44 have no successful-before latency ratio. Both binaries match live pinned
+Pillow on every timed workload. The cohort measures accepted `babffc16`
+against final `a06302a3` on ARM64, with exact source and executable identities.
+It establishes neither zero overhead nor native x86/world-ranking performance.
+The earlier ordinary 10-bit monochrome performance investigation remains
+separate; cohorts are not pooled.
+
+All 3,612 preceding matrix rows and 7,170 canonical outcomes are preserved;
+only the shared native-index receipt changes on 476 preceding canonical rows.
+The matrix now contains 3,666 rows, 2,998 active decode rows, 641 active encode
+rows and 27 planned encode rows. AVIF has 1,225 active decode rows. The native
+index contains 555 cases and 1,926 artifacts. All 10,382 preceding fixture
+paths remain; seven metadata documents change and 378 files are added.
+Existing fault contracts, native producer, dependencies and protected untracked
+files remain unchanged. Closing the bounded roadmap follow-up after testing
+refreshes only the claim-ledger roadmap digest; final fixture/document checks
+are rerun, and the original measured fixture receipt stays intact.
+
+The immutable checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-color-coded-tail-20261102/`.
+It retains final source, native inputs/observations, exact pixels, hypotheses,
+the incomplete first candidate and debug trace, all validation attempts,
+selected profiles, full-report bindings and fresh performance receipts.
+Inventories are independently rehashed outside `target/`.
+
+Strict 100% coverage, broader sequence/reference reconstruction, encoder
+completion, native SSE2/AVX2 runtime speeds and world-ranking comparisons
+remain open. All work remains local and uncommitted in the sole checkout at
+`/Users/lazytrot/work/image-slash-star` on existing `develop`; no branch or
+worktree was created.
+
+## AVIF monochrome coded-tail reconstruction — 2026-11-02
+
+Twelve public parity cases now match live pinned Pillow exactly for still
+output and both sequence frames. They cover mixed lossless/lossy monochrome
+keys and inter frames at 8/10/12 bits: 128x128 and 128x20 with denominator 10
+(logical inter width 102), 112x20 with denominator 9 (width 100), and 80x20 with
+denominator 9 (width 71). Before this change, ten sequences returned Unsupported;
+the 10/12-bit width-100 sequences returned incorrect edge pixels. All first
+frames were already exact. AVF-SEQUENCE-001's width-102 follow-up is closed for
+these declared cases; the parent sequence work item remains unfinished.
+
+Pinned dav1d reconstruction explains the edge mismatch: resize phase uses the
+logical coded width, while filter taps read reconstructed samples through the
+next eight-pixel coded boundary. The earlier admission-only experiment cropped
+that tail before resizing. The Rust decoder now moves the complete existing
+luma canvas through separate logical and physical resize geometry, limited to
+the neutral single-tile mixed-monochrome profile. Existing checked bounds,
+neutral-filter, film-grain and restoration restrictions remain. The 8-bit path
+also removes an unnecessary monochrome exclusion from the existing fixed
+TX4x4 lossless WHT grid; depth, quantization and geometry checks stay in place.
+No arithmetic kernel or native runtime fallback is introduced.
+
+The input-only generator has 26 named recipes; all reproduce twice through the
+unchanged pinned producer, including the preceding fourteen complete files.
+Complete digests and independently parsed headers are validated. Standard live
+Pillow reference collectors and independent native observers own pixels,
+complete-frame syntax, timing and repetition evidence. The new inputs contain
+no expected Rust results.
+
+The final selected run passed exactly twelve declared public cases with stable
+source and fixtures. Raw LLVM observations cover the geometry adapter and
+coded-padding path. Duplicate branch spans remain raw and are not summed;
+named-case coverage attribution is unknown. Coverage MCP 0.16.0 queried the
+new full report for entropy, block, frame and resize gaps through its installed
+CLI because the connector is unavailable. Local source identity remains
+unverified. The selected report is `.coverage-mcp/local-evidence/selected/20261102T032935.917004Z-d0fad720b6204d7c93212912ddc88710`.
+
+A fresh complete campaign passed all 139 integration checks in six executables,
+3,585 active parity cases and 167 separately reported existing fault contracts.
+Twenty-seven planned encode rows were not executed. Source and fixtures stayed
+stable; all case markers reconcile without normalization. Alpha floors pass.
+`make coverage-complete` exits 2 only because its strict 100% gate remains unmet:
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 102,223/142,040 | 71.9678% |
+| Branches | 20,900/31,970 | 65.3738% |
+| Functions | 5,657/9,125 | 61.9945% |
+| Regions | 155,640/220,169 | 70.6912% |
+
+The report is `.coverage-mcp/local-evidence/full/20261102-coded-tail/` with
+SHA-256 `def73c5cafb1f0add34c0746368adf6ed78b754e811a5ae2c940dda21d9206f9`.
+It retains all six instrumented executables, six raw profiles, one merged
+profile and 152 frozen source/input files. The preceding full campaign had
+3,564 parity cases; this refresh includes the prior nine boundary cases and
+the new twelve, with four runtime files changed. Denominators differ, so
+movement is not attributed solely to these twelve inputs. Function coverage
+changes from 5,656/9,123 to 5,657/9,125; its slightly lower percentage is retained.
+No source is excluded and no coverage threshold is reduced.
+
+Fresh `make lint`, `make lint-x86-simd` and `make test-feature-matrix` pass,
+including strict release/coverage-cfg Clippy and native/WASM/WASI lanes. The
+first Clippy run rejected a nonminimal boolean expression; the equivalent
+short-circuit form passed. Its rebuilt complete release executable is
+byte-identical to measured decoder `babffc16`, with both source identities and
+build receipts retained in an explicit bridge. No additional timing run is
+claimed for that textual simplification.
+
+The whole-call latency guard passed 384 samples across 32 unchanged successful
+workloads using three ABBA cycles. Its largest median slowdown was
+1.995%, below the declared repeated 3% review threshold. Formerly failing
+or incorrect cases have separate correctness proof and no successful-before
+latency ratio. This ARM64 cohort establishes neither zero overhead nor native
+x86/world-ranking performance. The earlier ordinary 10-bit monochrome
+performance investigation remains separate; cohorts are not pooled.
+
+All 3,600 preceding matrix rows and 7,146 canonical outcomes are preserved;
+only the common native-index receipt changes on 464 preceding canonical rows.
+The matrix now has 3,612 rows, 2,944 active decode rows, 641 active encode rows
+and 27 planned encode rows. AVIF has 1,171 active decode rows. The native index
+contains 501 cases and 1,764 artifacts. All 10,298 preceding fixture paths
+remain; seven metadata documents change and 84 files are added. Existing fault
+contracts, dependencies, Makefile, native producer and protected untracked
+files remain unchanged. No unit test or additional test executable is added.
+
+The immutable checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-coded-tail-20261102/`.
+It retains final source, public inputs and pixels, native observations, selected
+profiles, full-report bindings, source/build/performance receipts, prior partial
+trials and failed validation logs. The timing campaign for the incorrect
+unaligned-only intermediate source was stopped and excluded from acceptance.
+The earlier width-only trial remains rejected evidence. Inventories are
+independently rehashed outside `target/`.
+
+Strict 100% coverage, broader sequence reconstruction, encoder completion,
+native SSE2/AVX2 runtime measurements and world-ranking comparisons remain
+open. All changes remain local and uncommitted in the sole checkout at
+`/Users/lazytrot/work/image-slash-star` on existing `develop`; no branch or
+worktree was created.
+
+## AVIF mixed-segment key boundary parity — 2026-11-02
+
+Nine new public parity cases exercise varied 8/10/12-bit monochrome key/inter
+sequences at 40x16, 60x20 and 128x128. Their inter coded widths are 32, 48
+and 64 respectively; the first two use denominator 10 and the largest uses
+16. The 60x20 inputs expose four-pixel key-frame and bottom-edge tails, while
+the 128x128 key exercises the admitted size bound. Still output and both
+sequence frames match live pinned Pillow exactly. Separate native observers
+confirm complete frames, timing and repeat payloads for all nine sequences.
+
+The maintained input-only generator now uses named recipes for dimensions,
+depth, speed, restoration, key variation, denominator and complete digest.
+All fourteen recipes reproduce twice through the unchanged pinned producer;
+the preceding five IDs, parameters and input bytes remain unchanged. Complete
+file hashes and independently parsed AV1 segment, quantization and scaling
+features are checked before writing. Inputs own no expected pixels or Rust
+results; standard live reference collectors own observations.
+
+Coverage MCP 0.16.0 queried the preceding full report and the selected report.
+The connector is unavailable, so the installed CLI inspected the retained
+LLVM JSON. An initial `functions` metric query was rejected by that CLI; its
+failure is retained, and raw LLVM function counts informed the subsequent
+source inspection. Local source verification remains unavailable and
+named-case coverage attribution is unknown.
+
+The selected run executed and passed exactly nine declared public cases with
+stable source and fixture identities. Comparing unique raw branch spans on
+identical runtime source found four newly observed arms among
+14,428 compared spans; 1,609
+nonunique spans were excluded. These include the non-eight-aligned height
+rejection in the filtered-profile selector and three reference-tool predicates
+in the large-frame inter admission path. Counts are not assigned to individual
+cases. Baseline observations absent from this selected subset are not
+regressions. No replacement or additive full-coverage percentage is claimed.
+
+All 129 runtime source identities, Cargo inputs and the accepted public wrapper
+remain unchanged from accepted decoder `7bdc1ab7`. Fresh `make lint`,
+`make lint-x86-simd`, `make test-feature-matrix`, fixture validation and final
+documentation/preservation checks pass. SSE2/AVX2 validation remains compile-only
+on ARM64. No optimization or runtime change is retained, and no new speed
+measurement is claimed. The preceding source-bound performance guard remains
+historical evidence for the same accepted binary.
+
+The nine cases preserve all 3,591 preceding matrix rows and all 7,128 canonical
+outcomes. Only the common native-index receipt changes on 455 preceding
+canonical rows. There are now 3,600 matrix rows, 2,932 active decode rows,
+641 active encode rows and 27 planned encode rows. AVIF has 1,159 active decode
+rows. The native index contains 489 cases and 1,728 artifacts. All 10,235
+preceding fixture files remain; seven fixture metadata documents are refreshed
+and 63 assets are added. Existing fault contracts are unchanged. No unit test
+or additional test framework is introduced.
+
+A distinct, unresolved public input class remains recorded under
+AVF-SEQUENCE-001: denominator-10 128x128 sequences have coded width 102.
+All three accepted-source key frames match Pillow, while sequence rendering
+returns Unsupported at 8/10/12 bits. A one-condition neutral-monochrome admission
+trial left 8-bit unsupported and returned unequal right-edge pixels at 10/12
+bits (198 and 222 differing RGB bytes in the second frame). The trial was
+rejected and every runtime source byte restored. Complete inputs, feature
+reports, live Pillow pixels, before/trial commands, rejected source, patch and
+binary are retained. The successful denominator-16 boundary cases do not
+resolve this two-pixel-tail reconstruction issue. Coded-plane reconstruction
+and scaled-reference borders need first-divergence tracing before another
+admission proposal. These failures remain parity mismatches, not fault cases.
+The wrong-edition standalone formatter diagnostic from the rejected experiment
+is also retained; the later project-aware formatting/lint checks passed.
+
+The selected report is `.coverage-mcp/local-evidence/selected/20261102T025630.954087Z-77f90e37c53c4ab980eebb5643e30fa9`.
+The checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-mixed-key-boundaries-20261102/`.
+It retains the selected executable and raw/merged profiles, complete new
+fixtures/native observations, immutable accepted-parent bindings, all failed
+probe evidence and an independently rehashed inventory. No full campaign was
+rerun for this fixture-only increment. The latest full baseline remains
+`.coverage-mcp/local-evidence/full/20261102-monochrome-mixed-key/`: 71.9570%
+lines, 65.3406% branches, 61.9972% functions and 70.6843% regions; its strict
+100% gate remains unmet. Full coverage, the newly exposed coded-width-102
+class, native x86 speeds, encoder completion and a world-ranking comparison
+remain unfinished. Work remains local and uncommitted in the sole checkout
+at `/Users/lazytrot/work/image-slash-star` on existing `develop`.
+
+## AVIF monochrome mixed-segment key admission — 2026-11-02
+
+Five new public manifest sequences cover a monochrome key frame containing
+both lossless and lossy segments, followed by super-resolution inter output.
+The preceding accepted decoder rejected the key frame before reconstructing
+it. The corrected admission reuses the checked depth-parametric intra residual
+path for neutral-filter, single-tile 8/10/12-bit mixed segmentation. Frame-kind
+checks move to the existing inter callers so their prior restrictions remain.
+No kernel, allocation strategy, error conversion, retained Option category,
+unsafe Rust, runtime fault hook or dependency changes in this increment.
+Only `entropy.rs` differs among the 129 captured runtime source identities.
+
+The cases include a flat 8-bit key, varied 8/10/12-bit keys at native speed 3,
+and a varied 8-bit key at speed 7. Both frames of every sequence match live
+pinned Pillow exactly, with separate native full-frame, timing and repeat
+observations. The retained original investigation input
+`c553936d10bdd28d7911e4f15ea094c57b9af7d34054529ff9ecf348ff27b474`
+also now matches Pillow through both still and sequence APIs. The new flat
+recipe is a different complete file and does not claim to reproduce that
+original input's bytes. All five new sequences were unsupported before this
+admission change; their successful after results have no before latency ratio.
+
+The maintained input-only generator is
+`scripts/generate_avif_monochrome_mixed_key_fixtures.py`. It reproduces each
+complete file twice and checks pinned digests and independently parsed AV1
+features. Its separate AOM profile applies
+`libaom-mixed-key-segmentation.patch` after the preceding mixed-superres patch.
+All five actual sequence headers disable restoration and all frame restoration types are
+NONE, including the fast flat recipe's ignored restoration request. Varied
+key inputs exercise nonconstant first-frame residuals. Rebuilding the updated
+C producer against the preceding libraries also reproduced all 29 preceding
+mixed/ordinary monochrome/I422 recipes twice with their original digests.
+Expected pixels remain owned by the normal live Pillow/native collectors.
+
+The initial static native link failed because decoder entry points were
+omitted from AOM. Resuming the owned build with `CONFIG_AV1_DECODER=1` fixed
+that link. The initial link failure and corrected build, producer-version pin
+and actual-header corrections, and setup assertion correction remain recorded.
+No dependency was installed and no additional Git checkout was created.
+
+All 3,586 preceding matrix rows and 7,118 canonical outcomes are preserved;
+450 canonical rows update only their common native-index receipt. The current
+matrix contains 3,591 rows, with 3,564 active parity rows and 27 planned encode
+rows. AVIF has 1,150 active decode rows. The native index contains 480 cases
+and 1,701 artifacts. The 10,200 prior fixture files remain, with seven fixture
+metadata documents refreshed and 35 new assets added.
+
+The source-bound performance plan paired accepted baseline `93a40366` with
+candidate `7bdc1ab7` using the same optimized public wrapper. Both match live
+Pillow on 23 previously supported complete public-call workloads. Three ABBA
+cycles retain 276 timed samples. The declared guard passed; the largest
+measured median increase was 2.62%, below its 3% threshold. This
+bounds this fix on the ARM64 shared host. It does not settle the separate
+before-admission monochrome cost investigation or establish zero cost for all
+inputs, native x86 speed, SIMD gains, or a world ranking.
+
+Fresh `make lint`, `make lint-x86-simd` and `make test-feature-matrix` passed.
+The SSE2/AVX2 lanes are strict compile checks on this ARM64 machine. The selected
+coverage run passed all nine declared public parity cases with unchanged
+source and fixture identities. Its report, receipt, instrumented executable,
+raw profile and merged profile are retained. The full run passed all 139
+integration checks, all 3,564 parity rows and 167 separately reported existing
+fault-contract rows. No private unit-test executable ran; all 27 planned encode
+rows remained unexecuted. Full source and fixture identities were stable.
+One JPEG pass marker was split by a concurrent test-runner prefix/status; exact
+raw fragments were reconciled only against a declared active ID. The original
+log, first unreconciled analysis and correction receipt are retained; tests
+were not rerun to repair the accounting.
+
+| Metric | Covered/total | Coverage | Covered/total delta from preceding full run |
+| --- | ---: | ---: | ---: |
+| Branches | 20,875/31,948 | 65.3406% | +43/+10 |
+| Functions | 5,656/9,123 | 61.9972% | +2/+0 |
+| Lines | 102,179/142,000 | 71.9570% | +57/+6 |
+| Regions | 155,596/220,128 | 70.6843% | +79/+7 |
+
+Coverage MCP 0.16.0 inspected the retained LLVM measurements. These are local
+dirty-source results: source verification is unavailable and named-case
+attribution is unknown. A separate raw comparison of identical mapped
+`entropy.rs` source lines found 37 newly observed arms
+and 0 no-longer-observed arms among
+5,585 unique spans; 23 nonunique
+spans were excluded. Changed-source denominators are reported explicitly;
+these counts do not assign coverage to individual new cases. The owner-approved
+alpha coverage floors passed. `make coverage-complete` exited 2 at the retained
+strict 100% gate; the broader coverage/performance/encoder goal remains open.
+
+The immutable local checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-monochrome-mixed-key-20261102/`.
+The complete full report, frozen source, six executables and raw/merged profiles
+remain in `.coverage-mcp/local-evidence/full/20261102-monochrome-mixed-key/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261102T022905.119739Z-3f42b86d36ca4ae5887c4d4e4582255d`.
+The checkpoint binds their artifact inventories and independently rehashes its
+own inventory after atomic rename. All work remains local and uncommitted in
+`/Users/lazytrot/work/image-slash-star` on existing `develop`; no branch,
+worktree, staging, commit or remote mutation is introduced.
+
+## AVIF I422 neutral super-resolution — 2026-11-02
+
+Four public sequences expose ordinary 8-bit I422 super-resolution with neutral
+filters and no segmentation. The preceding executable rejects all four sequences;
+the current executable matches every live pinned Pillow frame exactly. They cover
+40x16, 80x48 and 128x64 display extents, denominators 9/10/16, an odd coded width of
+71, and height beyond the separate active-restoration profile's limit.
+
+The causal change is the generic I422 inter root-geometry proof in `entropy.rs`.
+It now uses checked padded coded dimensions, matching the existing I444 geometry
+rule, instead of requiring an active-restoration or mixed-segment profile to
+prove super-resolution dimensions. The shared checked I422 compositor already
+reconstructs, filters and resizes complete coded planes. Layout, depth, references,
+transform grammar, film-grain and active-restoration checks remain in their
+existing predicates. No kernel, postfilter plan, allocation, Option category,
+unsafe block, dependency, source exclusion, threshold or fault hook is changed.
+
+`scripts/generate_avif_i422_neutral_superres_fixtures.py` is an input-only producer
+using the existing pinned native source recipe. All four complete files reproduce
+twice and pass independent AV1 feature checks. Normal fixture verification checks
+them. Live Pillow/native collection supplies the standard sequence observations
+and complete exact pixels; no private unit test or alternate test framework is
+added. All 3,582 previous matrix rows, 7,110 canonical outcomes, 167 fault contracts
+and 10,172 previous fixture paths are preserved. Twenty-eight files are added;
+seven existing fixture metadata documents change, including 446 native-index SHA
+receipts. The matrix now has 3,586 rows, 3,559 active parity rows and 27 planned
+encoder rows. Canonical outcomes number 7,118; native observations number 475.
+
+The source-bound full-call ARM64 performance guard compares accepted pre-fix
+`e5f696f9` with current `93a40366`: 16 previously successful complete workloads,
+three ABBA cycles, and 192 samples. Both executables match live pinned Pillow on
+all 16 workloads. No overall latency increase above 3% repeats above 3% in two
+cycles; the largest overall increase is 1.30%. This is a bounded nonregression
+result, not proof of zero overhead or a general speedup. The four previously
+unsupported sequences have no successful pre-fix latency ratio. This cohort also
+does not resolve the separate before-admission 10-bit monochrome slowdown.
+
+Fresh strict lint, coverage-configuration lint, native/WASM/WASI feature checks,
+and SSE2/AVX2 strict compile lanes all pass. Native x86 runtime and speed remain
+unproven on this ARM64 host. Seven focused public cases pass, covering the new
+four and three existing restoration/mixed-segment guards. The fresh full native
+all-feature run passes all 139 integration checks, all 3,559 active parity cases,
+and 167 separately reported fault contracts. All case markers reconcile; no
+private unit-test executable runs. Twenty-seven planned encoder rows remain
+unexecuted. Source and fixture identities stay stable during both coverage runs.
+
+Full LLVM coverage is 102,122/141,994 lines (71.919940%), 20,832/31,938 branches
+(65.226376%), 5,654/9,123 functions (61.975227%), and 155,517/220,121 regions
+(70.650688%). Compared with the preceding full report, covered/total deltas are
+lines -1/-4, branches +6/-8, functions 0/0 and regions -2/-5. The causal geometry
+edit changes denominators; these percentages are not a test-only coverage gain.
+A separate comparison finds 13 newly observed arms on identical mapped source
+lines among 5,587 unique entropy spans, excluding duplicate spans. None of those
+compared arms loses observation. This is bounded source-span evidence with no
+per-case attribution; it is not a repository-wide no-regression claim.
+Coverage MCP still reports missing branches and labels this dirty source
+unverified and test attribution unknown. Alpha floors pass; strict 100% fails,
+so the full make command exits 2 despite all executed tests passing.
+
+Fixture, documentation, roadmap, claim-ledger, generated-capability,
+no-source-unit-test and whitespace checks pass. The first fixture check caught
+one stale AVIF count in the human roadmap; it is corrected and the complete
+fixture check passes. That failed receipt remains in the local investigation.
+
+Selected and full reports stay outside `target/` at the paths recorded by
+`.coverage-mcp/local-evidence/parity/avif-i422-neutral-superres-20261102/`.
+The checkpoint retains before/current source-bound executables, public wrappers,
+producer/observer/link inputs, input recipes, complete native observations,
+performance plans/timings/pixels, strict-check logs, and coverage source/profile
+identities. The full report has its own complete artifact inventory. All work
+remains local and unstaged on existing `develop` in the sole checkout at
+`/Users/lazytrot/work/image-slash-star`. The 100% coverage, general performance,
+encoder, native SSE2/AVX2 and world-ranking goals remain unfinished.
+
+## AVIF ordinary restoration parity and rejected caching — 2026-11-02
+
+Two ordinary monochrome 8/10-bit SGR super-resolution sequences now have public
+manifest parity cases. They are the complete retained workloads used for the
+restoration performance follow-up. Their pixels and frame/sequence metadata
+come from live pinned Pillow and the independent native collector. The input-only
+producer is generalized and renamed to
+`scripts/generate_avif_monochrome_superres_fixtures.py`: all three preceding
+neutral inputs keep their case IDs and bytes, and all five recipes reproduce
+twice. The normal fixture check validates all five complete files and AV1
+features. No Rust runtime or test source changes are retained in this increment.
+
+A longer unchanged-binary ABBA control uses 24 samples on two workloads. The
+10-bit latency increase repeats at 1.21% overall, with cycle ratios
+1.020932/1.002925/1.010524. Assembly disproves a segmentation-copy hypothesis:
+the helper contains no copy call. It shows two static admission-helper call
+sites. A proposed shared proof also bypasses unused mixed-profile checks, but
+156 samples over thirteen exact-live-Pillow workloads miss the predeclared
+1% target gain: the affected workload is 0.41% slower. The original 3% safety
+gate passes, but that is insufficient to keep the optimization. Its exact
+source, binary, timings, commands and rejection are retained; `entropy.rs` is
+restored byte-for-byte to the preceding accepted source. No speedup or zero
+performance cost is claimed. Both bounded macOS sampling attempts time out
+without reports; the second owned worker is retired explicitly. The dynamic
+cause of the small slowdown remains unproven. Geometry validation in retained
+views must not be confused with sample-range validation at surface creation.
+
+Two temporary registration-helper mistakes (a wrong parser and stale count
+constants) are retained with repairs. Written state is independently verified:
+all 3,580 preceding matrix rows, 7,106 canonical outcomes and 167 fault-contract
+rows keep their behavior; 444 native-index SHA receipts refresh. Current totals
+are 3,582 matrix rows, 3,555 active public parity rows, 27 planned encode rows,
+7,110 canonical outcomes and 471 independent native observations. All 10,158
+previous fixture paths remain; fourteen files are added.
+
+Selected coverage passes all five ordinary monochrome cases, with zero
+selected faults. The unique neutral-restoration decision records three neutral
+and four active continuations, and Coverage MCP reports zero gaps for that
+condition within this cohort. This improves the preceding three-case focused
+cohort, whose opposite outcome was absent; it does not close a new full-suite
+gap. The fresh full run passes all 139 integration checks, 3,555 public parity
+rows and 167 separately counted fault contracts. No private unit-test
+executable runs; source and fixture hashes remain stable during measurements.
+
+Full totals remain unchanged: lines 102,123/141,998 (71.918619%), branches
+20,826/31,946 (65.191260%), functions 5,654/9,123 (61.975227%) and regions
+155,519/220,126 (70.649991%). Alpha floors pass; strict 100% fails. Existing
+strict Rust, feature and SSE2/AVX2 compile evidence is reused for byte-identical
+Rust/Cargo inputs; fixture and documentation checks are fresh. No new native
+x86, SIMD speed, ranking or whole-file closure result is claimed. Local Coverage
+MCP source status remains `unverified` and individual case attribution `unknown`.
+
+The selected report is retained at `.coverage-mcp/local-evidence/selected/20261102T012621.167559Z-1f3acf9a68e247d3b5e5579d30d660c1/` and the fresh full baseline at
+`.coverage-mcp/local-evidence/full/20261102-monochrome-sgr-parity/`.
+The complete checkpoint is
+`.coverage-mcp/local-evidence/parity/avif-neutral-restoration-cost-20261102/`.
+Other public parity defects, the restoration performance follow-up and 100%
+coverage remain unfinished. Work remains on the existing `develop` branch in
+the sole working checkout.
+
+## AVIF neutral monochrome super-resolution admission — 2026-11-02
+
+Three complete ordinary monochrome sequences at 8/10/12 bits expose a missing
+inter-frame admission: their first frame decodes, but the neutral-filter
+super-resolution inter frame previously produced `Unsupported`. The frozen
+pre-fix executable fails all three new public matrix cases. Sharing the
+existing bounded structural/reference proof with the neutral-restoration case
+now produces exact live Pillow pixels for both frames. Reconstruction,
+resizing, geometry, motion and reference validation stay in the existing
+checked paths. Active restoration alone creates a restoration plan; the intra
+restoration admission remains unchanged. Only `entropy.rs` changes at runtime.
+
+The input-only producer's optional `ordinary` argument omits its fixture ROI
+control. All three inputs reproduce twice and match the retained original
+failing files byte-for-byte; its default invocation also reproduces all twenty
+preceding mixed-segment inputs twice without changing their digests. Independent
+AV1 header checks confirm actual frame features. Standard Pillow and native
+collectors own reference observations. A manifest registration check caught an
+initial insertion under the wrong format; that attempt and its correction are
+retained before the runtime change.
+
+Focused coverage passes 3/3 selected public parity cases, with no selected
+fault contracts. The fresh full native run passes all 139 integration checks,
+3,553 active public parity rows and 167 separately reported fault contracts;
+27 planned encode rows remain unexecuted. No private unit-test executable
+runs. Source and fixtures stay stable during both measurements. Current totals
+are 3,580 matrix rows, 2,912 active decode rows, 641 active encode rows, 7,106
+canonical cases and 469 independent native loop observations. All 3,577 previous
+matrix rows and 7,100 canonical outcomes retain their behavior; 441 native-index
+SHA receipts refresh. Existing fault-contract rows remain unchanged.
+
+The fresh full report covers 102,123/141,998 lines (71.918619%),
+20,826/31,946 branches (65.191260%), 5,654/9,123 functions (61.975227%) and
+155,519/220,126 regions (70.649991%). Alpha floors pass; the strict 100% gate
+fails. At the new neutral-restoration decision, raw LLVM branch counts are
+three neutral continuations and ten active-restoration continuations. Coverage
+MCP reports zero gaps for that one condition, not whole-file closure. Local
+source verification remains `unverified` and individual case attribution is
+`unknown`.
+
+Fresh strict Clippy, coverage-cfg Clippy, SSE2/AVX2 compile checks and native,
+WASM and WASI feature lanes pass. Ten complete public decode workloads match
+live Pillow on both binaries before three paired ABBA timing cycles. All 120
+samples satisfy the predeclared regression rule (reject an overall increase
+above 3% repeated in at least two cycles). The largest median increase is
+2.01% on the existing 10-bit monochrome restoration control; all three cycles
+are slower, so this remains a performance follow-up. This correctness fix does
+not establish zero overhead, a speedup, native x86 performance or a ranking.
+No dependency, unsafe Rust, runtime fault hook, unit test, source exclusion or
+threshold reduction is added.
+
+The source-bound full baseline and selected report are retained in
+`.coverage-mcp/local-evidence/full/20261102-monochrome-neutral-superres/` and
+`.coverage-mcp/local-evidence/selected/20261102T005449.353034Z-859c2dd85f4f49b0b15a992343981bd1/`.
+The complete investigation and checkpoint are in
+`.coverage-mcp/local-evidence/parity/avif-monochrome-neutral-superres-20261102/`.
+The other retained I422 and mixed-key public parity defects, broader coverage
+and performance work remain unfinished. Work stays on the existing `develop`
+branch in the sole working checkout.
+
+## AVIF mixed-segment super-resolution parity — 2026-11-02
+
+Twenty input-only native recipes cover a lossy key followed by a mixed
+lossless/lossy inter frame, coded at 64x48 and displayed at 80x48. Monochrome,
+4:2:0, 4:2:2 and 4:4:4 cover 8/10/12-bit samples with neutral filters; eight
+additional 8/10-bit variants within those twenty use active luma SGR
+restoration. Pinned libavif disables 12-bit encoder restoration, making four
+attempted recipes byte-identical to neutral inputs. Those attempts remain
+retained and are not registered as extra cases. Every distinct input
+reproduces twice. Independent AV1 header parsing checks the actual features;
+standard live Pillow and native collectors own the reference observations.
+
+All twenty exact public decode/sequence cases pass in focused coverage, with
+source and selected fixture identities unchanged during measurement. The
+previous full baseline records 178,170 rejecting outcomes and no admissions
+at `entropy.rs:4236`; this selected cohort records no rejections and 6,700
+admissions on identical runtime source. The rest of the restoration profile
+also executes. Coverage MCP still reports one gap for the opposite outcome
+within this selected report. No whole-file closure, summed generic gaps,
+per-case attribution or new full-suite coverage percentage is inferred.
+The selected report and its receipt remain in
+`.coverage-mcp/local-evidence/selected/20261102T003221.843140Z-6d1d1c9111264b10b617b5e015f457cd/`.
+
+All 3,557 previous matrix rows and 7,060 canonical outcomes retain their
+public behavior; 421 native-index receipts refresh. Current totals are 3,577
+matrix rows, 3,550 active public parity rows, 27 planned encode rows, 7,100
+canonical cases and 466 independent native loop observations. The 167 existing
+target-only fault contracts are unchanged and none is selected in this run.
+No Rust runtime or test source changes; strict Rust/feature/SSE2/AVX2 compile
+and full-baseline evidence from the preceding source remains applicable to
+that source. No new performance or native x86 runtime result is claimed.
+
+The native producer investigation retains unsuccessful builds, speed-8 native
+crashes, a retired bounded debugger attempt, non-mixed control inputs and
+valid inputs that pinned Pillow decodes but the current Rust implementation
+rejects as unsupported. Those are unresolved parity defects, not passing rows
+or target-only faults. Full coverage and codec performance remain unfinished.
+The producer recipe, source snapshots, all attempts and scoped verification
+are retained in
+`.coverage-mcp/local-evidence/parity/avif-mixed-superres-20261102/`.
+Work stays on the existing `develop` branch in the sole working checkout.
+
+## AVIF super-resolution admission cost — 2026-11-02
+
+Five source-bound public decode profiles identify repeated super-resolution
+eligibility checks on the current decoder. ARM64 assembly confirms a 264-byte
+segmentation copy before structural rejection. Borrowing that immutable state
+removes the copy. Restoration admission now rejects incompatible structure and
+layout before filter classification, and neutral profiles avoid classification
+whose result they do not use. All existing predicates and checked fallbacks
+remain. This changes two private helpers in `entropy.rs` only.
+
+The borrow-only trial retains exact live Pillow parity but misses the
+predeclared 3% full-call gain threshold; its source, executable and all 96
+paired timing samples remain retained. A second source-bound A–B–B–A trial
+combines the borrow with deferred filter classification. Across eight unchanged
+public decode workloads, both frozen binaries match live pinned Pillow before
+timing. All 96 samples from three cycles are retained. The profiled 12-bit
+4:2:0 16x4 inter sequence improves by 3.50% overall, with per-cycle changes of
+-1.71%, -4.62% and -3.66%. Changes across all eight workloads range from -3.50%
+to +0.37%; none crosses the repeated 3% regression gate. This is a bounded
+Apple M3 Pro shared-host latency result, without native x86 execution or a
+world-ranking claim. The initial formatting-only build is retained separately
+and was not timed.
+
+Fresh full native all-feature coverage passes all 139 integration checks in
+six executables. All 3,530 active public parity rows and the existing 167
+separately reported fault contracts execute and pass exactly once; 27 planned
+encode rows remain unexecuted. No new test or fixture is added. All 150
+source/setup identities and all 9,997 fixture-file identities remain unchanged
+during measurement. No private unit-test executable runs.
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 101,918 / 141,993 | 71.776778% |
+| Branch outcomes | 20,648 / 31,942 | 64.642164% |
+| Functions | 5,649 / 9,123 | 61.920421% |
+| Regions | 155,234 / 220,122 | 70.521802% |
+
+Alpha floors pass; the unchanged strict 100% gate still fails. These fresh
+metrics describe the refactored source and do not replace historical managed
+claims. Coverage MCP imports remain source-unverified with unknown test
+attribution; retained source identities bind this local measurement. Full
+coverage, raw profiles and six instrumented executables remain in
+`.coverage-mcp/local-evidence/full/20261102-superres-admission/`.
+
+The actual restoration-admission decision records 178,170 rejections and no
+admissions in this corpus. Its admitted path remains uncovered; a public
+mixed-segment super-resolution input is a concrete next coverage target. A
+function-header gap query is not evidence that the decision is fully covered.
+
+Formatting, strict stable/coverage Clippy, SSE2/AVX2 compile checks and the
+native/WASM/WASI feature matrix pass. There is no new allocation, unsafe Rust,
+dependency, optional-state category, runtime fault hook or coverage exclusion.
+Both trials, current profiles, source snapshots, assembly and raw timings
+remain in
+`.coverage-mcp/local-evidence/parity/avif-superres-admission-20261102/`.
+Work remains on `develop` in the sole `/Users/lazytrot/work/image-slash-star`
+checkout, without staging, commits, new branches, worktrees or remote writes.
+The full coverage and codec performance goal remains active.
+
+## AVIF adjacent square-64 chroma neighbor parity — 2026-11-02
+
+Eighteen five-frame 128x128 inputs cover adjacent 64x64 inter blocks in 4:2:2
+and 4:4:4, at 8/10/12 bits and qualities 70/95/99. A gray key frame precedes
+four colored checker periods. Ordinary encoder controls retain square roots;
+no native partition patch is needed. The high-depth planar sources preserve
+nonzero low sample bits. Every source reproduces twice byte-for-byte, and
+independent observed/unmodified scalar dav1d decoders produce identical YUV
+on all eighteen inputs and six additional mixed-pattern investigation guards.
+Expected pixels and native sequence observations are collected separately
+from input generation through the existing reference workflows.
+
+All eighteen checker sequences fail on the preceding Rust decoder. A bounded
+trace confirms the first divergent U terminal in a deep 64x64 block: both
+decoders have arithmetic range 39,176, but Rust selects coefficient-skip
+context 11 instead of native context 12. Its lower left chroma edge remains
+neutral because `SplitB64Deep` is absent from the full-grid loading predicate.
+The existing reconstruction path already traverses that complete grid.
+Including the deep plan beside shallow and mixed plans fixes all eighteen
+regressions; the six mixed-pattern guards also retain exact live Pillow
+parity. All five complete RGB frames and sequence metadata are checked.
+Only `entropy.rs` changes among runtime files. Temporary Rust tracing and
+diagnostic field visibility are removed after retaining their evidence.
+
+The existing fixture-verification target now checks the input-only square-64
+generator. All 3,539 prior matrix rows and 7,024 canonical outcomes remain
+unchanged, apart from 403 native-index receipts. The matrix has 3,530 active
+public parity rows, 27 planned encode rows, 7,060 canonical cases and 446
+independent native loop observations. The existing 167 target-only fault
+contracts remain separately counted. An investigation-helper count assertion
+failed before bundle mutation; its corrected assertion and original failure
+are retained. A copied summary field was independently corrected from 42 to
+the actual eighteen new rows without rerunning registration.
+
+Fresh full native all-feature coverage passes all 139 integration checks in
+six executables. Every active parity and fault-contract row executes and
+passes exactly once; planned rows remain unexecuted. No private unit-test
+executable runs. All 150 source/setup identities and 9,997 actual fixture-file
+identities remain unchanged during measurement. A runner status fragment
+splits one BMP pass marker; the initial failed reconciliation, exact raw span
+and catalog-checked rejoining rule are retained without editing the raw log.
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 101,924 / 141,991 | 71.782014% |
+| Branch outcomes | 20,652 / 31,942 | 64.654687% |
+| Functions | 5,649 / 9,123 | 61.920421% |
+| Regions | 155,244 / 220,122 | 70.526344% |
+
+Alpha floors pass; `make coverage-complete` returns 2 solely because the
+unchanged strict 100% gate fails. Coverage MCP reports no gap at the deep-plan
+and chroma-grid decisions. Its LLVM import remains source-unverified with
+unknown test attribution; separate local identities bind the source. Full
+coverage, raw profiles, six instrumented executables and reconciliation
+receipts remain in
+`.coverage-mcp/local-evidence/full/20261102-square64-neighbors/`.
+
+A fresh source-bound ARM64 A–B–B–A comparison checks eight unchanged public
+decode workloads. Both frozen binaries match live pinned Pillow before
+timing. All 96 samples from three cycles are retained; median latency changes
+range from -1.24% to +1.75%, with no repeated regression above 3%. This supports
+a bounded shared-host Apple M3 Pro regression check, without a speedup,
+native x86/SIMD execution or world-ranking claim.
+
+Strict stable/coverage Clippy, SSE2/AVX2 compile checks, native/WASM/WASI feature
+matrix and fixture integrity pass. The change adds no allocation, unsafe Rust,
+dependency, runtime fault hook, private unit test, optional-state category or
+coverage exclusion. Five fresh, untimed public decoder profiles on the
+preceding source retain exact live Pillow parity and identify entropy decoding
+as a material follow-up cost; sampled runs are not performance comparisons.
+Investigation, source/input reproduction, public regressions and validation
+evidence remain in
+`.coverage-mcp/local-evidence/parity/avif-square64-neighbors-20261102/`.
+The full coverage and codec performance goal remains active on `develop` in
+`/Users/lazytrot/work/image-slash-star`, with one checkout and no staging,
+commit, new branch, worktree or remote mutation.
+
+## AVIF 16x64 and 64x16 chroma reconstruction parity — 2026-11-02
+
+Forty-two complete-file parity inputs exercise thin inter leaves in 128x64
+and 64x128 sequences. Monochrome, 4:2:0, horizontal 4:2:2 and 4:4:4 cover
+8/10/12-bit samples and qualities 70/99. Independent scalar dav1d observations
+witness shallow, mixed and fully split transform trees; its observed and
+unmodified decoders produce identical YUV on all 42 inputs. The input producer
+reads no Rust output or expected pixels. Six vertical 4:2:2 requests return
+clean producer errors before writing a file because the native chroma geometry
+is invalid; these are neither public parity nor target fault-contract cases.
+
+The original decoder matches 18 of the 42 valid inputs. Extending the existing
+inherited-transform mapping to deep and mixed thin-64 chroma paths brings that
+to 35. Mixed 4:4:4 rectangular plans also omitted the complete above/left
+context grid. At the first divergent terminal, native and Rust arithmetic
+ranges agree, but the missing neighbor context selects skip context 11 instead
+of 12 and changes a nonzero transform into a skipped one. Loading the complete
+grid for those existing plans fixes the remaining seven cases. Both complete
+frames, exact RGB pixels and sequence metadata now match live pinned Pillow
+for all 42 cases. Initial failures, bounded first-divergence traces and both
+intermediate/final executable identities remain retained. Temporary Rust
+diagnostics have been removed.
+
+All 125 maintained narrow inputs reproduce twice byte-for-byte, preserving
+the previous 83 inputs. All 3,497 previous matrix rows and 6,940 canonical
+cases retain their public outcomes; 361 native-loop index receipts update.
+There are now 3,512 active public parity rows, 27 planned encode rows, 7,024
+canonical cases and 428 independent native loop observations. The existing
+167 target-only fault contracts remain separately reported.
+
+A fresh all-feature native coverage run passes all 139 integration checks in
+six executables. Every active parity row and fault-contract row is reconciled
+exactly once; planned rows remain unexecuted. A test-runner completion message
+split one TIFF execution marker. Its exact raw span, the initial failed
+reconciliation and the bounded rejoining rule are retained; the raw log is
+unchanged. All 150 source/setup identities and 9,763 fixture-file identities
+remain unchanged during measurement. No private unit-test executable runs.
+
+| Metric | Covered / total | Coverage |
+| --- | ---: | ---: |
+| Lines | 101,905 / 141,991 | 71.768633% |
+| Branch outcomes | 20,639 / 31,942 | 64.613988% |
+| Functions | 5,647 / 9,123 | 61.898498% |
+| Regions | 155,219 / 220,122 | 70.514987% |
+
+The alpha floors pass. `make coverage-complete` returns 2 solely because its
+unchanged strict 100% gate fails. Both outcomes of the previously missing
+16x64 and 64x16 all-children-split decisions are now observed: counts 37/80
+and 93/63 respectively. Coverage MCP reports no remaining gap at either
+decision. Its LLVM import remains source-unverified with unknown test
+attribution; separate local identities bind the source. Full report, raw
+profiles, instrumented binaries and reconciliation receipts remain in
+`.coverage-mcp/local-evidence/full/20261102-wide16-inter/`.
+
+A fresh paired ARM64 check compares the frozen accepted and corrected release
+binaries on the same eight unchanged public decode workloads. Both binaries
+match live pinned Pillow before timing. Three A–B–B–A cycles retain all 96 raw
+samples; median latency changes range from -0.65% to +0.75%, with no repeated
+regression above 3%. These shared-host Apple M3 Pro measurements support a
+bounded regression check, without a new speedup or world-ranking claim.
+
+Strict stable/coverage Clippy, SSE2/AVX2 compile checks and the native/WASM/WASI
+feature matrix pass. Only two runtime files change; the fixes add no allocation,
+private unit tests, unsafe Rust, dependencies, runtime fault hooks, new optional
+state categories or coverage exclusions. Work remains uncommitted on the
+existing `develop` branch in `/Users/lazytrot/work/image-slash-star`, with one
+checkout. Investigation and reproduction evidence is retained in
+`.coverage-mcp/local-evidence/parity/avif-wide16-inter-20261102/`.
+Full 100% coverage, further performance improvements and native x86 runtime
+evidence remain unfinished.
+
+## AVIF 8x32 and 32x8 inter transform parity — 2026-11-02
+
+Forty-two complete-file public parity rows cover fine-detail 64x32 and 32x64
+sequences at 8, 10 and 12 bits. Monochrome, 4:2:0, horizontal 4:2:2 and 4:4:4
+inputs use qualities 70/99. Independent scalar dav1d traces witness narrow
+inter leaves with shallow, mixed and fully split transform trees; observed and
+unmodified native decoders produce identical YUV for every valid probe. Exact
+live pinned Pillow RGB frames and sequence metadata match the unchanged Rust
+runtime. All 83 maintained narrow inputs reproduce twice byte-for-byte,
+including the unchanged 41 earlier inputs.
+
+The six forced vertical 4:2:2 native producers fail before writing a public
+input. A compiled lookup against the pinned native source confirms that its
+chroma-size table maps an 8x32 4:2:2 leaf to `BLOCK_INVALID`. The maintained
+producer now rejects that geometry before allocation; its partition-forcing
+patch also preserves the native validity test. All six requests then return a
+clean error with no output file. These are producer diagnostics, not Pillow
+parity failures or target fault-contract results. The initial native failure,
+its attempted commands and the build preflight failure remain retained.
+
+All 42 new selected matrix rows pass. Identical-source coordinate comparison
+against the compatible prior 1,007-row and twelve-row reports adds 86 observed
+branch outcomes: 72 in block reconstruction and 14 in entropy decoding. Both
+outcomes of the previously unobserved 8x32 child-offset decision are reached;
+Coverage MCP reports no remaining gap at that decision. Generic instances are
+OR-merged by source coordinate. Unselected prior hits absent from this subset
+are not measured losses. MCP imports remain source-unverified with unknown
+test attribution; separate identities bind local source. Reports and receipts
+remain outside `target/` in
+`.coverage-mcp/local-evidence/selected/20261102-avif-wide8-inter/`.
+
+All 3,455 prior matrix rows and 6,856 canonical cases retain their public
+outcomes. Only 319 canonical native-loop index receipts update. The matrix
+now has 6,940 canonical cases and 386 independent native loop observations.
+All 138 Rust/harness/build identities and 129 runtime/build identities match
+the prior accepted implementation; 2,780 unaffected fixture hashes also match.
+The prior 1,019 selected-case evidence and strict Rust/native/WASM/WASI/SIMD
+compile checks are reused under those identities. The eight performance inputs
+and accepted ARM64 confirmation remain unchanged, with no new speed claim.
+No Rust edits, private unit tests, unsafe Rust, dependencies, fault hooks, new
+optional-state categories or coverage exclusions are added. Full aggregate
+coverage, encoder/decoder optimization and native x86 performance remain open.
+Evidence is retained in
+`.coverage-mcp/local-evidence/parity/avif-wide8-inter-20261102/`.
+
+## AVIF frozen and selective entropy CDF parity — 2026-11-02
+
+Twelve complete-file public parity rows cover ordinary encoder CDF controls.
+Nine inputs freeze probability tables on both key and inter frames across
+8, 10 and 12 bits in 4:2:0, horizontal 4:2:2 and 4:4:4. Three inputs retain
+adaptive key-frame tables and freeze the following inter-frame tables. Exact
+live pinned Pillow RGB frames, dimensions, mode and sequence metadata match
+the current source-bound release decoder for every input. Independent native
+loop observations confirm both frames and repetition behavior. The input
+producer reads no target output or expected pixels; its optional CDF control
+uses the pinned libaom API. All 41 maintained narrow inputs reproduce twice
+byte-for-byte, including the unchanged 29 earlier inputs.
+
+All twelve new selected matrix rows pass. Compared by identical runtime source
+coordinates with the prior 1,007-row report, they add six observed branch
+outcomes: two in block reconstruction, three in entropy, and one in frame
+parsing. The public image subset now observes both outcomes of all five
+branches in the specialized four-symbol method. Coverage MCP reports no
+remaining gap there, closing the complete-file follow-up recorded below.
+Generic instances are OR-merged by source coordinate; unselected prior hits
+absent from the subset are not measured losses. Imported MCP source remains
+unverified with unknown test attribution; local identities bind source
+separately. The selected report and receipt are retained in
+`.coverage-mcp/local-evidence/selected/20261102-avif-frozen-cdf/`.
+
+All 3,443 previous matrix rows and 6,832 previous canonical cases retain their
+public outcomes. Only 307 canonical native-loop index receipts update. There
+are now 6,856 canonical cases and 344 independent native loop observations.
+The prior 1,007-case result is reused under identical Rust runtime, harness
+and build identities, equivalent old public cases and verified unaffected
+fixture hashes. All 129 runtime/build identity files and performance inputs
+are unchanged, so the preceding strict Rust, target, SIMD compile and ARM64
+performance evidence remains applicable. No private unit tests, runtime hooks,
+unsafe Rust, dependencies, new optional-state categories or coverage exclusions
+are added. Full aggregate coverage, further codec optimization and native x86
+performance remain open. Investigation, reproduction and registration evidence
+is retained in `.coverage-mcp/local-evidence/parity/avif-frozen-cdf-20261102/`.
+
+## AVIF fixed four-symbol entropy decoding — 2026-11-02
+
+Fresh untimed profiles of five complete public decode workloads identify
+adaptive symbol decoding as a material cost. A fixed four-symbol method now
+uses three explicit probability boundaries and a fixed three-probability CDF
+update. Eighty-five statically typed four-entry table callers use it, including
+coefficient low/high tokens and motion tables. Variable-size tables retain the
+general decoder. The final count slot remains bounded to 32, so its shifted
+probability is the same implicit zero boundary as pinned dav1d. Normalization,
+wrapping arithmetic, update rates and trace observations retain their order.
+The common trace completion helper has no separate release symbol.
+
+Both source-bound release binaries match live pinned Pillow on all eight
+predeclared timing workloads. A high-token-only trial failed the greater-than-3%
+profiled-workload gain gate and remains retained. The broader trial narrowly
+passed provisionally, then received five-times-longer confirmation with the
+same workload cohort, three cycles and A–B–B–A order. All 96 confirmation
+samples remain available. Overall median latency changes range from -3.23% to
++0.90%; two profiled workloads improve by approximately 3.2%. No control
+triggers the predeclared repeated greater-than-3% regression rule. These are
+bounded public-call observations on a shared Apple M3 Pro ARM64 host; native
+x86 runtime, SIMD execution and world rankings are not established.
+
+All 1,007 active selected AVIF rows pass, including exact pixels and structured
+failures. The report and unchanged-source/fixture receipt are retained in
+`.coverage-mcp/local-evidence/selected/20261102-avif-symbol4/`. A freshly built
+unmodified pinned scalar dav1d independently reproduces all 103 committed
+entropy states; the existing Rust integration parity test matches those exact
+values, CDFs and decoder states, including frozen CDF behavior. That trace run
+observes both outcomes of all five source branches in the specialized method.
+The public image subset alone leaves the disabled-CDF-update branch unobserved;
+a complete-file Pillow parity companion remains useful follow-up work.
+
+Strict `make lint`, SSE2/AVX2 compile checks and all seven relevant native,
+WASM and WASI checks pass. No unit tests, coverage exclusions, unsafe Rust,
+dependencies, fault hooks or new optional-state categories are added. Imported
+Coverage MCP source status remains unverified with unknown test attribution;
+separate hashes bind the local source. Full aggregate percentages remain the
+historical measurement. The current manifest receipt is refreshed after an
+earlier whitespace cleanup changed its byte hash, preserving historical
+coverage and measured-input fields. Frozen source, every trial, native oracle,
+profiles and receipts are retained in
+`.coverage-mcp/local-evidence/parity/avif-symbol4-20261102/`.
+
+## AVIF fully split vertical narrow transforms — 2026-11-02
+
+Four input-driven public parity rows cover fine-detail 16x64 sequences at
+10 and 12 bits in 4:2:0 and 4:4:4. Pinned scalar dav1d observations establish
+fully split 4x16 inter transform trees. All twelve exploratory inputs, including
+8-bit and lower-quality controls, match exact live Pillow RGB frames and
+metadata. The observed and unmodified native decoders produce identical YUV.
+The maintained producer's optional `fine` input pattern changes source pixels;
+no target output or private target state enters fixture generation. All 29
+registered narrow-inter inputs reproduce twice byte-for-byte, including the
+unchanged 25 earlier inputs.
+
+All four new selected parity rows pass. Their source-bound report in
+`.coverage-mcp/local-evidence/selected/20261102-avif-vertical-deep/` adds twelve
+observed branch arms to the prior 1,003-row AVIF measurement: eleven in block
+reconstruction and one in entropy. Coverage MCP reports no missing arm at the
+previously untested fully split vertical decision. This comparison merges
+generic instances by identical source coordinates; the four-row subset does
+not remeasure unselected baseline hits or establish a full regression result.
+The prior 1,003-row evidence is reused because the runtime is identical, all
+old public cases are equivalent, and all 2,716 unaffected fixture file hashes
+still match. MCP imports remain source-unverified with unknown attribution;
+local hashes bind the reports and runtime separately.
+
+All 3,439 prior matrix rows and 6,824 prior canonical cases retain their public
+outcomes. Only append-only native loop-index receipts change. The matrix now
+has 6,832 canonical cases and 332 independent native loop observations. Rust
+runtime, integration harness, build policy and performance controls are
+unchanged; the prior strict style, target and public-call performance checks
+remain applicable. Full aggregate coverage and native x86 runtime measurements
+remain open. Investigation and registration evidence is retained in
+`.coverage-mcp/local-evidence/parity/avif-vertical-deep-20261102/`.
+
+## AVIF high-depth narrow transform companions — 2026-11-02
+
+Ten input-driven parity rows extend the narrow 16x4 and 4x16 inter sequences
+to 10 and 12 bits at quality 99: four 4:2:0, two horizontal 4:2:2 and four
+4:4:4 inputs. The maintained input-only producer reproduces every registered
+input twice byte-for-byte. Live pinned Pillow supplies both exact RGB frames
+and sequence metadata; independent native observations supply loop evidence.
+All 6,804 prior canonical cases preserve their public outcomes, with only
+append-only loop-index receipts updated. The matrix now has 6,824 canonical
+cases and 328 native loop observations.
+
+All thirty exploratory 10/12-bit probes at qualities 45, 70 and 99 match live
+Pillow. Six of the ten registered inputs expose pixel mismatches in the
+source-bound release build preceding the two narrow-inter fixes described
+below. Current Rust source is unchanged. Additional scalar dav1d transform
+observations witness deep horizontal and mixed vertical split trees, and
+observed and unmodified native decoders produce identical YUV on all thirty
+inputs. Deep vertical trees remain an unmeasured case.
+
+All 1,003 active selected AVIF rows pass: 998 decode and five encode rejection
+rows. The source-bound report in
+`.coverage-mcp/local-evidence/selected/20261102-avif-narrow-depth/` records
+51 newly observed source branch arms, 41 in block reconstruction and ten in
+entropy, with zero lost arms. The comparison uses identical runtime source and
+merges repeated generic instances by source coordinate. It reaches the deep
+horizontal and mixed vertical narrow-transform branches. Coverage MCP imports
+remain source-unverified with unknown test attribution; separate local hashes
+bind the source and fixtures. This selected run does not update full aggregate
+percentages or establish 100% coverage.
+
+The prior strict Rust style, native/WASM/WASI, x86 SSE2/AVX2 compile checks and
+120-sample public-call performance regression campaign are reused because all
+129 runtime/build source identities and their validation inputs are unchanged.
+This fixture expansion makes no new SIMD runtime or speed claim. Frozen
+probe outputs, native observer changes and registration receipts are retained
+in `.coverage-mcp/local-evidence/parity/avif-narrow-depth-20261102/`.
+
+## AVIF narrow inter chroma and transform contexts — 2026-11-02
+
+Fifteen input-driven parity rows add two-frame 64x16 and 16x64 sequences at
+qualities 45, 70 and 99: six 4:2:0, three horizontal 4:2:2 and six 4:4:4 inputs.
+Pinned native leaf traces establish 16x4 or 4x16 inter geometry. The maintained
+native producer reproduces all fifteen complete inputs twice byte-for-byte.
+Live Pillow supplies exact frames and independent native observations supply
+loop evidence. All 6,774 prior canonical cases retain their public outcomes;
+only 278 receipts change to reference the append-only loop index. There are
+now 6,804 canonical cases and 318 complete native loop observations.
+
+The probes exposed two decoder defects. Shared sub-eight chroma now assembles
+its two or four prediction parts using each causal luma owner's reference,
+motion vector and interpolation filter. An intra or unavailable neighbor uses
+the complete checked current-block predictor. The private pending predictor
+is optional complete prepared state, cleared before every inter leaf and taken
+once; its absence selects that complete fallback. The two-element iterator's
+optional result is ordinary collection exhaustion. Neither category suppresses
+malformed-input errors. Existing chroma residual reconstruction is reused.
+
+The narrow transform parser also preserves the zero width context of TX4x8
+and the zero height context of TX8x4. A preceding child's split cannot lower
+that four-pixel axis context. This fixes the quality-99 horizontal 4:4:4 mixed
+tree as well as the six 4:2:0 pixel mismatches. All 171 oracle-success probes
+match exact Pillow dimensions, modes and every frame byte in the final release
+build, with zero regressions. Three vertical 4:2:2 producer probes are rejected
+by pinned Pillow on frame two and remain separately retained negative evidence.
+
+All 993 active AVIF selected rows pass: 988 decode and five encode rejection
+rows. The retained report and its receipt are in
+`.coverage-mcp/local-evidence/selected/20261102-avif-narrow-inter/`.
+All 129 runtime/build identities and the selected fixtures remain unchanged
+through that run. Coverage MCP imports remain source-unverified with unknown
+test attribution; the local source hashes provide separate binding. This
+selected report does not refresh full aggregate percentages or establish 100%.
+
+A fresh pre-fix release build differs only in the two edited AVIF modules and
+uses the same public wrapper and build options. Both binaries match live Pillow
+on ten declared timing controls before measurement. All 120 ABBA samples across
+three cycles are retained; median changes range from -2.06% to
++2.67% on the shared Apple M3 Pro ARM64 host. No control triggers the
+repeated greater-than-3% regression rule. These observations establish the
+bounded regression gate, not a universal speed gain or x86/SIMD speed claim.
+The original and observed pinned scalar dav1d builds also produce identical
+YUV for all fifteen accepted new inputs, keeping the geometry witnesses
+independent of instrumentation effects.
+
+Exact equal-source span mapping finds 90 newly observed branch arms in the
+block module and thirteen in entropy, with no lost arms. Other unchanged
+runtime modules have zero additions or losses. New, changed and deleted source
+branches remain in the selected report; they are outside this coordinate
+comparison. Coverage MCP still identifies unmeasured inter-transform branches.
+
+Frozen sources, inputs, exact outputs, failed probes, command receipts, native
+trace observers, raw timings and the verified inventory are retained in
+`.coverage-mcp/local-evidence/parity/avif-narrow-inter-20261102/`. The checkpoint
+contains the new fixture evidence and hashes for the complete selected corpus;
+full replay also requires the unchanged repository fixture corpus. Everything
+remains local and uncommitted in the requested checkout on `develop`.
+
+Strict default/all-feature/release/nightly-coverage Clippy, native AVIF and
+all-feature contracts, WASM AVIF/all-feature Clippy and rustdoc, WASI Clippy,
+and SSE2/AVX2 compile checks pass. The host is ARM64; x86 runtime parity and
+benchmark evidence remain open. No dependency, unsafe code, private unit test,
+fault hook, coverage exclusion, project branch or worktree is added.
+
+## WebP histogram candidates not retained — 2026-11-02
+
+Six histogram candidates were evaluated against the accepted sparse-predictor
+checkpoint. Seven source-bound builds, including a freshly rebuilt baseline,
+each match live Pillow in all 168 alpha calls: 1,176 exact public calls total.
+Seven three-cycle ABBA pilots retain 144 samples each across twelve controls,
+for 1,008 samples total. Eight ordinary controls include varied-color lossless
+RGB/RGBA, method-five RGBA, palette chains and the large plane transition;
+four token-aware controls check caller-budgeted encoding. The zero-block
+prototype also matches 72 live-Pillow lossless calls through both public APIs.
+
+The table shows median latency changes for five ordinary controls; negative
+values mean lower latency. Every control, cycle, byte gate and sample is retained
+in the pilot JSONs, including token-aware misses. The initialization pilot uses
+the freshly rebuilt baseline; the earlier pilots use the accepted binary.
+
+| Candidate | Raw alpha | Combined alpha | Method-four RGBA | Method-five RGBA | Large transition |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Occupied bounds | +3.79% | +2.12% | +4.22% | +1.19% | +1.89% |
+| Eight-bin zero probe | +4.81% | -1.08% | +4.51% | -3.67% | -1.06% |
+| Eight-zero admission | +2.85% | +0.06% | +1.68% | -1.13% | -1.56% |
+| One histogram group | -0.58% | +0.25% | +0.85% | +1.67% | +2.62% |
+| Contiguous populations | +2.87% | +6.71% | -1.09% | +0.44% | -5.39% |
+| Single initialization | -0.22% | -1.47% | -0.10% | +0.30% | +1.23% |
+
+No candidate is retained. Occupied bounds add bookkeeping without a repeatable
+full-call gain. Unconditional zero-block probing helps palette inputs but
+repeatedly regresses raw alpha and method-four RGBA. Admitting probes only
+after eight observed zeros reduces those regressions but retains mixed results.
+A single-group shortcut and avoiding duplicate initialization give only
+marginal gains. Contiguous population storage improves the large transition
+but regresses combined alpha. The independent same-source baseline control
+spans -1.01% to +1.69%, insufficient to explain the repeated 4–7% misses.
+The rejected block probe compiles to ARM64 vector loads and OR reductions;
+that static evidence does not establish a SIMD speed improvement.
+
+Both touched runtime modules were restored byte-for-byte. All 129 runtime/build
+identities and all 9,414 source/setup identities match the accepted checkpoint;
+its 502-row WebP parity, strict lint, target and fixture results remain reusable.
+No fixture, canonical expectation, manifest case, dependency, unsafe code,
+private unit test, fault hook, coverage exclusion or new branch was introduced.
+Documentation checks are rerun for this record. The original performance gap,
+full coverage and x86 runtime validation remain unfinished.
+
+Coverage MCP navigation confirms one remaining histogram gap group at the
+defensive pair-queue capacity guard; the guard is retained. All four PNG source
+files match the complete retained baseline, whose PNG query returns no missing
+branch groups. The unchanged AV1 block module has 723 gap groups, many involving
+generic inter-decoder instances, and remains a higher-return coverage target.
+The entropy module differs from that full baseline, so its old query is only
+navigation evidence and cannot prove current coordinates or a denominator.
+No full coverage percentage is refreshed by this investigation.
+
+All frozen candidates, binaries, live-oracle outputs, producers, decisions,
+paired samples, build-environment receipts and source-bound navigation records
+are retained with a verified inventory in
+`.coverage-mcp/local-evidence/parity/webp-histogram-no-go-20261102/`.
+Its accepted source/setup anchor is the independently verified
+`webp-spatial-entropy-20261102` checkpoint, manifest SHA-256
+`00a138142c113977ffe5d7a5a293551ee5ac77f0d8a560f1f4cb8eaf1f641a56`.
+Everything remains local and uncommitted on `develop` in
+`/Users/lazytrot/work/image-slash-star`.
+
+## WebP cached sparse predictor entropy — 2026-11-02
+
+Two new input-driven parity rows encode a 259x259 RGBA PNG at methods four and
+six. Its blue plane changes after a zero prefix longer than 65,536 pixels,
+across clipped predictor tiles. The existing input-only generator supplies the
+source independently of encoded output; pinned Pillow supplies exact encoded
+bytes, decoded modes and pixels. All 3,412 prior matrix rows and all 6,770 prior
+canonical JSON cases remain unchanged, including 1,000 WebP canonical cases.
+The matrix now has 6,774 canonical JSON cases.
+
+The private predictor caches each accumulated bin's fixed-point entropy term
+and its per-plane sum while the fourteen modes compete. A tile histogram also
+records its populated symbols once. Cost evaluation starts with the cached
+previous sum and replaces only populated bins with the same two terms as the
+original complete scan. Adding the winning histogram refreshes the cache once.
+Each subtracted term is still present in its plane sum; validated WebP geometry
+bounds populations and sums. This preserves the exact integer entropy, zero-bin
+bias, tie order and full transform/reference search. Guards, structured errors,
+hidden-RGB behavior and cancellation checkpoints remain unchanged. State stays
+on the stack, using about 10 KiB more than the previous three count arrays;
+there are no new heap allocations. The module documentation now describes both
+the method-four grid and the bounded method-five/six sampling search.
+
+All 502 selected WebP parity rows pass: 266 decode and 236 encode rows, with
+978 public encode calls and zero panics. Five existing target-only fault
+contracts pass separately. The cache-only prototype, sparse prototype and final
+build each preserve all 168 live-Pillow alpha probe bytes and pixels. Another
+72 lossless calls and eight baseline/candidate calls for the new cases match
+bytes, modes and pixels through ordinary and token-aware encoding.
+
+The retained cache-only pilot has 72 ABBA samples across six controls; medians
+improve by 5.14–21.69%. The sparse pilot has 96 samples across eight controls,
+including ordinary method-five RGBA and the large transition; medians improve
+by 4.35–34.17%. Their frozen sources, binaries, byte gates and all samples remain.
+The final benchmark keeps all seventeen previous controls and adds the large
+transition. Both builds match fresh Pillow output for all eighteen controls
+before timing. Across 216 ABBA samples and three cycles on the shared Apple M3
+Pro ARM64 host, median changes range from -34.60% to +2.97%. No control exceeds
+the 3% regression threshold in two cycles. Raw-alpha latency improves by 34.60%,
+ordinary method-five RGBA by 34.36%, lossless RGB noise by 13.48%, and the large
+transition by 7.81%. Palette chains with sixteen and seventeen colors improve
+by 28.58% and 27.90%. These are complete public-call latency measurements;
+uniform-RGB alpha controls are excluded from codec throughput ranking.
+
+**The original performance regression remains open.** Twelve separately retained
+paired samples against the earlier incomplete-search implementation measure
+0.288 ms versus 3.032 ms on the raw-alpha control, a 10.53x median latency
+ratio (cycle ratios 6.77–10.57x). That earlier build fails other ordinary parity
+inputs and cannot replace full native search. A fresh diagnostic profile has
+histogram clustering entropy as its leading collapsed codec frame, ahead of
+the predictor cost calculation. Profiling timings are not benchmark rankings.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261101T193234.821110Z-336cf241bff844dab5dd83376031e711/coverage.json`.
+Coverage MCP reports three remaining predictor branch-gap groups, two encoder
+groups, eight backward-reference groups and one cross-color group. All forty
+branch outcomes across the fifteen selected predictor helper instantiations
+are observed, including the first/repeated-symbol branch. Unchanged WebP source
+coordinates have zero newly observed and zero lost observations. The changed
+predictor module is excluded from that coordinate comparison. Importer source
+identity remains unverified and per-test attribution unknown; independent local
+hashes bind 129 runtime/build files and the validation inputs. This is selected
+coverage, not a refreshed complete aggregate or a 100% coverage claim.
+
+Strict default/all-feature/release/coverage lint, SSE2/AVX2 compile checks,
+native WebP/all-feature contracts, WebP WASM Clippy/rustdoc, all-feature WASI
+Clippy, fixture integrity and documentation checks pass against unchanged
+source/setup identities. No unit test, fault hook, unsafe code, dependency,
+coverage exclusion, extra branch, worktree or remote write was introduced.
+All work remains local and uncommitted on `develop` in
+`/Users/lazytrot/work/image-slash-star`. Reproducible producers, all variants,
+paired samples, source snapshots, checks and the selected report are retained in
+`.coverage-mcp/local-evidence/parity/webp-spatial-entropy-20261102/`, with an
+independently verified inventory. Full aggregate coverage, the original latency
+gap, x86 runtime parity/speed and world ranking remain unfinished.
+
+## WebP predictor cost reduction — 2026-11-02
+
+Four new input-driven parity rows cover zero color planes and transitions
+between zero and nonzero planes across clipped 33x35 predictor tiles, at
+methods four and six. The existing input-only generator supplies two complete
+RGBA PNGs; pinned Pillow independently supplies exact bytes, decoded modes and
+pixels. All 3,408 prior matrix rows and 992 prior WebP canonical JSON rows
+remain unchanged. The whole matrix now contains 6,770 canonical JSON rows.
+
+The private predictor histogram writer fills a borrowed buffer. Two local
+arrays retain trial and winning counts; swapping their mutable references
+avoids repeated 4 KiB copies. Exact tile and accumulated pixel counts also
+prove when both residual histograms contain only zeros. Their combined entropy
+is exactly zero under the existing fixed-point tables, and the prediction bias
+reduces to the same nonnegative rounding expression. The proof uses histograms
+after residual calculation and hidden-RGB cleanup. Mode order, strict tie order,
+complete transform/reference search, guards, errors and cancellation checkpoints
+remain unchanged. Only the predictor runtime module changes in this checkpoint.
+
+All 500 active WebP parity rows pass: 266 decode and 234 encode rows, 968 public
+encode calls and zero panics. Five existing target-only fault contracts pass
+separately. Both intermediate variants retain all 168 alpha probe byte hashes
+and pixel matches. Seventy-two live-Pillow lossless calls match exact bytes,
+modes and pixels. The four new cases also pass through both public APIs in
+both the complete-search baseline and the optimized build, for sixteen calls.
+
+The first buffer-only pilot reduces six public-call medians by 4.38–10.99%.
+The combined pilot reduces them by 4.01–31.55%; both pilots retain every sample.
+The final benchmark keeps all eleven previous controls and adds six method-six
+controls, including varied-color palette and zero-plane inputs. Both builds
+first match live Pillow in all seventeen controls. Across 204 ABBA samples and
+three cycles on the shared Apple M3 Pro ARM64 host, median changes range from
+-41.77% to +2.26%. No control exceeds the 3% regression review threshold in two
+cycles. The raw-alpha control improves by 16.40%, the ordinary lossless RGB-noise
+control by 10.74%, and the ordinary method-five RGBA control by 30.11%. Palette
+chains with sixteen and seventeen colors improve by 25.56% and 30.94%.
+
+**The original performance regression remains open.** A separate twelve-sample
+paired comparison against the earlier incomplete-search implementation measures
+0.292 ms versus 4.678 ms on the raw-alpha control, a 16.00x latency ratio. Both
+outputs match Pillow for this control; the older build fails other parity
+inputs. The final diagnostic profile still places predictor entropy and
+histogram clustering among the largest costs. The measured reduction validates
+this optimization, without establishing the broader performance objective.
+
+Timing includes public encoding, output materialization and drop, with input
+reading and image construction outside the timed boundary. Uniform-RGB alpha
+controls measure alpha/overhead behavior and remain excluded from codec
+throughput ranking. No world ranking, full-codec speed ratio or x86 runtime
+speed claim follows from these ARM64 latency measurements.
+
+Coverage MCP leaves three predictor gap groups, two encoder groups and eight
+backward-reference groups. LLVM observes all eight branch outcomes in spatial
+cost, including both zero-population conditions, and all twenty in the borrowed
+histogram writer. All ten selected predictor-helper instantiations have no
+missing branch outcomes. Unchanged WebP modules show no newly observed or lost
+outcomes against the prior selected report; the changed predictor is excluded
+from coordinate comparison. No guard or coverage total is removed. Importer
+source identity remains unverified and per-test attribution unknown; separate
+hashes bind 129 runtime/build files and fixture/test setup before and after
+validation. These selected observations do not establish a new full-suite
+percentage or 100% coverage.
+Selected report: `.coverage-mcp/local-evidence/selected/20261101T185906.474877Z-4883ca79950248fd88a3458f89c57d95/coverage.json`.
+
+Strict default/all-feature/release/coverage Clippy, fixture/documentation guards,
+native WebP/all-feature contracts, WASM WebP Clippy/rustdoc, WASI all-feature
+Clippy and SSE2/AVX2 compile checks pass. No unit tests, unsafe code, dependencies,
+fault hooks, safety-check removals or coverage exclusions are added. Optional
+cancellation and neighboring predictor modes retain genuine absence meanings;
+the histogram helper continues to return `Result`.
+
+Checkpoint: `.coverage-mcp/local-evidence/parity/webp-crunch-cost-20261102/`.
+It retains baseline and candidate identities, both pilots, canonical parity
+references, selected coverage, every final and legacy-control timing sample,
+profiles and validation receipts. The original slowdown, remaining parity and
+coverage gaps, and x86 runtime measurements remain unfinished. All changes
+remain local and uncommitted on `develop` in
+`/Users/lazytrot/work/image-slash-star`; no additional branch or worktree is used.
+
+## WebP method-six search and opaque alpha flag — 2026-11-02
+
+Fourteen new input-driven parity rows cover method-six alpha ramps, palette
+boundaries, single-row and single-column inputs, modified-Zeng palette ordering,
+and opaque RGBA lossless headers. Five complete PNG sources come from the new
+input-only generator; pinned Pillow supplies all canonical expectations. Both
+ordinary and fresh-token public encoding must match exact bytes, decoded modes
+and pixels. All 3,394 prior matrix rows and 964 prior WebP canonical JSON rows
+remain unchanged. The whole matrix now contains 6,762 canonical JSON rows.
+
+Method six at internal quality 100 now evaluates the native transform order,
+including palette-plus-spatial prediction and both palette orderings. Strict
+size comparisons retain the first winner on ties. Cached and uncached backward
+references compete independently, and the original palette cardinality selects
+the native box-chain configuration. Trial pixels, palette adjacency and token
+buffers reuse bounded scratch allocations. An existing RGBA scan also records
+actual transparency for the VP8L header; opaque storage no longer sets an alpha
+hint that changes Pillow's decoded mode. Lower-method alpha palette settings
+and the method-five palette-plus-spatial search remain separate unfinished work.
+
+All 496 active WebP parity rows pass: 266 decode and 230 encode rows, 948 public
+encode calls and zero panics. Five existing target-only fault contracts pass
+separately. The 168-call alpha probe improves from 152 to 168 exact byte matches,
+with all pixel comparisons passing. A 36-input lossless probe matches bytes,
+modes and pixels through both public APIs, for 72 calls. Before the header fix,
+all 72 differed only in the opaque-alpha hint; that diagnostic observation did
+not alter canonical expectations. The independently built pinned native
+reference matches Pillow in twelve alpha and thirty-six lossless calls. Native
+traces identify eight inputs whose winning palette order is modified Zeng.
+
+Coverage MCP reports two encoder gap groups, both at the bounded-palette
+cardinality check in the method-six wrapper. The selected run observes all
+32 branch outcomes in modified-Zeng ordering and all 28 in each public writer
+instantiation. No guard or coverage total is removed. The predictor retains
+three gap groups and backward-reference selection retains eight. Unchanged
+WebP modules show no newly observed or lost outcomes against the prior selected
+report; the two changed modules are excluded from coordinate comparison.
+The importer still labels source identity unverified and per-test attribution
+unknown; separate hashes bind 129 runtime/build files and validation inputs.
+These selected observations do not establish a new full-suite percentage.
+Selected report: `.coverage-mcp/local-evidence/selected/20261101T183246.230908Z-ebd4865f55d249d7b68fddc2e7a83961/coverage.json`.
+
+**Performance remains unfinished.** The unchanged eleven-control benchmark
+retains 132 ABBA samples across three cycles on the shared Apple M3 Pro ARM64
+host. Both builds first match live Pillow in all controls. The method-six
+raw-alpha control regresses from 0.285 ms to 5.490 ms, a 19.25x latency ratio;
+all three cycles confirm the regression. The other ten median changes range
+from -1.39% to +1.22%, with none exceeding the 3% review threshold in two cycles.
+Sampling the complete public call places the largest costs in predictor entropy
+and histogram clustering during the expanded search. The profile is diagnostic,
+not a timing rank. Faithful search pruning and entropy/scratch optimization
+still need measurement; this checkpoint has not passed performance acceptance.
+
+The timing boundary includes public encoding, output materialization and drop;
+input reading and image construction are outside it. Cases that fail the old
+build remain correctness evidence, outside paired performance comparisons.
+Uniform-RGB alpha controls measure alpha/overhead behavior and are excluded from
+codec throughput ranking. No world ranking or x86 runtime speed claim follows.
+
+Strict default/all-feature/release/coverage Clippy, fixture/documentation guards,
+native WebP/all-feature contracts, WASM WebP Clippy/rustdoc, WASI all-feature
+Clippy and SSE2/AVX2 compile checks pass. No unit tests, unsafe code, dependencies,
+fault hooks, safety-check removals or coverage exclusions are added. Optional
+tokens, filters, metadata and unused search alternatives retain absence meanings;
+the optional earlier-method alpha path retains its complete checked fallback.
+
+Work-in-progress checkpoint:
+`.coverage-mcp/local-evidence/parity/webp-alpha-crunch-20261101/`.
+It retains source and artifact identities, intermediate negative results, native
+traces, parity references, coverage reports, validation receipts and every timing
+sample. The broader coverage and performance goal remains active. All changes
+remain local and uncommitted on `develop` in
+`/Users/lazytrot/work/image-slash-star`; no additional branch or worktree is used.
+
+## WebP alpha entropy and exact prediction — 2026-11-01
+
+Seventeen new input-driven parity rows cover method-dependent alpha entropy
+selection, a vertical ramp, discontinuous palettes with and without zero,
+transparent predictor row edges, and a single-row nonzero palette. Five new
+complete RGBA PNG sources extend the existing input-only generator. Pinned
+Pillow independently supplies encoded-byte and decoded-pixel references;
+ordinary and fresh-token public encoding must both match. All 3,377 prior
+matrix rows and 930 prior WebP canonical JSON rows remain unchanged. The
+whole matrix now contains 6,734 canonical JSON rows.
+
+Internal ALPH images store the alpha plane in green with A/R/B zero. Their
+predictor must preserve that green data even though the internal alpha channel
+is zero. A private predictor configuration now carries this exactness choice;
+ordinary lossless encoding retains its existing transparent-RGB cleanup.
+Non-palette ALPH candidates share the complete VP8L writer while omitting the
+standalone frame header. A three-histogram alpha entropy analysis preserves
+native cost, hash, predictor bias and tie order without building four-channel
+histograms. Method-zero palettes also retain the native implicit final zero
+entry when there are more than seventeen colors. This fixes the corresponding
+ordinary lossless palette case as well. The pinned libwebp 1.6.0 sources are
+the [alpha encoder](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/alpha_enc.c),
+[lossless encoder](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/vp8l_enc.c),
+[alpha dispatch](https://github.com/webmproject/libwebp/blob/v1.6.0/src/dsp/alpha_processing.c),
+[predictor](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/predictor_enc.c)
+and [palette ordering](https://github.com/webmproject/libwebp/blob/v1.6.0/src/utils/palette.c).
+
+All 482 active WebP parity rows pass: 266 decode and 216 encode rows, 878 public
+encode calls and zero panics. Five existing target-only fault contracts pass
+separately. The source-bound 168-call alpha probe improves from 96 to 152 exact
+byte matches, with no previously exact result lost; all 168 pixel comparisons
+pass. Two further ordinary lossless method-zero calls become byte-exact.
+Sixteen ordinary-input method-six calls still differ in ALPH bytes and remain
+open parity failures. Complete native method-six transform/palette-order
+crunching and cache selection remain pending.
+
+Coverage MCP leaves two gap groups in the native encoder, both in the existing
+Huffman writer. LLVM observes both arms of every branch in all sixteen selected
+alpha-helper function instantiations. The predictor retains three gap groups,
+including constant-generic alternatives; no guard or coverage total is removed.
+A same-source comparison before entropy-cost optimization shows ten newly
+observed outcomes and none lost after adding the four palette/predictor edge
+rows. Relative to the preceding accepted WebP selection, unchanged modules
+show one newly observed outcome and none lost. The three changed modules are
+excluded from that coordinate comparison. These are selected-lane observations,
+without per-test attribution or a new full-suite percentage or 100% claim.
+The importer still marks source identity unverified; separate local hashes bind
+129 runtime/build files and the fixture/test setup before and after validation.
+Selected report: `.coverage-mcp/local-evidence/selected/20261101T175729.088752Z-d79ca607efdd4f35b6791ea79d45dc69/coverage.json`.
+
+The first complete candidate caused a repeated 14.80% slowdown on the small
+method-six raw-alpha control. Profiling identified entropy cost evaluation in
+backward-reference selection. Bounded lookup tables replace repeated logarithms
+with the same rounded fixed-point values; the existing population streak walk
+now accumulates totals and evaluates repeated counts once. All 168 probe output
+hashes remain identical across these optimizations. The initial and intermediate
+measurements, including the regression, remain retained.
+
+On the shared Apple M3 Pro ARM64 host, the final 132 ABBA samples across three
+cycles and eleven live-Pillow-gated, unchanged-output controls show median
+changes from -23.09% to +1.04%. No control exceeds the 3% regression review
+threshold in two cycles. The ordinary lossless RGB-noise, RGBA-predictor and
+method-five RGBA controls measure -7.51%, -23.09% and -18.03% respectively.
+Input reading and image construction remain outside timing; public encode,
+output materialization and drop are timed. Uniform-RGB alpha controls measure
+alpha/overhead behavior and are excluded from codec throughput ranking. Fixed
+cases that fail the baseline are excluded from timing comparisons. No world
+ranking or x86 runtime speed claim follows.
+
+Strict default/all-feature/release/coverage Clippy, fixture/documentation guards,
+native WebP/all-feature contracts, WASM WebP Clippy/rustdoc, WASI all-feature
+Clippy and SSE2/AVX2 compile checks pass. x86 runtime execution remains unavailable
+on this host. No unit tests, unsafe code, dependencies, fault hooks, safety-check
+removals or coverage exclusions are added. The private optional non-palette
+result selects the complete checked palette fallback; optional filters, tokens
+and preceding rows retain documented absence meanings.
+
+Checkpoint: `.coverage-mcp/local-evidence/parity/webp-alpha-entropy-20261101/`.
+The verified inventory retains the final source, earlier variants, live probes,
+canonical references, selected-report identities, validation receipts and all
+benchmark samples. Changes remain local on `develop` in
+`/Users/lazytrot/work/image-slash-star`.
+
+## WebP low-effort alpha parity — 2026-11-01
+
+Eight new ordinary-input encode rows cover alpha palettes at the 16/17-color
+filter boundary, horizontal and combined ramps, and a deterministic noisy
+alpha plane at clipped 17x19 geometry. Their generator constructs five complete
+RGBA PNG inputs without consulting an encoder. Pinned Pillow independently
+generates exact encoded-byte and decoded-pixel references. The shared public
+runner checks ordinary and fresh-token encoding. All 3,369 prior matrix rows
+and 914 prior WebP canonical JSON rows remain unchanged; the current whole
+matrix has 6,700 canonical JSON rows.
+
+The lossy caller previously discarded its selected method before encoding
+alpha. The correction carries the method through private helpers and applies
+libwebp's method-zero palette order and low-effort reference/hash-chain policy,
+method-dependent quality for methods zero through three, and the FAST filter
+candidate policy. Methods zero through three skip the unfiltered trial when
+the estimated filter is non-NONE and there are at most 192 alpha values.
+NONE-first ties remain stable whenever both candidates are tried. The pinned
+primary sources are libwebp 1.6.0's
+[alpha encoder](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/alpha_enc.c)
+and [lossless encoder](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/vp8l_enc.c).
+Only two runtime modules change relative to the preceding method-two checkpoint.
+The existing default/high-effort single-configuration alpha settings remain
+pending complete entropy/transform and cruncher parity.
+
+All 465 active WebP parity rows pass: 266 decode and 199 encode rows, 793 public
+encode calls and zero panics. Five existing target-only fault contracts pass
+separately. A source-bound live probe across six alpha distributions, all seven
+methods, qualities zero/eighty and both public encode entry points improves
+from 80/168 to 96/168 exact byte matches, with no previously exact call lost.
+All 168 decoded pixel comparisons pass. The 16 newly exact calls use method
+zero. The remaining 72 ordinary-input failures differ only in ALPH; they remain
+open parity failures and are never counted as fault-contract successes.
+
+Coverage MCP reports two remaining branch-gap groups in the native encoder,
+both in the existing Huffman writer. LLVM observations cover both arms of
+every branch in all nine alpha-helper function instantiations. Unchanged WebP
+modules show 0 newly observed and
+0 previously observed outcomes absent relative
+to the preceding complete WebP selection. Changed modules are excluded from
+coordinate comparisons. This is selected-lane evidence; no new full-suite
+percentage, managed aggregate gain or 100% claim follows. The importer labels
+source identity unverified and test attribution unknown; separate local hashes
+bind 129 runtime/build files and the fixtures/test setup before and after.
+Selected report: `.coverage-mcp/local-evidence/selected/20261101T170626.125051Z-447babf52aab4da69eef68e94c940192/coverage.json`.
+
+On the shared Apple M3 Pro ARM64 host, 96 ABBA samples across three cycles and
+eight unchanged-output, live-Pillow-gated controls show median changes from
+-41.91% to +1.33%. No control exceeds the 3% regression review threshold
+in two cycles. Input reading and image construction remain outside timing;
+public encode, output materialization and drop are timed. Uniform-RGB alpha
+controls measure bounded alpha/overhead behavior and are excluded from codec
+throughput ranking. Fixed method-zero cases fail the baseline and are excluded
+from timing comparisons. A candidate that expanded histogram work and raised
+high-effort quality was rejected after repeated default/high-effort regressions;
+an independently rejected cache-cap change lost twenty previously exact calls.
+Both experiments and their failures remain retained. No world-ranking or x86
+runtime speed claim is made.
+
+Strict default/all-feature/release/coverage Clippy, fixture/documentation guards,
+native WebP/all-feature contracts, WASM WebP Clippy/rustdoc, WASI all-feature
+Clippy and SSE2/AVX2 compile checks pass. x86 runtime execution remains unavailable
+on this host. No unit tests, unsafe code, dependencies, new fault hooks,
+safety-check removals or coverage exclusions are added. The new private Option
+categories mean an absent filter or a deliberately omitted filter candidate;
+fallible work continues to return Result with its existing failure cause.
+
+Retained checkpoint:
+`.coverage-mcp/local-evidence/parity/webp-low-effort-alpha-20261101/`.
+It binds sources, inputs, references, binaries, commands, coverage observations,
+rejected experiments and timing receipts. All changes remain local on develop
+in `/Users/lazytrot/work/image-slash-star`. The complete alpha parity,
+100% coverage and fastest encoder/decoder goals remain unfinished.
+
+## WebP method-two encoder parity — 2026-11-01
+
+Six new ordinary-input encode rows cover neutral 16x16, clipped neutral 17x19
+and sparse 64x64 RGB sources at qualities zero and eighty. Their PNG generator
+constructs only input samples and complete stored-DEFLATE files; pinned Pillow
+independently generates exact encoded-byte and decoded-pixel references. Both
+ordinary and fresh-token public encode paths match. All 6,672 prior canonical
+JSON rows and 3,363 prior matrix rows remain unchanged.
+
+The inputs exposed two implementation errors: method two incorrectly used
+rate-distortion mode selection, and its single-segment statistics path finalized
+skip probabilities when libwebp retains defaults. The correction uses prediction
+distortion, fixed I4/I16/chroma mode penalties, the flat-border I16 rule and the
+macroblock header limit. Existing methods keep their original scoring work.
+The version-matched sources are libwebp 1.6.0's
+[mode refinement](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/quant_enc.c)
+and [statistics pass](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/frame_enc.c).
+Only four WebP runtime modules change relative to the preceding accepted
+monochrome-canvas checkpoint. No unit tests, unsafe code, dependencies, fault
+hooks, safety-check removals or coverage exclusions are added.
+
+All 457 active WebP parity rows pass: 266 decode and 191 encode rows, 753 public
+encode calls and zero panics. Five existing target-only fault contracts pass
+separately. Thirty-two additional live comparisons on thin horizontal/vertical,
+textured and interior-flat RGB inputs also match pinned Pillow at qualities
+zero, forty, eighty and one hundred. Measured sources, fixtures and test setup
+remain unchanged during the final complete WebP selection.
+
+Coverage MCP confirms that both token-aware skip-signaling true arms now
+execute. The ordinary path already observed these source branches in the prior
+full report: unchanged-source globally merged outcomes show zero new outcomes
+and 24 full-suite observations absent from this narrower WebP selection. This
+is path-specific evidence, not a managed aggregate gain or a new full-suite
+percentage. The shared I4 selection has zero missing branch groups in this
+selection; rejected specialization variants and their constant-branch gaps are
+retained separately. Current selected report:
+`.coverage-mcp/local-evidence/selected/20261101T163848.787996Z-5f51d9245caf4bf4a83fda6abf3a1035/coverage.json`.
+
+On a shared Apple M3 Pro ARM64 host, 144 ABBA samples across three cycles and
+twelve byte-parity-backed controls give median latency changes from -4.05% to
++0.85%. No control exceeds the 3% regression review threshold in two cycles.
+Inputs and construction stay outside timing; each public encode call, output
+materialization and drop are timed. Uniform controls are correctness/overhead
+checks and are not throughput-ranking evidence. The baseline fails the new
+method-two cases, so those cases are excluded from performance comparisons.
+Earlier candidates with small consistent legacy-method slowdowns or a repeated
+method-six regression were rejected and retained. No world-ranking or x86 speed
+claim follows from these ARM64 measurements.
+
+Strict default/all-feature/release/coverage Clippy, fixture/documentation guards,
+native WebP/all-feature contracts, WASM WebP Clippy/rustdoc, WASI all-feature
+Clippy and SSE2/AVX2 compile checks pass. x86 runtime execution remains unavailable
+on this host. Ordinary RGBA method-two probes still differ in their ALPH chunks
+at qualities zero/eighty, while their VP8/VP8X chunks and decoded pixels match;
+these are retained open parity failures, never fault-contract passes.
+
+Retained checkpoint:
+`.coverage-mcp/local-evidence/parity/webp-method-two-parity-20261101/`.
+Its manifest binds sources, inputs, references, binaries, failures, commands,
+coverage observations and timing receipts. The full 100% coverage and fastest
+encoder/decoder goals remain open.
+
+## AVIF monochrome canvas allocation — 2026-11-01
+
+The shared block walker now leaves normatively absent monochrome chroma planes
+and their coverage masks unallocated. It retains the coded/visible geometry,
+fallible luma allocation, overlap checks, completeness validation and all
+existing profile/tool limits. Color canvas callers explicitly retain all three
+planes. Only `entropy.rs`, `frame.rs` and `raster.rs` change among 129
+runtime/build files; no unit tests, fault hooks, dependencies, unsafe Rust,
+safety-check removals or coverage exclusions are introduced.
+
+An independent external malloc/calloc/realloc observer measures 4–24 fewer
+allocation events and 4,352–417,792 fewer requested bytes per complete public
+decode call across seven monochrome workloads. Three color controls have
+identical allocation traffic. A padded 256x256 monochrome tile omits 69,632
+requested bytes and four allocation events. Slopes across 100/200 iterations
+cancel fixed setup and warmups. These are requested allocation traffic counts,
+not peak/live/RSS memory; instrumented timings are excluded from latency results.
+
+Both source-bound release binaries match every live pinned Pillow frame on
+ten declared timing inputs. Across 120 ABBA samples in three cycles on a shared
+Apple M3 Pro ARM64 host, median changes range from -1.88% to +0.81%; none
+triggers the repeated 3% regression review threshold. The 12-bit 256x256 mixed
+sequence improves in all three cycles, with a 1.88% lower overall median.
+The partial-edge counterpart improves 1.04% overall with mixed cycle results.
+Other modes, native x86/SIMD speed and world ranking are not inferred.
+
+All 978 active AVIF parity rows pass: 973 decode and five encode rejection
+rows, six public encode calls and zero panics. Measured sources, fixtures and
+setup remain unchanged during execution. The new constructor branch is
+observed both ways. Unique branch outcomes in unchanged AVIF modules have no
+additions or losses; changed entropy/frame/raster coordinates are excluded
+from that comparison. Coverage MCP CLI queries retain the remaining gaps.
+Four existing malformed track-container cases fail in the earlier sample
+parser, before the inspector's repeated guards; those guards remain counted.
+Imports remain source-unverified with unknown test attribution, with separate
+local hashes binding measured files. This is selected evidence, not a full
+aggregate, managed numeric coverage gain or 100% claim.
+
+Strict stable/default/all-feature/release/nightly-coverage Clippy, native
+AVIF/all-feature contracts, WASM Clippy/rustdoc, WASI Clippy and SSE2/AVX2
+compile checks pass. Fixture/docs/whitespace checks and the source-unit-test
+guard pass. Sources, before/after release binaries, active AVIF inputs and
+references, raw resource/timing observations, selected reports and validation
+receipts are retained locally under
+`.coverage-mcp/local-evidence/parity/avif-monochrome-canvas-20261101/`.
+
+## AVIF monochrome multi-superblock parity — 2026-11-01
+
+Twenty-one complete monochrome sequences add 8/10/12-bit parity across
+256x256 frames and 132x128, 128x132, 252x256 and 256x252 partial-edge frames.
+The six previously unsupported high-depth inputs are reused byte for byte.
+Every new complete input returns `Unsupported` before this change and matches
+all live pinned Pillow frames afterward. Repeated native encodes reproduce
+both planar source and complete-input pins; construction reads no expected
+pixels and executes no Rust.
+
+The neutral single-tile lossy profile now admits frame axes through 256 pixels.
+It uses the existing checked multi-superblock walker, dynamic tile state and
+frame canvas; block/transform extents remain independently bounded. Grain,
+active post-filter and multi-tile admission retain their 128-pixel limits.
+The shared base helper takes the explicit dimension limit, preserving its
+other geometry, quantization, filter and tool checks. Existing block and
+safety checks remain; no unit tests, fault hooks or coverage exclusions are
+introduced. Only `entropy.rs` changes among 129 runtime/build files.
+
+All 978 active AVIF parity rows pass: 973 decode rows and five encode rejection
+rows, with six public encode calls and zero panics. All 6,630 preceding
+canonical reference rows preserve their public outcomes; only 257 loop-index
+receipt digests change when appending the new observations. There are now
+6,672 canonical input/output rows, 303 native loop cases and 278 validated
+sequence references.
+
+The selected native LLVM comparison observes no additional or missing unique
+branch outcomes in unchanged AVIF modules. Changed `entropy.rs` is excluded
+from that coordinate comparison; duplicate generic observations are merged by
+OR. These cases expand the supported public input space; they are not claimed
+as an unchanged-source numeric coverage gain. Coverage MCP CLI queries retain
+the remaining entropy, reconstruction, raster and frame gaps. Imports remain
+source-unverified with unknown test attribution, and separate local hashes
+bind the measured sources, fixtures and setup. This is selected evidence,
+not a full aggregate, managed incremental gain or 100% claim.
+
+Ten previously supported workloads match live Pillow before timing. Across
+120 ABBA measurements in three cycles, median latency changes range from
+-0.85% to +1.27%; none triggers the repeated 3% regression review threshold.
+The newly supported inputs are excluded from equivalent-work timing because
+the baseline rejects them. These shared Apple M3 Pro ARM64 measurements are
+a latency guard, not evidence of a speedup or a world ranking.
+
+Strict stable/default/all-feature/release/nightly-coverage Clippy, native
+AVIF-only and all-feature contract tests, strict WASM Clippy/rustdoc, WASI
+Clippy and SSE2/AVX2 compile checks pass. Native x86 execution and speed are
+not inferred from cross-compilation. Complete sources, before/after public
+outcomes, selected reports and validation receipts are retained locally under
+`.coverage-mcp/local-evidence/parity/avif-monochrome-wide-20261101/`.
+
+## AVIF wide color OBMC parity — 2026-11-01
+
+Thirty complete 256x256 sequences add gray and colored 8-bit I420/I422 controls
+and fractional-sample 10/12-bit I420/I422/I444 controls. The sinusoid, checker
+and localized-change recipes vary transform selection and retained frames.
+Repeated pinned Pillow/native encodes reproduce every complete input. The
+input-only generator reads no expected pixels and executes no Rust.
+
+Three 12-bit checker sequences exposed incorrect pixels in presented frame 3.
+The mismatch was already present in reconstructed YUV. Native scalar/NEON
+outputs agreed, and parsed motion vectors and references matched. The wide
+color path parsed OBMC but replaced its context with `None`. Passing the
+parsed context to the existing subsampling-aware predictor fixes all three
+complete-file regressions. Every frame now matches live pinned Pillow exactly.
+The other 128 runtime/build source files are unchanged; diagnostic edits are
+restored. No guards, unit tests, fault hooks or coverage exclusions are added.
+
+All 957 active AVIF parity rows pass: 952 decode rows and five encode rejection
+rows, with six public encode calls and zero panics. All 6,570 preceding
+canonical reference rows preserve their public outcomes; only 227 loop-index
+receipt digests change when appending the independent native observations.
+There are now 6,630 canonical input/output rows and 282 native loop cases.
+At this checkpoint, six exploratory 256x256 high-depth monochrome inputs
+returned `Unsupported` despite successful Pillow decoding. The later
+monochrome multi-superblock checkpoint above resolves these exact inputs.
+
+The selected native LLVM report observes eight additional unique branch
+outcomes in unchanged `block.rs`, with no prior outcome missing in unchanged
+AVIF modules. The coordinate comparison excludes changed `entropy.rs` and
+merges duplicate generic observations by OR. Coverage MCP CLI gap queries are
+retained for entropy, reconstruction and motion compensation. Imports remain
+source-unverified with unknown test attribution; separate local source hashes
+bind the executed campaign. This is selected evidence, not a refreshed full
+aggregate, managed incremental gain or 100% claim.
+
+Strict stable/default/all-feature/release/nightly-coverage Clippy and
+SSE2/AVX2 compile checks pass. AVIF-only and all-feature native contract tests,
+strict AVIF/all-feature WASM Clippy and rustdoc, and all-target/all-feature WASI
+Clippy pass. Compile checks establish no native x86 runtime or speed result.
+A latency guard runs nine previously correct public workloads with 108 ABBA
+samples over three cycles on Apple M3 Pro ARM64. Both binaries match live
+Pillow for each timed workload. Median changes range from -0.06% to +2.24%;
+none triggers the predeclared repeated 3% regression rule. Incorrect pre-fix
+inputs are excluded from equivalent-work timings. These shared-host controls
+do not establish a universal performance bound or an optimization gain.
+The source-bound probes, failed diagnostic attempts, complete inputs, exact
+frames, source snapshots, selected reports and validation receipts are retained
+locally under `.coverage-mcp/local-evidence/parity/avif-wide-obmc-20261101/`.
+
+## AVIF short reference signaling — 2026-11-01
+
+Twenty-four complete 64x64 I444 sequences add public lossless/lossy parity for
+short reference signaling. Two-frame cases cover aliased and distinct slots,
+tied order hints, the seven-bit half-range boundary and wraparound.
+Three-frame cases retain different key/inter images and reorder their hints.
+The input generator preserves every tile byte, sample extent and file length;
+it never consults expected pixels. Each pinned source encode is repeated.
+
+All 927 active AVIF parity rows pass: 922 decode rows and five encode rejection
+rows, with six public encode calls and zero panics. Live pinned Pillow supplies
+all new frame pixels; repeated native libavif observations supply loop counts.
+All 6,522 preceding canonical reference rows preserve their public outcomes.
+Only 203 existing loop-index receipts change when the 24 native observations
+are appended. There are now 6,570 canonical input/output rows.
+
+The selected native LLVM report observes 39 additional unique AVIF branch
+outcomes against the preceding 903-row selection: 24 in `frame.rs`, 13 in
+`entropy.rs` and two in `block.rs`. Runtime/build source hashes match across
+all 129 files, LLVM schemas and static outcome keys match, and duplicate
+generic observations are merged with OR. No previously observed AVIF outcome
+is absent. Coverage MCP identified the short-reference gap and retains the
+follow-up queries; imports remain source-unverified with unknown test
+attribution. This is selected evidence, not a refreshed full aggregate or 100%.
+
+Strict stable/default/all-feature/release/nightly-coverage Clippy, fixture and
+documentation checks, and the source-unit-test guard pass. All 8,853 measured
+source, fixture and setup hashes remain stable during coverage. Subsequent
+cleanup removes trailing spaces on 25 already-dirty manifest description lines;
+the measured manifest is retained and parsed YAML equality is verified.
+Current receipt/count updates retain historical coverage evidence. Matching
+runtime hashes reuse the preceding SSE2/AVX2 compile, AVIF feature and WASM
+checks; this fixture addition makes no new performance or native x86 claim.
+There are no new unit tests, Rust source changes, fault hooks or exclusions.
+
+Evidence is retained in
+`.coverage-mcp/local-evidence/parity/avif-short-reference-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T142647.085234Z-fb13a823232b4cfabd8871fe97a93215/coverage.json`.
+
+## AVIF equiprobable entropy refill — 2026-11-01
+
+The private range decoder now keeps window refill out of the equiprobable-bit
+reader's hot path. General symbol readers retain their original refill policy.
+A const parameter selects the policy at compilation; range arithmetic, CDF
+updates, overread checks, cancellation, error behavior and coverage observers
+are preserved. The native release equiprobable reader shrinks from 63 to 29
+instructions. General symbol code has identical relocation-normalized
+instructions; its placement and latency are still checked independently.
+Untimed native sampling observes the changed reader and outlined refill.
+
+Both source-bound release binaries match live pinned Pillow pixels, dimensions,
+modes and frame counts on nine declared public still/sequence workloads.
+Three ABBA cycles pass the initial and five-times-longer confirmation cohorts,
+with 108 process samples each. In the longer cohort, three grain workloads
+show 3.05%–3.25% lower latency and lossless monochrome shows 4.41% lower latency
+than the preceding Rust decoder. The other controls span 2.89% lower to 0.60%
+higher latency. No control exceeds the declared 3% overall plus two-of-three-
+cycle regression rule. These are shared-host Apple M3 Pro observations, not
+native x86 performance, a SIMD acceleration ratio or a world ranking.
+
+Four earlier candidates are rejected and retained with their exact source,
+binaries, plans, live parity gates and 432 timing samples. The broad refill
+outline regressed wide lossy animation by 5.43%; restricting the policy to
+equiprobable bits passes that control. No rejected CDF arithmetic remains.
+
+All 903 active AVIF parity rows pass: 898 decode rows and five encode rejection
+rows, with six public encode calls and zero panics. Strict stable/default/
+all-feature/release/nightly-coverage Clippy, SSE2/AVX2 compile checks, 68 AVIF
+feature contracts, AVIF-only WASM Clippy/rustdoc and fixture/documentation
+checks pass. All 8,293 measured source, fixture and setup hashes stay unchanged
+during the coverage run. Only `src/codecs/avif/av1/entropy.rs` differs among the
+129 runtime/build files from the preceding grain checkpoint. There are no new
+parity rows, codec unit tests, fault hooks, dependencies, unsafe code, coverage
+exclusions or `Option` categories.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/avif-range-refill-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T135603.559569Z-b04775a09fe441d799923389e4ed451d/coverage.json`.
+Coverage MCP CLI queries retain the remaining entropy gaps. Imports remain
+source-unverified with unknown test attribution; local hashes provide separate
+provenance. This selected run does not refresh the full aggregate or establish
+100% coverage. Work remains uncommitted on `develop` in the single checkout at
+`/Users/lazytrot/work/image-slash-star`; the broader goal remains open.
+
+## AVIF film-grain depth and inactive-plane parity — 2026-11-01
+
+Thirty-four new complete 64×64 AVIF manifest inputs cover 10/12-bit
+monochrome, I420, I422 and I444 film-grain displays, overlap with restricted
+clipping, and 8/10/12-bit U-only, V-only and zero-active-point controls.
+Deterministic full-range Y4M sources include saturated endpoints and
+fractional scaling indices. Repeated pinned native encodes are byte-stable;
+all header rewrites preserve their lossless tile bytes and sample/file
+extents. Every input matches live pinned Pillow pixels through the public
+Rust decoder. All 6,454 preceding JSON reference rows across 32 documents
+remain unchanged.
+
+The selected campaign passes all 898 active AVIF decode parity rows, with
+8,293 source, fixture and setup hashes unchanged across execution. Strict
+stable/default/all-feature/release/nightly-coverage Clippy, fixture and
+documentation checks, and the source unit-test guard pass. The new generator
+has an encoder-free read-only check; the existing color-grain writer now
+accepts valid chroma-only updates and accurately labels checked inputs.
+All 129 runtime/build hashes match the preceding JPEG FDCT checkpoint, so
+its matching-source SSE2/AVX2 compile checks and performance evidence remain
+reusable. No runtime arithmetic, dispatch, dependencies, unsafe code, codec
+unit tests, fault hooks, coverage exclusions or `Option` categories changed.
+
+A local LLVM review identifies 21 AV1 branch outcomes absent from the
+preceding full native baseline: sixteen in grain synthesis and five in
+entropy admission. Both files retain identical source hashes and static
+branch identities. Selected grain coverage is 174/224 branches (77.6786%),
+versus 159/224 (70.9821%) in the preceding full baseline. One previously
+observed grain outcome and 223 entropy outcomes are absent from this narrower
+selection; these are not established regressions. This comparison is not an
+updated full aggregate or a managed incremental coverage claim. Defensive
+checks and the remaining gaps stay in the denominator.
+
+Retained source, complete inputs, oracle outputs, byte-stability and tile
+receipts, actual Coverage MCP CLI queries, and acceptance logs are in
+`.coverage-mcp/local-evidence/parity/avif-high-depth-grain-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T131048.532671Z-3a6057d0b01044b8afc7b23987d363c4/coverage.json`.
+Coverage MCP imports remain source-unverified and test attribution unknown,
+with summary/detail reconciliation limits; source hashes provide separate
+local provenance. The runtime is unchanged, so no new speed claim or native
+x86 runtime result is inferred. Work remains local and uncommitted on
+`develop` in `/Users/lazytrot/work/image-slash-star`, with one registered
+checkout. The broader coverage and performance goal remains open.
+
+## JPEG FDCT constant-vector broadcasts — 2026-11-01
+
+The private SIMD vector trait now const-evaluates complete fixed broadcasts.
+FDCT arithmetic, scaling, rounding, layouts, and dispatch are preserved.
+Both native release four-block kernels contain zero memory-fill call sites,
+down from forty each; untimed native sampling observes the affected FDCT in
+both binaries. Fixed vector construction remains safe Rust.
+
+Twelve new ordinary public encode parity cases cover minimum/maximum samples,
+saturated checkerboards and stripes, aligned block batches and tails, all
+three grayscale/RGB/CMYK modes, baseline Q100, and progressive Q1. Both release
+binaries and live pinned Pillow produce identical bytes for all twelve.
+All 6,430 preceding JSON reference rows across 32 documents remain unchanged.
+The affected selection passes 715 JPEG parity rows (570 decode, 145 encode),
+including 699 public encode calls with zero panics, plus thirteen existing
+target-only fault contracts counted separately.
+
+All fifteen predeclared full-encode workloads pass baseline/candidate/live
+Pillow byte gates and the unchanged 3% overall plus two-of-three-cycle
+regression review rule. Their 180 ABBA samples span RGB 4:4:4/4:2:2/4:2:0,
+128/512-pixel square inputs, baseline/progressive, quality endpoints,
+optimized/restart, grayscale, CMYK, and small-image controls. Observed latency
+is 6.82%–51.63% lower than the preceding Rust implementation. These are local
+shared-host Apple M3 Pro observations; native x86 performance and a world
+ranking remain unmeasured.
+
+Formatting, strict stable/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile checks, JPEG-only WebAssembly Clippy/rustdoc, and all 68
+JPEG-feature integration contracts pass. Source receipts bind the same 129
+runtime/build files. Fixture/documentation checks and the source unit-test
+guard pass. No codec unit tests, fault hooks, dependencies, unsafe code,
+coverage exclusions, or `Option` categories were added. The defensive default
+descale arm remains visible and unexecuted in the selected coverage report.
+
+Complete inputs, outputs, binaries, source snapshots, rejected preparation
+attempts, profiles, disassembly, commands, timing samples, and Coverage MCP
+CLI queries are retained in
+`.coverage-mcp/local-evidence/parity/jpeg-fdct-const-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T124941.097512Z-7b83de8eec4249999654a67cdb1725e2/coverage.json`.
+Imports remain source-unverified and test attribution unknown, with
+summary/detail reconciliation limits. The full baseline below predates this
+encoder change; no updated full aggregate, incremental gain, or per-file
+100% claim is inferred. Work remains local, uncommitted and unpushed on
+`develop` in `/Users/lazytrot/work/image-slash-star`, with one registered
+checkout. The broader coverage and performance goal remains open.
+
+## Full native baseline after JPEG dequantization — 2026-11-01
+
+The full native campaign passes all 139 checks in six executables (4, 1, 57,
+7, 1, and 69). All 8,195 source, fixture, and test-setup hashes remain unchanged
+across execution. Native LLVM reports 100,033/141,130 lines (70.8800%),
+20,056/31,738 branches (63.1924%), 5,580/9,083 functions (61.4334%), and
+152,576/218,929 regions (69.6920%). Release floors pass without exclusions.
+
+This is the local pre-FDCT-constant optimization baseline, based on `develop`
+`69a79d4c4` with uncommitted changes. It does not extend to later source or
+new fixtures and does not replace the historical managed claim ledger.
+Coverage MCP CLI imports remain source-unverified and test attribution
+unknown. Source snapshots and before/after hashes supply separate local
+provenance; function-group gaps are not unique LLVM branch totals.
+
+The largest missing branch totals remain in AV1 entropy and block
+reconstruction. The retained full report and actual CLI query commands are in
+`.coverage-mcp/local-evidence/full/20261101-dequant-final/`.
+
+## JPEG signed-word dequantization and IDCT parity — 2026-11-01
+
+Native JPEG reconstruction now retains low signed-word dequantized products
+and the upstream butterfly's signed-word pre-additions. Sequential DC storage
+narrows to the signed 16-bit JCOEF boundary while the predictor retains full
+precision. Complete const evaluation of SIMD broadcasts avoids release
+memory-fill calls; fixed eight-element transforms avoid out-of-line array
+mapping. The final kernel uses the complete native-word arithmetic throughout,
+without the experimental bounded-column admission or a new fallback category.
+
+Fifty-eight complete grayscale JPEG manifest inputs cover 35 preceding-target
+pixel bugs and 23 preserved controls. They include sequential and progressive
+scans, 8×8 and partial 17×9 blocks, positive and negative coefficients, wide
+quantizers, both horizontal halves, and dense coefficient patterns. All 528
+exploratory inputs now match pinned Pillow: 226 previously mismatched and 302
+were already exact. All 99 preceding public probes were rerun successfully.
+Official instrumented libjpeg-turbo 3.1.4.1 independently reproduces all 528
+Pillow outputs; every native C command exits zero. These diagnostics are not
+additional canonical parity rows. All 6,314 preceding JSON reference rows
+across 32 documents remain unchanged.
+
+The final affected selection passes 703 JPEG parity rows (570 decode and 133
+encode), including 639 public encode calls with zero panics, plus thirteen
+existing target-only fault contracts reported separately. Formatting, strict
+stable/default/all-feature/release/nightly-coverage Clippy, SSE2/AVX2 compile
+checks, JPEG-only WebAssembly Clippy and rustdoc, and all 68 JPEG-feature
+integration contracts pass. Source receipts bind the same 129 runtime/build
+files. Fixture/documentation checks and the source unit-test guard pass.
+No codec unit tests, fault hooks, dependencies, unsafe code, source exclusions,
+or `Option` categories were added. The existing checked-dequantization
+admission and its complete checked fallback remain visible.
+
+All failed arithmetic and code-generation experiments and their measurements
+remain retained. The first final-kernel short campaign triggered review at
+6.43% higher latency on one progressive RGB control while cycles varied and
+background workloads were active. The follow-up repeats every one of the ten
+exact baseline/candidate/live-Pillow controls with the same binary and input
+identities and fivefold samples. Every control clears the unchanged 3% overall
+plus two-of-three-cycle rule. Observed latency ranges from 1.28% higher to
+0.66% lower; the DC-only control is 0.19% higher. Both campaigns remain bound
+to the review. These shared-host Apple M3 Pro observations establish neither
+zero overhead nor native x86 speed or a world ranking.
+
+Coverage MCP CLI branch queries and their selected report are retained.
+Imports remain source-unverified and test-attribution unknown, with
+summary/detail reconciliation limits. Static arithmetic review is not
+execution coverage. No full-repository refresh, per-file 100% claim, or
+incremental aggregate gain is inferred.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/jpeg-dequant-width-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T121938.974472Z-a03c2a3184144f7c8a2dbec9d5a26d93/coverage.json`.
+All work remains local, uncommitted and unpushed on `develop` in
+`/Users/lazytrot/work/image-slash-star`. No new branch or worktree was created.
+The broader coverage and performance goal remains open.
+
+## Empty progressive JPEG scans with declared restart intervals — 2026-11-01
+
+Empty progressive scans now reach the existing padded-bit reader even when a
+restart interval is declared. Previously an empty DC scan before a comment
+marker was dropped, preserving coefficients that pinned Pillow replaces.
+The nonempty restart-segment extractor and defensive empty-list check remain.
+The optional extracted-segment value describes the absence of extraction;
+its alternate path is the complete existing reader. No fallible operation was
+changed to return `Option`.
+
+Twenty complete 17×9 grayscale manifest inputs cover positive and negative
+coefficients, DC and AC scans, intervals 1 and 65,535, absent DRI, and following
+comment, scan, and EOI markers. Four reproduce incorrect preceding-target
+pixels; sixteen are preserved controls. All twenty now match live pinned
+Pillow, and all 79 preceding public probes were rerun successfully. The native
+official libjpeg-turbo diagnostic also reproduces all twenty Pillow outputs;
+its warning exit status is 2, recorded separately from canonical parity.
+All 6,274 preceding JSON reference rows across 32 documents remain unchanged.
+
+The affected selection passes 645 JPEG parity rows (512 decode, 133 encode),
+including 639 public encode calls with zero panics, plus thirteen existing
+target-only fault contracts reported separately. Formatting and strict
+stable/default/all-feature/release/nightly-coverage Clippy pass. SSE2/AVX2
+Clippy compile checks, JPEG-only WebAssembly Clippy and rustdoc, and all 68
+JPEG-feature integration contracts pass. The receipts bind the same 129
+runtime/build source hashes. Fixture/documentation checks and the source unit
+test guard pass; no codec unit tests, fault hooks, dependencies, unsafe code,
+or source exclusions were added.
+
+Eight exact baseline/candidate/live-Pillow full-decode controls clear the
+unchanged 3% overall plus two-of-three-cycle regression review rule. They
+include ordinary progressive images with actual restart markers. Observed
+latency ranges from 0.46% higher to 10.57% lower; paired cycles vary, and the
+DC-only control is 0.38% higher. These local Apple M3 Pro observations establish
+neither zero overhead nor a native x86 or world-speed result.
+
+Coverage MCP CLI branch queries retain no missing IDCT function groups and
+three progressive groups. The empty-scan investigation found real parity
+bugs, while the defensive empty-segment-list observation remains uncovered.
+A parser-invariant review explains why that state appears unreachable after
+the fix. The zero-denominator and checked-dequantization guards also remain
+visible. Imports are source-unverified, test attribution is unknown, and
+summary/detail reconciliation limits apply. No full-repository coverage
+refresh, per-file 100% claim, or incremental aggregate gain is inferred.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/jpeg-empty-progressive-scans-20261101/`.
+The selected report is `.coverage-mcp/local-evidence/selected/20261101T112711.504752Z-7c5199cace634205ae08c7fae2e8f5f2/coverage.json`.
+All work remains local, uncommitted and unpushed on `develop` in
+`/Users/lazytrot/work/image-slash-star`. No new branch or worktree was created.
+The broader coverage and performance goal remains open.
+
+## Progressive JPEG partial smoothing and general workspace boundary — 2026-11-01
+
+The decoder now follows the precision of the first AC bands when estimating
+unknown zero coefficients. Accurate zeros and received nonzero coefficients
+are preserved; positive precision limits the prediction magnitude. DC-only
+interpolation retains any coefficients received in higher bands and follows
+upstream's current-iMCU row selection, including padded neighbors at a partial
+final MCU. Unknown DC or a zero first-ten quantizer disables optional smoothing.
+Missing tables still reach the existing checked reconstruction error.
+
+The diagnostic smoothing phase matched all 60 retained upstream coefficient
+inputs but still differed on twelve final images. The next observed boundary
+was the general first-pass workspace: upstream stored -4629 where the preceding
+target retained 60907. The native general transform now narrows that workspace
+with NEON truncation or SSE2/AVX2 signed saturation. The existing zero-vertical-AC
+correction remains. This is a correction of the observed boundary, not a claim
+that every arithmetic state or target has been exhaustively verified.
+
+Thirty-one new complete-input manifest cases cover 27 actual pixel regressions
+and four nearby controls. All 79 public probes match pinned Pillow: the 60
+coefficient probes now all pass, eighteen smoothing/scan controls pass, and a
+complete AC-only file with no DC scan exercises disabled smoothing. All 52
+previously matching probes remain exact. The twelve mismatches from the
+preceding checkpoint are resolved. Existing 6,212 JSON reference rows across
+32 documents remain unchanged; all 6,272 rows present before the final AC-only
+addition also remain unchanged. No codec unit tests, fault hooks, dependencies,
+unsafe code, or coverage exclusions were introduced.
+
+The final affected selection passes 625 JPEG parity rows (492 decode and 133
+encode), including 639 public encode calls with zero panics, plus thirteen
+existing target-only fault contracts reported separately. Strict formatting,
+default/all-feature/release/nightly-coverage Clippy, SSE2/AVX2 compile-only
+Clippy, JPEG-only WebAssembly Clippy and rustdoc, and all 68 JPEG-feature
+integration contracts pass. These receipts share 129 runtime/build source
+hashes; fixture integrity, documentation, and the source-unit-test guard pass.
+
+Every timed full decode first matched baseline/candidate/live pinned Pillow
+pixels. Initial width-correct candidates regressed progressive RGB controls;
+outlining alone and a packed-workspace experiment were rejected. Contiguous
+natural-order coefficient reconstruction and short-circuit sparsity checks
+recovered the common-path cost. A separate DC-only control caught a 22.14%
+regression. Inlining neighbor lookup reduced it to 6.91%; avoiding copies of
+known-zero AC storage and narrowing only newly synthesized coefficients reduced
+the final observed cost to 2.72%. Every trial remains retained.
+
+The final ordinary-production-link A-B-B-A campaign clears the unchanged 3%
+overall plus two-of-three-cycle review rule on eleven exact-output controls.
+Progressive RGB 4:4:4 latency is 5.44% lower locally; the other ordinary-image
+controls range from 0.71% higher to 2.49% lower. Some paired cycles vary in sign.
+The DC-only cost remains explicit. These Apple M3 Pro results establish neither
+zero overhead, native x86 speed, nor a world ranking.
+
+Coverage MCP CLI branch queries on the final selected report list no missing
+IDCT observations and three progressive function groups. The AC-only input
+closes the unknown-DC observation. Remaining observations concern empty entropy
+segment lists, a zero smoothing denominator, and the checked dequantization
+fallback and its caller. The empty-segment path needs complete-input
+investigation; the arithmetic guards remain visible with a static reachability
+review. Imports remain source-unverified and test-attribution unknown, with
+summary/detail reconciliation limits. No fresh full-repository total,
+per-file 100% claim, or aggregate incremental coverage gain is inferred.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/jpeg-partial-smoothing-20261101/`.
+The final selected report is
+`.coverage-mcp/local-evidence/selected/20261101T110957.120180Z-f5066647d1754d289bcebccc9907b245/coverage.json`.
+The preceding immutable checkpoint's 764 files were reverified before reusing
+its official libjpeg-turbo 3.1.4.1 source, native trace executable, and pinned
+Pillow reproduction. Diagnostic phases retain their distinct source identities.
+All changes remain local, uncommitted and unpushed on `develop` in
+`/Users/lazytrot/work/image-slash-star`; no new branch or worktree was created.
+Native SSE2/AVX2 execution, complete coverage, and the broader speed goal remain
+open.
+
+## JPEG zero-vertical-AC workspace boundary — 2026-11-01
+
+This preceding checkpoint is retained below; the partial-smoothing section
+above records the subsequent correction of its twelve remaining probes.
+
+The native IDCT now preserves the signed 16-bit workspace of upstream's
+zero-vertical-AC shortcut when its first-pass result overflows that width.
+The common transform first checks the scaled DC range; the bitmap check and
+workspace correction are outlined. Neon admits four columns at a time;
+SSE2 and AVX2 require zero vertical AC across all eight. Raw coefficients
+select the shortcut, so a zero quantizer cannot change admission. No general
+transform, defensive fallback, dependency, feature, or unsafe policy changed.
+
+An instrumented build from the official libjpeg-turbo 3.1.4.1 source archive
+reproduces default pinned Pillow 12.2.0 on all 60 retained complete coefficient
+probes. Bounded traces show the first storage difference for coefficient 8192
+and quantizer one: upstream stores -32768 after its word-sized shift, while
+the preceding target stores 32768. Feeding the observed reference coefficient
+block to the preceding transform reproduces the public target's wrong pixels.
+The [Neon shortcut](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/simd/arm/jidctint-neon.c)
+and [SSE2 shortcut](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/simd/x86_64/jidctint-sse2.asm)
+are retained with the original archive, trace patch, executable, and hashes.
+Only initialized workspace cells are traced; no tracing enters production.
+
+The correction fixes 29 probe mismatches and preserves all 19 previously
+matching files. Twelve multi-block first-scan files remained mismatched at
+that checkpoint.
+Their reference traces insert partial-smoothing coefficients that the current
+decoder omits: for example, natural-order positions 2, 8, and 16 become 352,
+6880, and -1920. The current smoothing path handles DC-only scans, while
+upstream also estimates zero coefficients whose precision is incomplete.
+Precision-aware partial smoothing and the general transform's intermediate
+widths were the next work. The current section above resolves these files;
+they were not counted as passing parity in the preceding checkpoint.
+
+Forty-two new input-only manifest cases add the 29 regressions and thirteen
+nearby controls; six earlier coefficient guards are reused. Selected execution
+passes all 594 JPEG parity rows (461 decode and 133 encode), including 639
+public encode calls and zero panics, plus thirteen existing target-only fault
+contracts reported separately. All 6,128 prior reference rows remain unchanged.
+No codec unit tests, fault hooks, or coverage exclusions were added.
+
+Strict formatting/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc,
+all 68 JPEG-feature integration contracts, fixture integrity, documentation,
+and the no-source-unit-test guard pass. After the cold-hint experiment was
+reverted, all 129 runtime/build source hashes exactly matched the checked
+outlined version, so its unchanged-source receipts are reused. This batch has
+affected selected LLVM evidence; it does not refresh full-repository totals
+or establish an aggregate incremental coverage gain. Coverage MCP imports
+remain source-unverified with summary/detail reconciliation limitations.
+Its IDCT query lists two missing branch observations for the same remaining
+path: an overflowing column group with nonzero vertical AC makes the helper
+decline the shortcut and the caller retain the general transform. These are
+kept visible while the general transform's width behavior is investigated.
+
+Every timed full decode first matched baseline/candidate/live Pillow pixels.
+The eager bitmap implementation was 10.63–16.35% slower on three progressive
+RGB controls and was rejected. Outlining put nine of ten overall controls
+within 2.6% of baseline; CMYK progressive was 3.63% slower overall, with only
+one paired cycle beyond 3%. A cold compiler hint then regressed progressive
+RGB controls 7.13–13.50% and was reverted. All three cohorts and exact
+executables remain retained. Five-cycle diagnostics with tenfold iterations
+on four concerning controls measured RGB progressive 4:2:0 and 4:2:2 latencies
+0.78% and 0.62% higher, baseline RGB 4:4:4 2.01% higher, and CMYK progressive
+2.57% lower. Both cohorts are retained; CMYK results vary between them.
+The restored candidate clears the declared 3% review trigger on these controls,
+without changing that threshold. The small observed costs remain explicit:
+no zero-overhead, native x86 speed, or global ranking claim follows.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/jpeg-idct-workspace-20261101/`.
+The restored candidate's selected report is
+`.coverage-mcp/local-evidence/selected/20261101T100532.208699Z-e777a791754743a694aede511138a6f7/coverage.json`;
+the cold-hint report is separately retained with that rejected experiment.
+All work remains local, uncommitted and unpushed on `develop` in
+`/Users/lazytrot/work/image-slash-star`. Native SSE2/AVX2 execution, complete
+coverage, and the broader performance goal remain open. The current section
+above resolves the twelve smoothing cases.
+
+## Progressive JPEG coefficient storage — 2026-11-01
+
+Progressive coefficient blocks now store signed 16-bit `JCOEF` values directly,
+reducing their payload from 256 to 128 bytes per block. DC predictors,
+smoothing, dequantization, and IDCT arithmetic retain their wider types.
+First-scan writes still narrow explicitly; refinement uses equivalent 16-bit
+wrapping arithmetic. No defensive branch, overflow fallback, dependency,
+feature, or unsafe code was added or removed. The
+[pinned coefficient definition](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/src/jmorecfg.h)
+and progressive decoder sources are retained with hashes.
+
+Six new complete public Pillow parity fixtures cover signed coefficient writes
+at category 15 / Al 12 and both signs through all twelve DC/AC refinement
+stages. The affected selection passed 552 JPEG parity rows (419 decode and
+133 encode), including 639 public encode calls and zero panics, plus 13
+pre-existing target-only fault contracts reported separately. All 6,116 prior
+reference rows remain unchanged. No unit tests, new fault hooks, coverage
+exclusions, or regenerated canonical results for mismatching inputs were used.
+
+Strict formatting/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc,
+all 68 JPEG-feature integration contracts, fixture integrity, documentation,
+and the no-source-unit-test guard passed. Build, lint, target, and selected
+coverage receipts identify the same 129 source/build files. The full native
+report in the JFIF section below is the preceding baseline; the current
+coefficient representation and six new fixtures have affected selected
+coverage evidence, not refreshed full-repository totals. Coverage MCP remains
+source-unverified with summary/detail reconciliation limitations, so no
+aggregate incremental-gain claim is made.
+
+With ordinary production linking, a three-cycle A-B-B-A campaign compared ten
+complete public decode workloads against the preceding Adobe-marker baseline.
+Every timed input first matched full baseline/candidate/live Pillow pixels.
+Overall latency medians stayed within 1.4% of baseline. A five-cycle diagnostic
+with tenfold iterations measured RGB 128×128 progressive 4:2:0, 4:2:2, and 4:4:4
+latencies 2.16%, 2.87%, and 2.15% lower; grayscale was 1.57% higher. Both cohorts
+are retained. The combined JFIF fix and coefficient change clear the declared
+3% regression review trigger on these controls. These local Apple M3 Pro
+measurements establish neither zero overhead nor native x86 SIMD speed.
+
+A separate historical 60-input coefficient-boundary probe found identical baseline and
+candidate pixels for every file. Only 19 matched default pinned Pillow; the
+other 41 exposed pre-existing IDCT differences at that checkpoint. The
+workspace correction above resolves 29, and the latest partial-smoothing
+checkpoint resolves the remaining twelve. Six matching
+guards were added to the matrix without counting the mismatches as parity.
+A diagnostic Pillow process with SIMD disabled changed 52/60 oracle outputs
+and matched the target on only eight, so it is not substituted for the default
+oracle. The full inputs and all observed pixels remain available for tracing
+the first arithmetic divergence.
+
+Retained source, executables, all timing cohorts, 60 probes, six fixture
+references, verification logs, coverage receipts, and checksums are in
+`.coverage-mcp/local-evidence/performance/jpeg-progressive-i16-20261101/`.
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261101T093923.951210Z-21c71ef685a4454089d80e56743a0915/coverage.json`.
+An earlier diagnostic forced equal progressive function placement and changed
+the timing gaps, supporting placement sensitivity as a contributor; it is
+retained separately under `performance/jpeg-progressive-placement-20261101/`.
+An outlined Huffman fallback was slower and reverted; its evidence is retained
+with this batch. No production linker flags changed. The workspace checkpoint
+above records progress on the 41 IDCT differences. Native SSE2/AVX2 execution,
+complete coverage, and a global performance ranking remain open. Work remains
+local on `develop`, uncommitted and unpushed.
+
+## JPEG JFIF payload boundaries — 2026-11-01
+
+**Historical minimal-fix checkpoint: correctness passed; performance was open.**
+The combined source is evaluated in the coefficient-storage section above.
+The minimal parser/inspector fix rejects recognized pre-scan JFIF payloads
+that omit either mandatory version byte. It preserves Pillow's acceptance of
+missing density/thumbnail fields, a missing NUL after `JFIF`, unrecognized APP0
+signatures, and short APP0 metadata after the scans. The pinned installed
+Pillow 12.2.0 JPEG handler and its hash are retained with the reproductions.
+
+Thirty new input-only public parity rows cover baseline and progressive RGB
+JPEGs, payload lengths 0, 4–8, and 11–14, signature variations, and three short
+post-scan payloads. The original implementation matched 24 and incorrectly
+accepted six malformed headers. The minimal fix matches all 30 complete files
+and all 90 direct detection/inspection/decode outcomes against live pinned
+Pillow. The affected campaign passed all 546 JPEG parity rows (413 decode and
+133 encode), 639 public encode calls with zero panics, and all 13 existing
+target-only fault contracts reported separately. All 6,056 prior reference
+rows remain unchanged. No unit tests, fault contracts, hooks, or exclusions
+were added.
+
+The fresh full native coverage run passed 139 integration checks across six
+binaries, with all 7,881 source, fixture, and setup file hashes unchanged
+during the run. Native LLVM reports lines 99,965/141,061 (70.87%), branches
+20,027/31,708 (63.16%), functions 5,564/9,067 (61.37%), and regions
+152,467/218,819 (69.68%); the release floors pass. The unchanged JFIF payload
+length condition's false arm increased from zero to 36 hits, and the Coverage
+MCP parser query lists four missing-branch groups instead of five. These are
+bounded observations, not an aggregate incremental-gain claim: imports remain
+source-unverified and the summary/detail reconciliation limitation remains.
+
+Strict formatting/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc,
+all 68 JPEG-feature integration contracts, fixture integrity, documentation,
+and the no-source-unit-test guard passed on the recorded minimal source.
+After the optimization experiments were reverted, all 129 recorded runtime,
+Cargo, and benchmark source hashes matched that checked source exactly, so
+the unchanged-source test evidence is reused.
+
+The minimal fix's three-cycle, ten-workload local A-B-B-A campaign flagged
+progressive controls: RGB 128×128 4:2:0 was 9.39% slower, 4:2:2 was 12.04%
+slower, 4:4:4 was 5.06% slower, and grayscale was 6.38% slower. Timed inputs
+first passed exact baseline/candidate/live Pillow pixel comparisons. Profiling
+places most CPU time in progressive entropy decoding; baseline and candidate
+progressive reconstruction have the same instruction count and mnemonic
+counts, with relocation differences. This does not establish the regression's
+cause. Validator/refinement call boundaries, bounded counter increments, and
+four-byte/full-word refill experiments did not resolve the concern and were
+reverted. Both saved executables rebuilt byte-identically. Five-cycle
+diagnostics with tenfold iterations confirmed RGB medians 9.30%, 11.76%, and
+5.74% slower; grayscale was 3.00% slower overall with mixed cycle results.
+Both campaigns remain retained, and the original 3% review threshold was not
+widened. Diagnostic-only optimization trials do not constitute parity or
+accepted optimization evidence. The x86-64 runtime availability probe on this
+host failed with `Bad CPU type in executable`; SSE2/AVX2 evidence remains
+compile-only. No SIMD speedup, zero-overhead, native x86 runtime, 100% coverage,
+or global ranking claim follows from this batch.
+
+Retained evidence is in
+`.coverage-mcp/local-evidence/parity/jpeg-jfif-boundaries-20261101/`, including
+the open performance status, immutable executables, exact source snapshots,
+rejected experiments, profiles, coverage receipts, and artifact hashes. The
+full native report remains at
+`.coverage-mcp/local-evidence/full/20261101-jfif-final/coverage.json`.
+All work remains in `/Users/lazytrot/work/image-slash-star` on local `develop`,
+uncommitted and unpushed. The performance concern described here applies to
+this saved minimal-fix checkpoint; its measurements remain retained.
+
+## JPEG Adobe marker precedence and color defaults — 2026-11-01
+
+JPEG color interpretation now follows the last valid Adobe APP14 marker before
+the first scan. Later markers remain retained metadata and cannot change the
+header's color choice. Previously the parser kept the first recognized marker,
+and a first marker after the scans could incorrectly reinterpret unmarked CMYK.
+Four-component JPEGs also follow libjpeg's YCCK default for unsupported nonzero
+Adobe transforms. The parser normalizes those values once when it captures the
+header interpretation; the raw APP14 payloads remain intact. Baseline and
+progressive reconstruction source files are identical to the preceding batch.
+The [pinned marker reader](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/src/jdmarker.c)
+and [header color defaults](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/src/jdapimin.c)
+are retained with source hashes alongside the live Pillow observations.
+
+Forty new ordinary public decode rows cover both RGB and CMYK, baseline and
+progressive scans, conflicting and matching duplicate markers, first and
+conflicting post-scan markers, eleven-byte Adobe payloads, unrecognized APP14
+signatures, and unsupported transform values. The original source matched
+26/40 complete inputs and returned different pixels for the other 14. The
+first 32-row matrix reproduction passed 22 rows and failed 10; the eight
+additional live probes exposed four more mismatches. The final campaign passed
+all 516 JPEG parity rows (383 decode and 133 encode), including 639 public
+encode calls and zero panics, plus all 13 existing JPEG fault contracts reported
+separately. Live pinned Pillow comparisons passed all 126 public decode
+executions across 112 unique complete inputs. All 5,976 pre-existing reference
+rows remain unchanged. No unit tests, fault contracts, hooks, or source
+exclusions were added.
+
+Performance review rejected an initial reconstruction-predicate variant after
+three controls crossed the predeclared 3% regression review threshold. A saved
+baseline rebuilt byte-identically. The final fix changes only parser source
+and retains the existing reconstruction checks. Ten local Apple M3 Pro controls
+used three A-B-B-A cycles, 100 warmups per process, Rust 1.96.1, and complete
+public decode calls through output destruction. Every timed input first passed
+full baseline/candidate/live Pillow pixel equality. The short-process medians
+ranged from 6.59% faster to 3.10% slower, triggering review of one workload.
+Five-cycle diagnostic runs with tenfold process iterations on the three
+previously affected workloads measured medians from 1.32% faster to 1.32%
+slower; none had a majority-cycle regression beyond 3%. Both campaigns and the
+rejected implementation are retained. This bounds local regression risk;
+variable timings do not establish a speedup or zero overhead.
+
+Strict formatting/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc,
+all 68 JPEG-feature integration contracts, fixture integrity, documentation,
+and the no-source-unit-test guard passed. Coverage-origin inventory remains
+267 guards across 36 files. The Coverage MCP CLI parser query still lists
+five missing-branch groups; this batch closes observed behavior gaps without
+claiming an aggregate coverage gain. Imports remain source-unverified and the
+summary/detail reconciliation limitation remains. The preceding full native
+baseline predates the RGB row-assembly and Adobe-marker batches; the current
+receipt is the affected JPEG selection. Native x86 parity/performance, 100%
+coverage, and a global codec speed ranking remain unproven.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/parity/jpeg-adobe-precedence-20261101/`:
+  complete reproductions, pinned generators and inputs, source identities and
+  focused patch, immutable executables, byte-identical baseline rebuild,
+  reference-preservation receipts, both timing campaigns and rejected variants,
+  acceptance logs, primary sources, Coverage MCP queries, and artifact hashes.
+- The final selected report path and SHA-256 are recorded in that directory's
+  `selected-report.json`; it remains separately retained outside `target/`.
+
+## RGB JPEG color semantics and progressive row assembly — 2026-11-01
+
+Raw RGB JPEG components now bypass YCbCr conversion in baseline and
+progressive decoding. The parser captures three-component color interpretation
+at the first SOS marker: JFIF implies YCbCr, Adobe transform zero selects RGB,
+and unmarked `R/G/B` component identifiers select RGB. The new cases check
+JFIF precedence, an explicit Adobe YCbCr override, missing Adobe metadata, and
+a conflicting Adobe marker after the scan, which cannot change the header-time
+color choice. Previously, those RGB inputs returned different pixels from
+pinned Pillow 12.2.0.
+
+Both decode paths also match libjpeg's replication rule when horizontally
+subsampled chroma is only one or two samples wide. The full-plane dispatcher
+now uses the same threshold as the row dispatcher. Direct baseline 4:2:2 and
+4:2:0 paths delegate these tiny widths to the general reconstruction path;
+raw RGB also uses the checked component assembler. Ordinary direct YCbCr paths
+remain eligible for larger widths.
+
+Progressive three-component output now uses reusable image-width scratch rows
+instead of cropping and expanding two complete chroma planes. Full-resolution
+rows are borrowed directly. Each component retains its own stride, visible
+extent, and sampling ratios, and output/scratch reservations are fallible.
+YCbCr rows still use the existing safe SIMD color converter; raw RGB rows are
+interleaved directly. The baseline YCbCr full-plane fallback and its existing
+fault contracts remain exercised.
+
+Twenty-two new public decode parity rows cover tiny chroma widths, the
+three-sample transition, minimal/odd/aligned RGB dimensions, both scan modes,
+and the marker cases above. The original source passed only 6/22 of these rows.
+The final selected campaign passed all 476 JPEG parity rows (343 decode and
+133 encode), including 639 public encode calls and zero panics, plus all 13
+existing JPEG fault contracts reported separately. The 64-case size/sampling
+probe and 22 fixture probes also passed all 86 public decode executions,
+representing 74 unique complete JPEGs. All 5,932 pre-existing input/output
+reference rows are unchanged. No unit tests, fault contracts, coverage hooks,
+or source exclusions were added.
+
+Local Apple M3 Pro release measurements used Rust 1.96.1, an immutable saved
+baseline executable, and the recorded dirty source identities. Three A-B-B-A
+cycles measured complete public decode calls through owned output destruction
+after 100 warmups per process. Input generation, file I/O, builds, and exact
+comparisons were outside timing. All eight timed inputs passed full baseline,
+candidate, and live Pillow pixel comparisons before timing. Incorrect raw RGB
+and tiny-width baseline outputs were excluded from speed comparisons.
+
+| Progressive RGB input, Q85 | Baseline median (ms) | Candidate median (ms) | Latency reduction |
+| --- | ---: | ---: | ---: |
+| 128×128, 4:2:0 | 0.219729 | 0.203938 | 7.19% |
+| 512×512, 4:2:0 | 5.491146 | 5.192146 | 5.45% |
+| 128×128, 4:2:2 | 0.323688 | 0.286584 | 11.46% |
+| 128×128, 4:4:4 | 0.504000 | 0.474375 | 5.88% |
+
+Every progressive RGB cycle improved. The baseline RGB, progressive grayscale,
+and progressive CMYK controls ranged from 0.25% slower to 1.00% faster. These
+are bounded local observations, not an x86 runtime result or a global codec
+ranking.
+
+Formatting, strict default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc, all 68
+JPEG-feature integration contracts, and fixture integrity passed. The selected
+coverage receipt represents the affected JPEG cases and existing fault lane;
+it does not replace the preceding full native baseline. Coverage MCP imports
+remain source-unverified and the summary/detail reconciliation limitation
+below still prevents an aggregate incremental-gain claim. The 100% goal and
+native SSE2/AVX2 parity/performance validation remain unfinished. All ongoing
+work stays in the primary checkout on local `develop`.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/performance/jpeg-progressive-rows-20261101/`:
+  before/after cases and probes, immutable executables, exact paired controls,
+  source identities and focused patch, reference-preservation receipts, check
+  logs, Coverage MCP gap queries, and artifact hashes.
+- `.coverage-mcp/local-evidence/selected/20261101T074525.204567Z-fb03c801e1bf479d87e88b27bfc881ba/`:
+  final 476-row JPEG and 13-fault-contract LLVM report, local receipt, and log.
+
+## Fractional JPEG sampling rejection parity — 2026-11-01
+
+The decoder now rejects fractional component sampling ratios before pixel
+reconstruction can truncate them through integer division. Previously, eight
+baseline/progressive CMYK and YCbCr inputs with horizontal or vertical 3:2
+ratios incorrectly decoded successfully; pinned Pillow 12.2.0 rejects their
+pixel loads. Detection, header inspection, and verification remain successful,
+matching Pillow. Valid integer 3:1 layouts still decode exactly.
+
+Sixteen public decode parity rows pair those eight malformed inputs with
+eight successful integer-ratio controls. Each complete 8×8 file has explicit
+quantization/Huffman tables, zero-coefficient entropy, and EOI. SOF2 controls
+contain an interleaved DC-first scan. Every MCU has at most ten blocks, so the
+fractional cases isolate ratio acceptance rather than exceeding libjpeg's
+interleaved MCU limit. The pinned generator
+`generate_jpeg_sampling_ratio_fixtures.py --check` verifies complete file hashes,
+header verification, successful pixels, and Pillow's fractional-load errors.
+All 5,900 pre-existing input/output reference rows remain unchanged. No unit
+tests, fault contracts, coverage hooks, or source exclusions were added.
+
+The parser bounds component factors to 1 through 4. Maxima of one or two
+therefore guarantee integer ratios; only larger layouts call the outlined
+validator. A first inline guard and an unconditional outlined guard measured
+10.84% and 9.21% higher RGB progressive decode medians respectively and were
+rejected. Their sources, executables, and raw samples are retained. Rebuilding
+the saved baseline produced a byte-identical benchmark executable.
+
+Final local Apple M3 Pro controls used Rust 1.96.1 and three A-B-B-A cycles,
+measuring complete public decode calls through output destruction after 100
+warmups per process. Each of four 128×128 Q85 controls passed full baseline,
+candidate, and live Pillow pixel comparisons before timing. The final controls
+ranged from 0.14% lower to 1.29% higher median latency; RGB progressive decode
+was 0.205750 ms versus 0.208396 ms. This bounds the local regression check,
+without establishing zero overhead or a general speedup. Incorrect fractional
+baseline outputs are excluded from timing comparisons.
+
+The final full native all-feature coverage run passed 139 checks across six
+integration binaries, with source and fixture identities unchanged throughout
+execution. Native LLVM summary totals are 70.859518% lines, 63.117498% branches,
+61.354098% functions, and 69.671003% regions. These are current local totals,
+not a Coverage MCP incremental gain: imported reports remain source-unverified,
+and the summary/detail reconciliation limitation described below remains.
+Formatting, strict default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy and rustdoc, all 68
+JPEG-feature integration contract checks, fixture integrity, documentation
+checks, and the no-source-unit-test guard passed. Coverage-origin inventory
+remains 267 exact guards across 36 files. Native x86 parity/performance and the
+100% coverage goal remain unfinished.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/parity/jpeg-fractional-sampling-20261101/`:
+  original eight-failure reproduction, 16-case before/after probes, reference
+  preservation receipts, final paired controls, rejected attempts, byte-identical
+  baseline rebuild, source identities, focused patch, check logs, raw sampling
+  guard observations, Coverage MCP gap query, and artifact hashes.
+- `.coverage-mcp/local-evidence/full/20261101-fractional-sampling-final/coverage.json`:
+  final complete LLVM report. The preceding inline-guard report remains at
+  `.coverage-mcp/local-evidence/full/20261101-fractional-sampling/coverage.json`
+  and does not represent the final runtime source.
+
+## Explicit CMYK JPEG subsampling parity — 2026-11-01
+
+Explicit CMYK 4:2:2 and 4:2:0 encoding now matches pinned Pillow 12.2.0
+instead of silently writing 4:4:4. The first C component retains full
+resolution; M, Y, and K use the requested sampling factors and the existing
+downsampling filter. Unspecified CMYK sampling still defaults to 4:4:4.
+The public sampling option documentation now explains that distinction.
+
+The encoder fix exposed a second discrepancy: baseline and progressive CMYK
+decoding replicated sampled components instead of applying IJG interpolation.
+Both paths now share a checked, fallibly allocated output assembler. Sampled
+images use four image-width scratch rows; unsampled images read borrowed
+component rows directly. Horizontal 2:1 interpolation uses replication when
+the component width is one or two samples, following the dispatch conditions
+in the [pinned libjpeg-turbo source](https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.4.1/src/jdsample.c).
+This narrow-width rule also applies to the existing shared YCCK row helper.
+
+Nineteen ordinary encode parity cases cover both sampling layouts, optimized
+and progressive output, restart rows, odd dimensions, partial MCU boundaries,
+and single- and two-sample component widths. Three pinned lossless CMYK TIFF
+sources provide varied K values, which the existing JPEG sources lack.
+`generate_jpeg_cmyk_subsampling_fixture.py --check` verifies their complete
+file and decoded-pixel hashes through the fixture-integrity target. All 5,862
+pre-existing input/output reference rows remain unchanged. No unit tests or
+target-only fault contracts were added.
+
+The final selected campaign passed all 438 JPEG parity rows: 305 decode and
+133 encode, exercising 639 public encode calls with zero panics. A separate
+42-input public probe passed full-byte encode and decoded-pixel comparisons
+against live Pillow for seven tiny dimensions, all three sampling layouts,
+and baseline/progressive output. Retained intermediate failures distinguish
+the original sampling discrepancy, the decoder interpolation discrepancy,
+and the narrow-width dispatch discrepancy.
+
+Local release controls compare the immutable preceding progressive-buffer
+candidate with this candidate on the Apple M3 Pro, Rust 1.96.1. All four
+128×128 Q85 RGB/CMYK baseline/progressive sources passed complete baseline,
+candidate, and Pillow comparisons for both encoding and decoding before
+timing. Three A-B-B-A cycles measured whole public calls through owned output
+destruction after 100 warmups per process. Progressive CMYK 4:4:4 decoding
+changed from 1.008667 ms to 0.876979 ms median latency (13.06% lower); all three
+paired cycles improved. Encoding control medians ranged from 0.24% faster to
+1.11% slower, and baseline CMYK decoding was 0.37% slower. The retained report
+contains all eight controls, including RGB progressive decoding, which also
+improved despite not being the targeted path. These observations do not
+establish a universal speedup, an x86 runtime result, or a codec ranking.
+Incorrect subsampled baseline outputs are excluded from timing comparisons.
+
+Formatting, strict native/default/all-feature/release/nightly-coverage Clippy,
+SSE2/AVX2 compile-only Clippy, JPEG-only WebAssembly Clippy, strict JPEG-only
+rustdoc, all 68 existing JPEG-feature integration contract checks, and complete
+fixture-integrity verification passed. The coverage-origin inventory remains
+267 exact guards across 36 files, with no source exclusions. Coverage MCP's
+selected encoder/decoder branch queries still identify gaps and are
+source-unverified imported evidence; the summary/detail reconciliation
+limitation below prevents an aggregate coverage-gain claim. The 100% goal
+and SSE2/AVX2 runtime parity and performance validation remain unfinished.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/performance/cmyk-subsampling-20261101/`:
+  paired controls, exact probes, reproduction and intermediate failure logs,
+  source identities, immutable probe/benchmark executables, focused runtime
+  patch, fixture/reference preservation receipts, check logs, and artifact hashes.
+- `.coverage-mcp/local-evidence/selected/20261101T070138.839597Z-0e1aa073fe53490980d38c946812cedd/`:
+  final 438-row LLVM report, local receipt, and captured output.
+
+## Progressive JPEG buffers and partial MCU parity — 2026-11-01
+
+Progressive AC refinement now uses fixed 64-entry coefficient and correction
+buffers instead of allocating temporary vectors for each block. A separate
+correctness fix makes interleaved DC scans without restart markers retain
+partial-MCU dummy blocks. These repeat the preceding DC value, contributing a
+zero initial difference and its low refinement bit. The old path skipped them;
+the varied 63×65 input produced 3,670 bytes versus Pillow's 3,675 bytes and
+different decoded pixels. The corrected output matches Pillow byte for byte.
+
+Three public encode parity rows cover bottom, right, and combined partial MCU
+edges: `enc_progressive_bottom_partial_mcu_420`,
+`enc_progressive_right_partial_mcu_420`, and `enc_progressive_partial_mcu_420`.
+The first two use pinned deterministic RGB PNG sources at 63×65 and 65×63;
+the third reuses the existing 33×33 JPEG. Existing input/output reference rows
+are unchanged. All 114 JPEG encoder matrix rows passed, exercising 544 public
+encode calls with zero panics. The new rows are ordinary Pillow parity cases;
+no unit tests or target-only fault contracts were added.
+
+Local paired release measurements used the Apple M3 Pro, Rust 1.96.1, the same
+dirty workspace snapshot, and an immutable saved baseline binary. Only
+`src/codecs/jpeg/encode/mod.rs` differs in the recorded runtime source
+identities. Each of three A-B-B-A cycles measured complete public `encode`
+calls through owned output destruction, after 100 warmups. Input generation,
+builds, and file I/O were outside timing. Every timed baseline and candidate
+output matched pinned Pillow 12.2.0 exactly before timing.
+
+| Progressive workload | Baseline median (ms) | Candidate median (ms) | Latency reduction |
+| --- | ---: | ---: | ---: |
+| RGB 128×128 Q85, 4:2:0 | 0.680 | 0.545 | 19.76% |
+| RGB 512×512 Q85, 4:2:0 | 12.187 | 10.515 | 13.72% |
+| RGB 128×128 Q10, 4:2:0 | 0.256 | 0.218 | 14.78% |
+| RGB 128×128 Q100, 4:2:0 | 0.770 | 0.581 | 24.58% |
+| Grayscale 128×128 Q85 | 0.524 | 0.393 | 24.92% |
+| CMYK 128×128 Q85, 4:4:4 | 2.518 | 2.084 | 17.24% |
+| RGB 128×128 Q85, 4:2:0, restart every MCU row | 0.682 | 0.539 | 20.90% |
+
+Every progressive cycle improved; the unchanged baseline-encoding control
+moved 0.52%. The odd-size correctness case is excluded from timing claims
+because the original output failed Pillow parity. An initial random CMYK
+4:2:0 comparison also differs from Pillow in both original and optimized
+binaries; it was a pending compatibility gap at that measurement point,
+excluded from ranking and subsequently resolved by the CMYK work above.
+The final CMYK timing uses the existing production workload's 4:4:4 sampling.
+The rejected first buffer variant, including its Q10 regression, remains in
+the retained attempt report. These are local observations, not a published
+ranking, an x86 speed claim, or evidence for the world's fastest codec.
+
+Formatting, strict native/default/all-feature/release/coverage Clippy,
+SSE2/AVX2 cross-compile Clippy, JPEG-only WebAssembly Clippy, fixture integrity,
+and all 68 existing JPEG-feature integration contract checks passed. Compile
+checks do not establish SSE2/AVX2 runtime parity or speed. Coverage MCP's full
+baseline query still lists encoder gaps, and raw baseline observations already
+cover both partial-MCU guard outcomes: the new parity cases catch a correctness
+gap that a branch percentage alone missed. The summary/detail reconciliation
+limitation described below remains; no aggregate coverage gain is claimed.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/performance/jpeg-progressive-buffers-20261101/`:
+  final and attempted reports, paired runner, source identities, focused patch,
+  native sample profile, raw samples, and local artifact hashes.
+- `.coverage-mcp/local-evidence/selected/20261101T063448.953572Z-6aec4f56094745b2988315c7bc49618b/`:
+  the 114-row LLVM report, local receipt, log, and raw DC branch observations.
+
+## Coverage cache isolation and full native baseline — 2026-11-01
+
+`cargo-llvm-cov` 0.8.7 collects executables from both host and explicit-target
+output trees. The previous shared cache retained old host executables when
+selected runs cleaned only their explicit target. Repeating the same four PNG
+parity rows in a fresh cache kept every covered count and all 112 source paths
+identical, while removing stale mappings from the reported denominators:
+
+| Metric | Shared-cache denominator | Fresh-cache denominator | Covered in both selections |
+| --- | ---: | ---: | ---: |
+| Lines | 155,778 | 140,930 | 1,095 |
+| Branches | 41,441 | 31,632 | 114 |
+| Functions | 10,107 | 9,043 | 109 |
+| Regions | 239,846 | 218,582 | 1,462 |
+
+Both selections have identical source manifests. This is a correction to the
+measurement inventory, not a codec coverage gain. The original reports and
+cache contents remain intact. `make coverage` now uses
+`target/cargo-llvm-cov/full`; `make coverage-selected` and direct selected
+script calls default to `target/cargo-llvm-cov/selected`. Their parent and each
+individual cache can be overridden as documented in [Testing](testing.md).
+The selected receipt records its resolved `CARGO_TARGET_DIR`.
+
+The changed default selected command passed 4/4 parity rows and reproduced
+the fresh control's exact totals. A new full native all-feature run passed all
+six integration binaries (139 checks), including the complete matrix harness,
+with unchanged source and fixture hashes during execution. Its input inventory
+contains 2,372 active decode rows, 556 active encode rows, and 167 target-only
+fault contracts; fault contracts remain separate from Pillow parity. All four
+alpha floors passed:
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 99,860 / 140,930 | 70.857873% |
+| Branches | 19,958 / 31,632 | 63.094335% |
+| Functions | 5,546 / 9,043 | 61.329205% |
+| Regions | 152,261 / 218,582 | 69.658526% |
+
+The clean full and selected runs have matching denominators for all four
+metrics. These are local LLVM producer totals, not managed Coverage MCP
+measurements or a replacement for the retained historical claim ledger.
+
+Cache isolation does not resolve LLVM summary/detail reconciliation. A fresh
+JSON self-comparison is still `incomparable` in Coverage MCP. A native LCOV
+export from the same profile has the same producer totals, but its detail has
+136,242 line records versus LF=140,930 and 31,616 branch records versus
+BRF=31,632. Its limited line-coordinate comparison is therefore not an exact
+whole-report percentage. Neither export is rewritten or trimmed to force a
+combined coverage claim. No production Rust code or unit tests were added.
+
+Retained local evidence:
+
+- `.coverage-mcp/local-evidence/diagnostics/coverage-cache-isolation-20261101.json`
+- `.coverage-mcp/local-evidence/full/20261101-cache-isolation/coverage.json`,
+  `coverage.log`, `coverage.local-evidence.json`, and `coverage-compare-selected.json`
+- `.coverage-mcp/local-evidence/selected/20261101T061649.456759Z-0ee9625ff3e9477c826bad9ea97e9683/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261101T061040.532913Z-c1e316eade284c778e6dff3c2fcf0977/coverage.json`
+  and `coverage.lcov` retain the fresh-control exports.
+
+## PNG zlib header and DEFLATE repeat rejection parity — 2026-11-01
+
+Four ordinary PNG inputs retain the complete one-pixel RGB container, valid
+chunk CRCs, and IEND. Pinned Pillow 12.2.0 accepts detection, inspection, and
+structural verification, then rejects both still and sequence decoding:
+
+| Public parity row | Input SHA-256 |
+| --- | --- |
+| `decode:png:error_zlib_window_size_above_limit` | `85f3908b8187264634018450f6a3f7b75b82e62fee6f073b01141d78607f731b` |
+| `decode:png:error_zlib_header_checksum_mismatch` | `e19795bb1425702730cfa038b17e2a2ed52556b63e3d01ceb054942aa2c0fb0c` |
+| `decode:png:error_zlib_preset_dictionary` | `8bd1ca9a90c24d35a1048cc4fbfc90c0e397cbe42c1105370268c31699d84969` |
+| `decode:png:error_zlib_dynamic_repeat_without_previous` | `499e28c39f5b6528ee9af60f0b4d953d7cbd14f4f7e3927074982114ba96c044` |
+
+The window case keeps CM=8 and valid FCHECK while requesting a 64 KiB window.
+The checksum case changes only FCHECK within IDAT and recomputes the PNG CRC.
+The dictionary case contains a complete zlib stream that inflates to the source
+raster when supplied its dictionary, which PNG forbids. The dynamic-tree case
+uses a complete code-length alphabet but emits repeat symbol 16 before any
+prior length. The dictionary case retains Pillow's `image file is truncated
+(0 bytes not processed)` error; the other three retain its broken-stream error.
+All four public rows passed their generated operation and structured-error
+contracts in the selected Rust run (4/4, zero fault-contract rows).
+
+Coverage MCP identified the unobserved header and repeat paths in the retained
+full baseline. Raw LLVM branches at unchanged `deflate.rs` spans confirm the
+following previously unobserved outcomes, each observed three times in the new
+selection: excessive window (line 92, true), incorrect checksum (lines 93–97,
+true), preset dictionary (line 98, true), and missing previous code length
+(line 424, false). Both reports' local receipts match the current DEFLATE
+source hash; zero-count duplicate mappings remain in the original reports.
+These are selected-run observations, without managed source/test attribution
+or a new whole-repository percentage.
+Coverage MCP's incremental branch comparison returned `incomparable` because
+the baseline details do not reconcile with its reported totals; the four raw
+branch observations above are retained separately from that aggregate result.
+
+`scripts/generate_png_deflate_header_edges.py --check` verifies all four
+deterministic inputs through `make verify`; `--verify-pillow` also validates the
+pinned oracle. Reference regeneration additionally repaired a stale generator
+allow-list for four existing CDEF fault points already supported by the runner.
+No production Rust source or unit tests were changed for these cases.
+
+Reports under
+`.coverage-mcp/local-evidence/selected/20261101T060537.075590Z-48ac44e2e03043638c4f1de3053c643a/`:
+
+- `coverage.json` and `coverage.local-evidence.json`
+- `deflate-branch-observations.json`, retaining the source and report hashes
+- `coverage-compare-deflate.json`, retaining Coverage MCP's comparison result
+
+## AVIF CDEF and Wiener stripe boundary parity — 2026-11-01
+
+`decode:avif:coverage_i420_intra_cdef_restoration_10bit_16x64` is an ordinary
+10-bit I420 key frame combining active luma CDEF with Wiener restoration.
+Its 64-row height crosses the first 56-row restoration stripe boundary. This
+checks the handoff between post-CDEF samples inside a stripe and saved
+deblocked rows in its halo, with CDEF disabled for the chroma planes.
+
+Pinned libavif 1.4.1/libaom 3.13.2 encodes are repeated and required to match.
+The source SHA-256 is
+`7d30b4c3eb9b0157a01e54afa6b011dfb54701ebfd919a5ddc52f047474e3bc6`,
+the AVIF SHA-256 is
+`ccf7cb2dc6c81749955e09853587f7b1047e3c89b17f2832a4196303d8302727`,
+and the 3,072-byte Pillow 12.2.0 RGB reference SHA-256 is
+`a6535b59e9da0eb66ee1bf768e080739bc8d88b2afc9554388b7620849900f1e`.
+The generator pins CDEF damping 5, Y strength 47, UV strength 0, and one Wiener
+luma restoration unit; no deblocking or super-resolution is enabled.
+
+The exact selected public parity row passed 1/1. Its LLVM report records three
+calls to `restore_striped_plane`, six stripe iterations, and both saved halo
+paths. No production decoder behavior or unit test was changed. This selected
+run does not replace the complete baseline; Coverage MCP marks the local report
+source as unverified and test attribution as unknown.
+
+Coverage MCP's incremental region comparison with the earlier full baseline
+returned `incomparable`: its detailed baseline regions do not reconcile with
+the reported totals. The comparison is retained without a coverage-gain claim;
+the selected parity result and observed stripe execution remain separate evidence.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/selected/20261101T055203.084075Z-b6be961d1182457284ae5e61ab17af7d/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261101T055203.084075Z-b6be961d1182457284ae5e61ab17af7d/coverage.local-evidence.json`
+- `.coverage-mcp/local-evidence/selected/20261101T055203.084075Z-b6be961d1182457284ae5e61ab17af7d/coverage-compare-restoration.json`
+
+## CDEF output reuse benchmark rejected — 2026-11-01
+
+A candidate removed the second CDEF plane clone and wrote filtered blocks
+into the consumed canvas. Two A-B-B-A sequences compared immutable release
+executables on an Apple M3 Pro with Rust 1.96.1 and all features. The timed
+boundary was `decode_sequence` through output drop, excluding file I/O. Each
+cohort used 200 warmups and 4,000 samples for color inputs or 1,000 samples for
+the larger monochrome control. Source, binary, input, and reference hashes are
+retained with every command and raw sample file.
+
+Median changes across the four cohorts for each executable were:
+
+| Fixture | Candidate latency change |
+| --- | ---: |
+| I420 CDEF 16x16 | +3.46% |
+| I420 CDEF 9x16 | +0.34% |
+| I422 CDEF 16x16 | +3.24% |
+| I420 CDEF/restoration 16x16 | -0.99% |
+| I420 restoration without CDEF, control | +2.64% |
+| Monochrome CDEF 128x64, control | +0.46% |
+
+Positive changes mean slower calls. The candidate did not establish a
+repeatable latency gain, and untouched controls also drifted. Its source
+change was reverted exactly. Candidate parity was not run after the timing
+rejection; these measurements are a rejected local experiment, not a verified
+speed improvement or an SSE2/AVX2 result.
+
+Report: `.coverage-mcp/local-evidence/performance/cdef-output-reuse-20261101/report.json`.
+
+## AVIF redundant-frame-header guard parity — 2026-11-01
+
+Added four cases from
+`animated_lossless_inter_420_derived_skip_refs_b32x32_64x64.avif`. The
+size-preserving `decode:avif:error_animated_redundant_frame_header_with_pending`
+mutation replaces the first OBU_FRAME with an OBU_FRAME_HEADER, its matching
+OBU_REDUNDANT_FRAME_HEADER, and OBU_PADDING, leaving a pending frame without
+tile data. The
+`decode:avif:error_animated_redundant_frame_header_without_pending` mutation
+replaces it with OBU_REDUNDANT_FRAME_HEADER and OBU_PADDING without an original
+frame header. Their fixture SHA-256 values are
+`46c2a6f033820f828209f9a81ef8da4318c5f3255cee99d866321ce4635a86d5` and
+`9c29fa97ff57041eb15a7b49a067b2fb2f6f141f003a835d7a786089d1c2dee8`. The
+`decode:avif:error_animated_frame_header_before_tiles` case repeats the
+ordinary frame header before tile data; the
+`decode:avif:error_animated_redundant_frame_header_mismatch` case changes the
+redundant header's `order_hint`. Their fixture hashes are
+`380c025386ee770a6573d88fa1bdf12adbe345149026c46a3aee78c922f06c78` and
+`4e004fa44966ae7fc63f2ce5214283e4138e8cc6658e12fcf7b38fbd0b9897b0`.
+
+Pinned Pillow 12.2.0 rejects frame 0 for all four cases, and the selected
+public Rust parity rows passed 4/4 with the same malformed outcome. The combined
+six-case selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T224014.242315Z-28db627af2da40cba9d691d9eccd2fc7/coverage.json`
+(SHA-256
+`2bd95f92f0796bcc7e855995cd55363a6550a81c6342120e8ad96fbc7c4f5068`); its
+local receipt SHA-256 is
+`0bbf85abbbc3ba5adac6974ce2cdbae31b14bbcd0f344e25161ad2d4644c40b7`. The
+selected mapping records the `Some`/`None` paths at line 1230 as 6/3, the
+matching/mismatched header paths at line 1248 as 3/3, and the pending/not-pending
+paths at line 1253 as 3/15. It also records temporal-layer comparison outcomes
+at line 1387 as 3/9 and spatial-layer comparison outcomes at line 1388 as 3/6;
+the mismatch rejection at line 1390 ran 6 times. LLVM emits duplicate
+zero-count mappings for these branches. Coverage MCP was unavailable, so this
+is local selected evidence without managed attribution or an aggregate
+coverage claim. No unit tests or production Rust changes were added.
+
+## AVIF tile-group layer identity parity — 2026-11-01
+
+Added `decode:avif:error_animated_tile_group_temporal_id_mismatch` and
+`decode:avif:error_animated_tile_group_spatial_id_mismatch` from
+`animated_opidc_0x101.avif` (SHA-256
+`25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be`). Each
+mutation expands the first operating-point IDC to admit two layer identities,
+then splits the first OBU_FRAME into an OBU_FRAME_HEADER and a tile group whose
+temporal or spatial ID differs from the pending frame. Both preserve the AVIF
+and sample lengths. Their fixture hashes are
+`0c23f3e5db7b1d9d7150144f5204044c2bee0804edd6eb022148fc7a4ef4a1d9` and
+`2c23b60cc7f4e5951b24ba1309aa7ec1afda18fd97b74d66b54e982899a6963d`.
+
+Pinned Pillow 12.2.0 rejects both at frame 0 with its color-plane decode error.
+Both public rows passed in the combined six-case selection above (6/6 total).
+That selection covers the temporal comparison at `frame.rs:1387` in both
+directions and the spatial mismatch at line 1388. The preexisting full report
+showed only matching layer identities at these comparisons; this selected
+report is kept separate and is not presented as a merged aggregate. Coverage
+MCP returned `Transport closed`, so this remains local LLVM evidence without
+managed attribution. No unit tests or production Rust changes were added.
+
+## AVIF sequence-header UVLC limit parity — 2026-10-31
+
+Added `decode:avif:error_animated_equal_picture_interval_uvlc_32_leading_zeroes`
+to exercise the public AV1 `uvlc()` boundary with a complete animated AVIF.
+The deterministic mutation sets the first equal-picture interval value to 32
+leading zeroes while preserving the BMFF sample layout. The fixture SHA-256 is
+`842854d4e586bf3b84607f45c85479cb37c3357a78296b7bf39da5ad71ad74e8`.
+Pinned Pillow 12.2.0 opens the five-frame container and fails loading frame 0
+with `RuntimeError: Failed to decode frame 0: Decoding of color planes failed`;
+the selected Rust parity row passed 1/1 with the matching malformed outcome.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T211948.321091Z-d295b971f2584401b7b0fcd54827a080/coverage.json`
+(SHA-256
+`1649e225367edcec6c54eee8060d0dad1ea399ecbeb7b5f02a915c85f3b79356`); its
+local receipt SHA-256 is
+`78aaedd311fd848818990485f6345bdf7b72a5c228558e380b025e0f96db5ba0`.
+At `src/codecs/avif/av1/bit_reader.rs:243`, the report records the true arm
+three times in one LLVM mapping and a second zero-count mapping for the same
+branch. These are selected-run counts, not whole-repository totals. Coverage
+MCP returned `Transport closed` for this report, so the result is local
+evidence without managed attribution or an aggregate coverage claim. No unit
+tests or production Rust changes were added for this case.
+
+## AVIF nonuniform tile-grid parity — 2026-10-31
+
+Added `decode:avif:error_nonuniform_tile_grid_tile_group_mismatch` and
+`decode:avif:error_nonuniform_tile_grid_ns_threshold_false` from the pinned
+`uniform_tile_rows_monochrome_256.avif` input (SHA-256
+`782568b37a63b44e632aee68896bcee3c59c5492081c7ac2ac6a31fc0ca1df37`). The
+first fixture clears `uniform_tile_spacing_flag`, making the header describe a
+nonuniform 2×4 grid while the encoded tile group retains its 1×4 layout. The
+second also sets the first `ns(3)` prefix bit, selecting the extended-value arm
+and a 2×3 grid. Their fixture hashes are
+`31f9bc09f7a52b56a9059a51d96c464bad715135557bfbf649c38501f55d6411` and
+`b7a9dc5b14f8115b21f131700351a26cb679f6c23ded975a47489291e074f9fa`.
+
+Pinned Pillow 12.2.0 opens both files and fails loading frame 0 with
+`RuntimeError: Failed to decode frame 0: Decoding of color planes failed`.
+The public Rust parity selection passed 2/2 with matching malformed outcomes.
+Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T213419.047311Z-a534b74bb4ce4fedbcbf26de1b348cfb/coverage.json`
+(SHA-256
+`2865aceb69ac8180336bea8ed0207f93d8788fe8f97c32a775386dae26325f21`); the
+local receipt SHA-256 is
+`092f1f576cec2a52837c7b2ff25fd15f37b44df803c9b5c0944d95e8910ae037` and
+records no source or fixture changes during the run. At
+`src/codecs/avif/av1/bit_reader.rs:143`, the `count <= 1` outcome remains
+unobserved while the other side ran 27 times. At line 149, both `ns()` threshold
+outcomes ran (24 true, 3 false). Coverage MCP returned `Transport closed` for a
+selected-report query during this session, so these remain local selected-run
+counts without managed attribution or a whole-repository coverage claim. No
+unit tests were added.
+
+## AV1 global-motion subexponential endpoint parity — 2026-11-01
+
+Added `decode:avif:animated_lossy_global_subexp_endpoint_i444_b128x128`, a
+deterministic same-length mutation of the existing four-frame RotZoom AVIF.
+The frame-2 global-motion parameter reaches the terminal `ns()` arm in
+`BitReader::subexp` while preserving the AV1 frame-header and tile-data
+boundaries. Pinned Pillow 12.2.0 decodes all four exact RGB frames; the separate
+pinned libavif 1.4.1 observation also decodes all four and records the existing
+infinite-repetition behavior. The selected public parity run passed 1/1.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T214641.701534Z-11d75f008d7d4eef85e8011ae0410890/coverage.json`
+(SHA-256
+`471112a0d0d31d215b0a481f89dc90d46d941f2cb1fde13f32e70c8869871c3f`); its
+local evidence receipt SHA-256 is
+`b67bf5a0167277d1bdd2846bb7fdaaaadd56f5f57ba51c42495ea2edeb33d003`. At
+`src/codecs/avif/av1/bit_reader.rs:191`, the selected report records the
+previously unobserved terminal outcome once (106 non-terminal outcomes in that
+mapping). This is selected-run evidence, not a full-suite coverage result.
+Coverage MCP returned `Transport closed` for the report query, so no managed
+attribution or aggregate coverage claim is made. No production Rust code or
+unit tests were added.
+
+## AV1 frame-before-sequence-header parity — 2026-11-01
+
+Added `decode:avif:error_animated_frame_before_sequence_header`. The
+deterministic generator changes the first frame sample's sequence-header OBU
+to same-length `OBU_PADDING`, leaving the following frame OBU before any AV1
+sequence state. Pinned Pillow 12.2.0 rejects frame 0 with its existing
+`RuntimeError: Failed to decode frame 0: Decoding of color planes failed`
+contract; the selected public parity row passed 1/1.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T215751.068273Z-7a83c84d5c2348a69f4578f4835febf7/coverage.json`
+(SHA-256
+`56160ed9d4dfd4f67099b23fb0260e55fc3645771de2300ad25c7a281d451746`); its
+local receipt SHA-256 is
+`11caa264eb9f113243f1598fbb06cfeebe677b035bf17641f91d115ac7095df2`. The
+selected report records the missing-sequence error arm at
+`src/codecs/avif/av1/frame.rs:937` three times. A retained earlier full local
+report also showed hits for that arm, but it has no source/build receipt that
+binds it to this selected run, so no aggregate coverage increase is claimed.
+The deeper `begin_frame` guard at line 1226 remains unreachable through this
+public input: the OBU-admission check rejects it first. Coverage MCP returned
+`Transport closed`; these counts are local-only.
+No production Rust code or unit tests were added.
+
+## Coverage gap triage — 2026-10-31
+
+The source-matched public parity report
+`.coverage-mcp/local-evidence/selected/20261031T114852.863923Z-addc0604926f4f39a298fa98bc588d3e/coverage.json`
+ran 2,891 active rows (2,345 decode and 546 encode); all passed. Its source
+manifest hash matches the current checkout at
+`1e2a75755c7341b6d14d426996680a9c8e1a000e586825241e4d86b089a3889e`. The
+remaining active row, `decode:avif:alpha_item_icc_profile_ignored`, passed in
+its own selected run above with the same source manifest and target. A local
+coordinate union adds two branch outcomes, from 18,749/32,492 to
+18,751/32,492. This union is local evidence, not a Coverage MCP measurement or
+a single full-matrix run.
+
+Coverage MCP returned `Transport closed` for the current gap query. Local
+inspection found defensive branches in the AVIF container's second parsing
+pass that have no distinct public outcome: the existing parity cases
+`error_iinf_child_not_infe`, `error_ispe_zero_width`,
+`error_ispe_zero_height`, `error_animated_duplicate_minf`, and
+`error_animated_duplicate_stbl` are rejected during the earlier sample
+validation pass, before the second pass can reach those guards. No case was
+added solely to execute those private branches. The 100% coverage goal remains
+open; other gaps still need triage.
+
+The existing TIFF parity row `decode:tiff:error_lzw_invalid_first_token_checkpoint`
+was also run by itself and passed 1/1. Its source-matched report records the
+invalid initial-code outcome at `decode.rs:3562` and `:3655`; the separate
+already-full-output outcome remains unobserved. No distinct Pillow-visible
+input for that guard was established, so no duplicate case was added. The
+report is
+`.coverage-mcp/local-evidence/selected/20261031T122220.769882Z-1ac0025535144f09bdab10c3b765f3df/coverage.json`
+(SHA-256
+`23a4d36d8d5f53e45bee5e2ecd7158d789ff4464afc9f4fe7456b5fd85fc206b`); its
+local receipt SHA-256 is
+`b009851d7efbb013c38275e6dff8c6567429686b4d679d5694a84225d3d4bf16`.
+
+Added `decode:jpeg:ycck_fractional_vertical_3x2_sampling` after the full report
+showed no true outcome for the vertical YCCK sampling-ratio check at
+`src/codecs/jpeg/decode/decode.rs:1134`. Its deterministic complete-file JPEG
+uses 2:3 luma/black and 1:2 chroma sampling. Pinned Pillow 12.2.0 rejects pixel
+loading with `OSError: broken data stream when reading image file`; the selected
+public parity row passed 1/1 with the matching malformed error category. The
+fixture SHA-256 is
+`a2bbff78c082139a2760232d613216f6a3f799b5770a30bc7f51bccd0da960b1`.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261031T123218.880013Z-8dd1d2deef3a4dd7baa8cd912b9d36ef/coverage.json`
+(SHA-256
+`89836811921dc7bab7b11b8e6c2bc12b05f47b5301907a269bb4e59f3574f6d2`); its
+receipt SHA-256 is
+`77841d4c7e2c200775bdd57b959fd31f946eeaea3cd9e5b9b37dcb7ad0a79455`. Its
+report records both branch outcomes at line 1134 (3 true, 3 false); the earlier
+full public report records 0 true and 183 false there. Both reports have the
+same source-manifest hash, Rust source-file hashes, target, instrumentation,
+features, target-directory identity, and 32,492-branch denominator. Full-report
+totals are 93,451/144,616 lines, 18,749/32,492 branches, 5,054/9,327
+functions, and 142,425/224,412 regions. The one-row selected report covers
+1,545/144,616 lines, 189/32,492 branches, 129/9,327 functions, and
+2,154/224,412 regions; these are selected-run totals, not a full-suite result.
+Coverage MCP returned `Transport closed` for the gap query and the first
+incremental comparison attempt. I then reran the parity row with the baseline's
+absolute target-directory identity; MCP has not returned a comparison for that
+aligned report. This remains local source-matched evidence without MCP
+attribution or a managed aggregate union. No unit tests ran.
+
+Added `encode:webp:enc_lossy_rgba_alpha_zero_palette_gap_token` for a
+transparent 121-value alpha palette with both small and large palette deltas.
+The deterministic 512×512 PNG fixture has SHA-256
+`0d5a554fec44c2de7f6e04f7c03f7c4fa9da67fb5acbc6cbd392a91cedd3d168`; its
+pixel bytes hash is
+`7c8bee506bf44fffd787780a3324fe9090a06062e486d4552246cb0680752dd2`. Pillow
+12.2.0 produces a 650-byte WebP reference with SHA-256
+`f28f4b210e224dbdc8cdfc8b7def089847ae19b029b58fc40b98b9a0088f57e8`. The
+selected public encode parity case passed 1/1 and exercised the ordinary,
+sink, and token-aware encode paths.
+
+Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T124737.010668Z-be682779a72d4fbda61117b7b88a6a18/coverage.json`
+(SHA-256
+`b99e4d4ea9cf1309df3af129039ec38c3f209700c4d0f4e0f9bb9cae1eaa7577`); the
+local evidence receipt SHA-256 is
+`472b0307f77a48d98c2afeca8a6fb6e7cb29eb9022ade18a0edda0d7ffa8be2e`. Against
+the matching full public report, the first true outcome for
+`palette_values[0] == 0` at `src/codecs/webp/native/encoder.rs:3431` is recorded
+four times, and the true outcome of the 64-candidate checkpoint at line 3452
+is recorded 57 times. The full report had no true outcome for either branch;
+source-manifest and encoder-file hashes, target, toolchain, target-directory
+identity, and branch denominator match. Coverage MCP returned a `Transport closed`
+error for both the gap query and incremental comparison, so this is source-matched
+local evidence without managed attribution or an aggregate coverage claim. No
+unit tests ran.
+
+Added `encode:gif:enc_rgb_low_color_token_checkpoint` for a token-aware 33×33
+two-color RGB image. The selected public GIF parity case passed 1/1, including
+exact Pillow bytes and re-decoded pixel parity. Its local LLVM report records
+both outcomes of the token checkpoint conditions at `src/codecs/gif/encode.rs`
+lines 1311 and 1343, with the checkpoint arm taken once in each loop at pixel
+1024. The earlier local all-public-parity report
+`.coverage-mcp/local-evidence/full/20261031-current-all-public-parity/coverage.json`
+(SHA-256
+`086f373d8dfa08b309e027832922b421b60eae7ff6c7e0326fc093d3a8996f1d`)
+records no taken checkpoint outcome at either location; its GIF encoder source
+hash matches this selected report. Their local source-file coordinate union
+adds two observed branch outcomes, without establishing current whole-matrix
+coverage. The fixture SHA-256 is
+`fa3e4abe97d4e9ad76d9326571fe279878f9d4dc7a53d6e7507df07f90ea48cd`.
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T134635.726253Z-7202311c8f19489aad1b1ccb3d19a98c/coverage.json`
+(SHA-256
+`a7eff4da144f24e452be81b8efb9756672111b7bfd8417af2b51bd2f4dab6213`); its
+local receipt SHA-256 is
+`20b565e28b272673ca687d2dac3efb167f6a02744e94474a4c1feb10380cee93`.
+Coverage MCP again returned `Transport closed`, so this is local selected-case
+evidence only; it is not a managed measurement or aggregate coverage claim. No
+unit tests ran.
+
+Added `encode:gif:enc_rgba_single_color_token_partition_base` for a 33×33
+single-color RGBA input. Its selected public parity case passed exact Pillow
+GIF-byte and re-decoded pixel comparisons. The local report records the true
+outcome of `left_length <= 1` at `src/codecs/gif/encode.rs:2547` once; the prior
+local all-public-parity report recorded zero true and 28 false outcomes. The
+GIF encoder source hash matches across those reports, so the local
+source-file-coordinate union adds one branch outcome. Fixture SHA-256:
+`cbd18abee6ca2801675d763c078349b173d8f4148f8ab60f56f98f5cae65bd58`.
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261031T135715.020282Z-40a3b6ccb0484151be3a29394c647132/coverage.json`
+(SHA-256
+`a8f2c13e5aaadc4bff342467b32ad4ae5b44a42c9162ec2bc028b18c3f5728f1`);
+local receipt SHA-256:
+`82dcfd207d3375832e92c7bfef1b54d45a1c908f76844b5e5a6b4fa5a5a98267`.
+Coverage MCP returned `Transport closed`; this remains local selected-case
+evidence without an aggregate coverage claim. No unit tests ran.
+
+Ran all 162 active target-side fault-contract rows (AVIF 101, TIFF 33, JPEG
+13, BMP 5, PNG 5, WebP 5); all passed. The BMP allocation contracts include
+the public error and successful Pillow-parity retry. The selected LLVM report
+records the previously missing true outcomes at `src/codecs/bmp/decode.rs:164`
+and `:720` once each; the source-matched public report recorded 0 true / 100
+false and 0 true / 61 false respectively.
+
+A local coordinate union restricted to 97 source files whose SHA-256 matches
+both receipts and the current checkout adds 400 covered branch outcomes, from
+17,572/30,148 to 17,972/30,148. The wider source-manifest hashes differ, so
+this is not a whole-matrix coverage union. Coverage MCP returned
+`Transport closed` for the incremental comparison; no managed attribution or
+aggregate coverage claim is made.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261031T140947.812054Z-ea50004fb5044154940050080a07e054/coverage.json`
+(SHA-256
+`097eb8c5f3cd01e81bf94635351cea3eb3069e564552327f6b1893f98bd692e6`); local
+receipt SHA-256:
+`59d4f6da1a8efd13e256ed71279ce55326e907cb6a38f3769bcb134910ce916a`. No unit
+tests ran.
+
+## AV1 color multi-tile super-resolution parity — 2026-10-31
+
+Added active parity row `decode:avif:coverage_color_multitile_superres_8bit_256x64`
+for an 8-bit full-range I420 still with two tile columns and AV1 super-resolution
+from coded width 228 to output width 256. The AVIF fixture SHA-256 is
+`5a1c05d8f225ef1c73f73010089ab0d5ddf7e495620f117673321a248e71b044`; its exact
+49,152-byte RGB reference SHA-256 is
+`42703be2059382a9c3dce70c4795ea5e085fcd87e30ca361d9bfc443213273f3`.
+
+The selected public parity row passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-color-multitile-superres-padded/coverage.json`
+(SHA-256 `70359916c47ea228f261e4ceb0ffd8ca26be3313b294809e09d8cdefaebce388`);
+its local receipt SHA-256 is
+`517f6d29373f35ec83356c6fe5f0a15217128e2939b31723d05e615c72c54ab6`. The
+receipt records unchanged source and fixture identities during the run. The
+selected report records the true outcome of
+`pending.header.superres_enabled` at `src/codecs/avif/av1/frame.rs:1682` three
+times.
+
+This case exposed a multi-tile reconstruction defect: assembly cropped each
+tile to visible width before super-resolution, while the resize filter can read
+the padded coded tail. Color tile assembly now retains each tile's padded source
+extent through filtering and resizing. The new case and the existing
+`multitile_color_split_groups` and `multitile_skipped_cdef_color_alpha` rows
+passed together, 3/3, with exact pixel parity. The regression report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-color-multitile-superres-regressions/coverage.json`
+(SHA-256 `a58d2514bf14ecaf91af6f4f90053193f22fb2acedc16d58372a139215c4c945`);
+its local receipt SHA-256 is
+`6b176fb5af01cd6a2f8ae375f9b1f5b236fa0769e02287c491eac0229932cd96`.
+
+A fresh all-feature LLVM coverage run passed and is retained at
+`.coverage-mcp/local-evidence/full-20261031-unknown-top-level-box/coverage.json`
+(SHA-256 `c2e7f97488df2b4e7db6a17e1f6eb729a85bac5c7ac347b81a1f8e8d5781c20d`).
+It records 99,469/140,549 lines (70.7718%), 19,860/31,520 branches (63.0076%),
+5,528/9,017 functions (61.3064%), and 151,708/218,036 regions (69.5793%).
+Coverage MCP returned `Transport closed`; this is local LLVM evidence without
+managed source attribution. The 100% goal remains open. No codec unit tests were
+added.
+
+## AVIF unknown top-level box parity — 2026-10-31
+
+Added active row `decode:avif:unknown_top_level_box_ignored`. Its deterministic
+379-byte fixture appends a bounded 12-byte `zunk` box after the complete
+8×8 lossless I420 still. Pillow 12.2.0 preserves the exact 192 RGB bytes.
+Fixture SHA-256:
+`ebd1e037026559f6a2f7dc12271c94a7440b2c06c79843eed5380afb92072d64`; RGB
+reference SHA-256:
+`8099fa1157400c228f24ce0e41a6f9c59cc73c8be02953024a92761dba0db709`.
+
+The selected public parity run passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-unknown-top-level-box/coverage.json`
+(SHA-256 `25ef24f3682d3e8650e3c9e0d784e2b52ca6f0f950d54b9e1d3e140a4e1e55f0`);
+its local receipt SHA-256 is
+`87137c0030806c4f9e6ce3223e195c056359ebda73499e3b9f27c14c3cb0fb7e`. The
+selected report records the unknown-box fall-through at
+`src/codecs/avif/samples.rs:2915` four times. The case adds a public input
+witness for this box form; it does not change the full report's aggregate
+coverage totals.
+
+## Auxiliary-item ICC metadata parity — 2026-10-31
+
+Added active public parity row `decode:avif:alpha_item_icc_profile_ignored`.
+The fixture associates the pinned `prof` ICC property from `icc_profile.avif`
+with only the auxiliary alpha item in `alpha.avif`; the AV1 payloads are
+unchanged and both file-backed item extents are relocated. Pillow 12.2.0
+accepts the full 6,476-byte AVIF and returns the same 16,384 RGBA bytes as the
+source image. Fixture SHA-256:
+`4dfa9e87d65e9365b3e38ab13e67bdceadd9b8eb5ddef273da03eb3057b553d3`; decoded
+pixel SHA-256:
+`7b62ff36a098d8bdea49e0b72c834b6fd3e4e04f70d884eee274fc69ed869ddd`.
+
+`make coverage-selected COVERAGE_CASES='decode:avif:alpha_item_icc_profile_ignored'`
+passed 1/1 active parity rows, with no fault-contract rows selected. The
+selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T115701.863084Z-64a314be74a24678a7a1b3857cbadd0c/coverage.json`
+(SHA-256
+`bf5c6f91f25ff11ebbb6d1207655c090da1b0892ac70a537a25d39798c05b47f`); its
+local evidence receipt is SHA-256
+`2a39ef48184bbe15f4c1b22d395b5afd682b8e2437a0f93b7e83f98eb2254d57`. A local
+comparison with the prior full public run (2,891 active rows) has matching Rust
+source identity, target, and 32,492-branch denominator. It finds two newly
+covered branch outcomes: non-empty non-primary ICC projection at
+`src/codecs/avif/container.rs:1123` and descriptor propagation at
+`src/codecs/avif/decode.rs:116`. Their union is 18,751/32,492 branches, up from
+18,749/32,492. Coverage MCP returned `Transport closed`; this is local selected
+evidence and does not claim a managed snapshot or a fresh full-suite run.
+
+## 10-bit I422 intra CDEF and restoration parity — 2026-10-31
+
+Added active parity row
+`decode:avif:coverage_i422_intra_cdef_restoration_10bit_16x16` for a valid
+16×16 10-bit I422 key frame with one CDEF strength set and Wiener restoration
+on luma. The pinned normal libaom encoder emits both filters without the
+fixture-only patch used by the separate I420 SGR case. Pillow 12.2.0/libavif
+1.4.1 decodes 768 exact RGB bytes. AVIF SHA-256:
+`aa368cf810ef5d48ce300f3582f9574744a1929beeb5525497675176b6b8beac`; RGB
+reference SHA-256:
+`afb7a71a8c86bf53df63a3735752e299ced6712e8b718cf4725fb3a2b61eaec6`.
+
+The selected public parity run passed 1/1 with exact 768-byte RGB8 parity. Its
+local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T114414.774704Z-90300a4cf42540e8801bbdc45efce653/coverage.json`
+(SHA-256 `feb1523b659857bb0843b099bb451465290f36e2dfe74f651187869855c929eb`);
+the execution receipt is
+`.coverage-mcp/local-evidence/selected/20261031T114414.774704Z-90300a4cf42540e8801bbdc45efce653/coverage.local-evidence.json`
+(SHA-256 `85a86eac52f692d521ba84b16b5ade88a92347f00bf16ac0e8a01134095599ad`).
+The selected report records the intra side of the `I422 CDEF || restoration`
+admission at `entropy.rs:10851` three times; the earlier full public-parity
+report, which predates this case, records only the other side there (1,976
+hits). Both local receipts report the same `entropy.rs` source hash. This is a
+source-matched local coordinate union, not a full-suite or Coverage MCP
+measurement. Coverage MCP returned `Transport closed`; no unit tests ran.
+
+## AV1 screen-content sequence-flag parity — 2026-10-31
+
+Added active parity rows `decode:avif:animated_screen_content_tools_disabled`
+and `decode:avif:animated_integer_mv_disabled` for the missing selector
+outcomes in `sequence.rs`. The first fixture fixes screen-content tools off
+and removes the now-absent per-frame flag while preserving tile payloads; the
+second retains selectable screen tools and sets the explicit integer-MV value
+to zero. The fixtures are SHA-256
+`d0c88a39ca31c30f56afa5540505d7e20892ed0d9d5339ff843cdf6d9040a357` and
+`47b3767081913f190e0473842a466a9a81ae4acce5e5099c323c9793187cdcce`.
+Pillow 12.2.0 decodes both with the same five exact frames and 33 ms timing as
+the source; the independent pinned native observer reports infinite repetition.
+
+The selected public parity run passed 2/2. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T103842.788936Z-e076f8b34a45491a86231c593c1b451f/coverage.json`
+(SHA-256 `48035173c8c951419b1ad0a789011a2b033cf6225dd2882f33383ea021ce504c`);
+the execution receipt is
+`.coverage-mcp/local-evidence/selected/20261031T103842.788936Z-e076f8b34a45491a86231c593c1b451f/coverage.local-evidence.json`
+(SHA-256 `011343789803c2ad8443f24ac11e54196eae3c548169ef3f1771ced087301cf2`).
+In the selected report, `sequence.rs:270` and `:275` each record both outcomes,
+and `:276` records the false selector outcome twice. Coverage MCP returned
+`Transport closed` for the gap query, so these are local selected-run results,
+not MCP attribution or a full-repository coverage measurement. No unit tests
+ran.
+
+## AV1 short sequence-header payload parity — 2026-10-31
+
+Added active parity row
+`decode:avif:error_animated_sequence_header_short_payload`. Its generator
+shortens the first sequence OBU by two bytes and uses those bytes for a
+zero-length `OBU_PADDING`, preserving the sample length and BMFF offsets. The
+second sequence header remains intact. Fixture SHA-256:
+`801608c817468a05bbf62f04ebee2cf5fbe324296c48e98560e7f74350357197`.
+Pillow 12.2.0 fails while loading frame 0 with
+`Failed to decode frame 0: Decoding of color planes failed`; the Rust public
+decode path returns the typed malformed AVIF result after a bounded read past
+the shortened sequence payload.
+
+The selected public parity run passed 1/1. Its LLVM report records both
+outcomes at `src/codecs/avif/av1/bit_reader.rs:105`, including three reads that
+exceed the OBU payload. The report is
+`.coverage-mcp/local-evidence/selected/20261031T110054.971190Z-f9abe410a4a14c90ae1a0f31e578b01e/coverage.json`
+(SHA-256 `aae8efa20a839ec6d73b9d4a3ac35ce14cf1721ae3515f63766dddd488ffd178`);
+its receipt SHA-256 is
+`e2cea0a5f68ddc5533010e44ad9eda7c9e45836cb3e5d2673118ef54af1e6afe`.
+Coverage MCP returned `Transport closed` for the focused branch query, so this
+is local selected-run evidence without MCP attribution or a full-suite
+coverage claim. No unit tests or Rust decoder-source changes were added.
+
+## AV1 BT.709 transfer-characteristic parity — 2026-10-31
+
+Added active public parity row
+`decode:avif:animated_transfer_characteristics_bt709`. Its deterministic
+five-frame 64×64 RGB AVIF carries CICP values `1/1/6`: BT.709 primaries and
+transfer characteristics with the BT.601 matrix. The sequence header remains
+an ordinary 8-bit 4:2:0 AV1 header. Fixture SHA-256:
+`8b7c981b052241b55112e6ae3ce64b00681c101a25c7d9bd9c9091d727417af2`.
+Pillow 12.2.0 and pinned libavif 1.4.1 decode all five exact RGB frames at
+33 ms; the independent native observer reports infinite repetition.
+
+The selected public parity run passed 1/1. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T095637.229277Z-94cba16d6ab042808ecd28a357c4dda7/coverage.json`
+(SHA-256 `1dd7df9cd507c60a7b98925856c322e9111cb2fe3c9be406247fdf42b652dfd7`);
+the execution receipt is
+`.coverage-mcp/local-evidence/selected/20261031T095637.229277Z-94cba16d6ab042808ecd28a357c4dda7/coverage.local-evidence.json`
+(SHA-256 `d528800b599a9e555c0564e3d28ed8830f8ce36a149064ff8f657bdf2f53f468`).
+Both report inputs remained stable during execution. The selected report shows
+the false side of the `transfer_characteristics == 13` check at
+`sequence.rs:325` three times; the retained 835-case AVIF report has 1,293
+true-side hits and no false-side hits at that coordinate. Across seven
+source-matched local reports, the sequence parser's branch-outcome union is
+97/106, leaving nine outcomes uncovered. Coverage MCP returned
+`Transport closed` for the gap query and incremental comparison, so these are
+local measurements, not MCP attribution. No unit tests ran.
+
+## AV1 order-hint-disabled public parity — 2026-10-31
+
+Added the active public parity row
+`decode:avif:animated_order_hint_disabled`. Its deterministic five-frame,
+64×64 RGB AVIF uses ordinary AV1 sequence headers with `enable_order_hint=0`;
+the generator clears only BMFF creation/modification timestamps. Fixture
+SHA-256: `565363788fd1a30cc51b2f3f3d4852a447292646de0b37ab81589590a93e706d`.
+Pillow 12.2.0 and pinned libavif 1.4.1 both decode all five 33 ms frames;
+the independently compiled libavif observer reports infinite repetition.
+
+The selected public parity run passed 1/1 and retained exact RGB references.
+Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T094727.789608Z-cb2ab3e25ef943ada7b483dd5d2b9f3c/coverage.json`
+(SHA-256 `3bd0ca3c0a4e5ea57c27e5754aaad84cb120dff19d4437b75504976add88a0a9`);
+the local execution receipt is
+`.coverage-mcp/local-evidence/selected/20261031T094727.789608Z-cb2ab3e25ef943ada7b483dd5d2b9f3c/coverage.local-evidence.json`
+(SHA-256 `a1c063d7b7de2e820c697abb2f14de787eb71032389de43344d048c4b578d714`).
+The receipt records stable source and fixture inputs during execution. In the
+selected report, `sequence.rs` has 31/106 covered branch records; lines 268 and
+269 take the `enable_order_hint` false side three times each. The retained
+835-case AVIF report had only the true side at those coordinates (450 hits,
+zero false hits), so this is a new parity-reachable branch outcome. These are
+selected-run figures, not full-repository coverage. Coverage MCP returned
+`Transport closed` for both the gap query and incremental comparison; this is
+local evidence, not MCP attribution. No unit tests ran.
+
+## AVIF encoder option-rejection parity — 2026-10-31
+
+Promoted four Pillow-backed public error cases to active parity: invalid
+subsampling, the rejected `444` alias, invalid range, and the decoder-only
+`dav1d` codec. All four pass through the public AVIF option parser with the
+expected structured parameter errors before the unimplemented valid encoder
+path. The selected integration parity run passed 4/4 rows with four public
+encode calls and no panics. AVIF now has five active encode parity rows and 27
+planned encoder rows; this does not establish valid AVIF encoding support.
+
+The local selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T083615.570074Z-46e71977acec41069cdcc45849b07f1f/coverage.json`
+(SHA-256 `b270554b7d70455a2a15c1aaff4541d437d5cc633bc71a74066d9ed4569bb491`);
+its receipt is
+`.coverage-mcp/local-evidence/selected/20261031T083615.570074Z-46e71977acec41069cdcc45849b07f1f/coverage.local-evidence.json`
+(SHA-256 `0b29aa74101eda5c512dfbe21835b1064ac6efd05323ffe057a28fe7a2a0b0bc`).
+Coverage MCP returned `Transport closed` for this report, so these results are
+local selected-run evidence only, not MCP attribution or a full-repository
+coverage measurement. No unit tests ran.
+
+The complete active AVIF matrix then passed 835/835 rows: 830 decode rows and
+five encode-error rows. Compared with the previous 831-row AVIF selection, the
+four newly active option cases added 26 covered source lines, 24 regions, and
+one function; the selected branch count did not change. Its report is
+`.coverage-mcp/local-evidence/selected/20261031T084427.545666Z-485e0356e2dd4e5eaef3b2d8b5402dfc/coverage.json`
+(SHA-256 `4e1804aaa6b54fde293b894e2ed7098e059c44a9704d552a25bc0a95da3f371f`),
+with receipt
+`.coverage-mcp/local-evidence/selected/20261031T084427.545666Z-485e0356e2dd4e5eaef3b2d8b5402dfc/coverage.local-evidence.json`
+(SHA-256 `aa48ecaaae3541af54784040cf2645e2cffe850e79cb21cb858cd32360eee0d4`).
+The receipt confirms the matrix and source were stable during execution.
+
+## AVIF still-mux native parity — 2026-10-31
+
+The exact integration parity case
+`avif_mux::still_mux_matches_complete_independent_native_files` passed 1/1 and
+checked all 28 complete native mux cases against the Rust still-container
+writer, including repeat writes and output-size limits. In this selected test
+only, `src/codecs/avif/encode/container.rs` covered 451/501 lines, 99/142
+branches, 28/49 functions, and 860/1,064 regions. The local report is
+`.coverage-mcp/local-evidence/selected/avif-mux-native-parity-20261031083949Z.json`
+(SHA-256 `6d5c95e112ab80ab470a80d0c906a4d91572791f9eb3499db9a97da13aa17d53`).
+These figures are a focused report for that parity test, not full-suite
+coverage or proof that public AVIF encoding is implemented.
+
+## AVIF ICC full-range 4:4:4 pixel parity — 2026-10-31
+
+The complete active AVIF parity selection exposed five ICC and mastering-
+display fixtures that the portable decoder rejected. Their container CICP is
+`2/2/6`: primaries and transfer are unspecified, while matrix coefficients
+select BT.601. Added admission for this observed 8-bit, full-range, 4:4:4,
+no-alpha class in `portable_color_conversion`; it reuses the existing BT.601
+converter, with no change to the per-pixel loop. The five rows
+`icc_profile`, `icc_ricc_type`, `icc_mdcv`, `icc_mdcv_trailing`, and
+`duplicate_mdcv_first_wins` each passed exact 48-byte RGB parity.
+
+The complete selected AVIF run passed all 831 active rows: 830 decode rows and
+the active invalid-quality encode row. The local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T082030.433884Z-19ab5338b2bd45adbdebab9746728498/coverage.json`
+(SHA-256 `0695f404c223aaf6a38e33af9a6aabeeb266beefa2899e50023f888a5bed15f`);
+its receipt is
+`.coverage-mcp/local-evidence/selected/20261031T082030.433884Z-19ab5338b2bd45adbdebab9746728498/coverage.local-evidence.json`
+(SHA-256 `25a502c1e74789fa6375b1414e230d99742c1a18412dfd44f8948eeb35ae48a1`).
+The receipt reports stable source and fixture state during the run. Coverage
+MCP returned `Transport closed`, so this remains local selected-run evidence,
+not MCP attribution or a full-repository coverage result. No unit tests ran.
+
+## AV1 sequence-header syntax-error parity — 2026-10-31
+
+Added active parity rows `decode:avif:error_animated_reduced_header_nonstill`,
+`decode:avif:error_animated_invalid_operating_point_idc`, and
+`decode:avif:error_animated_initial_display_delay_over_10`. Each fixture
+changes the first sequence header of the five-sample
+`animated_decoder_model_parameters_change.avif`. The first sets
+`reduced_still_picture_header` while `still_picture` remains clear (SHA-256
+`61d55ddcaafde6347e60cc7b9ffe4e2c18ac448f85e14c8d3b6a9a2f0056ff6f`); the
+second changes `operating_point_idc` from zero to temporal-only value 1 (SHA-256
+`d5553ed290d398d26ef3e731c98e4bee6b2d8d06b8a00dd4c876d851c61196c0`); the
+third sets initial display delay to 11 (SHA-256
+`5b1c2097577d75e116016f0760f6c589c12e1304fb42e7ef9a2c982f020b555a`). Pinned
+Pillow 12.2.0 opens each AVIF and fails loading frame 0 with
+`Failed to decode frame 0: Decoding of color planes failed`. Rust public
+`decode` and `decode_sequence` return the typed malformed AVIF contract. The
+selected public parity run passed 3/3.
+
+The local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T074426.293493Z-aaa6dabc6484430482a45f6a9a45631e/coverage.json`
+(SHA-256 `d34c3037aa56b776e3695fdf9932eb7ba981712459e86e08d745f9b8e6ceb9b6`),
+with its adjacent `coverage.local-evidence.json` receipt. It records execution
+at the AV1 sequence-parser conditions `sequence.rs:127`, `:195`, and `:212`;
+the receipt reports no source or fixture changes during the run. Coverage MCP
+again returned `Transport closed` for gap discovery and incremental comparison,
+so this is local evidence without MCP attribution or an aggregate coverage
+gain claim. The generator is
+`scripts/generate_avif_sequence_header_errors.py`. No decoder source changes or
+unit tests were added.
+
+A focused follow-up re-ran those three public parity rows and passed 3/3. The
+selected local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T105108.549888Z-f413b92a289a4061ab325c8f5c25f613/coverage.json`
+(SHA-256 `b4d672b86a50d8fc6203232720508754025e2c21d493470e6ec15b85be48b81a`);
+its receipt is
+`.coverage-mcp/local-evidence/selected/20261031T105108.549888Z-f413b92a289a4061ab325c8f5c25f613/coverage.local-evidence.json`
+(SHA-256 `0d08d18804417ab3d65ae64866001c696e28dab1d4a662692cca608ab95c33bc`).
+Across 16 local reports with matching source manifest and `sequence.rs` hashes,
+the branch-outcome union is 102/108 across 54 coordinates. The six absent
+outcomes are the two sides of three zero-count records at `sequence.rs:347`
+columns 8–32 and 36–67, and `sequence.rs:352` columns 31–42. Two ranges extend
+beyond their current source lines; the existing malformed cases return before
+the final sequence fields. No additional reachable parity case is indicated.
+Clearing the trailing marker in a candidate AVIF does reach the Rust public
+error `AV1 trailing marker bit is not set`, but Pillow 12.2.0 recognizes its
+five frames and decodes frame 0. That candidate was not promoted because it
+would assert behavior that differs from the reference decoder.
+Coverage MCP returned `Transport closed` for the focused report as well, so
+this remains local evidence without MCP attribution. No unit tests ran.
+
+## Repeated AV1 sequence-header color-primaries parity — 2026-10-31
+
+Added active parity row `decode:avif:error_animated_sequence_color_primaries_change`.
+The fixture changes only `color_primaries` from 1 to 9 in the second AV1
+sequence header of a two-frame AVIF. Its SHA-256 is
+`3a4039604a7bf10739a7bcdf5a32c406c3ed5b772b9fdad58a88e73bc6571588`. Pinned
+Pillow 12.2.0 opens the first frame and reports `Failed to decode frame 1:
+Decoding of color planes failed`; the Rust public sequence decoder returns the
+`Malformed` contract. The selected parity case passed 1/1 with exact 67,500-byte
+RGB8 parity for frame 0 and the expected sequence error.
+
+Before this row was added, the full active public parity selection passed 2,866
+cases (2,324 decode and 542 encode). Its local LLVM report is
+`.coverage-mcp/local-evidence/full/20261031-current-all-public-parity/coverage.json`;
+the adjacent `coverage.local-evidence.json` is its local receipt. The new
+selected report is
+`.coverage-mcp/local-evidence/selected/20261031T072616.189147Z-05c9273289c9438784a950f05ae1f8be/coverage.json`;
+its adjacent receipt records the `src/codecs/avif/av1/frame.rs` sequence-header
+mismatch branch as executed. Coverage MCP returned `Transport closed` for the
+gap and comparison queries, so these are local LLVM observations without MCP
+source/build attribution. This is not a full-coverage claim. No Rust decoder
+source change or unit test was added.
+
+## AV1 frame-ID wrap reference-slot parity — 2026-10-31
+
+Added active parity row `decode:avif:animated_frame_id_wrap_contiguous`. This
+valid two-frame sequence changes the IDs from 4,626 and 4,627 to 32,760 and
+10, with all seven reference deltas updated from 1 to 18. The IDs wrap in the
+15-bit range while preserving the decoded reference. Its AVIF SHA-256 is
+`8a53bf96c97b66d07b849ec6e4a6dcf18f37ab9db5b3edb045f2b357bd59e35e`. Pillow
+12.2.0 and the pinned native libavif observer preserve both exact 16x16 RGB
+frames; the selected Rust parity case passed 1/1 with exact 768-byte output.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T065142.055821Z-aee60d3386414efb9e57745ca09fac8c/coverage.json`
+(SHA-256 `419acd20d6901b9105cf3b658ce42bd8985e4b52721a464fc1c6a7a6204481ee`);
+its local receipt is
+`.coverage-mcp/local-evidence/selected/20261031T065142.055821Z-aee60d3386414efb9e57745ca09fac8c/coverage.local-evidence.json`
+(SHA-256 `4875ac0a4575dd7d07bfed568a87c4edb97475b478c15ff10256fc1634ae6f77`).
+The `frame.rs` source hash is
+`2fac0b2d4395417b17ca45b9a0dcfa432d3dc44601e762628c935bcff6229549` in both
+this report and the retained full-active report. At line 840,
+`invalidate_reference_slots` records 8/0 for the wrapped reference comparison;
+the full-active baseline records 0/8. A second zero-count instrumented crate
+instance remains. Coverage MCP again returned `Transport closed` for both the
+filtered gap query and incremental comparison, so this is local same-source
+evidence only, not MCP attribution or full-suite coverage. Source and fixture
+hashes remained stable during the selected run. No unit tests or decoder-source
+changes were added.
+
+The current fixture matrix contains 2,915 total rows: 2,342 decode / inspect /
+verify rows and 573 encode rows. Of those, 2,342 decode rows and 546 encode
+rows are active; 27 encode rows are planned. AVIF has 842 active decode rows.
+
+## High AV1 frame-ID reference-slot parity — 2026-10-31
+
+Added active parity row `decode:avif:animated_frame_id_high_contiguous`. The
+deterministic fixture advances the source sequence's frame IDs from 4,626 and
+4,627 to 20,000 and 20,001, preserving the one-step reference delta while
+crossing the 14-bit delta range. Its AVIF SHA-256 is
+`25c5e52ca0759816ce94f4aa5d2be42ed99353a004da85e1cf80e8006925eecf`. Pillow
+12.2.0 preserves both exact 16x16 RGB frames; the pinned native libavif
+observer decodes both frames and confirms the infinite-loop count. The
+selected Rust parity case passed 1/1 with exact 768-byte pixel output.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T064556.796593Z-81144245b41744e08257b6a4ff49d114/coverage.json`
+(SHA-256 `1f480551f013385ea93f95f76d3591209be466360dbc977f4930c3984eba1acd`);
+its local receipt is
+`.coverage-mcp/local-evidence/selected/20261031T064556.796593Z-81144245b41744e08257b6a4ff49d114/coverage.local-evidence.json`
+(SHA-256 `be8b31dbf69d1251a25b14edd9de04a33f5876c231300a0555d7c638800e9ef9`).
+The source hash for `src/codecs/avif/av1/frame.rs` is
+`2fac0b2d4395417b17ca45b9a0dcfa432d3dc44601e762628c935bcff6229549` in both
+the selected report and the retained full-active report. At line 836,
+`invalidate_reference_slots` records 8/0 for the high-ID comparison in this
+selected run; the full-active baseline records 0/8. A second zero-count
+instrumented crate instance remains in the selected report. Coverage MCP
+returned `Transport closed` for both the filtered gap query and the
+incremental comparison, so these counts remain local same-source evidence,
+not MCP attribution or a complete-coverage claim. Source and fixture hashes
+remained stable during the selected run. No unit tests or decoder-source
+changes were added.
+
+## One-pixel AV1 super-resolution edge-tile fallback parity — 2026-10-31
+
+Added active parity row
+`decode:avif:portable_lossless_monochrome_multitile_superres_narrow_edge_145x64`
+for a 145x64 all-lossless monochrome frame coded at width 129 with two tile
+columns. The final coded tile contains one visible pixel; denominator-9
+super-resolution restores the display width to 145. The deterministic
+`narrow-edge-tile` generator profile double-encodes and pins the AV1 seed,
+checks the two-column geometry, and verifies Pillow's exact 27,840-byte RGB
+reference (`1a3a18cc362bf40b0001563429b6446baca238f80a7a23adb6fbb54a3d12fd55`).
+The 8,491-byte AVIF SHA-256 is
+`aa73cdf640627b55ea1cc7a35af26a42f92bce39c504911c0e0fee6124905320`. Selected
+parity passed 1/1. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T063147.868326Z-5fdf2f844d654d97b5436b743e691c46/coverage.json`
+(SHA-256 `54c407b9e67c3391072f91c256b359d409a67af7d782ac76b8866d25fa7e0b11`);
+the receipt is
+`.coverage-mcp/local-evidence/selected/20261031T063147.868326Z-5fdf2f844d654d97b5436b743e691c46/coverage.local-evidence.json`
+(SHA-256 `ffc1485c57dadff1d49278b2fc2cb6c7bebf3361118fbca0dc87dac0d294f8ad`).
+
+Compared with the retained 2,847-case full-active report at
+`.coverage-mcp/local-evidence/selected/20261031-full-active-parity-current/coverage.json`
+(SHA-256 `1381ecc6baa8789346d4b32ce36ca365457515050eef7f5dabca96f601794d2e`),
+whose `frame.rs` (`2fac0b2d4395417b17ca45b9a0dcfa432d3dc44601e762628c935bcff6229549`)
+and `entropy.rs` (`17895a0a44369f11eb95a4d34923a295e2f8868eabeb0492cf587f0d10720399`)
+source hashes match this selected receipt, this input newly covers two branch
+spans in `src/codecs/avif/av1/frame.rs` and 66 in
+`src/codecs/avif/av1/entropy.rs`. At the targeted frame fallback spans
+`:3157` and `:3158`, one LLVM observation records 3/0 and another remains 0/0.
+This is a local same-source coordinate comparison, not Coverage MCP attribution;
+Coverage MCP returned `Transport closed` for the filtered branch query. The
+source did not change during the selected run, and the receipt binds the row to
+the fixture and Pillow reference. No Rust unit tests or decoder source changes
+were added.
+
+After adding the high-frame-ID parity row, the fixture matrix contained 2,894
+total rows: 2,321 decode / inspect / verify rows and 573 encode rows. Of those,
+2,321 decode rows and 542 encode rows were active; 31 encode rows were planned.
+AVIF had 821 active decode rows.
+
+## Lossless multi-tile AV1 super-resolution parity — 2026-10-31
+
+Added active parity row
+`decode:avif:portable_lossless_monochrome_multitile_superres_256x64` for a
+256x64 all-lossless monochrome frame coded at width 228 with two tile columns
+and denominator-9 super-resolution. Its deterministic generator double-encodes
+the pinned seed, validates the patched AV1 and AVIF headers, and pins a 49,152-byte
+Pillow RGB reference (`bc51fcf2f5bfe8ddd2d500f0ac1ef8fface82095da5127792ca79461518553a3`).
+The 14,762-byte AVIF SHA-256 is
+`47d5096e64a5d61a6247575f645490813a55ba2ddd4c77379987c1a37ea6dd91`. Selected
+parity passed 1/1. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T062505.670607Z-f98aef99a4354c728c51ad3edf237fdd/coverage.json`
+(SHA-256 `4d2f3ec78f1df5c4359b3791eda31c53c6cab8980d1fc1a8561da6c6831e0510`);
+the local receipt is
+`.coverage-mcp/local-evidence/selected/20261031T062505.670607Z-f98aef99a4354c728c51ad3edf237fdd/coverage.local-evidence.json`
+(SHA-256 `e303517212bde0049082d0f44d218728cdb1e7dfdcd64ca21b73af94652de36d`).
+Compared with the retained 2,847-case full-active report
+`.coverage-mcp/local-evidence/selected/20261031-full-active-parity-current/coverage.json`
+(SHA-256 `1381ecc6baa8789346d4b32ce36ca365457515050eef7f5dabca96f601794d2e`),
+this selected run newly covers the multi-tile guard branch at
+`src/codecs/avif/av1/entropy.rs:18123` (0/0 to 12/0). The source file SHA-256
+is identical in both reports (`17895a0a44369f11eb95a4d34923a295e2f8868eabeb0492cf587f0d10720399`).
+This is a local same-source branch comparison, not Coverage MCP attribution. The full-width input leaves the frame fallback at
+`src/codecs/avif/av1/frame.rs:3157` unhit (0/0); the one-pixel edge parity case
+above now covers it. Coverage MCP returned `Transport closed` for the branch query, so
+no MCP source attribution or full-suite coverage claim is made.
+
+At the time this full-width parity row was added, the fixture matrix contained
+2,892 total rows: 2,319 decode / inspect / verify rows and 573 encode rows. Of
+those, 2,319 decode rows and 542 encode rows were active; 31 encode rows were
+planned. AVIF had 819 active decode rows.
+No Rust unit tests or decoder source changes were added.
+
+## AV1 lossless monochrome super-resolution branch parity — 2026-10-31
+
+Added active parity row
+`decode:avif:portable_lossless_monochrome_superres_clamped_3x3` for a 3x3
+all-lossless monochrome key frame that enables super-resolution at the
+minimum-width clamp. The deterministic generator validates the AV1 syntax,
+pins the asset, and verifies Pillow's exact 27-byte RGB reference
+(`d3032e6d59449568a19027d012277ab23dc9843f5293220df001c16217a6e35f`). The
+selected parity run passed 1/1. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T060823.106357Z-6f30555f91514a92bfc0001557e86c6c/coverage.json`
+(SHA-256
+`53509c58f49232f85e4c163e688c045a09f0797e672f6674089e9e24b2e4d870`); the
+local receipt is
+`.coverage-mcp/local-evidence/selected/20261031T060823.106357Z-6f30555f91514a92bfc0001557e86c6c/coverage.local-evidence.json`
+(SHA-256
+`14f5039902259448ecf48efd133fc724e9ea62e72d4e9b192032170a51dd6f9b`). At
+`src/codecs/avif/av1/frame.rs:3139`, one exported branch observation has counts
+3/0 and a second observation at the same span has counts 0/0. The report thus
+records the true edge in one instance; it does not establish coverage of every
+instance. The receipt records the selected case and that source did not change
+during the run. Coverage MCP returned `Transport closed` for the branch query,
+so this remains local selected-coordinate evidence without MCP attribution or
+a full-suite coverage claim.
+
+At the time the clamped 3x3 parity row was added, the fixture matrix contained
+2,891 total rows: 2,318 decode / inspect / verify rows and 573 encode rows. Of
+those, 2,318 decode rows and 542 encode rows were active; 31 encode rows were
+planned. AVIF had 818 active decode rows.
+No Rust unit tests or decoder source changes were added.
+
+## AV1 monochrome super-resolution sequence parity — 2026-10-31
+
+Added active parity row
+`decode:avif:animated_monochrome_superres_sequence_17x16` for a two-frame,
+8-bit monochrome sequence with super-resolution and SGR restoration. The
+deterministic generator validates the AV1 profile and pins Pillow 12.2.0 frame
+bytes. Selected parity passed 1/1 with exact 816-byte RGB output per frame.
+The local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T054246.676014Z-eee15edc148f45e496c4333669768089/coverage.json`
+(SHA-256
+`6d9a7967449a7bd234d01223f4154b094dea352a1581e723013bcdf2c373febe`). It
+does not record hits on the intended AV1 frame fallback branch at
+`frame.rs:3139`; Coverage MCP closed the connection, so no MCP attribution is
+claimed. This parity case does not close that coverage gap. At the time this
+sequence row was added, the public fixture matrix contained 2,890 total rows:
+2,317 decode / inspect / verify rows and 573 encode rows. Of those, 2,317 decode
+rows and 542 encode rows were active; 31 encode rows were planned. AVIF had 817
+active decode rows. No Rust unit tests or decoder source changes were added.
+
+## Full coverage refresh and JPEG fast-path trial — 2026-10-25
+
+At `cf4ff290adf7ffd3296a9aea16be1884f458b644` (the merged PR #87 revision),
+`make coverage` passed the all-feature matrix and the configured release floors:
+93,692/139,473 lines (67.175726%), 18,575/32,068 branches (57.923787%),
+5,213/8,917 functions (58.461366%), and 143,029/216,455 regions (66.077938%).
+The local LLVM report is retained at
+`.coverage-mcp/local-evidence/full-20261025-pr87-main-refresh/coverage.json`
+with SHA-256
+`b91003d65bc8581a6d69f1e63a39493a0a0ecf1943dd16e9db7c0b23a1cce431`.
+The report has no Coverage MCP source/build receipt. A branch-gap query against
+it failed because the local Coverage MCP daemon did not become healthy, so no
+MCP gap groups or test attribution are claimed from this refresh. Raw LLVM data
+still contains repeated AV1 monomorphization observations; inspect each source
+path and establish a valid public input before adding parity rows. The 100%
+coverage objective remains open.
+
+### AV1 mixed-lossless B32 specialization probes — 2026-10-25
+
+The existing public rows
+`decode:avif:animated_mixed_lossless_inter_b32_i420_64x64` and
+`decode:avif:animated_mixed_lossless_inter_b32_i420_residual_64x64` each passed
+their selected Pillow pixel-parity run (1/1, 12,288 output bytes). The second
+fixture changes every pixel in its qindex-zero B32 ROI between frames, so it
+also tests nonzero residual data. Their selected LLVM reports are retained at
+`.coverage-mcp/local-evidence/selected/20261025T073910.795480Z-8a6d417b1768484fa50917b63d8c5b26/coverage.json`
+and
+`.coverage-mcp/local-evidence/selected/20261025T074319.862204Z-46ea5372d9c04f43ace4546c46a5da66/coverage.json`.
+Both local receipts record that source did not change during execution.
+
+Neither selected report records branch hits at `block.rs:48152` or
+`block.rs:48160` in the active `decode_inter_translation_impl` instances. The
+residual case reaches the mixed 8-bit lossless geometry admission path in
+`entropy.rs`, but it does not exercise the decoder specialization behind those
+branches. These are useful parity controls, not coverage gains; no additional
+fixture was added from them. Coverage MCP reports the selected reports as
+source-unverified with test attribution unknown, so the local branch data is
+coordinate-only and makes no aggregate coverage claim. Find a public input
+that reaches the decoder specialization before adding a parity row.
+
+A temporary JPEG 4:2:0 encoder fast path passed a constant all-present mask to
+the DC predictor for complete MCUs. Seven release A–B–B–A rounds on the Apple
+M3 Pro measured the public 1024×1024 RGB, quality-85, 4:2:0 encode. The
+candidate's median paired ratio was 1.016× the baseline (about 1.6% slower),
+with host load averages between 6.3 and 7.5. Both builds emitted 793,139 bytes
+with FNV-1a `d748543a168ce6aa` in every measured call. The candidate was
+discarded; this experiment did not run the Pillow parity lane and establishes
+no speedup.
+
+## 10-bit I420/I422 intra filter parity — 2026-10-31
+
+Coverage MCP identified the missing positive arm of
+`bounded_i420_intra_restoration` at `src/codecs/avif/av1/entropy.rs:10827`.
+Added active parity row
+`decode:avif:coverage_i420_intra_restoration_10bit_16x16`. The deterministic
+generator creates a 10-bit I420 source, repeats the pinned libavif/libaom
+encode, validates the AV1 OBU syntax, and checks the exact Pillow 12.2.0 RGB
+reference. AVIF SHA-256:
+`c508ed4754d696d6b3240ca552dd61a1481c062c9537904183c4657b13bc5f7f`.
+Selected parity passed 1/1 with exact 768-byte Rgb8 output. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-i420-intra-restoration-10bit/coverage.json`
+(SHA-256
+`1dcffa5b2cc25b6aed718a141105fe7617d4c90b3237a028d5333a5dbd1a4317`).
+Coverage MCP finds no remaining branch gap at the I420 admission branch in
+the parent validator at `entropy.rs:10827`. The positive
+`Some(quantization)` path is covered in
+`complete_bounded_i420_restoration_intra_reconstruction_context`; its
+no-quantization early-return branch at `entropy.rs:14353` remains uncovered.
+
+Added the active parity row
+`decode:avif:coverage_i422_intra_restoration_10bit_16x16` for a 10-bit I422
+still frame with Wiener luma restoration and no CDEF. Its selected parity run
+passed 1/1 with exact 768-byte Rgb8 output. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-i422-intra-restoration-10bit/coverage.json`
+(SHA-256
+`5a4fc31f6ea948cc086c21c2876029b24ebd1be5c7cc60e6ca9a79e810dd9d91`).
+On the final full report, Coverage MCP shows the I422 restoration admission
+path covered: the parent branch at `entropy.rs:10821` has no remaining gap,
+and the `Some(quantization)` path is covered in
+`complete_bounded_i422_restoration_intra_reconstruction_context`. Its
+no-quantization early-return branch at `entropy.rs:14209` remains uncovered.
+
+Added active parity row
+`decode:avif:coverage_i420_intra_cdef_10bit_16x16` for a 10-bit I420 key frame
+with CDEF enabled and restoration disabled. Its generator repeats the pinned
+libavif/libaom encode, checks the AV1 OBU profile and CDEF strengths, and pins
+the Pillow 12.2.0 RGB bytes. The AVIF SHA-256 is
+`3407c458add1348d2e0f0a73f8aaaa862fd435a18eb7c563b8461d89541656d2`.
+Selected parity passed 1/1 with exact 768-byte Rgb8 output. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-i420-intra-cdef-10bit/coverage.json`
+(SHA-256
+`edb903e6a41bb879b332b9bf6eaf5b7f1d88d45174d109aa41f6b2803f13e84e`).
+Coverage MCP finds no remaining branch gap at the parent CDEF admission at
+`entropy.rs:10832`; the positive quantization path is covered. The
+no-quantization early return at `entropy.rs:14504` remains uncovered.
+
+Added the matching 10-bit I422 case,
+`decode:avif:coverage_i422_intra_cdef_10bit_16x16`, with CDEF enabled and
+restoration disabled. It passed selected parity 1/1 with exact 768-byte Rgb8
+output. Its AVIF SHA-256 is
+`40e0090f85088bdef2e7cf08910002dd2dc48e95637c976173e71a9326a22352`; its
+selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-i422-intra-cdef-10bit/coverage.json`
+(SHA-256
+`ef3a7ab7a8ae3162749be88f052dcc65174dedadbc819bce34d86146b43aedff`).
+Coverage MCP finds no remaining branch gap at the parent I422 CDEF admission
+at `entropy.rs:10837`; the positive quantization path is covered. Its
+no-quantization early return at `entropy.rs:14596` remains uncovered.
+
+The refreshed full all-feature coverage run passed, including all 57
+coverage-matrix tests and 69 feature-gate tests. Its report is
+`.coverage-mcp/local-evidence/full/20261031-av1-intra-filters-i420-i422-current/coverage.json`
+(SHA-256
+`283711e7dd2539c825642c64d2ec5bdef7a68b965a0fb3e89a8ec10b214a079a`). It
+records 98,559/140,221 lines (70.288331%), 19,640/31,498 branches
+(62.353165%), 5,458/8,998 functions (60.657924%), and 150,308/217,537 regions
+(69.095372%); all configured floors pass. Relative to the preceding full
+report, this run adds 11 covered lines, 9 branches, 1 function, and 10 regions.
+Coverage MCP still reports 139 missed branch observations in
+`validate_complete_lossy_420_partition`, 11 in bounded I422 CDEF/restoration
+inter admission, and 6 in monochrome multi-tile CDEF admission. The report has
+unverified source identity and unknown test attribution, so it does not
+establish named-test attribution or a regression comparison. The matrix now
+contains 2,875 rows, including 2,302 active decode rows and 802 active AVIF
+decode rows. No Rust unit tests were added.
+
+## AV1 monochrome multi-tile filter parity — 2026-10-31
+
+Added active parity row
+`decode:avif:coverage_monochrome_multitile_cdef_8bit_128x64` for an 8-bit
+monochrome key frame with two tile columns, CDEF, and no loop filtering or
+restoration. Its AVIF SHA-256 is
+`ea6c16c86c07414bfa3f71f1132af6494c4d7f6cb5015d5b98bfc94e09e5d73b`; the
+24,576-byte Pillow RGB reference SHA-256 is
+`0d9fa687322831cf61ae6cd8b2cba87ee78bbb071641aada0f2879667bebd3b8`. Selected
+parity passed 1/1. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-multitile-cdef/coverage.json`
+(SHA-256
+`7451ba741cee29590e5704b18cd51a832e0c3ec665aff251494e095386937e1a`).
+
+Added the combined-filter row
+`decode:avif:coverage_monochrome_multitile_loop_cdef_8bit_128x64`. It uses the
+same source and tile layout with nonzero luma deblocking and CDEF syntax. Its
+AVIF SHA-256 is
+`f81ad82e033b3d36cd1c92ab97e296a1b4c3ea5308cd12c919e748a8304ce282`; the
+24,576-byte Pillow RGB reference SHA-256 is
+`2b228a77b35dad05b440b250ee3eee71d858a8561dde92a71634e8cccfffbb57`. The
+pinned generator checks both profiles using libavif 1.4.1, libaom 3.13.2, and
+Pillow 12.2.0. Selected parity passed 1/1 with exact RGB output. Its retained
+LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-multitile-loop-cdef-receipted/coverage.json`
+(SHA-256
+`d0b90f4c16d0366192fde9d5970f57201f6cdc10dad8cdd9d75416b21043d325`); the
+local evidence receipt SHA-256 is
+`a378aa4b622ad8661457ef117331849ec1f33bec2dbcaa78ad9933684afa29b7`.
+
+Added the active-strength case
+`decode:avif:coverage_monochrome_multitile_loop_cdef_active_8bit_128x64`.
+It uses the same source and tile layout with CDEF strength 44, luma deblocking
+level 56, and no restoration. Its AVIF SHA-256 is
+`229af13b8ae6f1e69ce316e74c42d2d225d3ce479bececd45c5ff2059502d763`; the
+24,576-byte Pillow RGB reference SHA-256 is
+`04fe662bfb299b49c6f8117c02278c3b94a80c18f388ca2c5f7370732af460e5`.
+Selected parity passed 1/1 with exact RGB output. Its retained LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-multitile-loop-cdef-active/coverage.json`
+(SHA-256
+`28daed932a725a3604f4db32d33a6b40d6fbca35d8ee73b0c132d9e29047265e`); the
+local evidence receipt SHA-256 is
+`f9ed0ca51d21a0fb58b892d70c0263ffe73e61ad2f7aaf7cf7d3e2182689eab7`.
+Coverage MCP's selected comparison against the zero-strength combined-filter
+case reports 15 newly observed branch outcomes: 8 in `direction_for_block`, 3
+in `constrain`, 2 in `adjust_primary_strength`, and 2 in
+`finish_monochrome_with_cdef`. It reports no added branch universe. Source
+identity is unverified and test attribution is unknown, so these are report
+coordinate observations rather than verified source or named-test attribution.
+
+The refreshed all-feature coverage run passed all 57 coverage-matrix tests and
+69 feature-gate tests. The latest report is
+`.coverage-mcp/local-evidence/full/20261031-av1-monochrome-multitile-active-loop-cdef-current/coverage.json`
+(SHA-256
+`6fdb2012499226fda522ba3be73e678ad2a3244241a19d43b6cd55f728879e68`). It
+records 98,559/140,221 lines (70.288331%), 19,641/31,498 branches (62.356340%),
+5,458/8,998 functions (60.657924%), and 150,308/217,537 regions (69.095372%);
+all configured floors pass. Its aggregate totals match the preceding full
+report. Coverage MCP's full comparison reports no changed branch observations;
+source/build identity is unverified and test attribution is unknown, so this
+does not establish a verified regression or named-test attribution. The latest
+report still has 18 missed branch observations in
+`complete_monochrome_multitile_loop_cdef_reconstruction_context`; in
+`src/codecs/avif/av1/cdef.rs`, the largest reported groups are 11 in
+`filter_block_into`, 5 in `direction_for_block`, 2 in `sample_at`, and 1 in
+`maximum_sample`. The matrix now contains 2,878 rows, including 2,305 active
+decode rows and 805 active AVIF decode rows. No Rust unit tests, decoder source
+changes, or SIMD benchmarks were added in this parity slice.
+
+## AVIF reordered meta handler parity — 2026-10-31
+
+Coverage MCP identified the unobserved first-child handler rejection in the
+container projection parser. Added active parity row
+`decode:avif:error_meta_reordered_handler`, derived from `baseline.avif` by
+moving its valid picture `hdlr` child after `pitm` while preserving file size
+and all AV1 media bytes. Fixture SHA-256:
+`75d67ac340bfec40e5bce5e0f5d19d769053ec5fe774989fd56cb90b32392516`. Pillow
+12.2.0 rejects the complete input at open. The first parity run showed that
+inspection rejected the file but full decode accepted it. The sample parser
+now enforces the required first-child handler for both paths, and the container
+projection no longer repeats that check. Selected parity passed 3/3 with the
+new case and the two existing metadata-handler error controls. Its LLVM report
+is `.coverage-mcp/local-evidence/selected/20261030T195351.283475Z-c5a2286e179e40aa9ff2938157a1d568/coverage.json`
+(SHA-256
+`a5be17a1d858e08d1dbb5d23d52fdfb8d3d4b593190e3a412cdd49d00b5398c2`).
+Coverage MCP reports no remaining branch gaps at `samples.rs:522` or in
+`container::parse_meta` for that full run's inventory.
+
+The refreshed full all-feature LLVM run passed. Its report is
+`.coverage-mcp/local-evidence/full/20261031-meta-handler-order-parity/coverage.json`
+(SHA-256
+`6c7809dfece5341bed6a054bb0ea66e29bc9e75784d13e4499b910dace2a5502`). It
+records 98,506/140,282 lines (70.219985%), 19,945/32,086 branches
+(62.161067%), 5,435/8,981 functions (60.516646%), and 150,307/217,737 regions
+(69.031446%); all configured floors pass. The report has unverified source
+identity and unknown test attribution, so it is not used to claim a regression
+or a percentage-point gain against managed historical measurements.
+
+The current public fixture matrix contains 2,882 total rows: 2,309 decode /
+inspect / verify rows and 573 encode rows. Of those, 2,309 decode rows and 542
+encode rows are active; 31 planned encode rows remain. AVIF has 809 active
+decode rows. No Rust unit tests were added.
+
+## AVIS movie without a picture track parity — 2026-10-31
+
+Coverage MCP identified the uncovered empty-track rejection in
+`samples::parse_movie` at `samples.rs:2136`. Added the active parity row
+`decode:avif:error_avis_moov_without_trak`. Its full-file fixture derives from
+`animated.avif` by removing the sole `moov/trak` while retaining `ftyp`,
+`meta`, `moov/mvhd`, and the complete `mdat` media payload. Pillow 12.2.0
+rejects the file at open. Fixture SHA-256:
+`b7bad81724df0c975c0ba70935f07ade291f5aa55f9b539b230bbb7bfe00562f`.
+The deterministic generator validates the box layout, preserved media bytes,
+fixture hash, and Pillow rejection. Selected parity passed 1/1; the selected
+LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T193551.913677Z-700fd071206e458cbcf56d745ee61d1c/coverage.json`
+(SHA-256
+`486111d1262c13a7f38e9efe108cfbc925b3bbb6269968be7e5d69b06f8d4ee1`).
+
+The refreshed full all-feature LLVM run passed, including 57/57
+coverage-matrix tests and 69/69 feature-gate tests. Its report is
+`.coverage-mcp/local-evidence/full/20261031-avis-moov-track-parity/coverage.json`
+(SHA-256
+`76b5ec93f1fea8010fa0fde49c736159b3684b51f4f0d8663a8e4c08b6853460`). It
+records 98,508/140,282 lines (70.221411%), 19,947/32,086 branches
+(62.167300%), 5,436/8,981 functions (60.527781%), and 150,315/217,736 regions
+(69.035437%); all configured floors pass. Coverage MCP no longer reports the
+missing branch at `samples.rs:2136`; the separate container projection parser
+still has an uncovered empty-track guard at `container.rs:1525`. The local
+report has unverified source identity and unknown test attribution, so it is
+not used to claim a regression or a percentage-point gain against managed
+historical measurements.
+
+The current public fixture matrix contains 2,868 total rows: 2,296 decode /
+inspect / verify rows and 572 encode rows. Of those, 2,296 decode rows and 541
+encode rows are active; 31 planned encode rows remain. AVIF has 796 active
+decode rows. No Rust unit tests were added.
+
+## AVIF primary item missing spatial extent parity — 2026-10-31
+
+Coverage MCP's retained full report left one missing branch in
+`container::inspect_inner_with_grid`. Added the active public parity row
+`decode:avif:error_primary_item_missing_ispe`. Its full-file input derives
+from `baseline.avif` by clearing the primary AV1 item's `ispe` association;
+box sizes and encoded AV1 media bytes remain unchanged. Fixture SHA-256:
+`475d45c0c712b011983d6d946a2e3ce4512d7968664853b0a6953fa7da0c06f7`.
+Pillow 12.2.0 rejects the complete file at open. The first Rust parity run
+accepted its pixels, exposing a decoder validation gap. The decoder now rejects
+an `av01` primary item without spatial dimensions, while inspection still
+reaches the container's missing-details rejection. The focused parity run
+passed 3/3: this row, the unsupported-primary-type error control, and the AVIF
+baseline pixel control.
+
+Its selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T192341.164267Z-3d05e558fab94ebd9f9ce2ad37f3f7c3/coverage.json`.
+The fresh full all-feature LLVM run passed, including 57/57 coverage-matrix
+tests and 69/69 feature-gate tests. Its report is
+`.coverage-mcp/local-evidence/full/20261031-primary-ispe-parity-final/coverage.json`
+(SHA-256
+`b821c8af1f464dfde0e0cdac95204d6a44aba5fd51e241724c4773aacd825d67`). It
+records 98,507/140,282 lines (70.220698%), 19,946/32,086 branches
+(62.164184%), 5,436/8,981 functions (60.527781%), and 150,314/217,736 regions
+(69.034978%); all configured floors pass. Coverage MCP's filtered branch
+queries return no missing groups for `samples::parse_ftyp` or
+`container::inspect_inner_with_grid`. Other AVIF parser and container gaps
+remain. The local report has unverified source identity and unknown test
+attribution, so it is not used to claim a regression or a percentage-point
+gain against managed historical measurements.
+
+The current public fixture matrix contains 2,867 total rows: 2,295 decode /
+inspect / verify rows and 572 encode rows. Of those, 2,295 decode rows and 541
+encode rows are active; 31 planned encode rows remain. AVIF has 795 active
+decode rows. No Rust unit tests were added.
+
+## AVIF lossless 4:2:0 grayscale texture parity — 2026-10-30
+
+Added the active public parity row `decode:avif:portable_lossless_420_gray_texture_8x8`
+for an 8x8 full-range, all-lossless I420 image with nonzero luma residuals and
+neutral chroma. The deterministic generator verifies the pinned Pillow/libavif
+versions, AV1 headers, repeated encoded bytes, and exact 192-byte RGB output.
+The fixture SHA-256 is
+`4d4caeb830d6775b0c82172b60cacae07b0945a419cecb44680394f4337eef65`; the
+expected RGB SHA-256 is
+`6596205a5d46da184e167b8f3b5eb0aa586091b0e83f7368b79f3992a4786242`.
+Selected public parity passed 1/1. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T174112.238658Z-a451598c3be04a80998eb593288d9435/coverage.json`
+(SHA-256
+`ab47bff39c7630e59c956bdeb7e99b4c17031dd18b91bfdb2a31173eec1e4f4a`). The
+report is selected-scope evidence with unverified source identity and unknown
+test attribution. Coverage MCP confirms this input does not execute the
+previously targeted `decode_syntax_with_cdef_with_lossless_square64_arena`
+branch at `block.rs:21001`; no branch-gain claim is made for that location.
+No Rust unit tests were added.
+
+## AVIF lossless 4:2:0 color texture parity — 2026-10-30
+
+Added the active public parity row
+`decode:avif:portable_lossless_420_color_texture_8x8` for an 8x8 full-range,
+all-lossless I420 image whose 2x2 cells cycle through red, green, blue, and
+yellow. The pinned Pillow/libavif generator checks repeatable AVIF bytes,
+sequence/frame headers, and exact 192-byte RGB output. Fixture SHA-256:
+`eba2565967dbab65b88d58c6855ee920d06f69ef39ed610306cff3e322beb0a2`;
+expected RGB SHA-256:
+`8099fa1157400c228f24ce0e41a6f9c59cc73c8be02953024a92761dba0db709`.
+Selected public parity passed 1/1. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030-color-texture-8x8-r1/coverage.json`
+(SHA-256
+`1f5cc7617d2f5af967998fb3a218c8bcd9e690d35990d387cab965e1f8bb8bfe`).
+
+The selected report records zero invocations of `decode_dc_coefficients` and
+the targeted lossless 4:2:0 leaf decoders. Coverage MCP still reports the
+branch group at `block.rs:21001` and the conditional at `block.rs:8753` as
+unobserved. A selected run of the existing 16x16 lossless I420 case also
+passed 1/1 without invoking those decoders. Its report is
+`.coverage-mcp/local-evidence/selected/20261030-existing-lossless-square-16x16-r1/coverage.json`
+(SHA-256
+`0b8d2afd6a2f70204c4d7163bb8cfc91e9164570fa153fb4624325a5154f04de`). The
+incremental comparison with
+the retained full report is incomparable because its branch detail is
+incomplete; this fixture is useful parity coverage, but no coverage gain is
+claimed. The public fixture matrix now contains 2,866 total rows: 2,294 decode /
+inspect / verify rows and 572 encode rows. Of those, 2,294 decode rows and 541
+encode rows are active; 31 planned encode rows remain. AVIF has 794 active
+decode rows. No Rust unit tests were added.
+
+## AVIF still duplicate top-level metadata after mdat parity — 2026-10-31
+
+Coverage MCP's retained full report grouped missing branches in
+`samples::extract_inner_with_metadata` at `samples.rs:2857`. The existing
+animated duplicate-metadata row uses the `avis` brand and takes the earlier
+sequence-specific branch at `samples.rs:2852`. Added the active public parity
+row `decode:avif:still_duplicate_top_level_meta_after_mdat`, derived from
+`grid.avif` by appending its complete top-level `meta` box after `mdat` while
+preserving every original byte. The fixture SHA-256 is
+`2279761c577c985f0c3ccfbe19a02a89f05c5fa16fb3dc1516bd5ebeb3c6702d`. Pillow
+12.2.0 preserves the original RGBA 80x80 metadata and exact 25,600 pixel bytes;
+selected public parity passed 1/1. The expected pixel SHA-256 is
+`4ede0d909351b9b09c7e3e9475bfd3baf458141dbdd08f08aee19c11d2ec2983`.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261031-still-meta-after-mdat-r1/coverage.json`
+(SHA-256
+`b0970b5aaf9ac4b2b8481b94357beb47dafbed1292dcd8f0f0836e3abe628220`). Its
+local receipt binds the run to source manifest hash
+`e66ba336597b9c6ee8e58f9e57e74f41160adeb0bd716cbb4ef1145e931d197a`, records
+the selected row passing, and confirms source files did not change during the
+run. Raw LLVM branches record four true-outcome hits at `samples.rs:2857` in
+the lazy and bounded item-extent parser instantiations. Coverage MCP still
+lists missing observations in other monomorphizations and reports source
+identity unverified and test attribution unknown. The incremental comparison
+against the retained selected report is incomparable because its branch
+detail is incomplete; no aggregate coverage gain is claimed. The matrix now
+contains 2,866 rows, including 794 AVIF decode rows. No Rust unit tests were
+added.
+
+## AVIF unsupported primary item type — 2026-10-30
+
+Coverage MCP reports had grouped missing observations in
+`samples::item_ids`. Source inspection identified an unsupported primary-item
+kind as a public edge case. Added the active parity row
+`decode:avif:error_unsupported_primary_item_type`. Its full-file input derives
+from `grid.avif` by changing only the primary item's declared type from `grid`
+to `Exif`; all box sizes and AV1 payloads are unchanged. The fixture SHA-256 is
+`9285db1aa6df2d36c4d02fa8f2efedeac2f3ca48fc5f6aec64488893c3e3b9b8`. Pillow
+12.2.0 rejects it with `Failed to decode image: Missing or empty image item`,
+and selected Rust parity passed 1/1 with the same rejection. The input passes
+through both supported-kind comparisons and reaches the unsupported-kind
+fallback.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T151646.164961Z-db210ab045ec49339a6588488b31700a/coverage.json`
+(SHA-256
+`42644ebe7948b11f74deae21718c07137a088645bef6f987f4da374068a36ba7`). Its raw
+branch records at `samples.rs:1984` and `samples.rs:1985` each show six visits
+to the false arm. Coverage MCP returns duplicate groups and marks source
+identity unverified and test attribution unknown, so this is targeted path
+evidence rather than an aggregate coverage-gain claim. An incremental
+comparison was incomparable because the saved full report lacks complete
+branch detail. The current public
+evidence matrix contains 2,864 total rows: 2,292 decode / inspect / verify rows and 572 encode rows.
+Of those, 2,292 decode rows and 541 encode rows are active.
+AVIF has 792 active decode rows. No Rust unit tests were added.
+
+## AVIF duplicate container empty-grid guard — 2026-10-30
+
+A fresh full `make coverage` run passed all six integration executables,
+including 57/57 coverage-matrix cases. It measured 98,483/140,287 lines
+(70.2011%), 19,936/32,104 branches (62.0982%), 5,434/8,983 functions (60.4920%),
+and 150,318/217,777 regions (69.0238%), above the configured floors but below
+the 100% goal. The retained report is
+`.coverage-mcp/local-evidence/full/20261030-after-unsupported-primary-item-type/coverage.json`
+(SHA-256
+`f560d1ae113c094d87a1719ae6e86bd178db6d1568ef5c107f19128bc0b89ec3`). Coverage
+MCP returned no missing branch groups for `samples::item_ids`; its source
+identity is unverified and test attribution is unknown.
+
+The same report marked the empty-list error arm in
+`container::Meta::grid_item_ids` as unobserved. Public inspection first creates
+an `InspectedAvif` in the sample parser, whose `still_payload` rejects a grid
+without `dimg` children. The container projection then reparses the same
+references, so its empty-list error duplicated that earlier public-input
+check. Removed the second guard while retaining the existing Pillow-compatible
+error at the sample-parser boundary. After the change,
+`decode:avif:error_grid_without_dimg_references` passed 1/1; strict `make lint`
+and `make lint-x86-simd` passed, including SSE2 and AVX2 cross-target Clippy.
+The full report predates this source edit. No Rust unit tests were added.
+
+## AVIF grid alpha sample-count mismatch — 2026-10-30
+
+Coverage MCP's full report identified the alpha/color tile-count guard in
+`still_payload` at `src/codecs/avif/samples.rs:2036`. Added the active public
+parity row `decode:avif:error_grid_alpha_sample_count_mismatch`. Its complete
+input is derived from `grid.avif` by repointing the second alpha cell's `auxl`
+reference from color tile 3 to tile 2, leaving tile 3 without alpha. Box sizes
+and AV1 payloads are unchanged. The fixture SHA-256 is
+`e63f9dfda938353e27c05834e4b736fd855bbdb273d9b8c2d661348e710e3e50`.
+Pillow 12.2.0 rejects the file with `Failed to decode image: Invalid image
+grid`; the selected Rust parity row passed 1/1 with matching rejection.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T145636.990698Z-d9d2e3894f364d68a67de334889f662b/coverage.json`
+(SHA-256
+`347cd1c8e516a0973d8f46a7a1c83ea18b7a3ffd0ad069be830f5e993bd8db9e`). At the
+guard span, its raw branch records include counts `(6, 0)` and a duplicate
+zero-count record. Coverage MCP returns two groups at that same span and
+reports the false arm missing in selected scope; it marks source identity
+unverified and test attribution unknown. This confirms the selected input
+reaches the mismatch outcome, but does not establish an aggregate coverage
+gain. The full coverage report has not been refreshed. The matrix now contains
+2,861 rows: 2,289 decode / inspect / verify rows and 572 encode rows, with
+2,289 active decode rows and 541 active encode rows. AVIF has 789 active
+decode rows. No Rust unit tests were added.
+
+## AVIF grid non-AV1 color tile — 2026-10-30
+
+Coverage MCP's full AVIF report marked the non-AV1 item-type arm in
+`item_sample` as uncovered. Added the active public parity row
+`decode:avif:error_grid_non_av1_color_tile`. Its complete input derives from
+`grid.avif` by changing only item 2's declared type from `av01` to `Exif`; all
+box sizes and AV1 media payloads remain unchanged. The fixture SHA-256 is
+`1721f82f4ea1f128a97041d867fc1a1c1c0a69663ef9e12d26b02e90b5285803`. Pillow
+12.2.0 rejects it with `Failed to decode image: Invalid image grid`, and the
+selected Rust parity row passed 1/1 with matching rejection.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261030T150957.740166Z-68654b770b70401f82f493352a7e45ab/coverage.json`
+(SHA-256
+`eacd42a6a577b96f165f9bc2fbbd17555a5ebadee2a6083977ccdeb26b1b20be`). Its raw
+LLVM record at `samples.rs:1968` has branch counts `(6, 0)`, showing the
+non-AV1 rejection arm was reached six times. Coverage MCP returns duplicate
+groups at the branch span and marks source identity unverified and test
+attribution unknown. This is targeted branch evidence, not an aggregate
+coverage-gain claim; the full report has not been refreshed. No Rust unit
+tests were added.
+
+## AVIF duplicate empty-grid guard — 2026-10-30
+
+Coverage MCP's full AVIF report marked the empty-child arm in
+`Meta::grid_item_ids` at `samples.rs:1714` as uncovered. Source order showed
+that this guard duplicates an earlier public-input check: `extract_inner_with_metadata`
+validates `still_payload(meta)` before constructing the grid metadata, and
+`still_payload` calls `item_ids`, which rejects an empty `dimg` list using the
+same `Meta::dimg_children` projection. Removed the later empty-list check while
+keeping the existing Pillow-compatible error at the earlier check.
+
+The existing public parity row `decode:avif:error_grid_without_dimg_references`
+passed 1/1 after the change and was rejected as Pillow rejects it. Selected
+report:
+`.coverage-mcp/local-evidence/selected/20261030T150350.831696Z-ca1ca5b3b0e940b98332608ef28da1f2/coverage.json`
+(SHA-256
+`be08cacec24612ca56c9d8ee56146c3788c81e3ee355d917483797b06e655862`). Its raw
+LLVM record for the earlier `item_ids` check at `samples.rs:1987` has counts
+`(6, 0)`. Coverage MCP returns duplicate groups at that span, while the report
+also retains a zero-count record at the removed source coordinate; source
+identity is unverified and test attribution is unknown. This targeted run
+confirms the public error path only, not an aggregate coverage gain. The full
+coverage report was not refreshed. No matrix row or Rust unit test was added.
+
+## AVIS trailing metadata after track media — 2026-10-30
+
+Coverage investigation found that `Meta::details_with_grid` had no public
+AVIS input for its missing-primary-item result. Added the parity fixture
+`animated_sequence_only_trailing_meta_after_mdat`: it appends a valid,
+handler-only top-level `meta` box after the complete `mdat` of
+`animated_sequence_only_no_meta`. Its input SHA-256 is
+`a58d67aaece0bd6502b9f3bb63467e22de4452d4d99d9fb21d088d371f0e0c1f`.
+Pillow 12.2.0 and pinned libavif 1.4.1/dav1d 1.5.3 decode the same five RGB
+frames, 33 ms timing, and one total play. Rust now ignores this trailing AVIS
+metadata after track media has been seen and uses the existing sequence-track
+details. The selected public parity row passed 1/1 with all 67,500 RGB bytes
+matching Pillow.
+
+The selected LLVM report records five visits to the missing-primary outcome
+at `container.rs:1071` (raw branch counts `(0, 5)`):
+`.coverage-mcp/local-evidence/selected/20261030T144143.942794Z-290ee03a075947edb4768cfb3280385f/coverage.json`
+(SHA-256
+`fb191116e7cc16ab092d59c46bfbad99876d9fa1bfb7ae5060cf291731be7084`).
+Coverage MCP returned no grouped branch at that coordinate and marks source
+identity unverified and test attribution unknown. This is targeted local
+evidence, not an aggregate coverage-gain claim; the full coverage report has
+not been refreshed. The public matrix now has 2,861 rows, including 2,289
+decode rows. No Rust unit tests were added.
+
+## AVIF IREF and inspection invariants — 2026-10-30
+
+Coverage MCP identified zero-ID and trailing-payload branches in the
+container's second-pass `parse_iref` projection. The sample parser already
+rejects those inputs before it constructs `InspectedAvif`, so the projection
+checks were redundant. Removed the duplicate validation while retaining
+bounds-checked reads and budget accounting. The existing Pillow parity rows
+`error_iref_zero_from_id`, `error_iref_zero_to_id`,
+`error_iref_trailing_payload`, and `iref_version_1_alpha_auxl` passed together
+(4/4). Selected report:
+`.coverage-mcp/local-evidence/selected/20261030T132610.180464Z-2258eed75b3c4b9cbecbe3d511e4837e/coverage.json`
+(SHA-256
+`6a5dda680d9a8305d8106c1af4f392943d5b8eee7898c8685f3b8b8fe686736f`).
+
+Added the active target-only fault-contract row
+`fault-contract:avif:avif_container_inspection_invariant_guards`. It calls the
+container projection below its private `InspectedAvif` wrapper with synthetic
+non-`ftyp`, incomplete, missing-structure, and detail-free inputs, asserting
+structured inspection errors. The clean retry uses the active AVIF baseline
+and checks its Pillow inspection metadata. Its oracle status is
+`not_applicable`; these internal probes are not counted as Pillow parity. The
+selected contract passed 1/1. Report:
+`.coverage-mcp/local-evidence/selected/20261030T134518.040498Z-5370b4d65f254e93967497c12dc1a267/coverage.json`
+(SHA-256
+`d12c5527151515d89993d6a2106e238bee732cb3d9a189e0dc00165e65444971`).
+
+Added `fault-contract:avif:avif_container_meta_full_box_version_rejected` for
+the container parser's duplicate FullBox-version guard. A normal malformed
+file is rejected earlier by the sample parser, so this target-only contract
+passes a nonzero version to a coverage-only parser hook, checks the structured
+inspection error, and then checks that inspection of the Pillow baseline still
+succeeds. Its `not_applicable` oracle status keeps the internal probe separate
+from Pillow parity. The selected contract passed 1/1. Report:
+`.coverage-mcp/local-evidence/selected/20261031T193102.285636Z-a5e675b53f094ae4ae7879b7b202ec7a/coverage.json`
+(SHA-256
+`fa885359894c1b249f499c0f64470296df815619b1f5b8788ef41c5ecc6e6ada`).
+
+The refreshed full `make coverage` run passed every test executable and the
+configured floors: lines 98,479/140,288 (70.1977%), branches 19,928/32,100
+(62.0810%), functions 5,434/8,983 (60.4920%), and regions 150,314/217,778
+(69.0217%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-avif-inspection-invariant-contract/coverage.json`
+(SHA-256
+`4fbbec56faf48c865dec6fdd97ed8c3f94bed8a763c68c8274ffebd37bb65870`).
+Coverage MCP found no missing branch group for `parse_iref`, the duplicate
+auxiliary AV1C property readers, or `inspect_inner_with_grid` in this report.
+MCP marks source/build identity unverified and test attribution unknown, so
+these are local run measurements; no verified aggregate-gain claim is made.
+The project remains below 100% on all four metrics.
+
+The same full report left the `media_data_seen = true` outcome uncovered at
+`samples.rs:2855` for the bounded-item, metadata-omitting specialization of
+`extract_inner_with_metadata`. Extended the existing active Pillow parity row
+`animated_duplicate_top_level_meta_after_mdat` to repeat decode with a
+1,265-byte metadata limit, the exact bound consumed by this valid fixture.
+The focused selected-coverage parity run passed 1/1 and preserved all 67,500
+RGB bytes. Its LLVM function record changed the target branch from
+`true=0, false=1` in the prior full report to `true=1, false=0` in the
+selected run. Report:
+`.coverage-mcp/local-evidence/selected/20261030T140240.399161Z-29ab42c338c742719c853dbb32c6a99e/coverage.json`
+(SHA-256
+`46fc412d612c742467a1c3dcc7b537a82869edf275fb03bdc91eeadb40373ad4`).
+This confirms the targeted policy outcome only; the full aggregate has not
+been refreshed for this added path, other generic instantiations remain
+separate, and MCP still marks source/build identity unverified and test
+attribution unknown.
+
+## AVIF duplicate auxiliary codec-property parity — 2026-10-30
+
+Coverage MCP's AVIF container report identified duplicate associated `av1C`
+branches in both container inspection and sample parsing. Added
+`decode:avif:duplicate_non_primary_av1c_first_wins`, using a deterministic
+second auxiliary-item `av1C` property declaring 10-bit depth after the
+original 8-bit configuration. The fixture SHA-256 is
+`5c06b67ebc29379bc0dd58c61865dd28927ab3669d59d75a08afcdeb7bcd832f`.
+Pillow 12.2.0 accepts the complete file and produces the same 64×64 RGBA mode,
+all 16,384 pixel bytes, image information, and EXIF bytes as the source.
+Both Rust metadata readers and the independent bitstream inspector now retain
+the first associated codec declaration. The decode path selects that first
+configuration without allocating or parsing later duplicate payloads.
+
+The selected parity run passed all three auxiliary first-wins rows:
+`duplicate_non_primary_ispe_first_wins`,
+`duplicate_non_primary_pixi_first_wins`, and
+`duplicate_non_primary_av1c_first_wins`. Report:
+`.coverage-mcp/local-evidence/selected/20261030T131308.980041Z-877af55aeff5447a948ea23ab7d01c3e/coverage.json`
+(SHA-256
+`d184c504191d53db0a08f34abe3ec3b317dba924c9b78441d5df5f7874397658`).
+Coverage MCP reports source/build identity as unverified and test attribution
+as unknown for this selected report; it supports targeted branch investigation,
+not an aggregate coverage-gain claim. The public fixture matrix now contains 2,861 total rows: 2,289 decode /
+inspect / verify rows and 572 encode rows. Of those, 2,289 decode rows and
+541 encode rows are active; 31 planned encode rows remain.
+AVIF has 789 active decode rows. No Rust unit tests were added.
+
+## AVIF empty XMP item parity — 2026-10-30
+
+Coverage MCP's prior full report identified the unobserved empty-extent path
+in `Meta::metadata`. Added the Pillow parity row
+`decode:avif:empty_xmp_metadata_item_extent`. Its deterministic mutation adds
+an XMP MIME item with no `iloc` extents to `baseline.avif` and rebases the
+primary item's unchanged AV1 payload. The fixture hash is
+`98c1a14618e4577354d82b758a8840d079990364b10ce94b6ef49debc87c1642`.
+Pillow 12.2.0 returns the same 49,152 RGB bytes and image information as the
+baseline and does not expose the empty XMP item. Rust now skips metadata items
+with no extents; the parity row also asserts that no opaque metadata is
+retained. The focused parity run passed 1/1.
+
+Coverage MCP still reports duplicate branch coordinates at `samples.rs:1277`
+for the selected report. The raw LLVM record has an eight-count hit on the
+true arm at the current source location, matching this fixture, plus a
+zero-count duplicate record. Source/build identity is unverified and test
+attribution is unknown, so this is targeted evidence only and no aggregate
+coverage gain is claimed. Report:
+`.coverage-mcp/local-evidence/selected/20261030T114102.606404Z-864b4044914349bda1c0b8aae114d0b0/coverage.json`
+(SHA-256
+`adf6bb2a4f91e3f29eb63a4f402c0e11920f4b9ed84c86ebbb40c77c2083e827`).
+The fixture matrix now contains 2,851 rows, including 2,279 active decode
+rows; AVIF has 779 active decode rows. No Rust unit tests were added.
+
+## AVIF duplicate mastering-display property parity — 2026-10-30
+
+Coverage MCP identified the second-associated-`mdcv` path in
+`Meta::source_color`. Added the Pillow-backed parity row
+`decode:avif:duplicate_mdcv_first_wins` and a deterministic generator that
+appends a conflicting second property, updates its association, and rebases
+the file-backed item extent. The fixture keeps the AV1 payload unchanged and
+has SHA-256
+`a81d3f13b2412488464d461f9c81ab496ce5758bfba3f5f94de237b37b77faa8`.
+Pillow 12.2.0 accepts it and returns the same 48 RGB bytes and ICC profile as
+the one-property control. Pillow does not expose `mdcv` in `Image.info`, so the
+row checks the first property against the existing specification-backed
+metadata assertion.
+
+The decoder now projects the first associated mastering-display property with
+`find_map`, matching the existing inspection path and avoiding a duplicate
+scan/error branch. The baseline, one-property control, and duplicate-property
+parity rows passed together (3/3). Coverage MCP reports no missing branch group
+at the current `samples.rs:1362` condition. It also lists two zero-count branch
+locations at line 1364 in the same report; source/build identity is unverified,
+so that coordinate mismatch is unresolved and no aggregate coverage gain is
+claimed. Report:
+`.coverage-mcp/local-evidence/selected/20261030T113105.734184Z-0ac4dd27a0e74a9fb58dc7723b9b3f50/coverage.json`
+(SHA-256
+`aac455a966a27986fb9d254ad48eb97e251b84a6e17fb2d3dd8062d46981e502`).
+The fixture matrix now contains 2,850 rows, including 2,278 active decode
+rows; AVIF has 778 active decode rows. No Rust unit tests were added.
+
+## AVIF duplicate alpha-reference parity — 2026-10-30
+
+Coverage MCP identified the unobserved duplicate-match outcome in
+`Meta::alpha_targeting` at `samples.rs:1462` and `container.rs:1538`. Added
+the active Pillow parity row
+`decode:avif:duplicate_alpha_auxl_reference_first_wins`. Its generated
+complete-file fixture changes the `auxl` relationship count from one to two,
+repeats the same destination ID, relocates both file-backed `iloc` extents,
+and verifies both AV1 payloads remain byte-identical to `alpha.avif`. Fixture
+SHA-256: `680204d0a9bb9dd0f058b2539e0ccb527c265f6b2ee5e863f2f3674fbe9d03a6`.
+
+Pillow 12.2.0 accepts the duplicate relationship and returns the same 16,384
+RGBA bytes as `alpha.avif`. Both metadata paths now select the first matching
+alpha relationship, matching Pillow and stopping the iterator at that match.
+Metadata retention and sample-payload validation also use named static
+policies instead of boolean mode switches. This preserves inspection/decode
+validation behavior without a per-sample runtime branch. The focused parity
+run passed 1/1. Coverage MCP reports no missing branch
+locations for `Meta::alpha_targeting` in the selected report
+`.coverage-mcp/local-evidence/selected/20261030T110325.340701Z-dcfc222d93864dbd94f4daaaa42637c7/coverage.json`
+(SHA-256
+`d09893977c2507ff63093857928e62f2117e53557cbaec321e67ff739b712f52`). The
+report has unverified source/build identity and unknown test attribution. Its
+incremental comparison is incomparable because the retained baseline detail
+does not match its reported totals, so no aggregate coverage gain is claimed.
+A subsequent full `make coverage` run passed all test executables and cleared
+the configured floors: 98,479/140,308 lines (70.1877%), 19,930/32,122
+branches (62.0447%), 5,429/8,979 functions (60.4633%), and 150,314/217,800
+regions (69.0147%). Coverage MCP found no missing branch group for
+`Meta::alpha_targeting` in
+`.coverage-mcp/local-evidence/full/20261030-after-static-policy-dispatch/coverage.json`
+(SHA-256
+`bc3392905e14e2c9f1f604fcea201611cb38c66b5fff81b290da6b54a27618d2`); it
+still marks source/build identity unverified and test attribution unknown, so
+these are local full-run totals rather than a verified aggregate gain.
+`make lint`, `make lint-x86-simd`, documentation lint, AVIF fixture generation
+checks, and fixture-integrity verification all passed.
+Coverage remains below 100%; no Rust unit tests were added.
+
+## AVIF metadata parity and preceding full coverage baseline — 2026-10-30
+
+Added four public AVIF error cases. `error_avif_missing_meta` retains complete
+`ftyp`/`mdat` boxes but omits `meta`. `error_avis_missing_moov` retains the
+sequence's complete `ftyp`/`mdat`, omits `meta`/`moov`, and rewrites the
+compatible `avif` brand to `avis` so the missing-movie condition is reached.
+`error_pitm_zero_item_id` changes only the complete version-zero `meta/pitm`
+identifier; Pillow rejects it with `Failed to decode image: Missing or empty
+image item`. `error_iinf_duplicate_item_id` duplicates the primary `infe`
+entry; Pillow opens it and fails while decoding frame zero. The generator pins
+hashes, checks box layouts and unchanged AV1 media bytes, and verifies each
+Pillow result.
+
+The missing-container cases plus baseline passed 3/3; the zero-primary-ID
+case plus baseline passed 2/2. Coverage MCP observed the true `movie.is_none()`
+arm at `samples.rs:2857`. For `parse_pitm` at `samples.rs:596`, selected raw
+LLVM data records both outcomes in one instrumented entry; MCP still lists
+zero-count duplicate coordinates, and the incremental comparison is
+incomparable. Both selected reports have unverified source identity and unknown
+test attribution, so they are targeted evidence, not verified aggregate gains:
+`.coverage-mcp/local-evidence/selected/20261030T052822.034279Z-16278491ae83412c8e031271d5cbe54d/coverage.json`
+(SHA-256
+`604353a08a121a6a11459186388e4b639a761ad95e10e2a0927ae76a08981247`) and
+`.coverage-mcp/local-evidence/selected/20261030T053751.057822Z-eb90df0082fe4d6686fc73ea0ad1fb68/coverage.json`
+(SHA-256
+`93a268406c922328fc4708717b6153ba8592b62d146f130347e8b9d4d14d4b99`).
+
+The existing AV1 translation-sample-depth fault-contract expectation was
+corrected to the decoder's public `AVIF sequence rendering has no completed
+color surface` error; its focused run passed 1/1. The full report after the
+duplicate-item parity change clears every configured floor: lines
+98,444/140,278 (70.178%), branches 19,934/32,132 (62.038%), functions
+5,426/8,974 (60.464%), and regions 150,266/217,755 (69.007%). Its SHA-256 is
+`178c937a2427cf81cccea2239d9860d7044d90478c67fa9ac25bd13083171123` at
+`.coverage-mcp/local-evidence/full/20261030-current-full-parity-refresh-with-duplicate-iinf/coverage.json`.
+Compared with the preceding zero-primary-ID full report, the totals rise from
+19,931/32,130 to 19,934/32,132 branches. Coverage MCP marks the comparison
+limited because source/build identity is unverified and test attribution is
+unknown, so this is not a verified aggregate gain. The earlier comparison
+against the required-container baseline observed the true `parse_pitm` arm at
+`samples.rs:596`, also with limited identity. Coverage remains below 100%, and
+no Rust unit tests were added.
+
+The public fixture matrix now contains 2,857 total rows: 2,285 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,285 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 785 active decode
+rows.
+
+## AVIF duplicate item-info ID parity — 2026-10-30
+
+Coverage MCP's full-report gaps included the duplicate-item branch in
+`samples::parse_iinf`. Added
+`decode:avif:error_iinf_duplicate_item_id`, generated by duplicating the
+baseline's primary `infe` under `iinf` while preserving both entries' ID and
+all AV1 media bytes. Pillow 12.2.0 opens the file, then rejects frame decoding
+with `Failed to decode frame 0: Decoding of color planes failed`.
+
+The first selected run exposed a public timing mismatch: Pillow inspection
+retains the first item entry, while Rust rejected during inspection. Lazy
+inspection now retains that first entry; bounded decode validation still
+rejects the duplicate before reading sample payloads. The parser policy uses
+static dispatch; the error handler is called only for duplicate IDs. The
+duplicate case and baseline passed 2/2. Coverage MCP's selected
+report still has unverified source identity and unknown test attribution; use
+it as targeted evidence only, not as an aggregate coverage claim. Report:
+`.coverage-mcp/local-evidence/selected/20261030T091738.193673Z-2e6c43a4f64346f2ba50222099d6b1ed/coverage.json`
+(SHA-256
+`0fb7036b039d9292df9677434aa941920c88a2d0be688bbf6251a673a07fb5b2`).
+
+## AVIF XMP pixi-only metadata parity — 2026-10-30
+
+Coverage MCP's full report had one missing branch in
+`container::Meta::non_primary_item_plane_properties`: the true arm of
+`bit_depth.is_some()` when the item has no dimensions. Added
+`decode:avif:xmp_metadata_item_pixi_only`, which associates the existing `pixi`
+property with an empty XMP metadata item without an `ispe` or data extent.
+Pillow 12.2.0 accepts it and preserves the base AVIF's mode, size, pixels, and
+metadata. The generator pins both fixture hashes and verifies Pillow's full
+observation; the case passed selected pixel parity (1/1).
+
+The refreshed all-feature LLVM report passes all configured coverage floors:
+98,473/140,296 lines (70.189457%), 19,926/32,112 branches (62.051570%),
+5,430/8,979 functions (60.474440%), and 150,302/217,781 regions (69.015203%).
+Coverage MCP reports no remaining gaps in the plane-property projection and
+observes the targeted branch as newly covered. Its comparison is limited
+because source/build identity is unverified and test attribution is unknown;
+the totals are report evidence, not a verified aggregate gain. Full report:
+`.coverage-mcp/local-evidence/full/20261030-after-xmp-metadata-pixi-only/coverage.json`
+(SHA-256
+`eeeaf8c034adbb24b5514d508a8253f6e96b4d897b9872f08e329c487545126a`).
+No Rust unit tests were added.
+
+## AVIF trailing box size-form parity — 2026-10-30
+
+Coverage MCP identified unobserved extended-size, oversized-size, and
+header-length outcomes in the top-level AVIF box parser. Added four Pillow
+parity rows: an open-ended UUID box, a well-formed extended-size UUID box, a
+UUID declaring a 4 GiB size with only its header present, and a `free` box
+declaring size 4 despite its 8-byte header. Pillow 12.2.0 opens and fully
+decodes all four with the baseline RGB mode, dimensions, pixels, and metadata.
+Each selected row passed pixel parity (1/1). The incomplete trailing-box
+reference enrichment now ignores a final size-below-header box after a complete
+`mdat`, matching its existing policy for incomplete trailing headers/payloads.
+
+The selected LLVM report for the size-4 case observes the true
+`size < header_size` branch in `container::next_box`; the UUID size variants
+exercise the UUID, zero-size, extended-size, and over-32-bit declarations. Full
+coverage passes all configured floors: 98,468/140,288 lines (70.189895%),
+19,927/32,110 branches (62.058549%), 5,430/8,979 functions (60.474440%), and
+150,302/217,778 regions (69.016154%). Coverage MCP reports no remaining branch
+gaps in `container::next_box`. Removing its nested size-zero guard was safe
+because only sample-parser-validated `InspectedAvif` values reach this
+projection; the malformed nested case still rejects during sample parsing.
+The report has unverified source/build identity and unknown test attribution,
+so its comparison with earlier totals is limited. Report:
+`.coverage-mcp/local-evidence/full/20261030-after-container-next-box-projection/coverage.json`
+(SHA-256
+`2cf99a661be75d59e69d5e15f445a47a123ffae906fa5ec30ba33f35523b27b7`). No Rust
+unit tests were added.
+
+## AVIF 12-bit 4:2:0 alpha extent mismatch parity — 2026-10-30
+
+Added the Pillow parity case
+`decode:avif:error_12bit420_alpha_ispe_extent_mismatch`. Its complete-file
+fixture changes only the auxiliary item's `ispe` from 17x9 to 16x9; the
+generator pins both file hashes, rebases item extents, and verifies the encoded
+AV1 item bytes are unchanged. Pillow 12.2.0 opens the file as 17x9 RGBA and
+fails on load with `Failed to decode frame 0: Decoding of alpha plane failed`.
+
+The first selected Rust run exposed a parity bug: Rust decoded the file as
+17x9 RGBA despite the auxiliary extent. The decoder now checks paired still
+color/alpha item extents before AV1 reconstruction, while inspection and
+verification retain their lazy metadata behavior. The malformed case and its
+matching 12-bit 4:2:0 and 4:4:4 alpha controls passed together (3/3) through
+`make coverage-selected`. Coverage MCP reports no missing branch groups at
+`decode.rs:24` in the selected report (2,241/48,483 branch observations); the
+report has unverified source identity and unknown test attribution, so this is
+selected evidence only, not a verified aggregate coverage gain. No Rust unit
+tests were added. Report:
+`.coverage-mcp/local-evidence/selected/20261030T050243.598352Z-797d832dcb604acab0a8c34b2ea29f9a/coverage.json`
+(SHA-256
+`9f620a5780f9ebcc1d07c463cbb343cccb43411ce1fa2ece16c03760b3ff6f93`).
+
+## AVIF odd-size color plane-placement parity — 2026-10-30
+
+Coverage MCP's all-active report showed an unobserved height-alignment outcome
+in `decode_portable_inner` at `decode.rs:578`. Added two deterministic public
+Pillow parity rows: `portable_lossless_i420_odd_17x17` exercises odd width and
+height, while `portable_lossless_i420_aligned_width_odd_height_16x17` keeps the
+width aligned and exercises an odd height. Both fixtures are 8-bit full-range
+lossless I420 key frames, generated and checked by
+`scripts/generate_avif_portable_color_odd_fixture.py`.
+
+The selected run with both new rows and the existing aligned 16x8 parity
+control passed 3/3 exact RGB pixel comparisons. Its raw LLVM report records
+nonzero counts for both arms of the width and height alignment decisions at
+`decode.rs:578` in the executed function. Coverage MCP still lists missing
+coordinates for that line from a zero-count symbol variant; the measurement
+has no verified source/build identity and reports test attribution as unknown.
+Treat the local counters as selected evidence only; no managed aggregate
+coverage gain or full-coverage claim is made. No Rust unit tests were added.
+Report: `.coverage-mcp/local-evidence/selected/20261030T022158.847718Z-43b5764300e84bf6aef82920dc19c0a4/coverage.json`
+(SHA-256
+`3ac9b56100dafb1759e0394447d1133ecd90ebd8a5f17000bebe5063935f27fd`).
+
+## AV1 lossless I444 first-partition fallback coverage — 2026-10-30
+
+Coverage MCP identified the missing true outcome of the admission branch in
+`validate_first_partition`. Added target-only contract
+`fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`
+using the active `high_bitdepth_still_10bit_444_lossless` Pillow parity input
+(SHA-256 `c49589983c8492a12c3920123f9535c887b8715bf5cbdb25b57dfdad0d8c3c7e`).
+The coverage-only fault makes the streamed decoder yield to the existing
+first-partition fallback. The contract requires its pixels to match the stored
+Pillow reference and a clean retry to return the same image.
+
+`make coverage-selected COVERAGE_CASES='fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity'`
+passed 1/1. Coverage MCP queried branch outcomes at
+`entropy.rs:21787`; only the false arm remains missing in this selection, so
+the true arm was observed. This is selected-test evidence, not a full-suite or
+aggregate coverage result. Coverage MCP reports source identity unverified and
+test attribution unknown; the local receipt records the exact selector and
+passing process. Report: `.coverage-mcp/local-evidence/selected/20261030T011438.699850Z-66a7ea3318a44327b80c6d9c5ec9c667/coverage.json`
+(SHA-256
+`85d0e117982a607921a34ab6eb2dfcd469c14f513d52d0dfe9276304718ea020`).
+
+
+## AV1 distance-compound parity — 2026-10-30
+
+Added the public parity row
+`decode:avif:animated_lossy_interinter_distance_i420_b16x16_64x64` for a
+three-frame 8-bit I420 AVIF whose final frame uses distance-weighted compound
+prediction. The fixture is deterministic and has SHA-256
+`7abfec6d36ae819aaea9a9dc814c33c538488ba87362cd174b5cd62dfcaaab13`.
+Its generator checks that AV1 order hints and joint compound are enabled,
+masked and warped motion are disabled, and the final frame exposes both
+references. The focused selected-coverage parity run passed 1/1 with exact RGB
+pixel parity. All four generated Pillow pixel references matched the retained
+files byte-for-byte, and native loop evidence verifies all 173 AVIF sequence
+references against the refreshed loop index.
+
+Coverage MCP queried the selected branch report for `distance_weight`. The
+helper executed 16 times and covered the `d0 > d1` path, including both
+outcomes of its threshold comparison. Four of its eight branch outcomes remain
+uncovered: the false arm of `d0 > d1`, the true arm of `d0 <= d1`, and both
+outcomes of the `d0_c0 > d1_c1` comparison. The selected report
+measures 3,480/32,118 branches (10.835%); this is selected-test diagnostic
+evidence, not a full-suite coverage result. Coverage MCP marks source identity
+unverified and test attribution unknown, so no verified aggregate gain or
+100% coverage claim is made. Report:
+`.coverage-mcp/local-evidence/selected/avif-distance-compound-nowarp-20261030/coverage.json`
+(SHA-256
+`31b724e9a89f9ca3f4519c2bd976b5bb69169b47cc600ede14574e9630acd11c`).
+
+## AVIF auxiliary-item plane-property parity — 2026-10-30
+
+Coverage MCP identified missing outcomes for duplicate `ispe` and `pixi`
+associations and for bit-depth-only plane metadata. Pillow accepts conflicting
+duplicate item properties and keeps the first declaration: the second `ispe`
+declares 32×64 after 64×64, and the second `pixi` declares 16-bit after 8-bit.
+Pillow still returns 64×64 RGBA for both. It rejects an alpha auxiliary item
+without `ispe`. Added the successful parity rows
+`decode:avif:duplicate_non_primary_ispe_first_wins` and
+`decode:avif:duplicate_non_primary_pixi_first_wins`, plus the malformed row
+`decode:avif:error_alpha_auxiliary_missing_ispe`. Their deterministic full-file
+fixtures are generated by
+`scripts/generate_avif_non_primary_property_duplicate_fixtures.py` and
+`scripts/generate_avif_alpha_missing_auxiliary_ispe_fixture.py`. Both AVIF
+metadata paths now retain the first `ispe` and `pixi` declaration and reject
+alpha auxiliary items without spatial extents. The selected all-feature parity
+run, including the existing `with_alpha` control, passed 4/4.
+
+The earlier selected Coverage MCP query reported no missing outcomes for the
+first-property guards in the selected `samples.rs` projection. It still listed
+the no-plane-properties arm at `samples.rs:1643` and the separate
+`container.rs` projection as unobserved. That query used the earlier selected
+report
+`.coverage-mcp/local-evidence/selected/20261029T211615.021967Z-2152aafc6e34456194145d69e42e72ff/coverage.json`
+(SHA-256
+`ba8c0ea9be2331bc2edcc906bb11107191955ae8baa3f0d6a0979dc562e2b947`).
+
+After strengthening the duplicate fixtures to contain conflicting property
+values, the final selected all-feature parity run passed 4/4. Its report is
+`.coverage-mcp/local-evidence/selected/20261029T212255.276233Z-bc20dba5e3d942c595ae720afc223750/coverage.json`
+(SHA-256
+`fd9af142f52b41d28d758578283b779d20707fc5d26a0adffa4434ebac9bdbf6`).
+Coverage MCP could not analyze this report because its local daemon did not
+become healthy. The local receipt marks source identity unverified and test
+attribution unknown; no aggregate coverage gain is claimed.
+
+## AVIF edit-box and edit-list parity — 2026-10-30
+
+Coverage MCP identified missing outcomes in `parse_edit_box` and
+`parse_edit_list_box`. Added four public malformed-input rows for a missing
+`elst`, duplicate `elst`, `entry_count != 1`, and zero `segment_duration`.
+Their deterministic full-file fixtures are generated by
+`scripts/generate_avif_track_box_parity_fixtures.py`. The combined selected
+all-feature parity run passed 4/4; pinned Pillow rejects every input at open.
+No Rust unit tests were added.
+
+Coverage MCP finds no missing branch outcomes at `samples.rs:2187`, `:2188`,
+or `:2209` in the selected report, and lists only the `false` arm as missing
+at `:2217`. This is consistent with the four new cases exercising both
+`parse_edit_box` outcomes, both `entry_count` outcomes, and the zero-duration
+error arm. Source identity and test attribution are unverified. Incremental
+comparison with `target/coverage-all-active-parity-20261030.json` was
+incomparable because the baseline's detailed observations are incomplete; no
+aggregate coverage gain is claimed. Report:
+
+`.coverage-mcp/local-evidence/selected/20261029T205301.665320Z-edaa68f597c844e6a96d16cb2e2eb25d/coverage.json`
+(SHA-256
+`ca3e23fc9b3a04d58684e2600b4905ba79814b669e2d213675b09809b89382a5`).
+
+## AVIF `irot` edge parity — 2026-10-29
+
+Coverage MCP identified an uncovered trailing-payload outcome in the two AVIF
+`parse_irot` paths. Pillow accepts a trailing property byte and uses the
+leading rotation value, so both parsers now preserve that behavior. Added the
+active success row `decode:avif:primary_item_irot_trailing_payload` and the
+active malformed-input row `decode:avif:error_primary_item_irot_invalid_value`;
+the pinned Pillow oracle accepts the former and rejects the latter. The exact
+selected parity run passed 2/2. No Rust unit tests were added.
+
+The fixture generator pins both input hashes and verifies that AV1 media bytes
+remain unchanged. It runs from `make verify-fixture-integrity`. Coverage MCP
+was queried on the selected report for `parse_irot`, but its returned branch
+spans still point to the removed trailing-byte guards; the current source has
+the compatibility comments at those lines. The local LLVM JSON retains
+zero-count objects with the old branches, and its receipt reports source
+identity unverified and test attribution unknown. Those spans are stale
+coordinate evidence, not a current coverage gap or an aggregate coverage gain.
+Report: `.coverage-mcp/local-evidence/selected/20261029-avif-irot-edge-parity/coverage.json`
+(SHA-256
+`520f80b2ddeb7fa7c51e6759db98882213fa49f1020912580c33be3bfa3b8bc3`).
+
+The current fixture matrix contains 2,842 total rows: 2,270 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,270 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 770 active decode rows.
+
+## TIFF YCbCr rational inspection bounds contract — 2026-10-29
+
+Coverage MCP found the unobserved out-of-range arm in
+`Directory::rational`. Normal inspection validates the YCbCr rational field
+count before reading each value, so this internal bounds failure is not
+reachable through the ordinary Pillow input. Added the target-only
+`fault-contract:tiff:tiff_ycbcr_rational_index_out_of_range` row using the
+active `ycbcr_custom_coefficients_reference_black_white_lzw_2x2` parity input.
+Its coverage-only fault selects the count as the requested index; inspection
+returns `TIFF YCbCr tag 529 is truncated`, and retry succeeds. The selected run
+passed 1/1; the fault row is `not_applicable` to the Pillow oracle and is not
+counted as parity. No private unit tests were added.
+
+Coverage MCP reports no remaining missing branch groups for
+`Directory::rational` in the selected report. Source identity is unverified and
+test attribution is unknown, so this target-only result is not a verified
+aggregate coverage gain or a 100% coverage claim. Report:
+`.coverage-mcp/local-evidence/selected/20261029T012251.792502Z-41e34f0c0d55446e8d785ad565f45ddd/coverage.json`
+(SHA-256
+`49fc1d0ac576c20a8a4dddcc6d331197cd53091d71fb8fe74412ed96d71e8c4d`).
+
+## TIFF YCbCr floating-value inspection bounds contract — 2026-10-29
+
+Normal TIFF inspection validates the YCbCr FLOAT field count before requesting
+each indexed value, so this out-of-range index is not reachable from the
+ordinary parsed input. Added the target-only
+`fault-contract:tiff:tiff_ycbcr_floating_index_out_of_range` row using the
+active Pillow parity input `ycbcr_coefficients_float_type_lzw_2x2`. Its
+coverage-only injection selects the entry count as the index; inspection
+returns `TIFF YCbCr tag 529 is truncated`, and retry succeeds. The selected
+fault-contract run passed 1/1; the injected failure is `not_applicable` to the
+Pillow oracle and is not counted as parity. No private unit tests were added.
+
+Coverage MCP reports no remaining missing branch groups in
+`Directory::floating_value` for the selected report. Source identity is
+unverified and test attribution is unknown, so this is selected diagnostic and
+coverage evidence, not a verified aggregate coverage gain or a 100% coverage
+claim. Report:
+`.coverage-mcp/local-evidence/selected/20261029T012809.747931Z-2e1c5071175a476e94e012f54496fc3a/coverage.json`
+(SHA-256
+`75db412ee621a48ae0d81915e40a58a77196d71844c21a83981e6f12d3d6d544`).
+
+## TIFF numeric-value inspection guard contracts — 2026-10-29
+
+Coverage MCP found missing branches in
+`Directory::numeric_values_are_nonempty_and_uniform`. Valid parsed TIFF fields
+derive byte length from a nonzero type width and count, so zero-width and
+non-divisible-width states cannot come from ordinary inputs. Added three
+target-only inspection contracts using the active `decode:tiff:multi_page`
+Pillow parity input: `tiff_directory_numeric_value_width_invalid`,
+`tiff_directory_numeric_value_width_remainder`, and
+`tiff_directory_numeric_value_remainder_nonempty`. The injections reach the
+zero-width, non-divisible byte-length, and trailing-byte guards. Each
+inspection reports an incomplete IFD chain; a clean retry matches the
+two-page parity metadata. All are `oracle_status: not_applicable`, not Pillow
+parity. The zero-width and trailing-byte selection passed 2/2, and the
+non-divisible-width selection passed 1/1. No private unit tests were added.
+
+The hooks are compiled only with `cfg(coverage)`, leaving release behavior and
+runtime performance unchanged. The selected reports are
+`.coverage-mcp/local-evidence/selected/20261029T014540.437831Z-870bd3f41656416a924b05b9e4de6cd8/coverage.json`
+(SHA-256
+`1c65cc01d268098135c1c035b30b5fc47516d2d9ce48776dde2ac93d0863e206`) and
+`.coverage-mcp/local-evidence/selected/20261029T020254.583462Z-f94019da788c4fa0931e13a6e0c5934c/coverage.json`
+(SHA-256
+`3e74bc2186283846a552f727296fdf9c3c5212a59f2bbcab0815d9dd8de3a2e9`).
+
+The all-feature coverage run after the TIFF contracts passed its six integration executables
+(4, 1, 57, 7, 1, and 69 tests). It measured 95,329/140,033 lines (68.076096%),
+19,032/32,092 branches (59.304500%), 5,286/8,958 functions (59.008707%), and
+145,448/217,391 regions (66.906174%), above the configured floors. Coverage
+MCP reports no remaining missing branch groups for this helper. It reports
+13,060 missing branches overall, led by AV1 `decode_inter_translation_impl`
+(largest group: 1,574 missing outcomes). Source identity is unverified and
+test attribution is unknown, so these measurements do not prove per-case
+attribution or a verified aggregate gain. The 100% objective remains open.
+Report:
+`.coverage-mcp/local-evidence/full/20261029-current-after-tiff-directory-numeric-width-remainder-final/coverage.json`
+(SHA-256
+`57c20d8c32857a967c6a62836af3c65bbdb8a096a221d4fa5172ad46d2339fea`).
+
+## AV1 inter-translation sample-depth fault contract — 2026-10-29
+
+Coverage MCP identified the quantization sample-depth equality branch in
+`Lossy420Decoder::decode_inter_translation_impl` among the largest remaining
+AV1 gaps. Ordinary validated sequence data keeps decoder tools and
+quantization at the same depth, so the opposite outcome requires a
+target-only fault contract. Added
+`fault-contract:avif:av1_inter_translation_sample_depth_mismatch` using the
+active `animated_lossy_inter_420_b16x64_mode_select_64x64` parity input. The
+coverage-only injection supplies 10-bit quantization to the 8-bit source; the
+public sequence API returns
+`decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface`.
+The clean retry succeeds and restores the source row's parity result. The
+fault is `oracle_status: not_applicable`, not Pillow parity. The selected run
+passed 1/1; no private unit tests were added.
+
+The injection is behind `cfg(coverage)`. A non-generic helper isolates the
+coverage branch from decoder monomorphizations, while the non-coverage helper
+is an inline identity. This preserves release-path work without claiming a
+measured speedup. Coverage MCP still lists seven specialization-specific
+groups at the sample-depth predicate's source line in the selected report, so
+this case exercises one mismatch path without closing the broader generic
+function gap. The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T021950.482913Z-6f8d13ad1e394fcfb0dc7690591eb7d3/coverage.json`
+(SHA-256
+`4bda2fecf7e541d749598654e15d2ef14ff60f949f8c1db75c59752d5976b4ef`).
+
+The latest all-feature coverage campaign passed six integration executables
+(4, 1, 57, 7, 1, and 69 tests). It measured 95,339/140,043 lines (68.078376%),
+19,034/32,094 branches (59.307036%), 5,287/8,959 functions (59.013283%), and
+145,455/217,398 regions (66.907239%), above the configured floors. Coverage
+MCP still reports 13,060 missing branches overall; the leading AV1
+`decode_inter_translation_impl` group has 1,574 missing outcomes. Source
+identity is unverified and test attribution is unknown, so these measurements
+do not prove per-case attribution or a verified aggregate gain. Report:
+`.coverage-mcp/local-evidence/full/20261029-current-after-av1-inter-translation-depth-contract-final/coverage.json`
+(SHA-256
+`d9a44e2d346b04e47f22240e993918b21de62b394f997f8c01f799595ea7848e`). The
+100% coverage objective remains open.
+
+## AVIF item-location extent policies and inspection fault contracts — 2026-10-29
+
+Coverage MCP showed that the const-Boolean branches in `parse_iloc` had an
+unreachable opposite arm in each monomorphization. Extent validation now uses
+statically selected `BoundedItemExtentPolicy` and `LazyItemExtentPolicy`
+implementations, preserving decode and inspection bounds behavior without a
+runtime policy branch. The calls remain monomorphized and inline; this change
+does not claim a measured speedup.
+
+Added two target-only inspection fault contracts for item-location table and
+extent-span reservation failures. Both reuse the baseline AVIF input, require
+the public inspection error, and retry successfully; they are marked
+`not_applicable` to the Pillow oracle. The selected run passed 2/2 fault
+contracts. Four adjacent public Pillow parity rows for baseline, split `idat`
+extents, a zero-length file extent, and ignored trailing `iloc` payload passed
+4/4. No private unit tests were added.
+
+The fresh all-feature coverage campaign passed six integration executables
+(4, 1, 57, 7, 1, and 69 cases). It measured 95,297/140,013 lines (68.062966%),
+19,017/32,082 branches (59.276230%), 5,284/8,958 functions (58.986381%), and
+145,407/217,363 regions (66.895930%), above the configured floors. Coverage
+MCP reports zero missing branch groups for `samples::parse_iloc`. Its report
+marks source identity unverified and test attribution unknown, so these results
+do not establish per-case attribution or a verified aggregate coverage gain.
+The 100% objective remains open. Report:
+`.coverage-mcp/local-evidence/full/20261029-after-avif-iloc-inspection-reservation-contracts/coverage.json`
+(SHA-256
+`5fcd25437cf23df00dc7eb351efeeb1ae400f29705021e2b318a5f01e24a5a28`).
+
+## AVIF I422 TX_MODE_SELECT direct-grid parity — 2026-10-29
+
+Added two exact Pillow parity rows for 8-bit I422 transform-select sequences.
+The 64x64 row covers a single-reference positive-qindex profile. The 128x64
+row has two 64x64 regions and its final frame repeats the right source region
+while blending the left. Both generated inputs retain pinned Pillow pixels and
+independent libavif loop observations. The selected run passed 2/2 rows:
+
+```sh
+make coverage-selected COVERAGE_CASES='decode:avif:animated_lossy_inter_422_mode_select_b64x64 decode:avif:animated_lossy_inter_422_direct_grid_mode_select_mixed_b128x64'
+```
+
+Coverage MCP queried the selected report at
+`src/codecs/avif/av1/block.rs:48518`. The 128x64 case produced one true-arm hit
+in the mode-select direct-grid validation; the full report still has 15
+missing outcomes across eight function groups at that location. An incremental
+comparison with the earlier full report is incomparable because the baseline
+lacks exact branch detail. The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T004640.007954Z-5e5a1daea18644f794461fafd464854e/coverage.json`
+(SHA-256
+`ee4e41405c6d24417958dec89bc251c140e79a1eea538766c63946163d81f436`).
+
+The refreshed all-feature coverage campaign passed its six integration
+executables (4, 1, 57, 7, 1, and 69 tests). It measured 95,291/140,009 lines
+(68.060625%), 19,019/32,086 branches (59.275073%), 5,280/8,954 functions
+(58.968059%), and 145,387/217,351 regions (66.890421%), above the configured
+floors. Its report is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-i422-mode-select-parity-final/coverage.json`
+(SHA-256
+`46548b2c0f810b4f3beef506a98644469c8679a023ea045bf44c00e98dd10590`).
+Coverage MCP marks source identity unverified and test attribution unknown, so
+these measurements are not a verified aggregate gain or proof of 100% coverage.
+No Rust implementation changes or private unit tests were added; the 100%
+objective remains open.
+The current fixture matrix contains 2,790 total rows: 2,218 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,218 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 718 active decode rows.
+
+## AVIF 12-bit 4:2:0 alpha converter guard contracts — 2026-10-29
+
+Coverage MCP found five uncovered rejection outcomes in
+`convert_subsampled_420_12bit_alpha`: zero width, luma length not divisible by
+width, zero height, and short U or V planes. Ordinary validated AVIF input
+cannot reach these internal states, so five typed target-only fault rows reuse
+the active `high_bitdepth_still_12bit_420_alpha_odd_edge_17x9` Pillow parity
+input. Together with the existing alpha-count mismatch contract, the selected
+run passed all six fault contracts (oracle `not_applicable`); the adjacent
+ordinary parity row passed 1/1 with exact RGBA8 pixel parity. All injected
+failures produced the public unsupported-subset result, and retry without the
+fault matched the fixture. No private unit tests were added.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T001949.649666Z-7052f79d302b4cb39943e18a4d527a8a/coverage.json`
+(SHA-256
+`948dde93ad264e2725ba8d9abb43f5a03562c100f5024b9fbccb68c573e8fc05`). The
+fresh all-feature campaign passed all six integration executables (4, 1, 57,
+7, 1, and 69 tests). It measured 95,134/140,009 lines (67.948489%),
+18,987/32,086 branches (59.175341%), 5,272/8,954 functions (58.878713%), and
+145,174/217,351 regions (66.792423%), above the configured floors. The report
+is `.coverage-mcp/local-evidence/full/20261029-after-avif-i420-12bit-alpha-faults/coverage.json`
+(SHA-256
+`47f3150cb8dcaf6be09aa5ac5cd98a48a038a63685c793ffcd6ecff302a1ed2a`).
+Coverage MCP now reports zero missing branch groups in
+`convert_subsampled_420_12bit_alpha`. It still reports 1,599 missing branch
+groups overall, led by AV1 `decode_inter_translation_impl` (largest group:
+1,574 missing outcomes). The report has unverified source identity and unknown
+test attribution; the measurements are not proof of per-case attribution or a
+verified aggregate coverage gain. The 100% objective remains open.
+
+## AVIF 8-bit 4:2:0 RGB lane conversion — 2026-10-29
+
+`decode_portable_inner` now converts eligible 8-bit 4:2:0 RGB output in
+eight-pixel lanes using the existing safe `wide` fixed-point conversion. The
+lane path applies when the image has no alpha and its width is at least eight
+and divisible by eight; alpha, odd-width, 4:2:2, and other conversion paths
+retain their existing handling. The interleave writes the same RGB24 byte
+order. `make lint-x86-simd` passed its SSE2-baseline and AVX2 Clippy builds;
+this host is ARM64, so those checks do not establish x86 runtime performance.
+
+The focused AVIF parity selection passed 10/10 rows, including ordinary
+4:2:0 inputs and the 2048×128 temporal sequence. Its report is
+`.coverage-mcp/local-evidence/selected/avif420-rgb-vector-arm64-20261029/coverage.json`
+(SHA-256 `036dda3846262580a524299e9b1ff4356821f2394df801a6c12156c1da059f30`).
+The full all-feature coverage campaign passed all six integration executables
+(4, 1, 57, 7, 1, and 69 cases). The report measured 95,076/139,954 lines
+(67.933750%), 18,957/32,066 branches (59.118693%), 5,272/8,954 functions
+(58.878713%), and 145,080/217,258 regions (66.777748%), above the configured
+floors. Its report is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-420-rgb-vector/coverage.json`
+(SHA-256 `f8ba86b378b9a711c2256115062d62cc061fcdefe274dcd2453c8873078a7e11`).
+Coverage MCP marks source identity unverified and test attribution unknown;
+these reports document passing parity and observed coverage, not verified
+per-case attribution or a 100% coverage result.
+
+An A-B-B-A probe used five cycles of 100 public `decode_sequence` calls per
+run on `animated_motion_temporal_mv_range_2048x128.avif` (SHA-256
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`). On
+macOS 15.7.7 ARM64 with rustc 1.96.1, the median of run medians changed from
+14,085,312.5 ns to 13,578,187.5 ns per decode, a 3.60% reduction. The full
+timing samples and binary hashes are retained at
+`.coverage-mcp/local-evidence/performance/avif-420-rgb-arm64-20261029/arm64-420-rgb-abba-final-routing.json`
+(SHA-256 `b705734f4102e1cd8f552b3622a839aa625927767d10b6a5a091e53ef8a82d00`).
+This is one workload on one ARM64 host; it does not establish a general codec
+ranking or an SSE2/AVX2 runtime gain. `cargo fmt --all -- --check`, `make lint`,
+`make lint-x86-simd`, and the full `make coverage` campaign passed.
+
+## AVIF reconstructed Y-plane length fault contract — 2026-10-29
+
+Coverage MCP identified the uncovered true outcome of the reconstructed-plane
+length guard in `decode_portable_inner`. Added
+`fault-contract:avif:avif_portable_y_plane_length_mismatch`, using the existing
+`decode:avif:baseline` Pillow parity input. Its coverage-only injection shortens
+the reconstructed Y plane after canvas assembly. The public decoder returns
+the unsupported-subset error; retry without the fault matches the existing
+Pillow pixels. The selected run passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/20261028T235124.724344Z-2b00bfb7e8bf44e3a1fd5ca6a77534e3/coverage.json`
+(SHA-256 `226611031fef4a21d7a671ab6649fc51624d3abf80a204c02771e085bb63a94d`).
+The coverage-only hook is absent from release builds; no private unit test was
+added, and this target-only result is not Pillow parity.
+
+The fresh full all-feature coverage campaign passed all six integration
+executables (4, 1, 57, 7, 1, and 69 cases). It measured 95,085/139,963 lines
+(67.935812%), 18,960/32,068 branches (59.124361%), 5,272/8,954 functions
+(58.878713%), and 145,090/217,268 regions (66.779277%), above the configured
+floors. The report is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-portable-plane-fault/coverage.json`
+(SHA-256 `bcaf3b8f0eedb29d18a11b13ddea5ac39d898dd976aa38f2c2ffb4a59a97f56d`).
+Coverage MCP no longer lists the Y-plane mismatch outcome among this function's
+missing branches. Its full-report comparison remains limited because source
+identity is unverified and test attribution is unknown, so no verified
+aggregate coverage gain is claimed. The 100% coverage goal remains open.
+
+## AVIF portable-plane and routing fault contracts — 2026-10-29
+
+Coverage MCP's refreshed report still showed missing U-, V-, and alpha-plane
+length outcomes in `decode_portable_inner`, plus an unsupported identity-color
+conversion outcome for subsampled planes. Added target-only rows
+`fault-contract:avif:avif_portable_u_plane_length_mismatch`,
+`fault-contract:avif:avif_portable_v_plane_length_mismatch`,
+`fault-contract:avif:avif_portable_alpha_plane_length_mismatch`, and
+`fault-contract:avif:avif_subsampled_identity_conversion_rejected`. Each
+coverage-only injection checks the stable unsupported-subset error and then
+retries the active Pillow parity input successfully. The three plane-shape
+rows passed 3/3; the identity-conversion row and an existing 10-bit 4:2:2 alpha
+parity row passed 2/2. The target-only rows have oracle status
+`not_applicable`; no private unit tests were added.
+
+The full-resolution route now uses the already validated `subsampled` result
+and horizontal-subsampling flag to distinguish 4:4:4 from 4:2:2. The final
+all-feature campaign passed all six integration executables (4, 1, 57, 7, 1,
+and 69 cases). Coverage MCP reports no remaining branch gaps in
+`decode_portable_inner`. The full report measured 95,109/139,986 lines
+(67.941794%), 18,972/32,076 branches (59.147026%), 5,272/8,954 functions
+(58.878713%), and 145,121/217,300 regions (66.783709%), above the configured
+floors. It is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-portable-routing/coverage.json`
+(SHA-256 `9d26004cd2993069516ef1ab0bd9e0824f49109a44afd9b53c1385ef1fe86676`).
+Source identity is unverified and test attribution is unknown, so these
+observations do not establish a verified aggregate coverage gain.
+
+The 100% objective remains open. A function-filtered query still reports 40
+monomorphized groups in `av1::block::decode_inter_translation_impl`, with the
+largest group missing 1,574 branch outcomes, and five remaining branch gaps in
+`convert_subsampled_420_12bit_alpha`.
+
+## AVIF container projection trusts validated metadata — 2026-10-29
+
+Coverage MCP's preceding full report showed five uncovered branch outcomes in
+`container::parse_iloc` and five in `container::parse_ipma`. These guards
+duplicated validation already performed by the sample parser before it can
+construct the sealed `InspectedAvif` passed to container inspection. The
+projection now relies on that validated-input boundary and retains its own
+record-budget, bounded-read, and checked-offset handling. No parity behavior
+changed, and no unit tests were added.
+
+Ten existing public AVIF parity rows passed: malformed version, width, item-ID,
+construction-method, and association cases remain rejected like Pillow, while
+valid version-two, indexed-extent, and optional-association inputs preserve
+exact pixels. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-container-projection-invariants-20261029/coverage.json`
+(SHA-256 `b233cd35a981bb57373beb013f8641d8e4490b4aca159d52de568cdf6933ebb6`).
+Coverage MCP reports no missing branch outcomes in either container
+projection parser in the refreshed full report. The full all-feature run
+passed all six integration executables (4, 1, 57, 7, 1, and 69 tests) and
+measured 95,044/139,931 lines (67.922047%), 18,936/32,058 branches (59.067939%),
+5,271/8,953 functions (58.874120%), and 145,000/217,186 regions (66.763051%),
+above the configured floors. Its report is
+`.coverage-mcp/local-evidence/full/20261029-after-container-projection-invariants/coverage.json`
+(SHA-256 `04ee7c25fa33a91924ce0594f27c505f8e13530987cdd32e19d3546d46f81f76`).
+Compared with the preceding report, ten missing branch outcomes were removed
+with the redundant guards; this is a denominator reduction, not ten newly
+covered outcomes. Coverage MCP marks source/build identity unverified and test
+attribution unknown. Formatting, strict Clippy (including release and
+coverage-hook lanes), and the native/WASI/WASM feature matrix passed. The
+configured 100% coverage goal remains open.
+
+## AVIF size-zero top-level `skip` parity — 2026-10-29
+
+Added active public row `decode:avif:size_zero_top_level_skip`. Its complete
+input appends a size-zero top-level `skip` box and trailing payload to
+`baseline.avif`; the pinned Pillow oracle verifies and decodes it to the same
+128×128 RGB pixels (49,152 bytes, SHA-256
+`f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf`). The
+input SHA-256 is
+`02a2791f3c182f175019224d62d658ed1c5b7654bb15eed98840b38628e81584`.
+
+The preceding full-report Coverage MCP query listed the `kind == b"skip"`
+true arm in `samples::extract_inner_with_metadata::<false>` at `samples.rs:2793`
+as missing. The selected public parity row passed 1/1, and its LLVM report
+records that arm in both metadata-bound specializations. The report is
+`.coverage-mcp/local-evidence/selected/avif-top-level-skip-20261029/coverage.json`
+(SHA-256 `a1e10dd474934020c431d53fb7641b6edebc2496e86b7b9d379717402ce56ff2`).
+Its local receipt records no source changes during collection; Coverage MCP
+still marks source/build identity unverified and test attribution unknown, so
+this is a focused parity and branch observation, not an aggregate coverage
+gain claim. No unit tests were added.
+
+A fresh full all-feature coverage run passed all six integration executables
+(4, 1, 57, 7, 1, and 69 tests). It measured 95,044/139,931 lines (67.922047%),
+18,936/32,058 branches (59.067939%), 5,271/8,953 functions (58.874120%), and
+145,000/217,186 regions (66.763051%), unchanged from the preceding full report.
+Coverage MCP no longer lists the `skip` true arm as missing; its full-report
+coordinate comparison reports one newly observed branch location and no
+removed locations. Both reports lack verified source/build identity, and MCP
+does not confirm named-test attribution, so this remains limited coordinate
+evidence rather than a verified aggregate coverage gain. The full report is
+`.coverage-mcp/local-evidence/full/20261029-after-top-level-skip/coverage.json`
+(SHA-256 `35d987c8f13e29531412954fff6472b5e589409dccec36d1a4d801d6bbc62864`).
+
+## AVIS truncated top-level header after a complete movie — 2026-10-29
+
+Coverage MCP's preceding full report identified missing outcomes in the
+`brands.has_avif` and `brands.has_avis` checks at `samples.rs:2816`. Added the
+active parity row
+`decode:avif:error_animated_sequence_only_stsz_common_size_short_samples_truncated_tail`.
+It derives from the existing malformed five-frame AVIS fixture
+(`fe2666ad9cf9fe32d6b4a35d64f1b9f1a101ae9a65e8055fab6cd62bc63e827c`) and
+appends the four-byte incomplete top-level size field `00 00 00 10`. Pillow
+verification succeeds; pixel loading still fails with
+`Failed to decode frame 0: Decoding of color planes failed`.
+
+The selected all-feature parity run passed 1/1. Its LLVM report records the
+`brands.has_avif == false` and `brands.has_avis == true` outcomes at line 2816
+in both metadata-bound specializations. The fixture SHA-256 is
+`704aa89ebb2866a5c6b457a28bd2e85317c0b5bb77bf40e151f7e9ab0618bda2`; the
+selected report is
+`.coverage-mcp/local-evidence/selected/avif-sequence-truncated-tail-20261029/coverage.json`
+(SHA-256 `23dc24bbf1e97e487c5e09232d9af7e46be7a8cfa6f899b0405d0a32eb8af230`).
+Its local receipt records that fixture and source files did not change during
+collection. A fresh full `make coverage` run passed the six integration
+executables (4, 1, 57, 7, 1, and 69 tests) and measured 95,044/139,931 lines
+(67.922047%), 18,940/32,058 branches (59.080417%), 5,271/8,953 functions
+(58.874120%), and 145,005/217,186 regions (66.765353%), above the configured
+floors. Coverage MCP now reports no missing outcomes at `samples.rs:2816`; its
+full-report coordinate comparison shows four newly observed branch outcomes
+and no removed locations. The full report is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-tail-parity/coverage.json`
+(SHA-256 `97a191d4e95590b5e870ad86439d3db24038087b57bb70418b6fa231147f1fdb`).
+Both reports lack verified source/build identity, and MCP marks test
+attribution unknown, so this is limited coordinate evidence rather than a
+verified aggregate gain. No unit tests were added.
+
+## AVIF `stsd` parser parity and ignored hint-track entry — 2026-10-29
+
+Coverage MCP identified missing `samples::parse_stsd` error outcomes for an
+unsupported FullBox version, an unknown sample-entry type, and an undersized
+`av01` entry. Added three malformed-input parity rows plus a successful
+trailing-payload row. All four fixtures derive from the pinned five-frame
+AVIS-only source `animated_sequence_only_no_meta.avif` (SHA-256
+`c861761e45518018150dc52302da7ff5015d1f259ff2c1309eea94eaf8176fdb`). The
+successful mutation appends one byte after its declared `stsd` entry, rebases
+`stco`, preserves file samples, and yields the same five 67,500-byte RGB frames
+in Pillow 12.2.0 and pinned libavif 1.4.1. The native loop oracle records one
+total play. Pillow rejects each of the other three complete files at open.
+
+Fixture SHA-256 values are `153ead664b729f1854c738ddd2e771e18c7488457f7716d8516df626eb2543ef`
+for `animated_stsd_trailing_payload.avif`,
+`aeace2695e5ce994805cc52b298cbed8f4354f025ff58431da591b83956a790b` for
+`error_animated_stsd_nonzero_version.avif`,
+`48318a79ccba0b03ec54fb991dc9125d6a79a2fba64a34fb710d97c36343c402` for
+`error_animated_stsd_unknown_sample_entry.avif`, and
+`2fd1bb9882767e930ab717a2e8c970de48643788b11546af73cf91a09582af91` for
+`error_animated_stsd_short_av01_entry.avif`.
+
+Added `animated_unknown_sample_entry_ignored_hint_track.avif` as an accepted
+public parity case. It adds a hint track with one bounded sample pointing at
+existing media data and an unknown sample-entry type. The pinned Pillow and
+libavif observers preserve the original five frames and one-play result; its
+SHA-256 is
+`dcc55d191d0f5e9cbabcd1dfbc9119b2f8e712ec1cea33880873739ed9987a49`.
+
+The selected parity run passed 4/4 rows. It first exposed the trailing-byte
+mismatch in `samples::parse_stsd`, then in the parallel
+`container::parse_stsd`; both parsers now stop after the declared entries and
+ignore bounded trailing bytes. The separate ignored-hint-track parity row
+passed 1/1 with exact 67,500-byte frame parity and exercises the container
+parser's non-`av01` entry path. The unsupported-version check in that second
+parser was redundant: its sealed `InspectedAvif` input can only be constructed
+after the public sample parser accepts versions zero or one. The reference
+bitstream inspector likewise parses exactly the declared entry count. No unit
+tests were added.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-stsd-parity-green-20261029/coverage.json`
+(SHA-256 `a1d7b2cab9ab99ed1bd118793b34d43f6de674cfef747e37c688b005d7139d64`).
+The new row's selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-ignored-hint-track-stsd-20261029-v2/coverage.json`
+(SHA-256 `1b805730291e4254099311c4a9df9538cc73f99979915cbb266a7b371e755185`).
+Coverage MCP reports no missing branch outcome in `container::parse_stsd` for
+this selection. A fresh full all-feature run then passed all six integration
+executables (4, 1, 57, 7, 1, and 69 tests). Coverage measured 95,075/139,969
+lines (67.925755%), 18,944/32,076 branches (59.059733%), 5,273/8,955 functions
+(58.883305%), and 145,034/217,228 regions (66.765794%), passing the configured
+floors. The report is
+`.coverage-mcp/local-evidence/full/20261029-after-missing-leading-ftyp/coverage.json`
+(SHA-256 `0152da4b31764fae4ce0a2bc0c051bd71d3dbc72eed3503bcefb7702e5411874`).
+These totals match the preceding full report; the extra malformed signature
+row adds parity protection but does not increase covered coordinates. Both
+full reports have unverified source/build identity and unknown test attribution
+in Coverage MCP, so they do not support a verified aggregate coverage-gain
+claim. Formatting and strict all-target, all-feature Clippy passed on the
+earlier source state; this latest change is fixture-only.
+
+The selected report records no missing branch outcomes in `container::parse_stsd`
+after the non-`av01` path is reached by the ignored hint track. The report does
+not establish a complete-suite coverage regression comparison or test
+attribution. No SIMD or benchmark change was made; 100% remains open.
+
+Added `error_animated_missing_leading_ftyp.avif` as a full-file Pillow parity
+case that changes only the leading box type from `ftyp` to `free`. The selected
+parity row passed. Coverage MCP shows the first-box branch remains unobserved
+for this selection. Code inspection shows public dispatch rejects the missing
+signature before `samples::extract_inner_with_metadata` runs, so this protects
+format detection but does not cover the parser's defensive first-box check.
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-missing-leading-ftyp-20261029/coverage.json`
+(SHA-256 `a00c65408d7d017a2cb157e7fc48f107726a32cc2077b2eb11085ce7605eb66a`).
+
+The current fixture matrix contains 2,774 total rows: 2,203 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,203 decode rows and 540 encode
+rows are active; 31 planned encode rows remain. AVIF has 699 decode rows.
+
+## AVIF `ipma` and `iref` parser parity — 2026-10-29
+
+Coverage MCP identified uncovered `parse_ipma` item-ID validation branches.
+Added parity cases for a zero item ID and a repeated, non-increasing item ID;
+both selected cases pass and match Pillow's open-time rejection. A separate
+trailing-payload case reproduced a mismatch: Pillow inspects and decodes the
+image while Rust rejected the bounded trailing `ipma` byte. The parser now
+ignores bytes after its declared association records, and the selected pixel
+parity case passes (49,152 bytes, `Rgb8`). The reference metadata inspector
+was adjusted to read the declared associations while ignoring the same tail.
+The selected reports are
+`.coverage-mcp/local-evidence/selected/avif-ipma-invalid-item-ids-20261029/coverage.json`
+and
+`.coverage-mcp/local-evidence/selected/avif-ipma-trailing-payload-20261029-confirmed/coverage.json`.
+Coverage MCP then identified three uncovered `parse_iref` rejection branches.
+Added zero source-ID, zero target-ID, and trailing-reference-payload fixtures;
+all three selected parity rows pass and match Pillow's open-time rejection.
+The trailing-byte mutation shifts the alpha file extents by one byte while
+preserving the referenced AV1 payloads. Its selected report is
+`.coverage-mcp/local-evidence/selected/avif-iref-item-id-errors-20261029/coverage.json`.
+The refreshed full all-feature report is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-iref-parity/coverage.json`
+(SHA-256 `5d69ddbf50fc288a91fb77c766813b064edd65b5d1f3a10971a0de365d2d9cd3`).
+All integration tests passed and the configured floors passed at 95,046/139,928
+lines (67.9249%), 18,944/32,056 branches (59.0966%), 5,271/8,953 functions
+(58.8741%), and 145,007/217,183 regions (66.7672%). Coverage MCP reports no
+missing branch observation at `samples.rs:979` or `samples.rs:1037` in this
+report. Its comparison with the preceding local full report identifies three
+newly observed `samples::parse_iref` branch arms, but source/build identity is
+unverified, so this is coordinate evidence rather than a verified aggregate
+gain. Three defensive true arms remain in `container::parse_iref`; public AVIF
+inspection first constructs `InspectedAvif` through `samples::inspected`, so
+the malformed references are rejected before this second parser runs. The
+parity-only matrix cannot reach those duplicate checks. The 100% goal remains
+open.
+
+## AV1 compound tall lossless I420 parity — 2026-10-28
+
+Added the active public parity row
+`decode:avif:animated_lossless_compound_vertical_i420_b64x128` for a
+three-frame, 128x128, all-lossless 8-bit I420 sequence. The final frame is the
+exact per-sample average of its two references; a fixture-only pinned libaom
+patch forces the inter root into two vertical B64x128 leaves. Pillow 12.2.0
+frame hashes are `8d5970545b72ff383366ee05a687ef5c1b2ad9c077423325499abca2d36207ca`,
+`c046f748dfe1bd899697d6cde047f11239987ec1cf83782334a2c5aa5e5de2e0`, and
+`64c3d0552abe271f84a6f59d0d179877485829b79e48fbafabf8daf4cafbe028`; independent
+pinned libavif loop evidence reports three frames and infinite repetition
+(`-1`). The selected public parity run passed 1/1 rows (49,152 output bytes per
+frame). No unit tests were added.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/current-lossless-compound-tall-i420-20261028/coverage.json`
+(SHA-256 `6aab7acb128f5e171a7a3066ea5451ac111032e36fa95b325a95276c0c63869d`).
+A fresh full `make coverage` run passed all six integration executables (4, 1,
+57, 7, 1, and 69 tests) and measured 95,065/139,980 lines (67.913273%),
+18,936/32,088 branches (59.012715%), 5,272/8,955 functions (58.872138%), and
+145,020/217,240 regions (66.755662%), passing configured floors. The report is
+`.coverage-mcp/local-evidence/full/current-final-after-compound-tall-lossless-20261028/coverage.json`
+(SHA-256 `b12fbc40994d3cf94b6d730e7517e9d2209d7a89d4559f416c82bf97861b362f`).
+Coverage MCP observed the `luma_height > 64` true arm at
+`src/codecs/avif/av1/block.rs:48440` compared with the previous full report.
+The report totals are unchanged, and source/build identity and test attribution
+are unverified, so this is coordinate evidence rather than a verified
+aggregate coverage gain. A subsequent gap query still reported missing branch
+outcomes at this predicate across six generic decoder specializations. The
+matrix contains 2,746 rows: 2,175 active decode rows and 540 active encode
+rows, with 31 planned encode rows.
+
+## AV1 compound wide lossless I420 parity — 2026-10-28
+
+Added the active public parity row
+`decode:avif:animated_lossless_compound_wide_i420_b128x128` for a deterministic
+three-frame, 128x128-superblock, all-lossless 8-bit I420 AVIF sequence. Pillow
+12.2.0 exact RGB hashes and independent pinned libavif loop evidence cover all
+three frames. The selected public parity run passed 1/1 rows (49,152 output
+bytes per frame). No unit tests were added.
+
+The retained selected LLVM report is
+`.coverage-mcp/local-evidence/selected/current-lossless-compound-wide-i420-20261028/coverage.json`.
+Its branch counter observes the wide lossless arm in
+`decode_inter_compound_translation_lossless_grid`; Coverage MCP marks source
+and build identity unverified, so this is targeted local evidence rather than a
+verified aggregate coverage gain. The current fixture matrix contains 2,746 total rows: 2,175 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,175 decode rows and 540 encode
+rows are active; 31 planned encode rows remain. A refreshed full `make coverage`
+run passed all six integration executables (4, 1, 57, 7, 1, and 69 tests). It
+measured 95,065/139,980 lines (67.913273%), 18,936/32,088 branches
+(59.012715%), 5,272/8,955 functions (58.872138%), and 145,020/217,240 regions
+(66.755662%), passing the configured floors. The report is
+`.coverage-mcp/local-evidence/full/current-final-after-compound-wide-lossless-20261028/coverage.json`
+(SHA-256 `48ffd4f369fa78923af2b32752411e7974536999aae2fd05a97a60a3fe119c87`).
+Coverage MCP found nine newly observed branch coordinates against the previous
+full report, including the `luma_width > 64` arm at
+`src/codecs/avif/av1/block.rs:48440`; the separate `luma_height > 64` arm was
+not observed by that run. MCP marks source/build identity unverified and tests
+unknown, so no verified aggregate coverage gain is claimed.
+
+
+## JPEG RGB 4:2:0 SSE2/AVX2 runtime comparison — 2026-10-26
+
+The merged [PR #106](https://github.com/appunni-m/image-slash-star/pull/106)
+added a 16-pixel RGB 4:2:0 conversion path for AVX2, while retaining the
+existing SSE2 packet path. Its [x86 benchmark run](https://github.com/appunni-m/image-slash-star/actions/runs/40253085701)
+completed five rounds for each of 40 JPEG encode/decode workloads on one
+AVX2-capable Ubuntu host. The SSE2 lane ran before the AVX2 lane. All 40 Rust
+output lengths and hashes matched across the two builds.
+
+For RGB Q85 4:2:0 encoding, the recorded median was 159,989 ns under SSE2 and
+123,933 ns under AVX2 at 128x128 (1.291x), 3,340,953 ns and 2,830,304 ns at
+512x512 (1.181x), and 13,394,850 ns and 11,414,454 ns at 1024x1024 (1.174x).
+In the same artifact, AVX2 Rust medians were 1.417x, 1.684x, and 1.729x the
+TurboJPEG 3.2.0 medians for those workloads. These hosted sequential runs show
+an AVX2-over-SSE2 improvement for the sampled workload, while leaving a clear
+gap to the oracle; they do not support a fastest-in-the-world or project-wide
+claim. The retained [benchmark artifact](https://github.com/appunni-m/image-slash-star/actions/runs/40253085701/artifacts/12621916274)
+has SHA-256 `fecb3cf22f5f92a1da9c825a05ae010bf5be21af02f50a4e3b3c836d0ee44aeb`.
+
+
+## AVIF I420 chroma reuse — 2026-10-28
+
+The public `decode_sequence` profile for
+`animated_motion_temporal_mv_range_2048x128.avif` showed substantial time in
+the scalar 4:2:0 chroma filter. The decoder now advances row and column
+coordinates without per-pixel division, shares U/V filter geometry, and reuses
+each vertically filtered chroma sample across its adjacent output columns.
+The fixed-point weights, pre-filter high-depth shift, edge replication, and
+single final rounding operation are preserved. No unsafe code or unit tests
+were added.
+
+On an Apple M3 Pro running macOS 15.7.7 with Rust 1.96.1, paired A–B–B–A runs
+timed the complete public sequence decode and output destruction 42 times per
+run in locked release builds (`--no-default-features --features avif`). The
+checkout was based on `69a79d4c4`, with locked dependencies and matching
+release settings; the only codec-source change between the A/B builds was
+`src/codecs/avif/decode.rs`. The fixture SHA-256 is
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`, and the
+decoded output totals 2,359,296 RGB bytes. Baseline medians were 14.953 ms and
+14.865 ms; the optimized medians were 12.238 ms and 12.194 ms. Averaging the
+two run medians gives an 18.06% latency reduction. This is one AVIF decode
+workload, not an encoder result or an x86 runtime result. A portable eight-lane
+RGB conversion experiment passed parity but did not improve the paired
+end-to-end result, so it was removed. `make lint-x86-simd` confirms the
+retained source still compiles under SSE2 and AVX2 flags; it does not measure
+runtime speed on those CPUs.
+
+The final selected parity run passed seven public rows spanning 4:2:0 and
+4:2:2, odd dimensions, 10-bit and 12-bit samples, alpha, and the timed
+animation. Coverage MCP found no missing branch coordinates in the new
+vertical-geometry or cached-sampling helpers for that run. The report is
+`.coverage-mcp/local-evidence/selected/avif-420-filter-cache-final-20261028/coverage.json`
+(SHA-256
+`406fa5e215d8b347b4a1b2b7f1cf86533f7e18ae47b366b7d5f70bc55fb20896`). Its
+source/build identity and test attribution are unverified by Coverage MCP, so
+this is selected coordinate evidence, not an aggregate coverage claim. Timing
+logs are retained under
+`.coverage-mcp/local-evidence/perf/avif-sequence-2048x128-arm64/`.
+
+## WebP vertical dimension-limit parity — 2026-10-28
+
+Added four active public encode parity rows for the WebP encoder's vertical
+dimension boundary: lossless and lossy success at 1x16,383, followed by the
+matching Pillow errors at 1x16,384. The selected parity run passed all four
+rows against Pillow 12.2.0. The cases extend the existing horizontal boundary
+fixtures and bring the matrix to 2,710 rows, with 540 active encode rows.
+
+The refreshed full `make coverage` run passed all six integration test
+executables (4, 1, 57, 7, 1, and 69 tests; zero failures). It measured
+94,615/140,050 lines (67.5580%), 18,816/32,142 branches (58.5402%),
+5,259/8,957 functions (58.7139%), and 144,357/217,340 regions (66.4199%).
+The report is `.coverage-mcp/local-evidence/full/webp-vertical-dimension-edges-20261028/coverage.json`
+(SHA-256
+`d96b0ec4b0144942778dcf0c5cf53384670b6a1b7864e37aff463b4766ca8e11`).
+Coverage MCP compared it with the previous full report and returned two newly
+observed branch coordinates, including the height-limit outcome in
+`validate_dimensions` at `src/codecs/webp/encode/vp8/encoder.rs:119`.
+The reports have unverified source/build identity and unknown test
+attribution, so this is coordinate evidence and not a verified aggregate
+coverage gain. The selected report is
+`.coverage-mcp/local-evidence/selected/webp-vertical-dimensions-20261028/coverage.json`
+(SHA-256
+`642b26ff047f1572b0cf71e08083406ff18e4c6824d32421e38b326d982e5a41`). No
+production codec changes, Rust unit tests, or performance claims were added.
+
+## AV1 wide I420 compound parity — 2026-10-28
+
+Added two active animated AVIF parity rows generated by
+`scripts/generate_avif_lossy_compound_wide_i420.py`. The mixed-residual case
+changes pixels in each 128x128 region of the final frame; the unsplit case
+uses the exact average of its two reference frames. Both compare all three
+196,608-byte RGB frames against Pillow 12.2.0. The selected parity runs passed
+1/1 each.
+
+Coverage MCP's selected comparison found five additional branch outcomes for
+the unsplit case relative to the existing wide-I420 parity case. The reports
+have unverified source/build identity and unknown test attribution, so this is
+bounded selected evidence; no aggregate full-coverage increase is claimed.
+The refreshed full `make coverage` run passed all six test executables (4, 1,
+57, 7, 1, and 69 tests). It measured 94,615/140,050 lines (67.5580%),
+18,814/32,142 branches (58.5340%), 5,259/8,957 functions (58.7139%), and
+144,357/217,340 regions (66.4199%). The report is retained at
+`.coverage-mcp/local-evidence/full/avif-compound-wide-parity-20261028/coverage.json`.
+Coverage MCP reports seven newly observed branch coordinates against the
+previous full report, but both reports have unverified source/build identity
+and unknown test attribution; no verified aggregate gain is claimed. Selected
+reports are retained under
+`.coverage-mcp/local-evidence/selected/avif-compound-wide-parity-fixed-20261028/`
+and `.coverage-mcp/local-evidence/selected/avif-compound-wide-unsplit-fixed-20261028/`.
+No decoder implementation or Rust unit tests were added.
+
 ## AVIF lossless B128 inter-grid parity — 2026-10-28
 
 Coverage MCP's latest full report identified missing outcomes at
@@ -82,10 +5797,31 @@ and no Rust unit tests were added. `make lint`, `make lint-x86-simd`, and
 `make test-feature-matrix` passed, including strict Clippy for debug, release,
 coverage, SSE2, and AVX2 targets, plus the native, WASI, and WASM feature lanes.
 
-The current fixture matrix contains 2,704 total rows: 2,137 decode / inspect /
-verify rows and 567 encode rows. Of those, 2,137 decode rows and 536 encode
+The current fixture matrix contains 2,714 total rows: 2,143 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,143 decode rows and 540 encode
 rows are active; 31 encode rows remain planned. The roadmap and generated
 capability counts now reflect this matrix.
+
+## AVIF top-level duplicate-box parity — 2026-10-28
+
+Added four active parity rows for duplicate top-level AVIF boxes around
+`mdat`. Pillow 12.2.0 ignores duplicate `meta` and `moov` boxes after media
+data, preserving the original five-frame metadata and pixels. Before `mdat`,
+a duplicate `meta` fails at image open; a duplicate `moov` opens and verifies
+but fails when Pillow decodes frame zero. The selected public parity run
+passed all four rows. Its report is
+`.coverage-mcp/local-evidence/selected/avif-top-level-duplicate-order-20261028-final/coverage.json`
+(SHA-256
+`2c5595219ddce35a70b8787e9d500841e226d59d7fbbcaa4021f8197fed22000`).
+
+Coverage MCP's selected comparison with the earlier after-`mdat`-only
+selection reports two newly observed branch coordinates in the
+`extract_inner_with_metadata` specializations at
+`src/codecs/avif/samples.rs:2765`. Source/build identity is unverified and test
+attribution is unknown, so this is bounded coordinate evidence rather than a
+verified aggregate coverage gain. The duplicate-mutation generator pins all
+four fixture hashes and checks each Pillow observation. No Rust unit tests,
+SIMD changes, or performance claims were added.
 
 ## AVIF `iloc` payload-span parity — 2026-10-28
 
@@ -286,6 +6022,28 @@ source/build identity or attribute its test run. No aggregate coverage
 increase is claimed. Fault mutation is compiled only for coverage builds; its
 three guards are recorded as `defensive_model` in the coverage-origin
 inventory. No Rust unit tests were added.
+
+## WebP RIFF declared-size fault contract — 2026-10-31
+
+Added target-only case
+`fault-contract:webp:webp_riff_declared_size_mismatch_rejected` for the
+declared-size validation in `write_riff_to_sink`. It uses the existing
+`encode:webp:enc_lossless` Pillow parity row, flips one bit in the generated
+RIFF size field only in coverage builds, and checks the public inconsistent-size
+error, unchanged caller sink, and exact-byte/pixel parity on retry.
+
+The four selected WebP RIFF fault contracts passed 4/4. Their local LLVM report
+is `.coverage-mcp/local-evidence/selected/20261031T133341.469954Z-246b71b216ef4e648f27548b77a48617/coverage.json`
+(SHA-256
+`de72c855db8284ff307c99c33038c60b2b47401e69d6bc9ee7ee872f2403e767`). It
+records one true and 11 false-arm hits at `src/codecs/webp/encode/mod.rs:191`,
+one true and 10 false at `:196`, one true and 9 false at `:201`, and one true
+and 8 false at `:208`. The source hash before and after this selected run was
+`98abc70a153da4be50d9b63d27545c55ef735a8839a414550a9f48d486e2852d`.
+Coverage MCP returned `Transport closed`, so this is local-only evidence and
+claims no managed aggregate coverage gain or regression. The fault result is
+target-only, not a Pillow parity pass. The fault point and enum exist only in
+coverage builds; no release-path or performance change is claimed.
 
 ## WebP token-aware raw-alpha parity — 2026-10-27
 
@@ -938,6 +6696,17 @@ condition remain uncovered. The injection is excluded from release builds,
 so this coverage change does not add a production-path branch. The full report
 above includes the new contract. MCP source identity remains unverified and
 test attribution unknown.
+
+The exact fault-contract selection was rerun on 2026-10-28 and passed 1/1.
+Its report is
+`.coverage-mcp/local-evidence/selected/20261028T162733.149537Z-e8b91d4448be45bb8fa8265ea2c14bfa/coverage.json`.
+Raw LLVM counters at the current mismatch condition in
+`src/codecs/avif/decode.rs:1071` show one mismatch and two matching samples in
+the exercised specialization. The zero-width and remainder guards were false
+in that run, and another specialization was not invoked. Coverage MCP's
+incremental comparison with the retained full report was incomparable because
+its branch detail did not reconcile with the totals; no aggregate gain is
+claimed.
 
 ## TIFF surplus-strip parity — 2026-10-25
 
@@ -5703,6 +11472,190 @@ Reports:
 - `target/release-evidence/coverage-fault-contract-monochrome-cdef-active-map-new-20261005.info`
 - `target/release-evidence/coverage-current-fault-contracts-20261005-cdef-active-map.json`
 
+### AVIF monochrome CDEF invalid sample-depth fault contract — 2026-10-31
+
+`fault-contract:avif:avif_monochrome_cdef_invalid_sample_depth_rejected`
+reuses the active `decode:avif:coverage_monochrome_multitile_loop_cdef_active_8bit_128x64`
+Pillow parity fixture. Its coverage-only hook changes the CDEF filter parameter
+depth to 7 immediately before the shared filter, reaching the `maximum_sample`
+range rejection. The integration contract checks the public AVIF `StillDecode`
+malformed error, then verifies that a clean retry succeeds. The row is
+target-only with `oracle_status: not_applicable`; it does not add a Pillow
+parity observation or a release-build hook.
+
+The exact selected `test_fault_contract_matrix` case passed. The retained
+LLVM JSON has no baseline observations for the invalid-depth edge at
+`cdef.rs:317`; the selected report records that edge after the injected depth
+7. Coverage MCP's incremental comparison was unavailable because its
+transport closed; this is selected branch-coordinate evidence, not a
+full-suite coverage claim.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/full/20261031-av1-monochrome-multitile-active-loop-cdef-current/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-cdef-invalid-sample-depth-final/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-cdef-invalid-sample-depth-final/coverage.local-evidence.json`
+
+### AVIF monochrome CDEF direction-depth fault contract — 2026-10-31
+
+`fault-contract:avif:avif_monochrome_cdef_direction_invalid_sample_depth_rejected`
+uses the same active monochrome CDEF Pillow parity fixture. Its coverage-only
+hook passes bit depth 7 to `direction_for_block`, which rejects the invalid
+depth and returns the normal AVIF `StillDecode` malformed error. The contract
+checks that error and a successful clean retry. The fault row remains
+target-only with `oracle_status: not_applicable`.
+
+The selected integration case passed. The retained LLVM JSON records the
+invalid-depth branch at `cdef.rs:72`, which had no observations in the full
+baseline. Coverage MCP's incremental comparison remains unavailable because
+its transport closed; this selected report provides local branch-coordinate
+evidence only.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/full/20261031-av1-monochrome-multitile-active-loop-cdef-current/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-cdef-direction-invalid-sample-depth-final/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031-avif-monochrome-cdef-direction-invalid-sample-depth-final/coverage.local-evidence.json`
+
+### AVIF monochrome CDEF input-guard sweep fault contract — 2026-10-31
+
+`fault-contract:avif:avif_monochrome_cdef_input_guard_sweep_rejected` reuses
+the active monochrome CDEF Pillow parity input. A coverage-only hook checks 19
+invalid private calls across block geometry, source and output lengths, sample
+depth, direction, empty sample dimensions, and deliberately unavailable taps.
+The public decode reports the malformed-input contract with the exact message
+`decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF guard sweep rejected 19 invalid inputs`;
+the row then verifies that an uninjected retry succeeds. Its oracle status is
+`not_applicable`, so the injected result remains separate from Pillow parity.
+
+A combined selected run of 12 active AVIF Pillow parity rows and the three CDEF
+fault contracts passed all 15 rows. The current-source LLVM report records
+66/66 CDEF branch outcomes, including the zero-variance and low-nonzero-
+variance outcomes in `adjust_primary_strength`. Source and fixture hashes were
+stable during the run. Coverage MCP returned `Transport closed`, so these are
+local selected-report counts rather than an MCP source/build receipt or a
+full-suite claim.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/selected/20261031-avif-cdef-parity-and-guards-current/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031-avif-cdef-parity-and-guards-current/coverage.local-evidence.json`
+
+### AVIF color CDEF active-map extent fault contract — 2026-11-01
+
+`fault-contract:avif:avif_color_cdef_active_map_extent_mismatch_rejected`
+reuses the active `decode:avif:coverage_i420_intra_cdef_10bit_16x16` Pillow
+parity input. A coverage-only hook shortens the decoded CDEF active map by one
+entry immediately before the existing extent guard. The public AVIF
+`StillDecode` malformed-input error is checked, followed by a successful clean
+retry. The injected row has `oracle_status: not_applicable` and is kept
+separate from the parity result.
+
+The selected fault-contract run passed 1/1, and a separate selected parity run
+passed 1/1 with exact 768-byte pixel parity. LLVM coverage shows the active-map
+extent guard's rejection edge taken once in the injected run and zero times in
+the parity-only run. Both local receipts report unchanged source and fixtures.
+Coverage MCP returned `Transport closed`, so these reports are local evidence,
+not managed attribution or a full-suite coverage claim. Source and fixture
+SHA-256 values were `349ae3a00776d6827e1716dbe7f5ed746238e063a961b465d615b7018dfcf139`
+and `3407c458add1348d2e0f0a73f8aaaa862fd435a18eb7c563b8461d89541656d2`.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/selected/20261031T230625.055415Z-3a1ada4568c748c4a0bbe6b67a063193/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031T230625.055415Z-3a1ada4568c748c4a0bbe6b67a063193/coverage.local-evidence.json`
+- `.coverage-mcp/local-evidence/selected/20261031T230732.716490Z-f3360f66ccd243dfab6b2c073b19f131/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261031T230732.716490Z-f3360f66ccd243dfab6b2c073b19f131/coverage.local-evidence.json`
+
+### AVIF color CDEF strength-count guard fault contracts — 2026-11-01
+
+The AV1 parser derives color CDEF strength counts from the parsed strength
+arrays, whose syntax allows one through four entries. The target-side
+`FrameCanvas::apply_cdef` guard also checks those counts against the arrays.
+Coverage review found that separate `count > array.len()` comparisons repeated
+the upper bound for the fixed `[u32; 4]` arrays; the guard now uses each array's
+length as the range upper bound, preserving the accepted values without
+unreachable comparison branches. Two target-only cases exercise the
+invalid-count path, which ordinary valid bitstreams cannot express:
+`fault-contract:avif:avif_color_cdef_invalid_y_strength_count_rejected` sets
+only the Y count to zero, and
+`fault-contract:avif:avif_color_cdef_invalid_uv_strength_count_rejected` sets
+only the UV count to zero. A third case,
+`fault-contract:avif:avif_color_cdef_active_strength_index_out_of_range_rejected`,
+sets an active region index to the first value beyond the Y and UV strength
+counts. All three hooks exist only under `#[cfg(coverage)]` and reuse
+`decode:avif:coverage_i420_intra_cdef_10bit_16x16`. The runner checks the
+public `StillDecode` errors
+`decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF strength counts are invalid`
+for the count cases and
+`decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF active region index exceeds strengths`
+for the index case, then confirms each clean retry succeeds. All three rows have
+`oracle_status: not_applicable`; the normal input remains a separate Pillow
+parity row.
+
+The baseline all-active matrix selection passed 3,088/3,088 rows: 2,365 decode,
+556 encode, and 167 fault contracts. The target-only fault outcomes remain
+outside oracle-parity counts. Its selected LLVM report records 96,178/142,952
+lines (67.28%), 19,311/31,982 branches (60.38%), 5,228/9,333 functions
+(56.02%), and 146,535/221,847 regions (66.05%). In `raster.rs`, it records
+1,982/4,674 lines (42.40%) and 308/904 branches (34.07%). These are all-active
+parity/fault-matrix figures, not full test-suite coverage or a 100% coverage
+claim. No Coverage MCP tool was exposed in this session, so the report and
+receipt are local evidence without MCP source/build attribution. The receipt
+records unchanged source and fixtures during the run, revision
+`69a79d4c46b3c8598de020e47345ade1b0e1d304`, source-manifest SHA-256
+`cf06eefe697bec96cafe0510654091b7d30cc7742d1c4ae467979369741c64ce`, raster
+SHA-256 `9256783ff149ecc1aafc5d52a5aee07f2bce91ef565f226381cedd2f33ca5827`,
+the active parity input SHA-256
+`3407c458add1348d2e0f0a73f8aaaa862fd435a18eb7c563b8461d89541656d2`, and
+matrix SHA-256
+`00450f600e2302f654d5452d156134cf3b25b29360545ed4e8e9eed0b0c470f7`. That
+matrix snapshot contains one planned 9x9 CDEF parity case, excluded from the 3,088
+executed rows.
+
+Reports:
+
+- `.coverage-mcp/local-evidence/selected/20261101T045700.728392Z-707a91ec2a1641dfaf86ccc8a774b6db/coverage.json`
+- `.coverage-mcp/local-evidence/selected/20261101T045700.728392Z-707a91ec2a1641dfaf86ccc8a774b6db/coverage.local-evidence.json`
+
+### AVIF odd-edge color CDEF parity — 2026-11-01
+
+The pinned 9x9 and 9x16 10-bit I420 fixtures
+`coverage_i420_intra_cdef_10bit_9x9` and
+`coverage_i420_intra_cdef_10bit_9x16` are active pixel-parity regressions with
+Pillow 12.2.0/libavif 1.4.1 RGB references. Both have active single-entry CDEF.
+The 9x16 fixture combines a partial horizontal block with an aligned vertical
+extent, exposing a failure hidden by the 9x9 fixture's repeated edge samples.
+
+The earlier visible-edge extension matched the 9x9 output but differed in 94
+of 432 RGB bytes for 9x16. The entropy walker had reconstructed the complete
+16x16 coded canvas, then cropped it before CDEF. Retaining that canvas through
+CDEF and cropping after filtering restores exact parity for both fixtures.
+Super-resolution retains its filtered padding for its subsequent resize stage.
+The temporary plane traces and diagnostic example were removed.
+
+The initial two-case reproducer passed 2/2 active rows. After removing the
+diagnostics, the related CDEF/super-resolution selection passed 35/35 parity
+rows. A separate selection passed 13/13 CDEF fault contracts with
+`oracle: not_applicable`; those results are not counted as Pillow parity.
+Native strict lint and the SSE2/AVX2 compile checks passed. The static origin
+inventory now accounts for all 267 coverage guards across 36 files, including
+the six color-CDEF defensive guards omitted from its previous receipt.
+
+Coverage MCP's branch-gap inspection of `frame_coordinate::<true>` reports
+only the unreachable arm of its compile-time generic condition as missing.
+No coverage exclusions were added. This is selected-case evidence; it does
+not establish full-suite coverage or decoder performance. The local LLVM
+reports have unverified source provenance and unknown test attribution in
+Coverage MCP.
+
+Reports:
+
+- Parity: `.coverage-mcp/local-evidence/selected/20261101T053933.226263Z-280a3c48d1c341c88ad8b5535deb42e9/coverage.json`
+- Parity receipt: `.coverage-mcp/local-evidence/selected/20261101T053933.226263Z-280a3c48d1c341c88ad8b5535deb42e9/coverage.local-evidence.json`
+- Fault contracts: `.coverage-mcp/local-evidence/selected/20261101T054059.940791Z-fece9c294b48459c837820cd50c7c44c/coverage.json`
+- Fault receipt: `.coverage-mcp/local-evidence/selected/20261101T054059.940791Z-fece9c294b48459c837820cd50c7c44c/coverage.local-evidence.json`
+
 ### AVIF grid and monochrome assembly fault contracts — 2026-10-05
 
 Two target-only rows use existing active Pillow parity inputs as reproducible
@@ -9777,6 +15730,18 @@ That report has no source/build receipt and labels test status unknown, so the
 remaining locations are diagnostic rather than verified per-row attribution.
 No coverage-only test was added.
 
+A fresh selected LLVM profile of this parity row passed 1/1 on 2026-10-29 and
+records six calls to `relocate_intrabc_source`. The calls follow the in-bounds
+monochrome path and do not exercise source relocation. The bounded public
+profile admits monochrome only and supplies `has_chroma: false`, leaving the
+chroma-border arms unreachable through public decode. A valid parity fixture
+for the relocation arms has not been established. The report is
+`.coverage-mcp/local-evidence/selected/av1-intrabc-spatial-current/coverage.json`
+(SHA-256 `4618cf1ac9f3143a85c010e155917088ca57b7291f78ad27b556ad49b7f5737b`).
+Its local receipt records no source changes during collection, but Coverage
+MCP still marks source/build identity unverified and test attribution unknown;
+this is a reachability note, not a coverage-gain claim.
+
 The targeted temporal-projection candidate is already exercised by the active
 `animated.avif` parity row (SHA-256
 `2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d`).
@@ -10095,13 +16060,84 @@ then runs `make verify-fixture-integrity`. It preserves the measured revision,
 original manifest and matrix hashes, and coverage MCP identity. GitHub CI runs
 the read-only verifier and never refreshes receipts automatically.
 
+## AV1 show-existing unshowable-reference parity — 2026-10-31
+
+The retained local full LLVM report at
+`target/release-evidence/coverage.json` (SHA-256
+`5209ff334213f218cd54ceaacdd0704099532ed63f38aaabc788ac130f2c7281`)
+showed no hits for the non-showable reference arm in
+`parse_reader` at `src/codecs/avif/av1/frame.rs:3241`, while the showable arm
+was observed 77 times. Coverage MCP returned `Transport closed` for both the
+full report and the focused report; these coordinates are local evidence only.
+
+Added active parity row
+`decode:avif:error_animated_show_existing_unshowable_reference`. The generator
+changes the show-existing slot in sample 2 of `animated.avif` from slot 2 to
+slot 0, which contains the initial non-showable key frame. It changes one AV1
+syntax byte; fixture SHA-256 is
+`bf8daa2a92e16a7c9b12cd5ef6d724b36c30e724d5f8a2952480387ff20ecf9d`.
+Pillow 12.2.0 opens the file and loads frames 0–2, then reports
+`Failed to decode frame 3: Decoding of color planes failed`. First-frame RGB
+parity remains exact at 67,500 bytes, and sequence decoding returns the same
+malformed-input error.
+
+`make coverage-selected
+COVERAGE_CASES='decode:avif:error_animated_show_existing_unshowable_reference'`
+passed 1/1. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T044137.197296Z-1a9966d9bc4a40d99eb43307d1b87fc0/coverage.json`
+(SHA-256
+`c240d1c355dd2815cf7b652e1c7b89b72d0bf3b0cd59dd7f500319dce2a3d335`); the
+local receipt SHA-256 is
+`96b2e7732ec71e0c72d2de96097ebf5807abeadd57e4d041e9c639175f0c76f2`. Its
+executed `parse_reader` specialization records the previously missing
+non-showable arm once. Coverage MCP again returned `Transport closed`, so this
+is not MCP-confirmed evidence and makes no aggregate coverage claim. No Rust
+unit tests or target-only fault-contract cases were added.
+
+The malformed-case ledger now includes sequence-only Pillow and Rust error
+rows, with their sequence status and error details kept separate from
+first-frame decode status. `scripts/generate_malformed_ledger.py --check` and
+`scripts/verify_claim_ledger.py` pass.
+
+## AV1 show-existing empty-reference parity — 2026-10-31
+
+The retained full LLVM report at `target/release-evidence/coverage.json`
+(SHA-256
+`5209ff334213f218cd54ceaacdd0704099532ed63f38aaabc788ac130f2c7281`)
+showed the empty-reference branch in `parse_reader` at
+`src/codecs/avif/av1/frame.rs:3238` had zero hits; the populated-reference arm
+was observed 77 times. The prior slot-7 mutation still selected a populated
+key-frame slot, so it was discarded as evidence.
+
+Added active parity row `decode:avif:error_animated_show_existing_empty_reference`.
+Its generator replaces the first color-track sample's key-frame OBU with the
+same sequence header and a show-existing frame header for slot 7, before any
+reference slot has been populated. The file opens as a five-frame AVIF;
+Pillow 12.2.0 reports a malformed decode at frame 0 and a malformed sequence
+decode at frame 3. The fixture SHA-256 is
+`4edf1ad3aca5683da9b01569d76381185f6dc057e089337466085f044e786f7c`.
+
+`make coverage-selected
+COVERAGE_CASES='decode:avif:error_animated_show_existing_empty_reference'`
+passed 1/1. Its selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T045526.866827Z-33ae152126e94c2aaebd2d59b4b50659/coverage.json`
+(SHA-256
+`5d62d5d34d26c60eeb9fa3d6ebddf11fea4fb40a491836507a7e55084d599de9`); the
+local receipt SHA-256 is
+`499c1ce36e92ddc8acfd69942082d6ceb63128c59e120a66457ea55ee058bc50`. Its
+`frame.rs:3238` branch record has counts `[0, 3]`, confirming the previously
+unvisited empty-reference arm ran. The source and fixtures did not change
+during this selection. Coverage MCP returned `Transport closed`; this is local
+selected evidence only and makes no aggregate coverage claim. No Rust unit
+tests were added.
+
 <!-- current-claim-ledger:begin -->
 Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `749acea03577c399224244cfd8cd6a946b2f632509d8b7a2751c2cb9a31aaf04`; matrix `77a783c3ddb307545604fd4d2ea2ef028150ccc951a34b2901d23b47048f2972`.
+- Current fixture integrity only: manifest `b255ebc4d4cc7d8159cec92ddff7f44b6120a83acf83d7a489b01b1995aa42c5`; matrix `51dab2922f3866c42930a192971ecc5baa81765d238b040baab3b240e4ac9fe2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -10482,7 +16518,7 @@ Pillow-backed input.
 | `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
-| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_chunk_iterator_failure_stops_iteration`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:png:png_inspect_invalid_signature_rejected`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch`, `fault-contract:webp:webp_hash_chain_index_overflow_rejected`, `fault-contract:webp:webp_riff_header_too_short_rejected`, `fault-contract:webp:webp_riff_signature_mismatch_rejected`, `fault-contract:webp:webp_form_type_mismatch_rejected` | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_zero_width`, `fault-contract:avif:avif_12bit_i420_alpha_nondivisible_luma_length`, `fault-contract:avif:avif_12bit_i420_alpha_zero_height`, `fault-contract:avif:avif_12bit_i420_alpha_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_portable_u_plane_length_mismatch`, `fault-contract:avif:avif_portable_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_subsampled_identity_conversion_rejected`, `fault-contract:avif:av1_inter_translation_sample_depth_mismatch`, `fault-contract:avif:av1_motion_predictor_zero_width_rejected`, `fault-contract:avif:av1_motion_reference_mv_geometry_guard_sweep_rejected`, `fault-contract:avif:av1_difference_mask_first_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_second_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_output_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_scratch_length_mismatch`, `fault-contract:avif:av1_wedge_mask_fill_empty_width`, `fault-contract:avif:av1_wedge_mask_fill_empty_height`, `fault-contract:avif:av1_wedge_mask_fill_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_invalid_mode`, `fault-contract:avif:av1_inter_intra_mask_empty_width`, `fault-contract:avif:av1_inter_intra_mask_empty_height`, `fault-contract:avif:av1_inter_intra_mask_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_non_normative_width`, `fault-contract:avif:av1_inter_intra_mask_non_normative_height`, `fault-contract:avif:av1_wedge_mask_reduce_empty_width`, `fault-contract:avif:av1_wedge_mask_reduce_empty_height`, `fault-contract:avif:av1_wedge_mask_reduce_scratch_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_direction_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_input_guard_sweep_rejected`, `fault-contract:avif:avif_color_cdef_active_map_extent_mismatch_rejected`, `fault-contract:avif:avif_color_cdef_active_strength_index_out_of_range_rejected`, `fault-contract:avif:avif_color_cdef_invalid_y_strength_count_rejected`, `fault-contract:avif:avif_color_cdef_invalid_uv_strength_count_rejected`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_item_extent_span_inspection_reservation_failure`, `fault-contract:avif:avif_container_inspection_invariant_guards`, `fault-contract:avif:avif_container_meta_full_box_version_rejected`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_chunk_iterator_failure_stops_iteration`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:png:png_inspect_invalid_signature_rejected`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_rational_index_out_of_range`, `fault-contract:tiff:tiff_ycbcr_floating_index_out_of_range`, `fault-contract:tiff:tiff_directory_numeric_value_width_invalid`, `fault-contract:tiff:tiff_directory_numeric_value_width_remainder`, `fault-contract:tiff:tiff_directory_numeric_value_remainder_nonempty`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch`, `fault-contract:webp:webp_hash_chain_index_overflow_rejected`, `fault-contract:webp:webp_riff_header_too_short_rejected`, `fault-contract:webp:webp_riff_signature_mismatch_rejected`, `fault-contract:webp:webp_form_type_mismatch_rejected`, `fault-contract:webp:webp_riff_declared_size_mismatch_rejected`, `fault-contract:avif:av1_unfiltered_copy_source_x_end_overflow_falls_back`, `fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`, `fault-contract:bmp:bmp_encode_height_over_signed_limit_rejected` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, bounded native concurrent verification, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |
@@ -12407,3 +18443,2565 @@ lines (67.34%), 18,705 / 32,072 branches (58.32%), 5,235 / 8,937 functions
 comparison is limited because source/build attribution is unverified; its
 coordinate query shows the newly exercised no-still-metadata branch and three
 remaining missing branches in `pixel_payload_bytes`.
+
+## Lossy I444 B8x16 transform-terminal parity — 2026-10-28
+
+Added active row `decode:avif:animated_lossy_inter_i444_b8x16_mode_select_64x64`
+for a deterministic two-frame 64x64 8-bit I444 sequence. The fixture-only
+libaom encoder controls force vertical B8x16 inter partitions while preserving
+positive qindex and `TX_MODE_SELECT`; the Rust decoder remains unchanged. Both
+exact Pillow RGB frame hashes and the independent pinned libavif one-play
+observation are retained. The selected parity run passed 1/1 rows and recorded
+16 true and 30 false outcomes for the targeted branch at
+`src/codecs/avif/av1/block.rs:51531`. Coverage MCP still labels source/build
+identity unverified for this selected report, so the counts are local LLVM
+coordinate evidence rather than a verified full-suite coverage claim.
+
+The current fixture matrix contains 2,729 total rows: 2,158 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,158 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## Lossy I422 small-partition parity — 2026-10-28
+
+Added active row
+`decode:avif:animated_lossy_inter_422_small_partitions_32x64` for a
+deterministic two-frame 32×64 8-bit I422 AVIF sequence. Selected parity passed
+1/1 cases with exact Pillow RGB hashes for both frames. The input SHA-256 is
+`f150bd51312eee0a9e7dccc57b3d26fc08899c400d82565b839d704e98c6c029`; pinned
+libavif independently decoded both frames and confirmed one-play sequence
+metadata.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T133544.038328Z-910da45580dc4afbb9dfcbc62b0a9e48/coverage.json`.
+Raw branch coordinates show 14 branch-record outcomes at previously unhit
+AV1 block-decoder coordinates. Coverage MCP's older all-active report flagged
+both arms of `decode_inter_split_luma_small_rect_topology` at
+`src/codecs/avif/av1/block.rs:52771` as missing; the selected report records one
+hit for each `child_split` arm at that span. Coverage MCP could not combine the
+reports because the older report's detail does not match its aggregate totals;
+both reports also lack verified source/build receipts. Treat this as targeted
+coordinate evidence, not a verified full-suite coverage gain.
+The fixture generator check and fixture-integrity gates pass. No Rust
+production code or unit tests were added.
+
+The current fixture matrix contains 2,729 total rows: 2,158 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,158 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF sequence decode A–B–B–A — 2026-10-28
+
+Compared the committed `69a79d4c46b3c8598de020e47345ade1b0e1d304` source (A)
+with the current AVIF Rust edits (B; diff SHA-256
+`7f6e6279137c15c28608147ee7e20d2fe13b0bb4e743a3c5494f540aad04df1b`) using
+the release `avif`-only public sequence-decode probe. The workload is
+`animated_motion_temporal_mv_range_2048x128.avif` (SHA-256
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`). Its
+exact parity row passed 1/1 before timing.
+
+On an Apple M3 Pro running macOS 15.7.7 with rustc 1.96.1, two A–B–B–A cycles
+collected 48 timed decodes per version after one warm-up decode each. Median
+latency was 15.466 ms for A and 12.848 ms for B (16.93% lower for B). The timer
+covers `decode_sequence` plus dropping decoded output; compilation and input
+I/O are excluded. The local report is
+`target/oracle-staging/avif-perf-abba-69a79d4c.json` (SHA-256
+`788dcac0f3131a5d8ee292b5b03ce507608e72c8bf50e392f70f56341d32f146`). This is
+one ARM64 workload and does not establish SSE2/AVX2 runtime speed or a general
+decoder speedup.
+
+## Lossy I420 B8x16 mixed-transform parity — 2026-10-28
+
+Added public row `decode:avif:animated_lossy_inter_420_b8x16_mixed_topology_64x64`
+for a deterministic two-frame 64x64 I420 sequence. The fixture-only libaom
+encoder patch forces vertical B8x16 inter leaves and a mixed transform tree:
+one TX8x8 child splits into TX4x4 blocks while the other stays TX8x8. Exact
+Pillow RGB parity passed for both frames, and the independent pinned libavif
+observer confirms a complete two-frame sequence.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T152427.654345Z-1ec332db4d9543b2a7651e6693cdda2a/coverage.json`.
+Coverage MCP's selected comparison against the retained 32x64 I422 row reports
+six newly observed branch coordinates in `decode_inter_split_luma_small_rect_topology`,
+including the `along_rows = true` arm at `src/codecs/avif/av1/block.rs:52753`.
+The selected raw report records both `child_split` arms at line 52771. Source
+and build receipts are unverified, and other generic instantiations still have
+missing arms, so this is limited coordinate evidence rather than a verified
+aggregate gain or full branch closure. Two temporary 64x32 variants were
+removed after their selected reports showed no distinct branch observations.
+No production Rust code or unit tests were added.
+
+The current fixture matrix contains 2,731 total rows: 2,160 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,160 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## TIFF selected coverage and directory-count audit — 2026-10-29
+
+Coverage MCP's retained TIFF report highlighted
+`Directory::numeric_values_are_nonempty_and_uniform` and the raw packed
+FillOrder path. Exact selected parity runs passed the active
+`decode:tiff:multi_page`, `decode:tiff:multi_page_multipage_three`,
+`decode:tiff:later_ifd_mixed_bits`, `decode:tiff:later_ifd_empty_bits`, and
+`decode:tiff:cyclic_ifd_leniency` rows (5/5), plus
+`decode:tiff:fill_order_2_miniswhite_1bit` and
+`decode:tiff:fill_order_2_minisblack_2bit` (2/2). A third run passed
+`decode:tiff:ycbcr_coefficients_float_type_lzw_2x2`,
+`decode:tiff:ycbcr_coefficients_double_values_lzw_2x2`,
+`decode:tiff:ycbcr_reference_float_type_lzw_2x2`, and
+`decode:tiff:ycbcr_reference_double_type_lzw_2x2` (4/4). The first group
+compares first-page pixels while exercising multipage and later-directory
+behavior; the second compares raw 1-bit and 2-bit FillOrder 2 pixels; the third
+compares float and double YCbCr values against Pillow.
+
+The selected reports are
+`.coverage-mcp/local-evidence/selected/tiff-ifd-uniformity-20261029/coverage.json`
+and
+`.coverage-mcp/local-evidence/selected/tiff-fill-order-packed-20261029/coverage.json`,
+and
+`.coverage-mcp/local-evidence/selected/tiff-ycbcr-floating-values-20261029/coverage.json`.
+Coverage MCP's branch query found no missing groups for
+`Directory::floating_value` in the selected float/double report.
+Coverage MCP still marks source/build identity unverified and test status
+unknown for these local reports. Its comparison with the retained full report
+is limited or incomparable, so no aggregate coverage gain or regression is
+claimed.
+
+The current `Directory::parse` constructs each numeric entry's byte length as
+`count * type_size`, where supported types have a nonzero width. After the
+`count == 0` early return, division by the count therefore yields that exact
+nonzero width, and the byte length is divisible by the count. The later
+`chunks_exact` remainder check is consequently false for entries produced by
+the public parser. These arithmetic rejection branches do not describe
+reachable malformed-file behavior; no private unit tests or duplicate parity
+rows were added. The active mixed-width and empty-field rows cover Pillow's
+first-page output and record its sequence-enumeration failures for unusable
+later-page metadata.
+
+The current fixture matrix contains 2,746 total rows: 2,175 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,715 rows are active (2,175 decode /
+inspect / verify and 540 encode); 31 planned encode rows remain.
+
+## Coverage gap disposition — AVIF, JPEG, and WebP paths — 2026-10-29
+
+The retained full branch report
+`.coverage-mcp/local-evidence/full/current-final-after-compound-tall-lossless-20261028/coverage.json`
+(SHA-256
+`b12fbc40994d3cf94b6d730e7517e9d2209d7a89d4559f416c82bf97861b362f`) lists
+missing arms in the generic WebP `write_token_stream`, `apply_palette`, and
+`encode_alpha_stream` helpers. The public frame encoder dispatches
+`Some(token)` together with `TokenBitWriterCheckpoint`, and `None` together
+with `NoopBitWriterCheckpoint`.
+The reported missing arms pair the no-op checkpoint type with a token or the
+token checkpoint type without one; that combination is not reachable through
+the public encoder, so no parity case can exercise it.
+
+The same report lists the `vertical_rows == 2` arm in the no-token JPEG
+`downsample_two_to_one` helper as unobserved. Public 4:2:0 encoding uses the
+already-downsampled batch conversion on that path; 4:2:2 reaches this helper
+with one vertical row, 4:4:4 bypasses it, and token-bearing encoding uses the
+checkpoint-aware helper. Adding a parity row cannot select the missing
+no-token 4:2:0 combination.
+
+The report also lists invalid-input arms in `container.rs::parse_iloc`. The
+existing `decode:avif:error_iloc_version_3` public parity case passed 1/1 under
+selected coverage. Its local LLVM counters reached the earlier
+`samples.rs::parse_iloc` rejection; the `container.rs::parse_iloc`
+specialization had zero calls because inspection receives an already-extracted
+AVIF. The selected report is
+`.coverage-mcp/local-evidence/selected/iloc-version-3-20261029/coverage.json`
+(SHA-256
+`ba0375814aeb3477ab9880b15dee54c513ef42dc253238648216ee16145d0439`); the
+local receipt records one selected, executed, and passed parity case with no
+source change during the run. These repeated validation failures are therefore
+not additional public input paths for this case.
+
+Coverage MCP marks both the retained full report and the selected report as
+having unverified source/build identity. This is a gap disposition only: no
+aggregate coverage gain is claimed, and no duplicate fixture or code change was
+made for these unreachable combinations.
+
+## AVIF parser parity and full coverage refresh — 2026-10-28
+
+The full `make coverage` campaign passed after the AVIF sample-table, property,
+track, and top-level container parity changes. Its retained report is
+`.coverage-mcp/local-evidence/full/current-final-avif-parser-and-decode-20261028/coverage.json`.
+The configured floors passed: 95,063 / 139,980 lines (67.91%), 18,936 / 32,088
+branches (59.01%), 5,272 / 8,955 functions (58.87%), and 145,016 / 217,240
+regions (66.75%). All existing test suites in the campaign passed.
+
+Coverage MCP returned no missing branch groups for the targeted
+`samples::parse_stsc`, `samples::parse_iprp`, `container::parse_iprp`,
+`track_plane`, and `Meta::transform` queries on this report. Public AVIF parity
+rows exercise the Pillow-compatible trailing `stsc` payload, malformed
+property-child cases, zero description index, and duplicate first-wins
+transforms. The presentation parser's second `iprp` pass now relies on the
+already validated `InspectedAvif` metadata and extracts the first two validated
+children without repeating structural guards. The full report still has large
+AV1 gaps, led by `Lossy420Decoder::decode_inter_translation_impl`.
+
+Coverage MCP marks this local report's source/build identity unverified and its
+test status unknown because it has no matching receipt. The run output confirms
+the local suite passed, but no verified aggregate coverage gain is claimed.
+No unit tests were added. `cargo fmt`, strict debug/release/coverage Clippy, and
+the AVIF decode and loop-evidence parity selections passed on this source state;
+the broader 100% coverage goal remains open.
+
+## AVIF sample-table tail and property-child parity — 2026-10-28
+
+Coverage MCP identified an unobserved trailing-payload rejection in
+`samples::parse_stsc` and unknown/duplicate-child guards in
+`samples::parse_iprp`. Added active rows
+`decode:avif:animated_stsc_trailing_payload`,
+`decode:avif:error_iprp_unknown_child`, and
+`decode:avif:error_iprp_duplicate_ipma`. The trailing-byte fixture preserves
+both original `stsc` mapping rows and encoded samples, rebasing `iloc` and
+`stco` offsets by one byte. Its input SHA-256 is
+`afd53fee7738e9b4fe280bb0ff1a19f938cdaad326977abf2cb4266c8e376e4b`. Pillow
+12.2.0 and pinned libavif 1.4.1 both decode the same five exact frames with
+33 ms timing and one play. The two malformed `iprp` fixtures replace `ipma`
+with an unknown child or append a duplicate `ipma`; Pillow rejects both at
+open. Their input SHA-256 values are
+`1d67de2af3d30be3ef552e461fb3a74c3badacd6c6fd84e1e8fb9937fa3d3580` and
+`d6e09f8fcc13fd62817793463188f12b2583ec044a967368af9c977f4cf2b65f`.
+
+The Rust `stsc` parser now matches Pillow and libavif by ignoring bytes
+remaining after the declared mapping entries. The exact selected parity run
+passed 3/3 rows:
+`.coverage-mcp/local-evidence/selected/20261028T170536.363506Z-613cb8b3d44c468c9ae3364f9fa65afc/coverage.json`.
+Coverage MCP reports that selected LLVM source/build identity is unverified;
+these branch observations are targeted local evidence and do not establish a
+verified full-suite coverage gain. Other AVIF parser branches and the broader
+decoder coverage goal remain open. No unit tests were added.
+
+The current fixture matrix contains 2,744 total rows: 2,173 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,173 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF sample-table edge and zero-description-index parity — 2026-10-28
+
+Coverage MCP's saved full report highlighted branches in `parse_stsc`,
+`parse_iprp`, and `track_plane`. Added five malformed-input parity rows for a
+nonzero `stsc` version, an empty `stsc` table, zero samples per chunk, an empty
+`stco` offset table, and a missing `ipma` association box. Added a successful
+two-chunk AVIF row whose first `stsc` description index is zero. The deterministic
+fixture recipes preserve the encoded `mdat` samples and are checked by the
+fixture-integrity command.
+
+Pinned Pillow 12.2.0 and native libavif 1.4.1 both accept the zero-index file,
+decode five exact RGB frames with 33 ms durations, and report one play. The
+selected parity run first reproduced Rust's rejection in `track_plane`; mapping
+index zero to the first description fixed the mismatch without adding a new
+allocation or a test-only code path. The same six-case selection then passed
+6/6, including exact 67,500-byte frame parity. No private unit tests were added.
+
+The native loop observation uses clean libavif source commit
+`6543b22b5bc706c53f038a16fe515f921556d9b3`; the input SHA-256 is
+`c6f3ff4272a7ade6f51cd77a3c643fb7301e416e4e5ebbd75e4fca4397c5db64`. The
+selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T164343.283144Z-22e94f916a054e708790594c69aacce7/coverage.json`.
+Coverage MCP can locate the selected parser functions, but marks source/build
+identity unverified. The selected subset does not establish an aggregate
+coverage gain; a fresh full report is required for that comparison.
+
+The current fixture matrix contains 2,741 total rows: 2,170 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,170 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF malformed `stsc` ordering parity — 2026-10-28
+
+Added active malformed-parity rows
+`decode:avif:error_animated_stsc_first_chunk_not_one` and
+`decode:avif:error_animated_stsc_non_increasing_chunk`. The first changes the
+first `stsc` mapping from chunk 1 to chunk 2; the second changes the later
+mapping from chunk 3 back to chunk 1. The deterministic generator preserves
+file length and all `mdat` bytes. Their input SHA-256 values are
+`9b54a6a24989c3ca9feaffb1779ced9407a9cad3f864415d0742e9def89eb46a` and
+`a6032faac42c6646befcb10470541495702600e98d70fc56dcde3c7fde787f73`.
+Pillow 12.2.0 recognizes both files as AVIF and rejects them at open with
+`UnidentifiedImageError`; both exact public parity rows passed.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T162733.149537Z-e8b91d4448be45bb8fa8265ea2c14bfa/coverage.json`.
+Raw counters for the exercised `samples::parse_stsc` specialization show both
+outcomes for the first-entry and increasing-chunk guards. A second generic
+specialization remains unexecuted in this selected run. Coverage MCP marks
+source/build identity unverified; the incremental comparison with the retained
+full report was incomparable because its branch detail did not reconcile with
+the totals, so no aggregate coverage gain is claimed.
+
+The current fixture matrix contains 2,734 total rows: 2,163 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,163 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF property-association order error parity — 2026-10-28
+
+Added active malformed-parity row
+`decode:avif:error_iprp_ipma_before_ipco`. It moves the complete `ipma` box
+ahead of `ipco` in the baseline still AVIF without changing box bytes, file
+length, or encoded samples. The input SHA-256 is
+`06d3fa832ab0b96b7108926c8973b30d578617e75aa57a7bbcaabdd53ac2cdd7`.
+Pillow 12.2.0 recognizes the full file as AVIF and rejects it at open; exact
+public parity passed 1/1. The selected report is
+`.coverage-mcp/local-evidence/selected/20261028T162733.149537Z-e8b91d4448be45bb8fa8265ea2c14bfa/coverage.json`.
+Raw LLVM counters record the first-child `ipco` ordering rejection in the
+exercised `samples::parse_iprp` specialization. Coverage MCP leaves other
+`parse_iprp` branches and a second specialization unobserved; source/build
+identity is unverified, so this is local coordinate evidence only.
+
+The current fixture matrix contains 2,735 total rows: 2,164 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,164 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF duplicate primary-item transform parity — 2026-10-28
+
+Coverage MCP's saved AVIF branch report identified unobserved duplicate
+transform guards in `Meta::transform`. Added active parity row
+`decode:avif:primary_item_duplicate_transform_properties_first_wins` with
+conflicting duplicate `irot`, `imir`, `pasp`, and `clap` properties. The input
+SHA-256 is
+`c6b9cfc406f9fd210aa2817d6311791ce27929ef0b0173c06e9b2945b82eeae7`.
+Pinned Pillow 12.2.0 preserves the first property of each kind and produces
+49,152 RGB bytes (SHA-256
+`f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf`). The
+Rust inspection and sample-metadata paths now retain the first associated
+transform rather than rejecting later duplicates. Selected public parity
+passed 1/1 rows.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T160458.670138Z-5c88cb05a1594eff9b02085896c7ff5f/coverage.json`.
+Its raw counters record eight true and eight false outcomes for each of the
+four `samples.rs::Meta::transform` duplicate guards in the exercised generic
+specialization. Coverage MCP marks source/build identity unverified and still
+lists the other specialization without observations. Its incremental comparison
+with the retained full report was incomparable because baseline branch detail
+did not match the reported totals. This is targeted local evidence rather than
+a verified aggregate coverage gain. No unit tests were added.
+
+The current fixture matrix contains 2,732 total rows: 2,161 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,161 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF monochrome grid 32-bit dimension descriptor parity — 2026-10-28
+
+Added active public parity row
+`decode:avif:portable_lossless_monochrome_grid_32bit_dimensions_73x64` for
+the 12-byte grid descriptor form that stores both canvas dimensions as 32-bit
+values. Its input SHA-256 is
+`40991aa9bee645ee683cb8c562d9db17e3c834e0c6998db90890dc0a498cd2f3`. Pinned
+Pillow 12.2.0 parity passed 1/1 rows and produced the same 18,688 RGBA bytes as
+the 16-bit-form grid fixture (SHA-256
+`a553e8c265e29b0644101cff0da8cb54ac351ac4541b86d095ad960445cea987`).
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261028T154651.754351Z-3331105e58824b8c952a25e791396dd6/coverage.json`.
+Its local branch counters record eight outcomes for the complete descriptor
+prefix at `src/codecs/avif/samples.rs:1727` and eight outcomes on the 32-bit
+dimension arm at line 1741. Coverage MCP reports source/build identity as
+unverified and its comparison does not establish a verified aggregate gain;
+these counters are targeted local coordinate evidence only. No production
+Rust code or unit tests were added.
+
+The current fixture matrix contains 2,731 total rows: 2,160 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,160 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF `pasp` compatibility parity — 2026-10-29
+
+Coverage MCP's retained full AVIF branch report identified three unobserved
+invalid-value outcomes in each `container::parse_pasp` and
+`samples::parse_pasp`: zero horizontal spacing, zero vertical spacing, and a
+nonempty trailing payload. The report has no source/build receipt, so these
+coordinates were treated as candidates and checked against pinned Pillow
+12.2.0 / libavif 1.4.1 before adding parity rows.
+
+Added three deterministic public inputs from
+`primary_item_irot_pasp_4x3.avif`. They set horizontal spacing to zero, set
+vertical spacing to zero, or append one `0xff` payload byte while rebasing the
+file-backed `iloc` extent. Their input SHA-256 values, in that order, are
+`1d8ad709f18d1bed97ca2e44178a8b9580aeb79763ea9543d4bc3ef73d62d799`,
+`3f8eef88f63387e8de633f5783d56e3ca8ae6d0ccc5a397969377c2bda3f220a`, and
+`e62a08cb8bcb753fcae35739316bfc5ee4c0943879f4d9f6d0ecf087dee2f5c7`. The
+pinned oracle accepts all three and returns the same 18 RGB bytes as the
+source fixture (SHA-256
+`efbe5247163f007591d148c7975ad74429fd2282feb0bdec402838155763da38`). The
+encoded `mdat` bytes remain unchanged.
+
+Both Rust `pasp` parser paths now preserve these unusable values as opaque
+properties, matching Pillow's behavior. The sample parser copies bytes only on
+this ignored-property path; valid `pasp` parsing retains its existing borrowed
+span. The three new manifest cases pass selected public parity 3/3. No unit
+tests were added.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/avif-pasp-compat-20261029-retry1/coverage.json`.
+Coverage MCP records the report's source/build identity as unverified and its
+comparison with the retained full report as incomparable because baseline
+branch detail does not match its totals. These results are targeted local
+coordinate evidence; no aggregate coverage gain is claimed.
+
+The current fixture matrix contains 2,749 total rows: 2,178 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,178 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF truncated top-level header parity — 2026-10-29
+
+Added active parity inputs for a one-byte partial box header after a complete
+AVIF and for a signature-recognized AVIF containing only its `ftyp` box followed
+by that partial header. Pinned Pillow 12.2.0 accepts the complete image with
+the trailing fragment and returns the same 49,152 RGB bytes as `baseline.avif`
+(SHA-256 `f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf`).
+It recognizes the incomplete still's AVIF signature and rejects image open as
+malformed. Both inputs are generated and hash-checked by
+`scripts/generate_avif_container_edge_fixtures.py`.
+
+The two new rows and the three existing `pasp` compatibility rows passed the
+selected parity run 5/5. Its report is
+`.coverage-mcp/local-evidence/selected/avif-pasp-and-short-tail-20261029/coverage.json`.
+Coverage MCP compared it with the selected over-budget trailing-box report and
+returned `status=limited`: source/build identity is unverified and test status
+is unknown to MCP. The selected reports contain 2,144/32,088 and 2,233/32,088
+covered branch observations; the comparison reports 22 newly observed
+coordinates overall and six in the two `extract_inner_with_metadata`
+specializations, including the false `meta.is_some()` outcome. These are
+report-coordinate differences, not a verified aggregate coverage gain or
+regression. No full coverage run was performed for these selected additions.
+
+The current fixture matrix contains 2,751 total rows: 2,180 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,180 decode rows and 540 encode
+rows are active; 31 planned encode rows remain.
+
+## AVIF `stsz` branch parity follow-up — 2026-10-29
+
+The retained full report
+`.coverage-mcp/local-evidence/full/20261029-after-stsz-branch-cases/coverage.json`
+had no remaining reported branch gaps in `container::parse_stsz` or
+`samples::parse_stsz` after two public parity rows were added:
+`decode:avif:error_animated_stsz_nonzero_version` exercises the samples parser's
+nonzero-version rejection, and
+`decode:avif:error_animated_sequence_only_stsz_common_size_short_samples`
+exercises the container parser's nonzero common sample-size path. Both rows
+passed the selected parity run (2/2).
+
+The full all-feature coverage campaign passed all integration executables:
+animation loop 4/4, capability table 1/1, coverage matrix 57/57, decode policy
+7/7, determinism 1/1, and feature gates 69/69. Its totals are lines 95,073 /
+139,981 (67.918503%), branches 18,944 / 32,084 (59.045007%), functions 5,272 /
+8,955 (58.872138%), and regions 145,030 / 217,242 (66.759651%).
+
+Coverage MCP reports zero remaining `parse_stsz` branch gaps and two newly
+observed coordinates against the earlier full report: the false arm in
+`container.rs:1774` and the true arm in `samples.rs:2437`. The comparison is
+limited because source/build identity and test attribution are unverified; the
+coordinate delta is not a verified aggregate gain. No production Rust code,
+unit tests, SIMD implementation, or benchmark changes were added, and the full
+100% coverage goal remains open.
+
+The current fixture matrix contains 2,759 total rows: 2,188 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,188 decode rows and 540 encode
+rows are active; 31 planned encode rows remain. AVIF has 688 decode rows.
+
+## AVIF `stsz` trailing-payload parity — 2026-10-29
+
+Coverage MCP's retained full report highlighted missing branch outcomes in
+`container::parse_stsz` and `samples::parse_stsz`. Added the active public
+parity row `decode:avif:animated_stsz_trailing_payload`. Its deterministic
+fixture appends one bounded byte after the declared five sample-size entries,
+rebases `stco` and `iloc` offsets, and preserves the encoded `mdat` payload.
+The input SHA-256 is
+`ec5869776d517f36dcbd9d19eb05e8a87dd709b3651a2b2ca00a826cf546f8c3`.
+Two malformed-input rows also exercise an empty sample-size table and a
+zero-sized sample entry. Pillow rejects both complete files at open; their
+input SHA-256 values are
+`00a12f15bb8a108afd79d4a8c3a38f03e2a00180b513c32ecc3c18a2544deffd` and
+`6bf0b1208f1043014565adbfa368a46ac60462faaea837da36fe240604fd6b72`.
+
+Pillow 12.2.0 and pinned libavif 1.4.1 both accept the complete input, decode
+five exact RGB frames with 33 ms timing, and report one play. The two Rust
+sample-size parsers now stop after the declared entries while keeping all
+existing bounds checks. The selected public parity run passed 3/3: the valid
+sequence matched all five 67,500-byte Pillow frames, and both malformed rows
+matched Pillow's open-time rejection.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029-stsz-edges/coverage.json`.
+Coverage MCP reports its source identity as unverified and test attribution as
+unknown. Comparison with
+`.coverage-mcp/local-evidence/full/current-after-loop-hash-fix-20261029/coverage.json`
+is incomparable because the baseline branch detail does not reconcile with
+its totals. No aggregate coverage gain is claimed; the full 100% goal remains
+open. The current fixture matrix at that point contained 2,754 total rows:
+2,183 decode / inspect / verify rows and 571 encode rows. Of those, 2,183
+decode rows and 540 encode rows are active; 31 planned encode rows remain. No unit tests, SIMD
+implementation, or benchmark changes were added.
+
+## AVIF grid descriptor and `ftyp` parity — 2026-10-29
+
+Coverage MCP's full report
+`.coverage-mcp/local-evidence/full/20261029-after-avif-iref-parity/coverage.json`
+identified three unobserved public grid-descriptor outcomes in
+`samples::Meta::grid_properties`: version one, zero output width, and zero
+output height. Added active rows `error_grid_version_1`,
+`error_grid_zero_width`, and `error_grid_zero_height`. Their input SHA-256 values
+are `6d75c008f18bf3c509c79ba810656a0e71d0f1da05c890456af598e51172ddeb`,
+`37b53b695d8d8a97ddba92087ad15de6c75635c970c2dd94d037b6ad6f754bf2`, and
+`3f2fd4d6f618c5527c25a1750b508c5ed7122f69b4a7c44a7c3bd9c4fb5292b6`. The
+deterministic generator verifies that each mutation changes only the eight-byte
+descriptor and preserves all other file bytes and AV1 media. Pillow 12.2.0
+rejects version one with `Failed to decode image: Not implemented` and both
+zero dimensions with `Failed to decode image: Invalid image grid`. The selected
+public parity run passed 3/3. Rust now classifies the unsupported descriptor
+version as malformed at the public boundary, matching Pillow's recorded
+`RuntimeError` contract.
+
+Coverage inspection also motivated
+`error_ftyp_misaligned_compatible_brand_payload`. It appends one byte to the
+compatible-brand list in `ftyp`; the generator pins its SHA-256 as
+`ada44e071b8609bc68b65ce123df4dac04b21e4b64d0865ec699bc7425400fc3` and
+checks that the encoded `mdat` and `idat` payloads are unchanged. Pillow rejects
+the file at open, and selected parity passed 1/1. A 1,025-brand input was also
+probed: Pillow accepts it, so the parser's existing resource cap was retained
+and that input was not recorded as an error parity case.
+
+All four public rows were rerun together in this checkout and passed 4/4. The
+selected LLVM report, local receipt, and captured output are under
+`.coverage-mcp/local-evidence/selected/avif-grid-ftyp-parity-20261029/`.
+Coverage MCP could not combine that selection with the saved full report
+`.coverage-mcp/local-evidence/full/20261029-final-stsd-parity/coverage.json`:
+its baseline branch detail does not reconcile with its totals, and neither
+report has a verified source/build identity. No aggregate coverage gain is
+claimed from this selected run.
+
+The final all-feature LLVM run is
+`.coverage-mcp/local-evidence/full/20261029-after-avif-ftyp-parity/coverage.json`.
+All integration executables passed: animation loop 4/4, capability table 1/1,
+coverage matrix 57/57, decode policy 7/7, determinism 1/1, and feature gates
+69/69. Totals are 95,050/139,928 lines (67.927791%), 18,947/32,056 branches
+(59.105940%), 5,271/8,953 functions (58.874120%), and 145,009/217,183 regions
+(66.768117%); repository floors pass and the 100% objective remains open.
+Coverage MCP reports no remaining branches in `samples::Meta::grid_properties`.
+Its full-report comparison is coordinate-only because both reports lack verified
+source/build identities. The additional `ftyp` row did not change aggregate
+coverage coordinates. Duplicate private container-parser branches that public
+inspection rejects earlier remain unclaimed; no private unit tests were added.
+No SIMD implementation or performance benchmark changed in this batch.
+
+The current fixture matrix contains 2,774 total rows: 2,203 decode / inspect /
+verify rows and 571 encode rows. Of those, 2,203 decode rows and 540 encode
+rows are active; 31 planned encode rows remain. AVIF has 703 active decode rows.
+
+## AVIF unterminated `infe` item-name parity — 2026-10-29
+
+The saved full report
+`.coverage-mcp/local-evidence/full/20261029-current-after-av1-inter-translation-depth-contract-final/coverage.json`
+listed both missing branch outcomes in `samples::Reader::c_string`. Added the
+active parity row `decode:avif:error_infe_missing_item_name_terminator`. Its
+fixture changes the `infe` item-name terminator in `baseline.avif` to `X`, keeps
+the complete file and AV1 media payload intact, and has SHA-256
+`b8609cd7fd3acd8c4f7eacad072ed85dcce52c65df9ebd9760ab1e1a8328620d`. Pinned
+Pillow 12.2.0 rejects the full input at open. The selected public parity run
+passed 1/1.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-infe-unterminated-name/coverage.json`.
+Coverage MCP shows one `Reader::c_string` branch outcome still missing in this
+measurement; the prior full report showed both outcomes missing. The incremental
+comparison is `incomparable` because baseline branch detail does not reconcile
+with its reported totals. Both reports lack verified source/build identity, so
+this is coordinate-level evidence and no aggregate coverage gain is claimed.
+No Rust code, unit tests, SIMD implementation, or benchmark changes were made.
+No full matrix rerun was performed.
+
+The current fixture matrix contains 2,801 total rows: 2,229 decode / inspect / verify rows and 572 encode rows. Of those, 2,229 decode rows and 541 encode rows are active; 31 planned encode rows remain.
+
+## High-depth I422 super-resolution/restoration parity slice — 2026-10-29
+
+The new `animated_lossy_inter_422_superres_sgr_10bit_160x56.avif` input is a
+two-frame, full-range 10-bit I422 sequence. Its inter frame is coded at
+128x56, super-resolved to 160x56, and applies SGR restoration to all planes.
+The generator selects `TX_MODE_LARGEST`, which is required by the existing
+high-depth I422 restoration admission path. The pinned file hash is
+`60748f33355d8f8b54f48942e319c1791e75c75c94da55a1568fd6679edf578a`; both
+Pillow 12.2.0 frame hashes and an independent pinned native loop observation
+are retained.
+
+The focused public parity command
+`make coverage-selected COVERAGE_CASES='decode:avif:animated_lossy_inter_422_superres_sgr_10bit_160x56'`
+passed 1/1. Coverage MCP reports remaining branch gaps in
+`high_depth_lossy_i422_superres_restoration_supported` for the selected report
+at `.coverage-mcp/local-evidence/selected/20261029T102753.700076Z-51b908da01e449298ea39b421d64e7de/coverage.json`.
+That report has unverified source/build identity and unknown test attribution,
+so it does not support an aggregate coverage delta or a full-coverage claim.
+The fixture matrix now contains 2,801 rows, including 729 AVIF decode rows.
+This fixture-only slice made no decoder hot-path, SIMD, or benchmark changes.
+
+## AVIF inter-frame decoder profile baseline — 2026-10-29
+
+The public workload `decode:avif:animated_motion_temporal_mv_range_2048x128`
+passed its exact three-frame RGB parity case (1/1). On the current ARM64 host,
+the release `avif_perf_probe` measured 21 warmed calls at a 12.331 ms median,
+12.090–13.661 ms range, and 12.617 ms nearest-rank p95. Host and toolchain
+details are in
+`.coverage-mcp/local-evidence/perf/20261029-avif-motion-mv-arm64-control/metadata.txt`;
+raw runs are in `control-a1.txt`.
+
+A separate eight-second macOS `sample` profile recorded 6,775 stack samples.
+The largest visible AV1 path was tile entropy/partition reconstruction through
+`validate_tile_entropy_prefixes`, `validate_complete_lossy_420_partition`,
+and `decode_inter_translation_impl`; RGB materialization was a smaller path.
+This profile guides the next experiment but does not provide precise timing by
+function. The profile is retained as `sample.txt` beside the run data. This is
+a single diagnostic baseline from the dirty tree at commit
+`69a79d4c46b3c8598de020e47345ade1b0e1d304`; the candidate comparison is
+recorded below. This ARM64 profile does not establish SSE2 or AVX2 performance.
+The repository's strict `make lint-x86-simd` compile/lint lanes passed for the
+SSE2 baseline and AVX2 flags on `x86_64-unknown-linux-gnu`; native x86 runtime
+parity and timing remain to be measured.
+
+## AV1 integer-motion block copy — 2026-10-29
+
+`put_unscaled_kernel` now copies complete in-bounds rows when both interpolation
+filters are absent, which is the integer-motion path. The checked `PlaneView`
+row slices feed `copy_from_slice`; filtered blocks and any block touching a
+plane edge keep the existing replicated-sample kernel. This adds no unsafe code
+or allocation. It leaves the existing `wide` SIMD kernels intact; compiler
+lowering and runtime speed on x86 still need native measurement.
+
+The public sequence probe was rebuilt with all features and measured the same
+three-frame motion-range input in sequential A-B-B-A order, 51 decoder calls
+per run and two runs per build. Across 102 measured calls per build, the
+control median was 13.224 ms and nearest-rank p95 was 14.527 ms; the candidate median was
+12.666 ms and p95 was 13.406 ms, a 4.22% lower median on this ARM64 host. The
+candidate and control binary hashes, toolchain, host, and raw runs are retained
+in `.coverage-mcp/local-evidence/perf/20261029-avif-motion-mv-copy-candidate/`.
+This is one workload on a dirty tree, not a world-record or x86 SIMD claim.
+
+The final candidate passed six selected Pillow parity rows covering the same
+motion-range workload plus left/right search-window and positive/negative
+motion on both axes. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-motion-copy-final/coverage.json`.
+Coverage MCP identifies the in-bounds copy and clipping fallback as exercised;
+one checked-add overflow outcome remains unseen. That outcome is unreachable
+for valid bounded AV1 block geometry on supported 32/64-bit targets, so no
+synthetic private-line test was added. Coverage MCP marks this selected report's
+source identity unverified and test attribution unknown; it is not full-suite
+coverage evidence.
+
+## AV1 unfiltered-copy fallback parity and coverage — 2026-10-30
+
+The current candidate passed 13 selected Pillow sequence-parity rows covering
+multi-tile and large 4:2:0 motion, both temporal search-window sides, four
+motion-vector range directions, and five lossy inter partition layouts. A
+separate target-only fault contract forces the unfiltered copy's source-X end
+addition to overflow; scalar fallback output matched the source row's Pillow
+reference, and a clean retry matched the injected result. The contract has
+`oracle_status: not_applicable` and is reported separately from parity.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T215408.343449Z-d50845debbda49bf9b661ade0ca99b9c/coverage.json`
+(SHA-256
+`3e9ed70bd6994e75a40fe190e1306300880c963ea4e6beff770294ea76ae8900`). The
+selected run passed all 14 rows: 13 parity cases and one fault contract.
+Coverage MCP's line-filtered queries at the copy helper's checked conversion,
+addition, and bounds-check locations returned no missing branch groups; the
+file-level query still reported 29 missing branch groups elsewhere in `mc.rs`.
+Its report source identity is unverified and test attribution is unknown, so
+these results are local coordinate evidence and do not establish an aggregate
+coverage increase.
+
+A blend-focused selection also passed 15 public inter-inter, inter-intra, and
+OBMC parity rows alongside 12 target-only fault contracts for motion geometry,
+copy fallback, difference-mask buffer validation, and wedge-mask validation.
+All 27 rows passed; the 12 contracts have `oracle_status: not_applicable` and
+remain separate from the 15 Pillow parity results. Coverage MCP reports no
+missing branch groups for `fill_wedge_mask`; it still reports seven in
+`difference_mask_and_blend`, three in `reduce_wedge_mask`, six in
+`fill_inter_intra_mask`, seven and four in the left and top OBMC blends, and
+one in `copy_unfiltered_block_if_in_bounds` for this different selection. The
+report is
+`.coverage-mcp/local-evidence/selected/20261029T220325.244183Z-61b23febdf5b4888a48400724dd680ef/coverage.json`
+(SHA-256
+`94736238319fa515a57e8f2090d3eb190d9a21301703b926394edd1f4d9a6457`). Its
+source identity and test attribution are unverified, so these remaining
+function groups are selected coordinate findings rather than aggregate
+coverage results.
+
+The public three-frame motion-range decode was also measured with five A–B–B–A
+cycles and five reverse-order B–A–A–B cycles. The baseline and fast-copy
+candidate medians were 13.428 ms and 12.552 ms in the first order (6.53% lower
+candidate latency), then 13.952 ms and 12.897 ms in the reverse order (7.56%
+lower). Raw reports are `target/avif-motion-abba/results.json` (SHA-256
+`c084409af23eb1f8541fe9b6fd09a081721cb6bdc68817959d178b47257f13c6`) and
+`target/avif-motion-abba/confirmation.json` (SHA-256
+`f2fcd26c528763a4146998d47d9ea3377d3a389972d8072210b5634f29df5966`). This
+repeatable result is for one workload on an Apple M3 Pro ARM64 host; it is not
+an x86 runtime, SSE2/AVX2, encoder, or project-wide speed claim.
+
+## AV1 inter-inter wedge parity — 2026-10-29
+
+Added `animated_lossy_interinter_wedge_i420_b16x16_64x64`, a deterministic
+quality-99 64x64 I420 sequence whose sixteen B16x16 inter blocks select masked
+compound references. The fixture uses the pinned Pillow 12.2.0 / libavif 1.4.1
+/ libaom 3.13.2 encoder, exact timestamp-normalized input bytes, and retained
+native loop evidence. Its selected public parity case passed 1/1 with all three
+RGB frames matching Pillow.
+
+The final selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-interinter-wedge-q99-final/coverage.json`.
+It records 16 calls each to `MotionScratch::blend_wedge`, `fill_wedge_mask`,
+and `reduce_wedge_mask`, plus 32 retained chroma-mask blends. This confirms the
+public input reaches inter-inter wedge reconstruction and 4:2:0 mask reduction.
+Coverage MCP reports no missing branch groups for `blend_wedge`; it still shows
+three unobserved failure branches in `fill_wedge_mask` and ten in
+`reduce_wedge_mask`, including empty geometry and short scratch checks that
+valid bitstream geometry does not reach. The report has no verified source/build
+receipt and unknown test attribution; comparison with the earlier candidate
+was incomparable. This is selected-case evidence only, not an aggregate
+coverage gain or full-coverage claim.
+
+## AV1 difference-weighted inter-inter parity — 2026-10-29
+
+Added four deterministic quality-100 64x64 AV1 sequences with B16x16
+compound-selectable references: normal I420, inverted I420, I422, and I444.
+The final source frames follow the difference-weighted blend pattern, and all
+four selected public Pillow parity rows passed with exact RGB output. Their
+complete inputs and native repetition observations are retained.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-diffwtd-masks-all-layouts/coverage.json`.
+It records 64 calls to `difference_mask_and_blend` across the four cases and
+observes both mask-inversion outcomes and the supported I420, I422, and I444
+mask-layout paths. Coverage MCP still reports 11 branch observations missing
+inside that helper, including short-buffer and short-scratch rejection paths.
+An isolated inverted-I420 run also passed 1/1; its line-filtered query leaves
+only the non-inverted mask arm missing, while the combined report has no
+missing observation there.
+Its source/build receipt is unverified and test attribution is unknown;
+comparison with the earlier single-case report was incomparable. This is
+selected-case evidence, not an aggregate coverage delta or full-coverage claim.
+
+Added four target-only fault contracts for first-reference, second-reference,
+output-buffer, and mask-scratch length guards. The selected run
+`.coverage-mcp/local-evidence/selected/20261029-avif-diffwtd-parity-and-buffer-contracts/coverage.json`
+passed four parity rows and all four contracts. Each contract injects a short
+internal buffer through the public sequence decoder, checks its
+`Unsupported(NotImplemented)` outcome, then retries cleanly and matches the
+stored sequence parity references. The AV1 block layer maps these internal
+guard failures to the public unsupported result. Coverage MCP line filters
+show no missing branch arm at `mc.rs:2207`, `2212`, `2217`, `2223`, `2230`, or
+`2246`; seven other branch observations remain missing inside the helper.
+The report's source/build identity is unverified and MCP test attribution is
+unknown; its local log records four parity rows and four contracts passing.
+This remains selected-case evidence, not an aggregate coverage delta or a
+full-coverage claim.
+
+## AV1 wedge layout parity and mask fault contracts — 2026-10-29
+
+Added deterministic quality-99 I422 and I444 variants of the existing
+inter-inter wedge sequence. The selected public parity run passed all three
+supported layouts (I420, I422, and I444). Their three decoded frames match the
+pinned Pillow outputs, and native loop observations are retained in the AVIF
+loop bundle.
+
+The same selected run passed six target-only public fault contracts for empty
+width, empty height, and short scratch in both wedge-mask fill and reduction.
+Each injected failure returns `Unsupported(NotImplemented)` through sequence
+decode, then a clean retry succeeds. Their oracle is `not_applicable` because
+the injected invalid private scratch states have no reference input behavior.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029T084251.538350Z-c5d4841fbb01496daf0b359b4902bd64/coverage.json`;
+its local log records three parity rows and six contracts passing. Coverage MCP
+reports no remaining branches in `fill_wedge_mask` and three in
+`reduce_wedge_mask`, at `mc.rs:704`, `707`, and `725`. A limited selected-test
+comparison against the I420-plus-contract run observes four additional branch
+outcomes in this helper and leaves those three. All three require the y-only
+4:4:0 subsampling layout, which `ChromaSampling::from_subsampling(false, true)`
+rejects. The supported I420, I422, and I444 layout branches are observed; no
+synthetic private test was added for an unsupported bitstream layout.
+
+Coverage MCP marks both reports' source identity unverified and test
+attribution unknown, so that comparison is a report-coordinate change rather
+than a verified coverage gain. This is local selected-case evidence, not a
+full-suite coverage result or a 100% coverage claim.
+
+## Full local coverage refresh and nclx parity contract correction — 2026-10-29
+
+The full local LLVM coverage campaign passed after removing a stale feature
+contract that treated any bounded `nclx` tail as malformed. Its byte insertion
+also enlarged `meta`, shifting the media extents, so it did not isolate the
+property. The existing `colr_nclx_trailing_payload_ignored` parity row moves a
+tail byte from `clap` into `nclx` while preserving container sizes and matches
+Pillow. The reserved-bit and truncated-field checks remain. The focused
+`avif_primary_cicp_color_matches_the_container_contract` integration check
+passed, and the full AVIF matrix passed with the parity row active.
+
+The full report is
+`.coverage-mcp/local-evidence/full/20261029-current-tree/coverage.json`.
+All coverage-run integration tests passed (139 tests). The repository's
+current coverage floors pass at 95,217/140,121 lines (67.953412%),
+19,032/32,140 branches (59.215930%), 5,279/8,962 functions (58.904262%), and
+145,320/217,552 regions (66.797823%). This is a refreshed local baseline, not
+100% coverage.
+
+Coverage MCP marks the report source unverified, build ID absent, and test
+attribution unknown. It reports 13,108 branch observations and 72,232 regions
+missing. A focused `decode_inter_transform_size` group has 174 missing branch
+observations.
+
+A maintained five-frame wide-I444 mode-2 sequence now reaches the true
+`all_roots_split && all_children_split` `LossyWideMode2Deep16` path at
+`entropy.rs:7165`. Its flat gray key frame is followed by checkerboards with
+2-, 4-, 8-, and 16-pixel periods. The pinned generator produces a deterministic
+62,628-byte input with SHA-256
+`a806f4585aa11699bc831fff1b02b7f1eacbd2089a88a2578bb6933afbcbdaf0`; all five
+Rust-decoded RGB frames match Pillow exactly at 100 ms each. The selected
+public parity run passed 1/1. Its LLVM report records four true evaluations
+for each condition in the Deep16 branch. The independent native loop witness
+decodes all five frames and reports infinite repetition.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T093646.778150Z-c0c438e07bb3402189ec175efd2af3c8/coverage.json`.
+Coverage MCP marks its source unverified and test attribution unknown. The
+incremental comparison with the preceding full report was incomparable because
+the baseline branch detail is incomplete. No aggregate coverage gain is
+claimed, and the full report above remains the pre-row baseline. Other
+specializations of `decode_inter_transform_size` still have missing outcomes.
+The report also leaves seven observations in `difference_mask_and_blend`; the
+y-only 4:4:0 mask path remains unavailable through supported AV1 chroma
+layouts. No synthetic unit test was added.
+
+A deterministic two-frame 10-bit I444 super-resolution/SGR sequence adds
+input-driven parity for the narrow high-depth I444 restoration profile. Its
+largest-transform inter frame uses denominator 10, coded size 128x56,
+upscaled size 160x56, and SGR on all three planes. The 1,656-byte input hashes
+to `d0f13c712995e0464efb51575ca353aabd26c8ff6e3001c415fd98f239c8221c`; its
+two exact Pillow RGB frame hashes are `69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed`
+and `855f30260049bc5f85a057fa91223c85259acc4a55c4ae2d4ec66e45d88e4be6`.
+The selected public parity run passed 1/1 and its LLVM report records the
+specialized restoration admission path reaching its successful return. The
+report's source identity is unverified and test attribution is unknown; the
+incremental comparison with the saved full report is incomparable because its
+branch detail is incomplete. No aggregate coverage gain is claimed. Native
+loop evidence confirms two decoded frames and infinite repetition.
+
+The focused report is
+`.coverage-mcp/local-evidence/selected/20261029T095423.557742Z-9a9e5275a438434a93802b8df7b4c102/coverage.json`.
+
+## 8-bit I422 super-resolution/SGR parity — 2026-10-29
+
+Added the active public parity case
+`decode:avif:animated_lossy_inter_422_superres_sgr_8bit_160x56`. Its pinned
+1,601-byte sequence uses an 8-bit I422 inter frame coded at 128x56, upscaled
+to 160x56, with largest-transform mode and SGR on all three planes. The two
+exact Pillow RGB frames match SHA-256
+`69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed` and
+`06f17713c7758faaac74cd5cabd7d441aed55a41e8e03322a3e339b4a345ac2f`.
+The focused public parity selection passed 1/1. The independent pinned native
+loop observation decodes both frames and reports infinite repetition. No
+private unit tests were added.
+
+The public fixture matrix now contains 2,802 total rows: 2,230 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,230 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 730 active decode
+rows.
+
+The refreshed full report is
+`.coverage-mcp/local-evidence/full/20261029-avif-i422-superres-refresh/coverage.json`.
+All 139 coverage-run integration tests passed, including the 57-test matrix
+and 69 feature-gate tests. Totals are 95,700/140,121 lines (68.298114%),
+19,286/32,140 branches (60.006223%), 5,299/8,962 functions (59.127427%), and
+145,995/217,552 regions (67.108094%), above the current floors. Coverage MCP
+still reports 12,854 missing branch outcomes overall and 59 in
+`lossy_i422_superres_restoration_supported` (with additional outcomes missing
+in its closures and the high-depth sibling).
+
+The report-coordinate comparison with the preceding full report observed 58
+new branch locations, including the accepted I422 restoration path. Source
+and build identity remain unverified and test attribution is unknown, so this
+is limited coordinate evidence, not a verified aggregate coverage gain or
+regression. The 100% coverage objective remains open.
+
+## 12-bit I422 super-resolution no-restoration parity — 2026-10-29
+
+Added the active public parity case
+`decode:avif:animated_lossy_inter_422_superres_12bit_160x56`. Its deterministic
+1,675-byte sequence has a 12-bit I422 inter frame coded at 128x56 and
+super-resolved to 160x56 with restoration disabled. The two exact Pillow RGB
+frame hashes are
+`69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed` and
+`3acbd991ecc3cdbea09be468ef346e16f3413c9766e2cc6ebb8690b8e2f69ab6`. Its
+selected public parity run passed 1/1, and the independent native loop
+observation confirms two decoded frames with infinite repetition.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T110505.345865Z-ed4be997988b4adcb851447db40fcd5b/coverage.json`.
+The selected LLVM report records the no-restoration early-return outcome at
+`entropy.rs:13909`; Coverage MCP still reports missing outcomes across other
+function instances.
+The report's source identity is unverified, build ID is absent, and test
+attribution is unknown. Its incremental comparison with the full report is
+incomparable because baseline branch detail is incomplete, so no aggregate
+coverage gain is claimed. No private unit test was added. The public fixture
+matrix now contains 2,803 total rows: 2,231 decode / inspect / verify rows and 572 encode rows.
+Of those, 2,231 decode rows and 541 encode rows are active;
+31 planned encode rows remain. AVIF has 731 active decode rows.
+
+## AVIF trailing incomplete top-level payload parity — 2026-10-29
+
+Added the active public parity case
+`decode:avif:trailing_truncated_top_level_payload`. It appends a complete
+eight-byte `free` box header declaring an absent eight-byte payload after the
+complete baseline still. Pinned Pillow accepts the file and preserves the
+baseline image information and RGB pixels. The selected public parity run
+passed 1/1 with exact 49,152-byte RGB output.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T111854.337976Z-0f0d7202ea63491bb66094fa5e668f57/coverage.json`.
+Its LLVM data records four true-arm hits for the completed-image predicate at
+`container.rs:364`. Coverage MCP still reports missing outcomes at that
+location in other function instances. The report has unverified source
+identity, no build ID, and unknown test attribution; incremental comparison
+with the full report is incomparable because its branch detail is incomplete.
+No aggregate coverage gain is claimed, and no private unit test was added.
+
+The public fixture matrix now contains 2,804 total rows: 2,232 decode / inspect / verify rows and 572 encode rows.
+Of those, 2,232 decode rows and 541 encode rows are active; 31 planned encode
+rows remain. AVIF has 732 active decode rows.
+
+## AVIF animated stss table parity — 2026-10-29
+
+Coverage MCP highlighted `samples.rs::parse_u32_records`. The public input
+`animated_stss_trailing_payload.avif` declares zero `stss` entries and retains
+the original sync-sample index as bounded trailing payload. Pillow 12.2.0 and
+the pinned libavif 1.4.1 observer both preserve five exact 150x150 RGB frames
+at 33 ms and report one play. The parser now ignores bytes after the declared
+entries, matching Pillow while continuing to validate each declared index.
+Two companion full-file cases exercise its failures: a table declaring two
+indices with only one present, and an unsupported FullBox version. Pillow and
+Rust both reject each case.
+
+All three selected public parity runs passed 1/1:
+`.coverage-mcp/local-evidence/selected/20261029T113039.761715Z-e28eafef2ac349d7b51623100a843110/coverage.json`.
+`.coverage-mcp/local-evidence/selected/20261029T113805.902403Z-ee899468e25f447ead25b495183a3c67/coverage.json`, and
+`.coverage-mcp/local-evidence/selected/20261029T113956.214247Z-b670f5556b244611b47ed48cf5a71e1d/coverage.json`.
+The fresh error-case reports show no remaining missing branch at the removed
+trailing-byte check; their per-case reports still omit the opposite FullBox
+version outcome. Coverage MCP marks source identity unverified, and the saved
+full-report comparison remains incomparable because its branch detail is
+incomplete. No aggregate coverage gain is claimed. No private unit test was
+added, and no full matrix refresh was run.
+
+The public fixture matrix now contains 2,807 total rows: 2,235 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,235 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 735 active decode
+rows.
+
+## AVIF track-reference zero target parity — 2026-10-29
+
+Coverage MCP identified missing branches in `samples.rs::parse_tref`. Added a
+full-file animated AVIF whose sole `auxl` reference targets track ID zero.
+Pillow 12.2.0 and the pinned libavif 1.4.1 observer ignore that target and
+preserve all five exact RGB frames, 33 ms timing, and one play. The Rust parser
+now treats target zero as no auxiliary-track mapping while still rejecting
+duplicate `auxl` children within one `tref` box. A companion input with two
+such children is rejected by Pillow at image open and Rust as well.
+
+The selected parity run included both new rows and the existing duplicate
+`hint` reference control; all three passed. Coverage MCP's branch query reports
+no remaining branch groups in either AVIF `parse_tref` function for this
+selected report. The report is
+`.coverage-mcp/local-evidence/selected/avif-tref-auxl-parity-with-hint-20261029/coverage.json`
+(SHA-256
+`993394543e9bf7fa1b657e211adb1cce6cae87bc67898cbdc4165d422c0f13e8`). It has
+unverified source identity and unknown test attribution, so this is focused
+parity and branch evidence, not a verified aggregate coverage gain or a 100%
+coverage claim. No private unit tests were added.
+
+The public fixture matrix now contains 2,809 total rows: 2,237 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,237 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 737 active decode
+rows.
+
+## AVIF alpha-track timescale parity — 2026-10-29
+
+Coverage MCP highlighted `samples.rs::sequence_payload`. Added the active
+`sequence_alpha_timescale_mismatch` case by changing the alpha track timescale
+while preserving the color track timescale. Pillow and the pinned libavif
+observer accept the input and preserve all five RGBA frames with color-track
+timing. The parser pairs alpha samples by position and keeps color-track
+timing, matching those observations. No unit test was added.
+
+The focused parity selection, including alpha timescale, duration, and sample
+count controls, passed 3/3. A wider six-case selection also passed 6/6 and
+included ordinary animation, a missing-handler track, and an unknown sample
+entry hint-track control. Its report is
+`.coverage-mcp/local-evidence/selected/avif-sequence-payload-coverage-controls-20261029/coverage.json`
+(SHA-256
+`6406b51b55b6f39ade719f73b9848fb3517af24fcaeeeeb38a45c1836bceabf9`). For
+this selected report, Coverage MCP still identifies an uncovered false arm
+in the fallback color-track configuration search and an uncovered true arm
+at duplicate-alpha-track rejection. The report has unverified source identity
+and unknown test attribution, so it is focused branch evidence only; no
+aggregate coverage gain or 100% coverage claim is made.
+
+The public fixture matrix now contains 2,810 total rows: 2,238 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,238 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 738 active decode rows.
+
+## AVIF sequence track selection parity — 2026-10-29
+
+Coverage MCP's `sequence_payload` query showed the duplicate-alpha rejection
+and fallback color-track selection branches were still missing. Added
+`sequence_duplicate_alpha_tracks`, which duplicates the auxiliary alpha track
+under a distinct ID while preserving its color reference and sample payloads.
+Pillow preserves all five exact RGBA frames, and the pinned libavif observer
+parses and decodes five frames. The parser now selects the first matching
+auxiliary alpha track, matching Pillow's tolerance of the repeated track. Added
+`error_sequence_no_color_track_candidate`, which changes the color handler to
+`soun` and its sample entry to `zzzz`; Pillow and Rust reject this file at open,
+exercising the fallback search's no-configuration path.
+
+The selected public parity run included these inputs and six alpha/handler
+controls; all eight cases passed. Coverage MCP reports no missing branch groups
+for `sequence_payload` in this selection. Its report is
+`.coverage-mcp/local-evidence/selected/avif-sequence-selection-parity-20261029/coverage.json`
+(SHA-256
+`92332bda21fc210daeee3530b6d955e64ef49d112492b026ae006797dee0704b`). The
+report has unverified source identity and unknown test attribution, so the
+result is selected branch evidence only and does not establish aggregate
+coverage or 100% coverage. No private unit tests were added.
+
+The public fixture matrix now contains 2,813 total rows: 2,241 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,241 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 741 active decode rows.
+
+The new `error_iloc_empty_extent_list` parity row uses a primary item with no
+declared extents. Pillow and Rust both report the public malformed empty-item
+outcome, and the selected parity run passed 1/1. Its LLVM report records the
+empty-span branch for both inspection and decode validation. The report is
+`.coverage-mcp/local-evidence/selected/20261029T123329.798172Z-04c836bc22f94f2da32991ea26cf410e/coverage.json`
+(SHA-256
+`c2514e9acc58d5b2b7b28f37c522d1a518b485f94be34f2379786a9bb7e00b4a`). Its
+local receipt records that the source and fixtures did not change during the
+run. Coverage MCP returns `source=unverified` and `tests=unknown` for this
+local report, so this is focused branch evidence rather than an aggregate
+coverage claim.
+
+The current full `coverage_matrix_tests` run passed 57/57 tests after this row
+was added. Its report is
+`.coverage-mcp/local-evidence/full/20261029-post-iloc-empty/coverage.json`
+(SHA-256
+`034c832b488168bfeeb12ffc0642f3097f9d0ef664117a25df20024d8f05fdbc`). The
+local full report records 19,094/32,132 branches; the preceding full report
+recorded 19,093/32,132 at the same denominator. Coverage MCP now reports no
+missing groups at the no-payload span check. Its remaining `validate_plane`
+gaps are the empty-plane guard, which current AVIF payload construction cannot
+reach, and opposite `READ_PAYLOAD` arms in each const-generic specialization,
+which are compile-time impossible. Coverage MCP still marks this full report
+`source=unverified` and `tests=unknown`, so the aggregate comparison remains
+local exploration evidence.
+
+## AV1 motion predictor geometry fault contract — 2026-10-29
+
+Coverage MCP showed the invalid-geometry arm in `MotionScratch::length` was
+unreached by valid AV1 block geometry. Added the target-only fault contract
+`fault-contract:avif:av1_motion_predictor_zero_width_rejected` on the existing
+three-frame motion-range input. The coverage-only hook forces zero width; the
+public sequence decode reports failure and a clean retry succeeds. The selected
+case passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/20261029T124959.015899Z-07eb1054576b4506bdb98a761e97beb1/coverage.json`
+(SHA-256
+`6abf896b7f0ff32d20ea89d5b0e2d8a84a40fa03964f2598a471b85aef101dc0`). The
+release decoder has no fault branch or added work. Coverage MCP still reports
+the empty-height and over-limit geometry arms as missing; these are defensive
+states unavailable from valid AV1 block geometry, so no additional private-line
+cases were added.
+
+The refreshed all-feature LLVM coverage run passed all six integration
+executables (139 tests total), including all 57 coverage-matrix tests and every
+active parity and fault-contract row. Its report records 95,703/140,116 lines
+(68.302692%), 19,291/32,134 branches (60.032987%), 5,300/8,962 functions
+(59.138585%), and 146,001/217,543 regions (67.113628%). The report is
+`.coverage-mcp/local-evidence/full/20261029-av1-motion-geometry-contract/coverage.json`
+(SHA-256
+`d1915b964edb1ada03b98b17024a15933e61795f5d40205413c53261e632670c`). Coverage
+MCP reports 12,843 missing branches, led by 1,574 outcomes in the AV1 inter
+translation decoder. It marks report source identity unverified and test
+attribution unknown; the measured totals are local exploration evidence, not a
+verified aggregate gain or a 100% coverage claim. No private unit tests were
+added.
+
+## AV1 reference-MV geometry fault contract — 2026-10-31
+
+The retained full parity report showed the invalid geometry arms in
+`motion::find_reference_mvs` were not reached by active public parity inputs.
+The report's source identity is unverified, so it served as a local gap
+hypothesis. Added the target-only fault contract
+`fault-contract:avif:av1_motion_reference_mv_geometry_guard_sweep_rejected`
+using the existing distance-compound AVIF sequence fixture. Its coverage-only
+hook sends 17 malformed geometry requests through the same validation path;
+the public sequence decode fails and a clean retry succeeds. The selected
+fault-contract case passed 1/1 with the oracle marked not applicable. Its
+source- and fixture-bound local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T021111.257732Z-a74c34f89e5e4881b3fdefc6617d5931/coverage.json`
+(SHA-256
+`05438e46a209acf1d632e40f7c992bd4f7c864fd84cad01f1a7ddb88a9965301`).
+Coverage MCP returned `Transport closed`, so no managed comparison or coverage
+gain is claimed.
+
+The normal decoder no longer compares absolute tile starts with ends after
+checked additions: the shared nonnegative origin preserves relative ordering,
+and overflow already returns an error. End-versus-frame checks also reject a
+zero frame extent. The fault hook and sweep compile only for coverage builds;
+normal decode has no added runtime work. No unit tests were added.
+
+## AVIF compatible-brand list parity — 2026-10-29
+
+Pinned Pillow 12.2.0 / libavif 1.4.1 decodes a complete AVIF with 1,025
+compatible brands, while the Rust still-image and sequence parsers previously
+rejected lists above 1,024 entries. Removed that arbitrary cap in both parsers
+and reserve space for the validated list length, reporting allocation failure
+through the existing codec error contract. Added the deterministic
+`ftyp_1025_compatible_brands` fixture and an active input-only decode parity
+row; the fixture retains the original metadata and AV1 payload.
+
+The selected exact parity run passed 1/1 with a 128x128 RGB8 output matching
+the pinned reference (49,152 bytes). Its report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-ftyp-1025-compatible-brands/coverage.json`
+(SHA-256
+`c65c9306d674d9414289a5fb7f1905f12184a3edc921d4fc0cc6c94a7891232b`).
+Coverage MCP marks this local report's source identity unverified and test
+attribution unknown; it is focused parity evidence, not an aggregate coverage
+claim. No unit tests were added.
+
+The existing `error_ftyp_misaligned_compatible_brand_payload` parity row also
+passed 1/1 in a separate exact selection. Its report is
+`.coverage-mcp/local-evidence/selected/20261029-avif-ftyp-misaligned-brands/coverage.json`
+(SHA-256
+`2dc36188e9a1575fed124ed9cd9e5e7e90c6a9fd11aa1c7fe81799b5f8409392`).
+Coverage MCP still returns missing `parse_ftyp` branch locations for that
+selection. Both selected reports have unverified source identity and unknown
+test attribution, so this run confirms the public malformed-input result but
+does not establish branch closure.
+
+At this coverage refresh, the fixture matrix contained 2,817 total rows: 2,245 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,245 decode rows and 541 encode
+rows were active; 31 planned encode rows remained. AVIF had 745 active decode rows.
+
+## AV1 wide lossless inter parity and coverage refresh — 2026-10-29
+
+The existing public cases `animated_lossless_inter_420_b128x128_10bit`,
+`animated_lossless_inter_420_wide_grid_b128x128`, and
+`animated_lossless_compound_wide_i420_b128x128` passed exact Pillow parity
+(3/3). Their selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029-av1-wide-inter-parity/coverage.json`
+(SHA-256
+`a67c69e6591ca2f9a7711f13ad0784461e08de61b908cf8672bf74d8c6713995`). Coverage
+MCP still reports branch outcomes in `decode_inter_translation_impl` around
+lines 48437 and 48469 for other compiler specializations. The report has
+unverified source identity and unknown test attribution; selected-case gaps do
+not establish a full-suite regression or justify adding cases that only force
+internal state.
+
+The refreshed all-feature LLVM coverage run passed all six integration
+executables (139 tests total), including all active parity and fault-contract
+rows. Its report records 95,704/140,121 lines (68.300968%), 19,286/32,126
+branches (60.032373%), 5,300/8,964 functions (59.125390%), and
+146,001/217,547 regions (67.112394%). `make coverage` passed the owner-approved
+alpha floors. The report is
+`.coverage-mcp/local-evidence/full/20261029-exporter-refresh-retry/coverage.json`
+(SHA-256
+`17555db046f3ecd2425703abdcdc971217d460bdc7da67c06cf1b4205a18138a`). Coverage
+MCP reports 12,840 missing branches, led by 1,574 outcomes in the AV1 inter
+translation decoder. Its source identity remains unverified and test
+attribution unknown, so these totals are local exploration evidence rather
+than a verified aggregate gain or a 100% coverage result.
+
+## AVIF I444 direct-chroma-grid parity — 2026-10-29
+
+Coverage MCP identified missing branch outcomes around the direct chroma-grid
+sampling decisions in `decode_inter_translation_impl`. Added the active parity
+case `animated_lossy_inter_444_direct_grid_mode_select_mixed_b128x64`, using a
+pinned 8-bit I444, three-frame 128x64 AVIF fixture (SHA-256
+`8eb2916792a241372d03d5ccf1802549363ad61325c3ec3489b36752aaa7cfc2`). The
+fixture generator verifies deterministic bytes, AV1 profile/frame syntax, and
+all three pinned Pillow RGB frame hashes. The native loop bundle independently
+records three decoded frames and the infinite-repeat observation.
+
+The selected public parity run for the existing I422 companion and new I444
+case passed 2/2, with exact RGB comparison for both sequences. Its LLVM report
+records both branch outcomes at source lines 48335 and 48369 in the executed
+single-reference lossy direct-grid specialization. Coverage MCP still reports
+other groups at those source coordinates; the report is local-only, its source
+identity is unverified, and test attribution is unknown. This is focused
+parity/coverage evidence, not verified aggregate branch closure. Report:
+`.coverage-mcp/local-evidence/selected/20261029T144419.910177Z-a2f04b18bae841c2889af2239472a0ed/coverage.json`
+(SHA-256
+`8a03cfb5aa1a23c238763fdbb8c0af88f0971c852c496243987d482599917fca`). No Rust
+unit tests or runtime decoder changes were added.
+
+## AV1 clipped-wide monochrome parity and lossless-grid invariant — 2026-10-29
+
+Added the input-only parity row
+`animated_lossless_inter_monochrome_clipped_b128x128_124x128`, a two-frame
+monochrome AV1 sequence with a 124x128 frame and a B128x128 lossless inter
+grid. The deterministic generator checks the AV1 syntax and pinned Pillow
+12.2.0 RGB hashes. The fixture is 21,898 bytes (SHA-256
+`7553404e35f1583e5bb2e785acb4908de5a4bbfa8d888054b163cc8da32391e8`); its
+two Pillow frame hashes are
+`f503c9af04a4099c03bedb1461014aa8e4ef8668506fd169c523d7a862e22b87` and
+`6717767046bca15b0c19c8ef51ad4abd60dbc6d1effacd520dd2398f2d572f1a`. The
+selected matrix parity run passed 1/1, and the native loop witness check
+passed with two decoded frames and infinite repetition.
+
+The coverage audit found `allow_clipped` short-circuit arms in
+`decode_inter_lossless_wide_grid`. Its only caller passes
+`lossless_partial_grid`, whose predicate permits B32x32 plans, while this wide
+path requires a dimension above 64. Those arms were therefore unreachable in
+this function. Removed the redundant parameter and retained full coded-raster
+validation; the call graph has the same accepted inputs and fewer runtime
+conditions. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029-av1-lossless-wide-invariant/coverage.json`
+(SHA-256
+`00b0137fc00b8f54042a0572c6a19574a6502a178318c7dabb2b6170d434dc8c`).
+Coverage MCP marks its source unverified and test attribution unknown, so the
+report is focused local evidence only. No Rust unit tests were added.
+
+The current fixture matrix contains 2,821 total rows: 2,249 decode / inspect /
+verify rows and 572 encode rows. Of those, 2,249 decode rows and 541 encode
+rows are active; 31 planned encode rows remain. AVIF has 749 active decode
+rows.
+
+The refreshed all-feature LLVM run passed all six integration executables
+(139 tests total), including 57 coverage-matrix tests and every active parity
+row. `make coverage-check` passed the maintained floors. The strict 100% gate
+still fails: lines are 95,701/140,117 (68.300777%), branches 19,284/32,122
+(60.033622%), functions 5,300/8,964 (59.125390%), and regions 145,999/217,544
+(67.112400%). Report:
+`.coverage-mcp/local-evidence/full/20261029-cwd-wide-grid-invariant/coverage.json`
+(SHA-256
+`aab419bd797f37e5128618e4d37f5e618b6176e4ae1ee5b0be84ec1441f4b8a2`).
+Coverage MCP reports 12,838 missing branches, led by 1,574 outcomes grouped
+under `decode_inter_translation_impl`. It marks source identity unverified and
+test attribution unknown; these aggregate totals remain local exploration
+evidence, not a verified coverage gain or 100% result.
+
+## 10-bit mixed-lossless AV1 inter parity — 2026-10-29
+
+Added the active input-only parity row
+`animated_mixed_lossless_inter_b32_i420_10bit_impulse_residual_64x64`. Its
+deterministic fixture generator proves a 10-bit I420 sequence, a
+`TX_MODE_SELECT` inter frame with mixed lossy and lossless segments, and one
+residual in the non-skipped B32 ROI. The 2,948-byte AVIF input SHA-256 is
+`9a136b442ee7f742259cabc9bb1b2ce68004f9831eb4b169f08fa507f6dabbce`; its
+Pillow RGB frame hashes are
+`dcf046d69b3aa8558665fb2b20eddc466cd6a3c1cacc05104345a251a302b0b2` and
+`4d19f63fcc4cbee56812b9cca517b4d27f5fadfb3c75e9dad84543026f430e32`. The
+native loop bundle records two decoded frames and infinite repetition.
+
+The selected public parity row and the existing
+`av1_inter_translation_sample_depth_mismatch` fault contract passed together
+(2/2). Coverage MCP reports no remaining branch locations in
+`mixed_lossless_inter_transform_mode_enabled` for that selection, including
+the high-bit-depth arm. The selected report is
+`.coverage-mcp/local-evidence/selected/20261029T174202.868798Z-42d5ff2298c64d26896c06a1cf4e078d/coverage.json`
+(SHA-256
+`ec7ef2862f0b54fc447d39dc8e92f026b70d97edbbb6174b1d023045c609beaf`). Its
+source identity is unverified and test attribution is unknown, so it proves
+focused branch reachability only; no aggregate coverage gain is claimed. No
+Rust unit tests were added.
+
+`make lint` and `make lint-x86-simd` pass, including strict debug, release,
+coverage-configured, SSE2-baseline, and AVX2 Clippy lanes. The fixture matrix
+now has 2,820 rows, including 748 active AVIF decode rows. A seven-iteration
+local AVIF probe on Darwin 24.6 arm64 and Rust 1.96.1 decoded
+`animated_motion_temporal_mv_range_2048x128` (input SHA-256
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`) in a
+median of 11,936,583 ns (range 11,740,500–12,998,583 ns). This is a current
+working-tree diagnostic without an A/B comparison, so it does not establish a
+speedup. The broader 100% coverage and SIMD performance goals remain open.
+
+## AV1 chroma-mask sampling type and parity check — 2026-10-30
+
+Motion-compensation wedge and difference-mask helpers now take the existing
+`ChromaSampling` enum instead of independent X/Y booleans. This prevents the
+unsupported 4:4:0 y-only layout from entering private mask code. Wedge
+reduction handles 4:2:0 and 4:2:2 explicitly, while full-resolution and
+monochrome masks remain unchanged. Difference-mask reconstruction copies
+full-resolution rows directly for those layouts. No buffer allocation or
+per-sample arithmetic was added, and odd-width edge replication remains
+preserved.
+
+The selected run passed eight input-only Pillow parity rows for inter-intra
+wedge and inter-inter wedge/difference masks across 4:2:0, 4:2:2, and 4:4:4,
+including both difference-mask polarities. It also passed ten existing
+target-only fault contracts for difference-buffer and wedge-mask guards. The
+LLVM report is
+`.coverage-mcp/local-evidence/selected/20261029T221912.083316Z-455f985281524acfb822fc5455c1f664/coverage.json`
+(SHA-256
+`d114342f524ea8e90e55b9566af46fb07fe608d729802abf1c29d11afcf69e7f`).
+Coverage MCP reports no remaining branch locations in `reduce_wedge_mask`
+or `fill_wedge_mask`. `difference_mask_and_blend` retains two unobserved
+branch outcomes at `mc.rs:2369` and `mc.rs:2378`, both in its odd-height
+vertical-pair fallback. Public AV1 luma transform and grid dimensions are
+multiples of four, so those outcomes are outside valid input geometry; the
+defensive fallback remains in place.
+
+The report has no verified source/build receipt and unknown test attribution.
+It is selected-case evidence only and does not establish an aggregate
+coverage increase. No Rust unit tests were added. The broader 100% coverage
+and SIMD runtime-performance goals remain open.
+
+## AV1 compound distance-ratio parity edge — 2026-10-30
+
+Added active parity row
+`decode:avif:animated_lossy_interinter_distance_ratio_edge_i420_b16x16_64x64`.
+Its deterministic six-frame 4:2:0 sequence makes the final order-hint-5 frame
+select references at order hints 3 and 6, exercising both outcomes of the
+distance-weight ratio comparison. The pinned AVIF input SHA-256 is
+`abc38ca334493341926ff5f728ece919a1b71569cd8bfd4dec08f18d180811ba`.
+
+The focused selection of this row plus the existing distance and altref
+controls passed 3/3, including exact RGB parity for all frames. Its LLVM report
+is
+`.coverage-mcp/local-evidence/selected/20261030T043729.219398Z-22cec4c3371d46c7a64064a122cb0d51/coverage.json`
+(SHA-256
+`7c7aba9ce90f4c41821af8426169a555bc20c20ba4700cdfc263eea4da4f9b27`).
+Coverage MCP reports 4,033/47,825 selected-binary branch observations. The
+executed `distance_weight` instance has nonzero true and false counts for both
+distance orderings and both threshold comparisons. Its remaining gap result
+points to a zero-count symbol at reported line 2427, while the current function
+is at line 2459; with source identity unverified, this coordinate is not
+treated as a reachable current-source gap. No aggregate coverage gain is
+claimed. The case's pinned native loop evidence validates independently. No
+Rust unit tests were added. The broader 100% coverage and SIMD
+runtime-performance goals remain open.
+
+## AV1 inter-translation invariant cleanup — 2026-10-30
+
+Removed two redundant admission checks from AV1 inter reconstruction. The
+`ChromaSampling` check listed every variant of its closed internal enum, and
+the `SampleDepth` check listed every value constructible through its private
+fields and checked constructor. The common-geometry helper no longer accepts
+the unused sampling argument; reference depth/layout, nonzero visible
+dimensions, valid block layout, and inter-intra prediction constraints remain
+validated. This removes impossible rejection paths without adding work to the
+reconstruction hot path.
+
+The current selected run passed six active input-only Pillow parity rows:
+4:4:4 lossless B8x8 inter-intra plus 4:2:0 inter-intra mask modes 0–3 and
+wedge blending. Report:
+`.coverage-mcp/local-evidence/selected/20261030T044233.969762Z-624584168adf48dab456ee01184379fc/coverage.json`
+(SHA-256
+`e5966408e973c841c4d820e177c898445341426eae3f684cfd4d0a1a09743e63`).
+Coverage MCP measured 4,170/47,825 selected-binary branch observations. The
+valid inter-intra modes exercise both sides of the mode and mask-coordinate
+branches. Remaining gaps in `fill_inter_intra_mask` are its coverage-only
+invalid-mode and geometry injections; `inter_translation_common_geometry_is_valid`
+still has defensive invalid-reference/depth/layout and zero-dimension arms.
+Those private invalid states were not made into unit tests or claimed as
+Pillow behavior. Source identity remains unverified and test attribution
+unknown, so no aggregate coverage gain is claimed.
+
+`make lint` and `make lint-x86-simd` passed, including strict debug, release,
+coverage-configured, SSE2-baseline, and AVX2 Clippy lanes. `cargo fmt --all
+-- --check` and `git diff --check` also passed. No Rust unit tests were added.
+The broader 100% coverage and measured SIMD performance goals remain open.
+
+## AVIF CLLI trailing-payload parity and coverage refresh — 2026-10-30
+
+Coverage MCP's preceding full-report gaps pointed to trailing-payload handling
+in both AVIF `parse_clli` paths. Added active parity row
+`decode:avif:clli_trailing_payload_ignored`, derived from `hdr.avif`. Its
+deterministic generator appends one zero byte to the four-byte primary-item
+CLLI property, rebuilds the enclosing boxes, and rebases all five file-backed
+`iloc` extents. It verifies that every item extent and the complete AV1 media
+payload remain byte-identical, then compares Pillow's full image information,
+frames, and decoded RGB bytes with `hdr.avif`. The fixture SHA-256 is
+`7862991cf4424c784f22d4a27ef128949eea8ad927c8ad05eed23a6e9effd108`.
+
+Both bounded CLLI parsers now read the two required 16-bit fields and retain
+the entire payload, including a Pillow-tolerated tail. The existing empty-CLLI
+contract still rejects a payload too short to contain those fields. The
+obsolete Rust-only assertion that treated a one-byte tail as malformed was
+removed; no Rust unit tests were added. The selected `hdr` plus trailing-CLLI
+parity run passed 2/2. Its report is
+`.coverage-mcp/local-evidence/selected/20261030-clli-trailing-payload-ignored/coverage.json`
+(SHA-256
+`31cac774f7d784d1644a33fc2e70e04ca5e1599dd49dbcc0b87037fcc22ea706`).
+
+The full `make coverage` refresh passed the all-feature suite and configured
+coverage floors: lines 98,440/140,272 (70.178%), branches 19,932/32,128
+(62.039%), functions 5,426/8,974 (60.464%), and regions 150,262/217,749
+(69.007%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-clli-trailing-payload/coverage.json`
+(SHA-256
+`37564d07f005c02dbf856809dcdeecae09a08cbeb5d2ead38878c7ad8bac659a`).
+Coverage MCP returns no grouped branch gaps for `parse_clli` in this report,
+but marks source identity unverified and test attribution unknown. Treat it as
+local full-suite evidence, not a verified aggregate comparison. The incremental
+union with the selected report was incomparable because the baseline branch
+detail did not reconcile with its reported totals. `make lint`,
+`make lint-x86-simd`, `make test-feature-matrix`, and fixture integrity checks
+pass. No SIMD implementation or performance benchmark changed in this slice;
+the 100% coverage and measured SIMD speed goals remain open.
+
+## AVIF nested property size below its header — 2026-10-30
+
+Added active parity row `decode:avif:error_ipco_property_size_below_header`.
+Its full-file fixture changes the first `ipco/ispe` size from 20 to 4 while
+preserving the file length and AV1 `mdat` bytes. Pillow 12.2.0 rejects it at
+open with `UnidentifiedImageError`. The fixture SHA-256 is
+`1376cc7d7360eae6b03c97b6d3808dc95bfa945aa8578e4443c540489ea2ed20`.
+The focused selection with the existing nested zero-size control passed 2/2;
+its local LLVM report SHA-256 is
+`4afa4957216bb3b0dbf5a4486e683fd3fa95b0094ca3e48c885aea97e4b35565`.
+An isolated selection of the new row also passed 1/1. Its report SHA-256 is
+`0aee1e9a43a7955af56b653dfeef57dab40c7421cce38d22ddc3156637b77308`.
+
+The full all-feature coverage run passed its configured floors: lines
+98,441/140,272 (70.179%), branches 19,933/32,128 (62.042%), functions
+5,426/8,974 (60.464%), and regions 150,264/217,749 (69.008%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-ipco-size-below-header/coverage.json`
+(SHA-256
+`1cfaf61e3920b8ad8b0491aea153cf77e190bcfd9160a53f8647f9ba57fa3ebe`).
+Coverage MCP's comparison against the preceding full report observes one new
+branch coordinate, the true arm of `samples::next_box` at `samples.rs:325`.
+MCP marks this limited because source/build identity is unverified and test
+attribution is unknown; it is not a verified aggregate gain or proof that this
+specific selected case caused the full-report observation. In the one-case
+LLVM export, one `samples::next_box` function record at that location has six
+true-arm and 80 false-arm counts; a second record for the same source span has
+zero counts. The MCP gap grouping surfaces that unexecuted record. This is
+local branch evidence for the selected fixture, while source identity and
+MCP-level test attribution remain unverified.
+
+The public matrix now has 2,848 rows: 2,276 active decode rows and 541 active
+encode rows, with 31 planned encode rows; AVIF has 776 active decode rows.
+Fixture integrity, the roadmap count, and generated capability documentation
+verify. No Rust unit tests were added. No SIMD implementation or runtime
+benchmark changed; 100% coverage and measured SIMD speed remain open.
+
+## AV1 frame-canvas completeness accounting — 2026-10-30
+
+The AVIF sequence profile showed repeated full-canvas completeness scans in
+`FrameCanvas::finish_with_filters_inner`. The frame canvas now counts copied
+samples in coded and visible extents and compares the relevant count at finish.
+The written bitmap remains in place for overlap rejection and intra-edge
+availability. Counts update only after a placement passes geometry and overlap
+validation. No Rust unit tests were added.
+
+On ARM64, the pre-change five-second `sample` profile recorded 3,768 stack
+samples; its collapsed stacks include 351 samples in
+`validate_plane_placement` and 333 in `finish_with_filters_inner`. The profile
+is retained at
+`.coverage-mcp/local-evidence/perf/20261030-framecanvas-counts/arm64-profile.txt`.
+An A–B–B–A comparison used 60 decode calls per block, the same release
+settings, and public `decode_sequence` on both binaries. For
+`animated_motion_temporal_mv_range_2048x128`, the pooled median fell from
+11.524 ms to 10.502 ms (8.9%). For
+`animated_motion_temporal_mv_range_negative_y_128x2048`, it fell from
+11.793 ms to 10.461 ms (11.3%). Raw timing blocks and host/build metadata are
+in `framecanvas-counts-abba.json` and `framecanvas-counts-tall-abba.json` in
+that directory. These are local ARM64 results for two workloads, not a claim
+of general AVIF speedup or x86 SSE2/AVX2 runtime performance.
+
+The five-row focused parity selection passed baseline, grid, alpha, odd-sized
+I420, and the profiled sequence cases. `make lint`, `make lint-x86-simd`, and
+`make test-feature-matrix` passed. The post-change full all-feature coverage
+run passed configured floors: lines 98,466/140,300 (70.182%), branches
+19,936/32,132 (62.044%), functions 5,423/8,973 (60.437%), and regions
+150,305/217,795 (69.012%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-framecanvas-counts/coverage.json`
+(SHA-256
+`484dfbb0d856f2394c73953db847af9b5a397b6ed89e795817cf122230a4393b`).
+Coverage MCP finds no missing branch observations in the changed finish and
+copy-count spans, but the report has unverified source identity and unknown
+test attribution. The four-metric 100% goal remains open.
+
+## AVIF lazy item-table inspection reservation contract — 2026-10-30
+
+Coverage MCP identified the uncovered fault-injection true arm in
+`parse_iinf::<LazyItemExtentPolicy>` at `src/codecs/avif/samples.rs:623`.
+The existing item-table reservation contract exercised decode's bounded
+policy, while inspection uses the lazy policy. Added the target-only matrix row
+`fault-contract:avif:avif_item_table_inspection_reservation_failure` using
+`inspection_error_then_retry_succeeds`; its oracle status is
+`not_applicable`. No Rust unit test was added.
+
+The exact selected fault-contract run passed 1/1. Its report is
+`.coverage-mcp/local-evidence/selected/20261030-avif-item-table-inspection-reservation/coverage.json`
+(SHA-256
+`60b3c648218b41c3912ffaffe8dee24a174d81f308dfa9fc29bf9f0cf9276d94`). The
+raw LLVM record for the lazy-policy specialization shows one injected true-arm
+count and two false-arm counts. The refreshed all-feature `make coverage` run
+passed configured floors: lines 98,467/140,300 (70.183%), branches
+19,936/32,132 (62.044%), functions 5,423/8,973 (60.437%), and regions
+150,306/217,795 (69.013%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-item-table-inspection-fault/coverage.json`
+(SHA-256
+`c6960d031d0d4250cb6a34499c5194d22e44fd4672dce4120457e7cd262e17ce`).
+
+Coverage MCP now reports no missing branch observations at line 623 and one
+newly observed coordinate there in the full-report comparison. It marks that
+comparison limited because source/build identity is unverified and test
+attribution is unknown; treat this as local report evidence, not a verified
+aggregate coverage gain. The selected-report incremental union was
+incomparable because its instrumented inventory differs from the full report.
+The 100% coverage goal remains open.
+
+## AVIF duplicate item IDs use policy dispatch — 2026-10-30
+
+Coverage MCP reported the opposite missing arms of the generic constant check
+in `parse_iinf` for its lazy-inspection and bounded-decode specializations.
+Those arms cannot occur for either policy. Replaced the constant condition with
+`ItemExtentPolicy::on_duplicate_item_id`: bounded decoding lazily constructs
+the existing parse error, while lazy inspection retains the first entry.
+Valid inputs do not call this handler, and inspection does not allocate an
+error for a tolerated duplicate. No Rust unit test was added.
+
+The existing parity case `decode:avif:error_iinf_duplicate_item_id` passed
+1/1. `make lint` passed, and the full all-feature `make coverage` run passed
+the configured floors. At local `HEAD` `69a79d4c4` plus working-tree changes,
+coverage measured lines 98,473/140,305 (70.185%), branches 19,935/32,130
+(62.045%), functions 5,426/8,976 (60.450%), and regions 150,312/217,801
+(69.013%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-static-duplicate-policy/coverage.json`
+(SHA-256
+`f8a1843b26bdc468ddfa96b605f34cfe73a56f4bd44918040f0587d205c7cf02`).
+
+Coverage MCP reports no missing branch observations at the changed duplicate
+handler line in this full report. Its source identity is unverified and test
+attribution is unknown, so this is local coordinate evidence and does not
+establish a verified aggregate coverage gain. The four-metric 100% goal
+remains open.
+
+## AVIF incomplete auxiliary-alpha declarations — 2026-10-30
+
+Coverage MCP's retained full report listed missing arms in
+`samples::Meta::non_primary_item_plane_properties` for an alpha item with no
+extent dimensions and no pixel-depth declaration. Added the input-only parity
+row `decode:avif:error_alpha_auxiliary_missing_ispe_and_pixi`, derived from
+`alpha.avif` by clearing item 2's `ispe` and `pixi` associations while keeping
+its `av1C` and `auxC` associations. Pillow rejects the complete file at open.
+The existing missing-`ispe` row retains `pixi`, so it checks a distinct input.
+
+The exact selected parity/coverage run passed 1/1. The new full
+`make coverage` run passed all integration targets and configured floors:
+lines 98,483/140,309 (70.190%), branches 19,929/32,118 (62.049%), functions
+5,430/8,980 (60.468%), and regions 150,311/217,794 (69.015%). Report:
+`.coverage-mcp/local-evidence/full/20261030-after-alpha-missing-ispe-pixi/coverage.json`
+(SHA-256
+`4db19dad61747ab23c1c8bc8616668a16272be3aaa9658c4547db11da12b65dd`).
+Its raw LLVM branch record at `samples.rs:1668` records both outcomes, including
+the missing-dimensions arm. Coverage MCP no longer lists a missing branch for
+the `samples::Meta` projection, while three branches remain listed for the
+parallel `container::Meta` projection.
+
+Coverage MCP marks this report's source identity unverified and test
+attribution unknown; its comparison with the preceding full report is limited
+because source/build identity and instrumented coordinates differ. The counts
+are local run evidence, not a verified aggregate gain. No Rust unit tests were
+added, and the four-metric 100% coverage goal remains open.
+
+## AV1 inter-translation admission coverage consolidation — 2026-10-30
+
+Coverage MCP had grouped the common admission result as a missing branch in
+multiple `decode_inter_translation_impl` callback specializations. Moved that
+shared validation into `validate_inter_translation_admission`, keeping the
+coverage build out of the generic callback and using `inline(always)` in
+non-coverage builds. This retains the checked behavior and avoids a release
+call boundary; no runtime speedup is claimed.
+
+The existing target-only contract
+`fault-contract:avif:av1_inter_translation_sample_depth_mismatch` passed 1/1
+after the refactor, using
+`decode:avif:animated_mixed_lossless_inter_b32_i420_impulse_residual_64x64`.
+Its oracle status is `not_applicable`; it checks the structured sequence
+failure and successful retry. The selected report is
+`.coverage-mcp/local-evidence/selected/20261030T154722.946987Z-46548de26e36400a9572d428bf2d2980/coverage.json`
+(SHA-256
+`efb3fbc23221bea012dad02fcb9ace6b3b7162599a0e42b4daa1d7b37800b252`).
+
+The refreshed full `make coverage` run passed all integration targets,
+including 57/57 matrix tests, and cleared all configured floors: lines
+98,521/140,311 (70.216163%), branches 19,955/32,102 (62.161236%), functions
+5,435/8,984 (60.496438%), and regions 150,354/217,796 (69.034326%). The
+retained report is
+`.coverage-mcp/local-evidence/full/20261030-after-inter-translation-admission-refactor/coverage.json`
+(SHA-256
+`fe85ca54330771a0dd0a1dc72e8352a5ff009600c998f0eae221da7ea36a49bb`).
+Coverage MCP groups the admission helper as one function group and still
+reports 12 missing branch outcomes within it. Its largest remaining AV1 group
+is the lossless-small prediction guard in `decode_inter_translation_impl`;
+the generic callback specializations still produce repeated missing branch
+groups there.
+
+Coverage MCP marks the full report's source identity unverified and test
+attribution unknown, so the totals are local measurements and do not prove an
+aggregate coverage gain. No Rust unit tests were added. The four-metric 100%
+coverage goal and measured SSE2/AVX2 runtime goals remain open.
+
+## AV1 lossless-small inter-translation branch — 2026-10-30
+
+Added the input-only parity row
+`decode:avif:animated_lossless_inter_420_fixed_b4x4_64x64`, backed by a
+deterministic 64×64, two-frame, all-lossless 8-bit I420 AVIF whose inter frames
+use fixed 4×4 AV1 partitions. The selected parity run passed 1/1 with full
+12,288-byte `Rgb8` pixel parity. Its raw LLVM branch record at
+`src/codecs/avif/av1/block.rs:49501` records the `lossless_small` true arm 256
+times and its false arm zero times for the executed specialization.
+
+Command: `make coverage-selected
+COVERAGE_CASES='decode:avif:animated_lossless_inter_420_fixed_b4x4_64x64'`.
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261030T171950.823465Z-74d2144025a34b419ed8b0c513cd704f/coverage.json`
+(SHA-256
+`d55e9f56e15e6864f831c253710dbfab1f155d2cd53d375fe81353bab48cd8de`). The
+local evidence receipt is stored alongside it; fixtures were unchanged during
+the run. Coverage MCP marks source identity unverified and test attribution
+unknown for this report. Its grouped query still lists both arms across
+callback specializations; the executed specialization's raw LLVM record is the
+direct local evidence for this input. This does not establish a verified
+aggregate coverage gain. The incremental comparison against the preceding
+full report is incomparable because its branch detail does not reconcile with
+reported totals. No Rust unit tests were added; the four-metric 100% coverage
+and measured SSE2/AVX2 runtime goals remain open.
+
+## 8-bit I422 inter-frame CDEF parity — 2026-10-31
+
+The current public evidence matrix contains 2,889 total rows: 2,316 decode /
+inspect / verify rows and 573 encode rows. Of those, 2,316 decode rows are
+active, alongside 542 active encode rows and 31 planned encoder rows.
+
+Added the input-only parity case
+`decode:avif:animated_lossy_inter_422_cdef_8bit_16x16`. Its deterministic
+two-frame AVIF is 8-bit I422 at 16×16 with inter-frame CDEF enabled, the
+largest transform, and no loop restoration. The fixture generator's `--check`
+passed, and the exact selected parity run passed 1/1 with both 768-byte RGB
+frames matching pinned Pillow references. Independent loop evidence
+verification passed for all 185 AVIF sequence references.
+
+The retained local LLVM report,
+`.coverage-mcp/local-evidence/selected/20261031T034145.456411Z-c691778d52534010a603a42424df8cdb/coverage.json`,
+contains two emitted records for
+`complete_bounded_i422_cdef_inter_reconstruction_context` in `entropy.rs`;
+each records all seven branch pairs with an observed arm. Its adjacent local
+receipt records the selected case passing and fixtures unchanged. Coverage MCP
+returned `Transport closed`; the receipt therefore marks MCP source identity
+unverified and test attribution unknown. This is local selected-case evidence,
+not an MCP-confirmed gap closure or aggregate coverage gain. The 100% coverage
+goal remains open. No Rust unit tests were added.
+
+## AVIF duplicate sample-table container parity — 2026-10-31
+
+The local full LLVM report at
+`target/release-evidence/coverage.json` showed the duplicate-child arm of
+`samples::parse_minf` at `samples.rs:2391` unobserved (0 hits versus 2,061 for
+the non-duplicate arm). Existing duplicate-`minf` and duplicate-`stco` cases
+do not exercise a second `stbl` inside one `minf`. Added the input-only parity
+row `decode:avif:error_animated_duplicate_stbl` and a deterministic complete
+AVIS mutation. The generator rebases the item and sample offsets, verifies the
+box structure, and confirms that pinned Pillow 12.2.0 rejects the file at
+open. Its SHA-256 is
+`82117e58d5518cead7a53bc76cb705b3b02261558c6d5b34cf90328700b8bb4d`.
+
+`make coverage-selected
+COVERAGE_CASES='decode:avif:error_animated_duplicate_stbl'` passed 1/1. The
+selected report is
+`.coverage-mcp/local-evidence/selected/20261031T040311.313482Z-379056a26e2d456a834a2dc8f6d2fa3b/coverage.json`
+(SHA-256
+`e9d80cea32b6fcd80b1cf627998f29c654b577924ced961553e033c208d0951e`). Its
+raw branch record at `samples.rs:2391` records both outcomes six times in the
+executed parser specialization. Coverage MCP returned `Transport closed` for
+both the full and selected reports, so this is local LLVM evidence, not an
+MCP-confirmed gap closure or aggregate coverage gain. No Rust unit tests were
+added; the 100% coverage goal remains open.
+
+## AVIF zero track-ID parity — 2026-10-31
+
+The local full LLVM report at `target/release-evidence/coverage.json` showed
+the zero-ID arm of `samples::parse_tkhd` at `samples.rs:2264` unobserved (0 hits
+versus 2,143 for nonzero IDs). Added the active public parity row
+`decode:avif:error_track_tkhd_zero_id`. Its complete animated AVIF fixture sets
+the version-one `tkhd` track identifier to zero without changing box sizes or
+sample offsets; the pinned Pillow 12.2.0 oracle rejects the file at open. The
+fixture SHA-256 is
+`5b9718040db403bad0122fd59426e3e4d61652b88cea1a5654435075475180a3`.
+
+`make coverage-selected
+COVERAGE_CASES='decode:avif:error_track_tkhd_zero_id'` passed 1/1. The selected
+report is
+`.coverage-mcp/local-evidence/selected/20261031T041022.555957Z-73491296284247a79160e36436e5a8fd/coverage.json`
+(SHA-256
+`959daca7b66e8ad99b86cc4a3505d13d600309384e1f318be61e4651e53b0ec6`). Its
+raw `parse_tkhd` branch record at `samples.rs:2264` records six hits on the
+zero-ID arm in the executed parser specialization. Coverage MCP returned
+`Transport closed` for the full report, so this is local LLVM evidence, not an
+MCP-confirmed gap closure or aggregate coverage gain. No Rust unit tests were
+added; the 100% coverage goal remains open.
+
+## JPEG ZRL batching trial — 2026-10-31
+
+A release sample of RGB 512×512 Q10 4:2:0 encoding identified repeated AC
+zero-run-length (ZRL) Huffman writes in `encode_raw_ac_value`. A candidate
+combined two adjacent ZRL codes into one `RawBlockWriter::write` call; each
+code is at most 16 bits, so the combined call stays within the writer's
+32-bit bound and emits the same bit sequence. The candidate was built with
+`CARGO_TARGET_DIR=target/jpeg-zrl-batch-arm64-20261031 cargo build
+--manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release
+--locked`. Baseline and candidate binary SHA-256 values are
+`ae481f7245766a33ebda4d46826a09540a3fe0820822a824590b691c4ddadd64` and
+`5229207069b68731555a9d9f96f473dfbed999a6103975fa90bc4422b0686d69`.
+
+Three A–B–B–A cohorts ran the same generated 512×512 RGB, quality-10,
+4:2:0 workload for 1,200 iterations per process with 100 warmups. The input
+FNV-1a was `75efb3d33c9418ec`; all twelve runs emitted 29,341 bytes with FNV-1a
+`4280bc9f48852fbe`. Candidate paired medians were about 1.5%, 3.2%, and 2.6%
+slower than their controls. Across all six runs per build, the medians were
+1,523,813 ns baseline and 1,554,063 ns candidate. Host load averages started
+at 8.44 and remained above 6.8, so these timings do not establish the exact
+regression size; they provide no evidence of a gain. The candidate was
+rejected and the JPEG source was restored without a retained code change.
+
+Selected public parity passed 2/2 for `encode:jpeg:enc_q10` and
+`encode:jpeg:enc_optimize`, including exact reference outputs and 128×128
+re-decode pixel parity. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T041842.324296Z-50f829c2b4e840e880e9b21fe4ba988e/coverage.json`
+(SHA-256
+`834c2de6261d4445fbe65bec3eb2f5edce478c1d1da1de3bd2c9eb730f7189ae`).
+Coverage MCP returned `Transport closed` for both this selected report and the
+latest full report, so no MCP gap attribution or aggregate coverage claim is
+made. No Rust unit tests were added.
+
+## Current-checkout AVIF 12-bit alpha parity recheck — 2026-10-31
+
+In `/Users/lazytrot/work/image-slash-star`, the selected public parity run
+passed 3/3 for `decode:avif:error_12bit420_alpha_ispe_extent_mismatch`,
+`decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9`, and
+`decode:avif:high_bitdepth_still_12bit_444_alpha_9x9`. The two valid controls
+matched Pillow RGBA pixels (612 and 324 bytes); the auxiliary extent mismatch
+was rejected like Pillow. The fixture generator `--check` reproduced the
+1,436-byte mismatch fixture with SHA-256
+`9150d49f7f499f86c9e778a70d6525bd06a5509e409366d082097e6d7c4a2be6`.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T042316.942023Z-fef06ba59ea74e81b92facd7af50a39c/coverage.json`
+(SHA-256
+`43f507358c3305eac3d3f52d5822488dc47264ed658d0fffdf4288292cc9646c`); its
+local receipt SHA-256 is
+`878b4495ec297f43d45b2335e625311be1d1211aec240768f94ae83ba2313322`.
+Coverage MCP returned `Transport closed` for the targeted branch query, so this
+remains local selected evidence and does not establish aggregate coverage gain
+or MCP attribution. No unit tests or fault-contract cases were selected.
+
+## JPEG progressive restart interval cleanup — 2026-10-31
+
+The latest local full LLVM report showed an unobserved true outcome for
+`current_restart_interval.is_some()` at `src/codecs/jpeg/encode/mod.rs:5127`
+in both `Noop` and token checkpoint instantiations of
+`encode_progressive_scans_exact`. Coverage MCP returned `Transport closed` for
+the full report and the focused report, so this finding is local LLVM evidence,
+not MCP attribution.
+
+Source inspection established the state invariant: `restart_rows` is fixed
+for one encode; every scan interval is zero when row restarts are disabled (or
+the row count exceeds Pillow's limit), and positive otherwise because every
+valid scan has at least one MCU column. The current interval can change between
+positive scan intervals, but cannot transition from nonzero to zero. The
+redundant `current_restart_interval.is_some()` fallback was removed, leaving
+the direct `restart_interval != 0` marker condition.
+
+Selected Pillow parity passed 4/4 for `encode:jpeg:enc_progressive`,
+`encode:jpeg:enc_progressive_restart_rows`,
+`encode:jpeg:enc_progressive_restart_rows_partial_mcu_420`, and
+`encode:jpeg:enc_cmyk_progressive_restart_rows`. The LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T042845.528400Z-c9ee384b906148218addd16aee84ace7/coverage.json`
+(SHA-256
+`6f9a9f9bb79f9a232c22a59344c73e1c5fec1e5635eaac1c37560da59faa0437`); both
+outcomes of the simplified condition were observed in the no-token and token
+instantiations. `make lint` and `make lint-x86-simd` passed, including strict
+debug, release, coverage-hook, x86-64 SSE2, and AVX2 Clippy builds. No fixture,
+unit test, or fault-contract case was added; no benchmark speedup is claimed
+for this small branch simplification.
+
+## AV1 frame-ID continuity boundary and wrap parity — 2026-10-31
+
+Added the input-only parity cases
+`decode:avif:error_animated_frame_id_outside_continuity` and
+`decode:avif:error_animated_frame_id_wrapped_outside_continuity`. Both mutate
+only the second 15-bit frame ID in a deterministic full-file AVIF. The
+half-range case changes 4,627 to 21,010, exactly 16,384 (`1 << 14`) after its
+predecessor ID 4,626. The wrap case changes 4,627 to 4,625, producing modulo
+difference 32,767. Pillow 12.2.0 decodes the first 16×16 RGB frame exactly
+(768 bytes), then rejects frame 1 in both inputs with
+`RuntimeError: Failed to decode frame 1: Decoding of color planes failed`.
+
+The selected command passed 2/2:
+
+```sh
+make PYTHON=.oracle-venv/bin/python coverage-selected \
+  COVERAGE_CASES='decode:avif:error_animated_frame_id_outside_continuity decode:avif:error_animated_frame_id_wrapped_outside_continuity'
+```
+
+The combined LLVM report records both outcomes of `frame_id > previous` and
+two hits on the true outcome of
+`difference >= 1 << (frame_id_bits - 1)` at
+`src/codecs/avif/av1/frame.rs:3415`. The local receipt reports no source or
+fixture changes during the run. The report is
+`.coverage-mcp/local-evidence/selected/20261031T051142.471584Z-c82168dbbbc34b5b945223b981408b23/coverage.json`
+(SHA-256
+`11545f9f7e7a9ba4c128bb15d76800597c7c81c5add8776769bc62d885896c40`); the
+receipt SHA-256 is
+`ed01739fc7e1ff58e4472c1ac2ba50777988790c729782a75c78002314dd6be2`.
+Coverage MCP returned `Transport closed`, so this remains local selected
+evidence and makes no aggregate coverage or MCP-attribution claim. No unit
+tests were added.
+
+The existing parity case `decode:avif:error_animated_repeated_frame_id` was
+also run by itself to confirm the equality guard. It passed 1/1 with exact
+768-byte RGB8 pixel parity for ordinary decode and the expected malformed
+sequence result. LLVM recorded `true=1, false=0` for
+`frame_id == previous` at `src/codecs/avif/av1/frame.rs:3412`. The local receipt
+records unchanged source and fixtures during the run, with source manifest
+SHA-256
+`ce9d7365fe646859675988242f990ee3cda3944542a70f0e5b74330f340f7fb8`.
+Report:
+`.coverage-mcp/local-evidence/selected/20261031T051747.695923Z-799a4334b17e4532a2766e519fe61a36/coverage.json`
+(SHA-256
+`9d36f14c824f33aefdae160d4f4ce5ba4ce053b5e0c80522ae6e56d496d5fcb4`); its
+receipt SHA-256 is
+`0d114c78117329909be0e0154ec13a129d09abc0ffcd921f372985f2df4777dd6`.
+Coverage MCP again returned `Transport closed`; this single-case report does
+not update or claim aggregate coverage totals.
+
+## JPEG MCU offset arithmetic trial — 2026-10-31
+
+A targeted experiment replaced saturating arithmetic for MCU-derived offsets
+inside `encode_baseline_420_mcu_row_streaming` with ordinary addition and
+multiplication. Allocation sizing and restart countdown saturation were left
+unchanged. Release binaries on Apple M3 Pro with Rust 1.96.1 ran the public
+512×512 RGB Q10 4:2:0 encode with the same deterministic input (FNV-1a
+`75efb3d33c9418ec`), 100 warmup calls, and 1,000 measured calls per process.
+Two A–B–B–A sequences produced these per-process medians:
+
+| Sequence | Baseline A (ms) | Candidate B (ms) | Candidate B (ms) | Baseline A (ms) |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 1.462709 | 1.499000 | 1.481000 | 1.450667 |
+| 2 | 1.464709 | 1.437875 | 1.454417 | 1.454542 |
+
+The median of the four baseline process medians was 1.458626 ms; the candidate
+was 1.467709 ms, 0.62% slower. The direction reversed between sequences, so
+there was no stable speedup. Every run produced 29,341 bytes with FNV-1a
+`4280bc9f48852fbe`, matching the retained TurboJPEG comparison for this input.
+The candidate was rejected and the source restored. This targeted ARM64
+diagnostic does not establish SSE2 or AVX2 runtime performance.
+
+## AV1 stale reference-slot invalidation parity — 2026-10-31
+
+Added the active public parity row
+`decode:avif:animated_frame_id_stale_reference_invalidation`. Its deterministic
+AVIF uses frame IDs 0, 8,000, and 17,000. The middle inter frame refreshes one
+reference slot, leaving seven slots at ID 0; the independently decodable final
+key frame reaches the stale-reference invalidation branch. The input SHA-256
+is `3b8ce1b8ddccf7b114f2ceac3505c254d73bc823d2138cae01106ce04029dd6d`.
+
+Pillow 12.2.0 and the pinned native libavif observer decode three 16×16 RGB
+frames with hashes `9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b`,
+`6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7`, and
+`9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b`; both
+observers report an infinite loop. Selected Rust parity passed 1/1 with exact
+pixel output.
+
+The selected LLVM report records seven taken and nine untaken outcomes at
+`src/codecs/avif/av1/frame.rs:846` in the active decoder instance, matching the
+seven stale slots. Its source and fixture receipts remained stable during the
+run. The report is
+`.coverage-mcp/local-evidence/selected/20261031T070510.612353Z-57deae32ab7a4b5cbf5471e0abcb3bd1/coverage.json`
+(SHA-256 `6d481d7e8ba52ec733dbd901283e664875607bfdd18a3c8fa8109366f613ebaf`);
+the local receipt SHA-256 is
+`d523bd7b3a6c02e82c838d4086d2bba7964fa44ba3e49bd709371e72c45a725d`.
+Coverage MCP returned `Transport closed` for the incremental comparison, so
+this is local selected evidence and makes no MCP attribution or full-suite
+coverage claim. No unit tests or Rust decoder-source changes were added.
+
+## AV1 future-reference invalidation parity — 2026-10-31
+
+Added active parity row
+`decode:avif:animated_frame_id_future_reference_invalidation`. Its frame IDs
+are 30,000, 10,000, and 20,000. The second frame wraps by a valid 12,768-step
+delta and refreshes one slot; seven retained slots still identify frame 30,000
+when frame 20,000 arrives. The final independent key frame must invalidate
+those higher-ID references. The input SHA-256 is
+`ebe40d4c20e39723979ac8fc5968c846b54f30045739af26d8d91974d7492cbb`.
+
+Pillow 12.2.0 and pinned libavif preserve the same three exact 16×16 RGB frames
+as the stale-ID case and report an infinite loop. Selected Rust parity passed
+1/1 with exact output. The LLVM report records seven taken outcomes for
+`retained.header.frame_id > frame_id` at
+`src/codecs/avif/av1/frame.rs:837`, plus seven taken outcomes in the slot-clear
+branch at line 846. Source and fixture hashes remained stable during the run.
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T071007.884581Z-0f19927ef06c4bd3b3dadc65e4e7c286/coverage.json`
+(SHA-256 `43acb87dee5ed2984f010e43a1e1a25cd81226485084ae35ec721a27a61f2ae6`);
+the local receipt SHA-256 is
+`ccc3d4fe814a144a7d32451ce97b57879bc874cc6a6745cb5c4bf6ed749a38d4`.
+Coverage MCP remains `Transport closed`, so this is local selected evidence,
+not MCP attribution or an aggregate coverage claim. No unit tests or Rust
+decoder-source changes were added.
+
+## AV1 timing without decoder-model parity — 2026-10-31
+
+Added the active input case
+`decode:avif:animated_timing_without_decoder_model`. It enables valid AV1
+timing information while leaving `decoder_model_info_present_flag` clear in
+the sequence header. The complete AVIF input is 1,243 bytes with SHA-256
+`7978ad21887be7ec5e74b13ab9555e2c2caef9911b900947b67c231b74f1f5cf`.
+
+Pinned Pillow 12.2.0 and libavif 1.4.1 decode five 150×150 RGB frames at
+33 ms each; all five pixel hashes match `animated.avif`. The independently
+compiled libavif loop observer decodes all five frames and reports one play.
+Selected Rust parity passed 1/1 with exact 67,500-byte RGB pixel parity.
+
+The retained 835-row active AVIF report previously recorded only the true
+outcome for `decoder_model_present` at
+`src/codecs/avif/av1/sequence.rs:166` (15 true, 0 false). This isolated case
+records the false outcome three times (0 true, 3 false). The source-file hash
+for `sequence.rs` is identical in both receipts, so this is a reachable new
+branch outcome against the same implementation source. The selected report is
+`.coverage-mcp/local-evidence/selected/20261031T085355.229370Z-7ac58d73edac40399e1ec7c1f3e21f0d/coverage.json`
+(SHA-256
+`517ad9c0dd3f6e835bb89e503ef4c096553edb58ac31e116b87b278bbe56c991`); its
+local receipt SHA-256 is
+`dcf15147325daeecb6cc7c9ac16caee4f22335f53d0f5d41b4c8936237395473`.
+Coverage MCP returned `Transport closed`, so the branch evidence is local and
+does not claim MCP attribution or an aggregate coverage increase. No unit
+tests or Rust decoder-source changes were added.
+
+## Maximum valid AV1 initial-display-delay parity — 2026-10-31
+
+Added active parity case `decode:avif:animated_initial_display_delay_10`. Its
+deterministic AVIF enables timing and display-model syntax and sets the valid
+initial display delay to the boundary value 10. The input is 1,244 bytes with
+SHA-256
+`aa95d8f4b6f2576f91a010fd0cc1cd5ed10ea826b89f8aba661c3dd6a9fa1b7d`.
+
+Pillow 12.2.0 preserves all five 150×150 RGB frames and their 33 ms durations.
+The pinned native libavif observer decodes five frames and reports one play.
+Selected Rust parity passed 1/1 with exact 67,500-byte pixel parity. The
+selected LLVM report records the previously unhit false outcome of
+`initial_display_delay > 10` at
+`src/codecs/avif/av1/sequence.rs:212` three times; the retained 835-row AVIF
+selection recorded only the true outcome (3 true, 0 false). Both receipts have
+the same source manifest and `sequence.rs` hash. Combining that baseline with
+the two selected timing cases yields 91/106 covered branch outcomes in this
+file, up from 89/106; this case adds the valid-delay false outcome.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T090520.372596Z-910f9113b03b4926a53091b4ca1efbf2/coverage.json`
+(SHA-256
+`60e37cd8067e6c97d9591ccd445b9018ad3cddf69d07d12b1dd8abbd15f738d9`); its
+local receipt SHA-256 is
+`0673fa5bc8ed29d1f16b2c7721ca259d103f3923f244346e7932674ae968617a`. Coverage
+MCP returned `Transport closed`, so this is local selected evidence and makes
+no MCP attribution or whole-repository coverage claim. No unit tests or Rust
+decoder-source changes were added.
+
+## AV1 identity-matrix profile parity — 2026-10-31
+
+Added three active public parity cases around the AV1 identity-matrix profile
+guard. `decode:avif:animated_identity_matrix_profile1_444` covers the valid
+8-bit 4:4:4 profile-1 path, and
+`decode:avif:animated_identity_matrix_profile2_12bit_444` covers the valid
+12-bit 4:4:4 profile-2 path. Their fixture SHA-256 values are
+`4535db4548ddf82d23c72ef970b01f1632f4db4c9f7ddfd392bf0d5d011bdd4a` and
+`d0079f47a1f7709a373191d2248d42daec16d01132b6aaf1cdb1d7dc613fb1da`.
+Pillow and the pinned native libavif observer decode five frames from each;
+the selected Rust parity rows passed with exact RGB output.
+
+The error row `decode:avif:error_animated_identity_matrix_profile0_8bit_420`
+uses a complete 8-bit 4:2:0 profile-0 AVIF whose sequence header and both
+`nclx` declarations carry matching identity CICP values 1/13/0. Pillow opens
+the five-frame container and reports
+`RuntimeError: Failed to decode frame 0: Decoding of color planes failed` on
+load; Rust rejects the same public input. The deterministic mutation hashes
+to `a88b8b552040ea93afb486c17efca9c7cdb0e7151854e1a0e350375489cd5526`, and
+its selected parity row passed 1/1.
+
+All three fixtures pass their generator `--check` commands. The selected
+profile-1 report is
+`.coverage-mcp/local-evidence/selected/20261031T100757.418610Z-369dea0685974d72b38e05cafd8858a4/coverage.json`
+(SHA-256 `57fc9eb6df96ad48aec4d7ff7bc85288086a5bf4ebef464b1dac4f88474fd6dc`);
+its local receipt SHA-256 is
+`cfc102cd22402a989f70ac817f5aa3548cceb54f3b5106fb7ca4c792b63f62c8`. The
+selected profile-2 report is
+`.coverage-mcp/local-evidence/selected/20261031T101259.691540Z-369a087c36e742c38f70064c0ce0326f/coverage.json`
+(SHA-256 `54fb071ff8602add6f916af5a36ab921b2b0301476f3bcace458f57d90cc1e68`);
+its receipt SHA-256 is
+`01c22d8612950c10651a9fdbaa518f1f7fd9c49e89dfb35fa4000b77166cf404`. The
+profile-0 report is
+`.coverage-mcp/local-evidence/selected/20261031T101941.683743Z-82b18ce5cd534ef1b633a8edc16b61fd/coverage.json`
+(SHA-256 `9481bd2fb5999e91f1c5a1c117de7b87059f7ec2e54df7bb489420918e95be12`);
+its receipt SHA-256 is
+`0bc5acb192c97adff018755a65f174c758258c2f5c6927194dc74b4f0fbdd2d5`.
+
+The profile-0 report adds the previously unobserved false outcome for
+`profile == 2` at `src/codecs/avif/av1/sequence.rs:326` (column 30), three
+hits. A local union of 14 passing selected reports with matching sequence
+source and manifest hashes now observes 99 of 108 branch outcomes in that
+file, up from 98 of 108 before this row. This is a coordinate-level union of
+selected LLVM reports, not full-suite coverage. Coverage MCP returned
+`Transport closed` for the report query, so it could not verify attribution or
+the aggregate. The local receipt records the selected case passing 1/1 and
+the source and fixture hashes unchanged during execution. No unit tests or
+Rust decoder-source changes were added.
+
+## AV1 high-tier operating-point parity — 2026-10-31
+
+Added active parity case `decode:avif:animated_operating_point_high_tier`. It
+sets `seq_level_idx` to 8 and inserts the required main-tier bit in the first
+AV1 operating point. The resulting input is 1,235 bytes with SHA-256
+`bb06afad6c56b58389eede0bdda980ca42ee36ca045eb92e39de7f5a85e19fb0`.
+
+Pillow 12.2.0 and the pinned native libavif observer decode five 150×150 RGB
+frames at 33 ms each and report one play; their frame pixels match exactly.
+Selected Rust parity passed 1/1 with exact 67,500-byte RGB pixel parity. The
+selected LLVM report records the true outcome of `level > 7` at
+`src/codecs/avif/av1/sequence.rs:199` three times. The source-matched baseline
+records the false outcome 456 times and no true outcome. Combining that
+baseline with the timing-without-model, maximum-display-delay, and high-tier
+selected reports covers 92/106 branch outcomes in `sequence.rs`, up from
+89/106; all four reports have the same source manifest and sequence source
+hash.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T091247.190127Z-b5e574d00ae1410e9414e5adb1b0b319/coverage.json`
+(SHA-256
+`2f77f5f09206b7762199f1dac4a3b119e78aa23132976930a245373d427f35cb`); its
+local receipt SHA-256 is
+`885229c975e9a1d7bfcf69dacbf66251cca7c68e5a1ae3cd68debba8fab63068`.
+Coverage MCP returned `Transport closed`, so this is local selected evidence
+and makes no MCP attribution or whole-repository coverage claim. No unit tests
+or Rust decoder-source changes were added.
+
+## AV1 decoder-model parameters absent parity — 2026-10-31
+
+Added active parity row
+`decode:avif:animated_decoder_model_without_operating_point_parameters`. It
+enables valid sequence-level decoder-model timing, leaves
+`decoder_model_present_for_this_op` clear, and adds the required false
+buffer-removal flags to the frame headers. The resulting input is 1,249 bytes
+with SHA-256
+`e220130a0614df8c5fce0acf525c2c69a9fccaa8ec140373eac1f91d424d757d`.
+
+Pillow 12.2.0 and the pinned native libavif observer decode five 150×150 RGB
+frames at 33 ms each, preserve the source pixels, and report one play. Selected
+Rust parity passed 1/1 with exact 67,500-byte RGB pixel parity. The selected
+LLVM report records the false outcome of the per-operating-point decoder-model
+flag at `src/codecs/avif/av1/sequence.rs:200` three times; the source-matched
+baseline records only the true outcome (9 true, 0 false). Combining that
+baseline with the four selected sequence-header cases covers 93/106 branch
+outcomes in `sequence.rs`, up from 89/106. All reports have the same source
+manifest and `sequence.rs` hash.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T092252.124788Z-54854731d7fb407797b0bdbd3e805573/coverage.json`
+(SHA-256
+`7f2b7394fae0b7b17e336dece774eeaa234c87c1fe019a89a6e7aa086b7741c7`); its
+local receipt SHA-256 is
+`6889b846843287c3bc3d97b2d7fb58ad03efa68d8d8017503c91c3e7c6a9457e`. Coverage
+MCP returned `Transport closed`, so this is local selected evidence and makes
+no MCP attribution or whole-repository coverage claim. No unit tests or Rust
+decoder-source changes were added.
+
+
+## AV1 equal-picture interval UVLC parity — 2026-10-31
+
+Added active parity case `decode:avif:animated_equal_picture_interval_two_ticks`. It enables AV1 equal-picture-interval timing and encodes `num_ticks_per_picture_minus_1` as `uvlc(1)` (`010`), reaching the valid leading-zero path while leaving BMFF sample timing and encoded frame payloads unchanged. The 1,243-byte AVIF has SHA-256 `e49851e6d94c721525f3b4130d7279c2ed2329a68032ea81f3714ae68119db7d`.
+
+Pillow 12.2.0 and the pinned native libavif observer decode five 150×150 RGB frames with exact pixels, 33 ms timing, and one total play. Selected Rust parity passed 1/1 with exact 67,500-byte pixel parity. The selected LLVM report records both outcomes of the `while !self.bit()?` loop at `src/codecs/avif/av1/bit_reader.rs:241` three times each. The source-matched selected report for `animated_decoder_model_without_operating_point_parameters` recorded only the false outcome (0 true, 3 false); their local union covers 15/50 bit-reader branch outcomes versus 13/50 in that prior report. Both receipts have the same source-manifest hash.
+
+The report is `.coverage-mcp/local-evidence/selected/20261031T111225.003911Z-577217dab3d74d4ea69c4b514c7ad684/coverage.json` (SHA-256 `54ded30bab283f79977404c76c40b1e9370e22bf86fc5a9c055ff0b7c3c3ada3`); its local receipt SHA-256 is `9ef554d0bceff5a8289fefeb8eddb40b73f5367bded577249a3090ecb13d5c23`. Coverage MCP returned `Transport closed`, so this remains local selected evidence and makes no MCP attribution or whole-repository coverage claim. The public evidence matrix now contains 2,916 total rows: 2,343 decode / inspect / verify rows and 573 encode rows. Of those, 2,343 decode rows and 546 encode rows are active; 27 encode rows are planned. AVIF has 843 active decode rows. No unit tests or Rust decoder-source changes were added.
+
+## BMP signed-dimension encoder guard — 2026-10-31
+
+Added target-only case `fault-contract:bmp:bmp_encode_height_over_signed_limit_rejected` to the shared coverage matrix. It decodes the active `decode:bmp:depth_24` fixture, checks its pixels against the pinned Pillow reference, and arms a `cfg(coverage)` fault point that presents a copied image height of `i32::MAX + 1` to the BMP file-size guard. The public `img::encode` call must return a BMP `Dimensions` error at the `StillEncode` stage. The case has `oracle_status: not_applicable` and does not add a Pillow parity row.
+
+The selected coverage run passed 1/1. Its LLVM report records the false outcome of the height limit at `src/codecs/bmp/encode.rs:269` once. The previous local baseline recorded no false outcome at the same guard before the coverage hook was added. Because the source revisions differ, these reports are not combined into a coverage total.
+
+
+## WebP VP8 method-one lossy encoder parity — 2026-10-31
+
+Added active parity row `encode:webp:enc_lossy_method_1_intra16_candidate_pruning`
+for the existing 128×128 RGB WebP source at quality 80, method 1. The first run
+exposed a mismatch: Rust produced 4,056 bytes while Pillow produced 4,088.
+Tracing the fast VP8 path showed that method 1 must choose its chroma mode from
+pixel distortion and fixed mode cost before quantization. The Rust encoder now
+uses that search and evaluates only the selected chroma candidate, following
+libwebp 1.6.0's `RefineUsingDistortion` path in
+[`quant_enc.c`](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/quant_enc.c#L1161-L1263).
+
+The clean selected parity run passed 1/1. Regular and token-aware public encode
+calls matched Pillow's exact 4,088-byte output, and re-decoded pixels matched
+for all 128×128 RGB pixels. Its LLVM report observes both outcomes of the
+Intra16 candidate-pruning branch at `src/codecs/webp/encode/vp8/intra16.rs:332`.
+The current evidence matrix contains 2,917 rows: 2,343 decode / inspect / verify
+rows and 574 encode rows, with 2,343 decode rows and 547 encode rows active and
+27 encode rows planned.
+This is a single-case local report, not an aggregate coverage claim; Coverage
+MCP attribution was not verified. `make lint` passed, including formatting,
+strict Clippy, release Clippy, and coverage-configured Clippy. No unit tests
+were added, and no performance benchmark was run.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T142557.000511Z-9251eddb912c45e98db9f3df888ca217/coverage.json`
+(SHA-256 `97ee518be68b721ef25fc729337c4aa0e26d808e42b47aba51faad603ca18f8a`);
+its local receipt SHA-256 is
+`a343a547c7e3d4671962cf49382cbe3efdfd9fbe29f77fa18f256da8d1a3c139`.
+
+## WebP VP8 method-four search parity — 2026-10-31
+
+Ran the existing active parity row
+`encode:webp:enc_lossy_quality_80_method_4_nonuniform_rgb_17x17`. It passed
+1/1 with the exact 380-byte Pillow output and re-decoded 17×17 RGB pixel
+parity; the row made four public encode calls and reported no panics. The
+selected report covers both outcomes of the method threshold at
+`src/codecs/webp/encode/vp8/frame.rs:303` and `:431`, plus both Intra4/Intra16
+selection outcomes at `:309` (9 and 3 hits).
+
+The method-0, method-1, and method-4 reports share source-manifest hash
+`638eb4f23ea7bae92f6497e82a546f8073484d0a00d8e9b42bc5bcb5477309c5` and
+`frame.rs` hash
+`a6750749e4c5b07cd66e6367c7d8486748867099ea0ee46b8d0fa3cd251708de`. A local
+coordinate-level union covers 20/22 branch outcomes in that file, up from
+16/22 for method 0 plus method 1; method 4 adds four outcomes. This is selected
+file-level evidence, not a whole-repository coverage result. Coverage MCP
+returned `Transport closed` for the report query, so managed attribution was
+not verified. The source and fixture inventories were unchanged during the
+run. No unit tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T143500.811534Z-71c33d3019db41d5abd73d75228f7eee/coverage.json`
+(SHA-256
+`5826a5862ce4c25ef5f668d83622e86050f32364449332ba341ec9a9256ccfc9`); its
+local receipt SHA-256 is
+`4835f9787c1a0aa4f18c7a1afd1ca6cec0825f64d558256d4208833a536994b1`.
+
+## WebP VP8 method-six token-aware parity — 2026-10-31
+
+Ran the existing active parity row `encode:webp:enc_lossy_method_6_token_checkpoint`
+on the 128×128 RGB `lossless.webp` source. It passed 1/1 with the exact
+3,570-byte Pillow output and re-decoded pixel parity; the row made five public
+encode calls and reported no panics. Across matching local reports for the
+method-0, method-1, method-4, and method-6 cases, method 6 adds 58 distinct
+branch outcomes in `src/codecs/webp/encode/`: 28 in `vp8/quant.rs`, 22 in
+`vp8/cost.rs`, five in `vp8/partition.rs`, and one each in `vp8/intra16.rs`,
+`vp8/intra4.rs`, and `vp8/encoder.rs`. The method-6 report observes all 34
+branch outcomes reported for `vp8/quant.rs`.
+
+All four reports have source-manifest hash
+`638eb4f23ea7bae92f6497e82a546f8073484d0a00d8e9b42bc5bcb5477309c5`; source
+and fixture inventories were unchanged during this run. The union is local
+coordinate-level evidence for selected cases, not full-suite coverage.
+Coverage MCP returned `Transport closed`, so managed attribution was not
+verified. No unit tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T143813.451293Z-cbbaa85c96594a22982449b69ec5c727/coverage.json`
+(SHA-256
+`899455084dcda2996233a51e98d6539aa0ce7100681ac43a8acc2da39b7814b5`); its
+local receipt SHA-256 is
+`a412ef77798d83cf2a1e822ac67b6be1e42e49b1c5fe0f712e9af79cc7a32271`.
+
+## WebP VP8 large-frame parity — 2026-10-31
+
+Ran the existing active parity row
+`encode:webp:enc_lossy_quality_0_method_0_large_frame_skip_sample` on its
+513×257 RGB source. It passed 1/1 with the exact 506-byte Pillow output and
+re-decoded pixel parity; the row made four public encode calls and reported no
+panics. Against the four source-matched selected reports above, it adds nine
+branch outcomes in `src/codecs/webp/encode/`: three in `vp8/intra16.rs`, three
+in `vp8/residual.rs`, two in `vp8/partition.rs`, and one in `vp8/encoder.rs`.
+This is a local coordinate-level union of selected reports, not a full-suite
+coverage result. The source and fixture inventories were unchanged during the
+run. Coverage MCP returned `Transport closed`, so managed attribution was not
+verified. No unit tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T144036.446167Z-d0ab386dc9314852bf13a9a7a167522b/coverage.json`
+(SHA-256
+`e991f104612d693ea40c38f0d4e243fb2fba8178d0added59c5f98537b6dd35e`); its
+local receipt SHA-256 is
+`3352e98edd229b3bdde1bd8043de2416f3f97e923e998f235bcf61141ca61f50`.
+
+## WebP VP8 204-macroblock parity boundary — 2026-10-31
+
+Ran the existing active parity row
+`encode:webp:enc_lossy_quality_0_method_0_sampling_boundary_204_macroblocks`
+on its 192×272 RGB source. It passed 1/1 with the exact 2,218-byte Pillow
+output and re-decoded pixel parity; the row made four public encode calls and
+reported no panics. Its selected report added no new branch outcomes to the
+local coordinate-level union of the five preceding WebP encoder reports. The
+case remains useful as a parity regression at this geometry boundary; it is
+not counted as a coverage gain. Source and fixture inventories were unchanged
+during the run. Coverage MCP returned `Transport closed`, so managed
+attribution was not verified. No unit tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T144224.728035Z-7e7299b06fb24b9cbd969f6e7ba95ab9/coverage.json`
+(SHA-256
+`33e9e2de25f42301370012d123fa1baa1c8d0332142c2445a384dfacb714f046`); its
+local receipt SHA-256 is
+`7734422f22964a2a5a8abdbc4fa5f19ac1687ec2d0e9f52c727c20fbe0a8d012`.
+
+## WebP VP8 method-zero capped-statistics parity — 2026-10-31
+
+Ran the existing active parity row
+`encode:webp:enc_lossy_quality_0_method_0_capped_statistics` on the 128×128
+RGB `rgb.png` source. It passed 1/1 with the exact 698-byte Pillow output and
+re-decoded pixel parity; the row made four public encode calls and reported no
+panics. Its selected report adds no new branch outcomes to the local
+coordinate-level union of the method-0, method-1, method-4, method-6,
+large-frame, and 204-macroblock WebP encoder reports. The case remains a useful
+Pillow parity regression for the 50-macroblock capped-statistics behavior; it
+is not counted as a coverage gain. All seven reports share source-manifest
+hash `638eb4f23ea7bae92f6497e82a546f8073484d0a00d8e9b42bc5bcb5477309c5`;
+source and fixture inventories were unchanged during execution. Coverage MCP
+returned `Transport closed`, so managed attribution was not verified. No unit
+tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T144520.365963Z-3ee04de5720048659796896605049c15/coverage.json`
+(SHA-256
+`fc27f96cb876526429f2991ab18b43068b35ca916150b5e36cbefaa68504d281`); its
+local receipt SHA-256 is
+`9f0573d0a97aef9c818830ed0da697ae60b65d93cd142636f195b210413cf59b`.
+
+## WebP VP8 single-pixel segment parity — 2026-10-31
+
+Ran the existing active parity row `encode:webp:enc_1x1`. It passed 1/1 with
+the exact 64-byte Pillow output and re-decoded 1×1 RGB pixel parity; the row
+made four public encode calls and reported no panics. Its selected report
+records the true outcome of `maximum_center == minimum_center` at
+`src/codecs/webp/encode/vp8/analysis.rs:478` three times. The source-matched
+local union across the prior nine WebP encoder reports had only the false
+outcome there; this row adds six branch outcomes to that union: one in
+`vp8/analysis.rs`, three in `vp8/partition.rs`, and two in `vp8/encoder.rs`.
+The union is coordinate-level selected evidence, not full-suite coverage.
+
+All ten reports share source-manifest hash
+`638eb4f23ea7bae92f6497e82a546f8073484d0a00d8e9b42bc5bcb5477309c5`; the
+source and fixture inventories were unchanged during execution. Coverage MCP
+returned `Transport closed`, so managed attribution was not verified. No unit
+tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T145031.965138Z-a9649f4aaa2d4965bbb138a0248d7688/coverage.json`
+(SHA-256
+`7eee58362aecd3106cd616deb3d31432f4526249b07a05f953a13ca8cdbc4c95`); its
+local receipt SHA-256 is
+`261491e5ccf14c6c3396ee9448b8775b6c6f84a487937ac2af936fa45e5989f3`.
+
+## WebP VP8 aligned segment-cluster checkpoint parity — 2026-10-31
+
+Added the active parity row
+`encode:webp:enc_lossy_method_4_segment_cluster_full_span_48x48` for a
+48×48 RGB image with a checkerboard macroblock beside flat blocks. Temporary
+local tracing confirmed that its macroblock alphas span 192 through 255, so
+the scan visits exactly 64 values. The final uninstrumented selected run
+passed 1/1 with the exact 124-byte Pillow output and re-decoded pixel parity;
+it made five public encode calls and reported no panics. Its report records
+the previously missing false outcome of the 64-value checkpoint condition at
+`src/codecs/webp/encode/vp8/analysis.rs:438` six times. This is local
+coordinate-level selected evidence, not full-suite coverage.
+
+The source manifest hash is
+`638eb4f23ea7bae92f6497e82a546f8073484d0a00d8e9b42bc5bcb5477309c5`; source
+and fixture inventories were unchanged during the final run. Coverage MCP
+returned `Transport closed`, so managed attribution was not verified. No unit
+tests were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T152058.184462Z-a11c23719f7f43c18545edb0ae6775a4/coverage.json`
+(SHA-256
+`06b55dde8db3ebe9c3508c3f68e7ec1c0863df6b71a8d2af9fe70d1dec6a2b18`); its
+local receipt SHA-256 is
+`d334fa71f7cc80973a19da07db31ca79571a6d780b1391bc3c595f15c873351a`.
+
+## WebP VP8 segment-map update parity — 2026-10-31
+
+Added the active parity row
+`encode:webp:enc_lossy_quality_80_method_0_intra4_macroblock_grid_32x32` for a
+32×32 RGB input whose alternating 4×4 gray tiles select intra4 luma modes.
+The exact Pillow output is 490 bytes and the re-decoded pixels match. This
+case exposed a segment-header mismatch: libwebp omits segment-map probability
+updates and per-macroblock segment IDs when all segment probabilities are the
+default. Rust now carries the header's `update_map` decision into mode writing
+and emits those fields only when the map is updated.
+
+The new case and the existing
+`encode:webp:enc_lossy_method_4_segment_cluster_full_span_48x48` regression
+both pass exact byte and pixel parity (2/2 rows, 10 public encode calls, no
+panics). The selected report records 66/136 branch outcomes in
+`src/codecs/webp/encode/vp8/partition.rs`; selected-run counts are not a
+full-suite coverage percentage. The source manifest SHA-256 is
+`8bc3fa69195ce50effc28eead29c0d5466e6d1ede9e2affc507d940e8019bd25`; source
+and fixture inventories were unchanged during the run. Coverage MCP returned
+`Transport closed`, so managed attribution remains unverified. No unit tests
+were added.
+
+The report is
+`.coverage-mcp/local-evidence/selected/20261031T160947.235936Z-35cd057dd62a4c1480b6c45d64d2e63b/coverage.json`
+(SHA-256
+`c133f4086934e34e65de41d7af14e553be09f074a5e118cfb35b79b908b89989`); its
+local receipt SHA-256 is
+`09da4736dcc811d201d4b1a75f7471c58b0707e05533977f4bfe910fe6c40992`.
+
+## Full all-feature coverage refresh — 2026-10-31
+
+The standard all-feature coverage command completed with all 139 existing
+integration and contract test cases passing, including all active public
+parity-matrix rows. The maintained coverage floors pass: 99,441/140,533 lines
+(70.759893%), 19,859/31,522 branches (63.000444%), 5,527/9,015 functions
+(61.308930%), and 151,671/218,011 regions (69.570343%). The report remains
+below the project's 100% four-metric goal.
+
+The run exposed a stale AVIF census assertion: the manifest and roadmap list 27
+planned former-native encode rows, while the existing assertion expected 31.
+The assertion and current roadmap evidence now agree with the 27-row matrix;
+fixture integrity, strict Clippy, and formatting checks pass.
+
+The local source-manifest SHA-256 is
+`4b6ea098df08afba1e99aa6ad9cac73b6675cf822f751578f83a11a1c05a4f9a`. The
+fixture manifest and matrix hashes are
+`2cf34ef9833788ec44b2361b1d5d36abff0ceb41bbc7d99c7065cd44deb056cf` and
+`02ebbdcbf5879e228da6bf45fce266a9e37eb77df227b35eb11da50382c471e7`.
+Coverage MCP returned `Transport closed`, so the report has no managed source
+or test attribution and does not replace the managed baseline. No unit tests
+were added.
+
+The full report is
+`.coverage-mcp/local-evidence/full-20261031-current/coverage.json` (SHA-256
+`fea09cc7fd393a962006f007380348009065e4e5ea4aeb578f56559eaad67d81`).
+
+## AVIF still alpha-count invariant cleanup — 2026-10-31
+
+The full report above showed the true arm of the still-image alpha sample-count
+check in `ExtractedAvif::validate` was never reached. `still_payload` constructs
+both planes from their item-ID lists and rejects unequal lengths before
+constructing `ExtractedAvif`, so no public image input can reach the later
+duplicate check. Removed that duplicate guard while retaining the earlier
+input-level check. The animated alpha-count mismatch remains checked by the
+full-sequence decoder.
+
+The selected parity run passed 3/3: the still-grid alpha-count mismatch, the
+animated alpha-count mismatch, and the 12-bit 4:2:0 alpha-extent mismatch. No
+unit tests or new fixture cases were added. The selected report's source
+manifest SHA-256 is
+`453b9d2cc4ad53c5bb84fd2c7c926fe0740b996684e2e4c400769c9bd56457ef`; source
+and fixture hashes were stable during the run. These selected rows do not
+refresh the full-suite coverage totals, and the full report predates this edit.
+Coverage MCP returned `Transport closed`, so managed attribution remains
+unverified.
+
+The selected report is
+`.coverage-mcp/local-evidence/selected/20261031-avif-alpha-invariant-cleanup/coverage.json`
+(SHA-256
+`67f4a52673c57c0cd82a7108f3d16bd78165de41ba42f0682a470327d7c232bf`); its
+local receipt SHA-256 is
+`6f05f4e951504f035a5cd9abd46203be2b5131054625bf19d531c12689131d45`.
+Formatting, strict all-feature Clippy, and `make lint-x86-simd` passed. The x86
+SSE2 and AVX2 lanes were cross-compiled on an ARM64 host; no x86 runtime
+performance measurement is claimed.
+
+## Full all-feature coverage after AVIF invariant cleanup — 2026-10-31
+
+The standard `make coverage` run completed all 139 existing test cases with no
+failures. Current coverage is 99,439/140,528 lines (70.760987%),
+19,858/31,520 branches (63.001269%), 5,527/9,015 functions (61.308930%), and
+151,667/218,006 regions (69.570104%). All configured alpha floors pass; the
+four-metric 100% goal remains open.
+
+The source-manifest SHA-256 after the AVIF invariant cleanup is
+`453b9d2cc4ad53c5bb84fd2c7c926fe0740b996684e2e4c400769c9bd56457ef`. Coverage
+MCP again returned `Transport closed`; this local full report has no managed
+source or test attribution. No unit tests were added.
+
+The full report is
+`.coverage-mcp/local-evidence/full-20261031-post-alpha-invariant/coverage.json`
+(SHA-256
+`1fe7bef9e6b28000e2882de2bb660d4117998a8050567035c961324840c26615`).
+
+## AVIF reconstructed-plane borrow optimization — 2026-10-31
+
+The portable AVIF decoder now validates reconstructed Y/U/V extents and borrows
+the already complete, origin-aligned planes directly. This removes a redundant
+full-frame `FrameCanvas` allocation and copy from each decoded frame. Coverage
+builds still inject plane-length faults through an isolated clone; release
+builds do not include that hook.
+
+Four existing public AVIF parity rows passed exact Pillow pixel comparison:
+the three-frame 4:2:0 sequence, multi-tile super-resolution, and 10-bit and
+12-bit 4:2:0 alpha cases. The Y, U, and V portable-plane fault contracts also
+passed (7/7 selected rows total). No codec unit tests or new fixtures were
+added. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T172513.024928Z-6e942eb2e8e9463abff0e99a321a29bc/coverage.json`
+(SHA-256
+`db7645d4652c7a2d9fe4233f827e226e57e82ea3faa741327b60daec132b201b`); its
+local receipt SHA-256 is
+`bcf191bcd6c855bf820f65709dc689333167be2c93985418dab19d5737039ce7`.
+
+Two release A/B cohorts used the same public sequence probe, fixture, binary
+path, 100 timed decodes, and two warmups per cohort, in A–B–B–A and B–A–A–B
+order. Across 400 timed decodes per binary on an Apple M3 Pro (aarch64,
+`rustc 1.96.1`), the direct-plane candidate reduced pooled median time from
+10.336 ms to 9.781 ms (5.37%) and linearly interpolated p90 from 10.787 ms to
+10.407 ms (3.52%). Every B cohort median was below its neighboring A cohort;
+the B samples include one 17.063 ms scheduling outlier. The baseline executable
+SHA-256 is
+`0da84e66450e93754c8e4d788ad4e000ab91a58883876244a2c2989f504cbbbd`; the
+candidate executable SHA-256 is
+`8a2819c67ff5572436068f8602d2de9cfc785086c5fb73d77cec66b0c60ccfa1`. Both
+used fixture SHA-256
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`. The
+127-file source-closure manifests differ only in
+`src/codecs/avif/decode.rs` (baseline SHA-256
+`28d4c0305090ab1ff0bbcc34aedd6a51ff2c02b250ab43a244b927210cc5cb6f`,
+candidate SHA-256
+`9a97a90099680bf3c4effc57948236da310b18b3c8e258ed5f7c6451210e5ca8`).
+
+At the time of this direct-plane change, the full all-feature report recorded
+99,458/140,541 lines (70.7680%),
+19,865/31,528 branches (63.0075%), 5,528/9,017 functions (61.3064%), and
+151,697/218,027 regions (69.5772%). All 139 integration tests passed and the
+configured floors pass; the 100% goal remains open. The report is
+`.coverage-mcp/local-evidence/full-20261031-avif-plane-borrow/coverage.json`
+(SHA-256
+`0aed5abd72336558ae8ae05fee6f92c159c9e3ec8f2bc2d7b0044fb52b478d77`).
+Coverage MCP returned `Transport closed`, so this is local LLVM evidence
+without managed attribution.
+
+Formatting, strict all-feature Clippy, x86-64 SSE2 and AVX2 compile-only Clippy,
+and the native/WASI/WebAssembly feature matrix passed. The x86 lanes were
+cross-compiled on the ARM64 host; no SSE2 or AVX2 runtime speed claim is made.
+
+## AVIF duplicate sample-description color parity — 2026-10-31
+
+The earlier full LLVM report showed that the duplicate-color-property arm of
+`samples::parse_sample_description` had no witness: the branch at
+`samples.rs:2664` recorded 2,134 hits for the first-color path and zero for the
+duplicate path. Added active parity row
+`decode:avif:error_animated_duplicate_sample_description_colr`. Its generated
+AVIS fixture inserts a conflicting second `nclx` property, rebases sample
+offsets, and preserves the encoded media data. Pinned Pillow 12.2.0 recognizes
+AVIF, then rejects the file as malformed. The Rust parser now rejects the
+duplicate color property with the same public outcome. The selected case passed
+1/1 with no target-only fault rows and no codec unit tests.
+
+The selected local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261031T174846.958160Z-ebb7759b93984b08be46bfb253a276db/coverage.json`
+(SHA-256
+`cc6e9498f4ec236d1babac894ed2c56fe20c9eec5c37335e6f20549dbe25c73e`); the
+local-only receipt SHA-256 is
+`e2a5f8c9b7d67e5700c26cea61e6f8199490672d7a1cb26fcc11bbd56ae870dc`. The
+fixture SHA-256 is
+`99f4051b60a85669670f9664d20a061a57a7e8ad00115219ab34bfb2ef65c396`. In the
+refreshed full report, the branch at `samples.rs:2664` records both outcomes
+(2,140 and 6 hits); the AVIF parser file has 583/588 branches covered.
+
+The refreshed all-feature run passed all 139 integration tests and records
+99,459/140,542 lines (70.7682%), 19,866/31,528 branches (63.0107%),
+5,528/9,017 functions (61.3064%), and 151,699/218,028 regions (69.5778%). Its
+report is
+`.coverage-mcp/local-evidence/full-20261031-post-duplicate-stsd-colr/coverage.json`
+(SHA-256
+`dd2f4bd56a161b91d0a342566acfb23f4a8c9a70d85a809372c1de7dd4401faa`). Coverage
+MCP again returned `Transport closed`; these are local LLVM measurements with
+no managed attribution. The 100% goal remains open.
+
+After this parser change, a release A/B rerun used the same public sequence
+fixture and four 100-decode cohorts per binary. Timing varied substantially
+between adjacent cohorts: candidate medians ranged from 10.199 to 23.199 ms;
+the pooled p90 was 31.798 ms for the baseline and 33.512 ms for the candidate.
+This run is inconclusive and is not treated as a speedup claim. The earlier
+lower-noise result applies to the direct-plane change alone. Raw cohort logs
+and the current candidate summary are retained under
+`target/avif-perf-evidence/` for local inspection.
+
+`make lint`, `make lint-x86-simd`, `make test-feature-matrix`,
+`make refresh-fixture-integrity`, and pinned-Python `make verify` pass. The
+SSE2 and AVX2 lanes are compile-only cross-checks on the ARM64 host.
+
+## AVIF word-packed raster coverage — 2026-11-01
+
+`FrameCanvas` and `MonochromeFrameCanvas` now share a checked `u64` coverage
+mask. Row overlap and completeness checks inspect word ranges, and monochrome
+placements keep checked written-sample counts so CDEF completion does not
+rescan the bitmap. The storage remains one bit per sample; the change targets
+per-sample coverage iteration and does not add CPU-specific intrinsics.
+
+Five public AVIF parity rows passed against the pinned Pillow references:
+12-bit 4:2:0 alpha odd edges, the 12-bit alpha extent error, animated alpha
+sample-count mismatch, monochrome multi-tile CDEF, and the 2048x128 temporal
+motion sequence. No codec unit tests were added or run. The selected LLVM
+report records 1,441/4,646 lines and 224/898 branches in `raster.rs`; this is
+selected-run coverage, not a full-suite total. Its report is
+`.coverage-mcp/local-evidence/selected/20261031T225526.013834Z-59ee43640398411a94fc4bc53a4c2d23/coverage.json`
+(SHA-256
+`87e1f15709267e670e2d09b0ef59503167ec84deb5027285c66aea1540c11fa0`), and its
+local receipt SHA-256 is
+`606e6e426402a34ec84994018c42138562facba615b720c2be1cd7ec7ef3b6db`. Coverage
+MCP returned `Transport closed`; these are local LLVM measurements without
+managed attribution.
+
+The release probe compared the same 2048x128 AVIF input in A–B–B–A order, with
+two warmups and 100 timed decodes per cohort. On an Apple M3 Pro with
+`rustc 1.96.1`, the pooled median over 200 baseline samples was 10.506 ms and
+over 200 candidate samples was 9.356 ms (10.94% lower). Cohort medians were
+10.379 and 10.656 ms for A, and 9.318 and 9.399 ms for B; each B cohort was
+faster than both A medians. The fixture SHA-256 is
+`294468c2498c8fa494bfcc2e701a944e90f15ec4b5f08eb64fa34f907e5a6a1a`; the
+candidate `raster.rs` SHA-256 is
+`0fef4a662acf7e778b16de04b90f5473ea86df7a40985c276cbfe5a56943d4fb`. The
+baseline and candidate probe executable SHA-256 values are
+`1113e916cce052b3260f2a3107bc8de46b9022269cff8ed0944d2d50025155b7` and
+`92f64005912fca8688750e9690d373272c72d9157f7430aa3619f39c8eca75e7`.
+Per-cohort samples are retained under `target/avif-perf-evidence/`.
+
+Formatting, strict all-feature Clippy, and x86-64 SSE2-baseline and AVX2
+Clippy cross-checks passed. The x86 lanes were compile-only on this ARM64 host;
+no SSE2 or AVX2 runtime speed claim is made.
+
+## Full native coverage refresh — 2026-11-02
+
+The all-feature native integration run on local `develop` at `69a79d4c4`
+plus uncommitted changes passed all 139 checks across six executables.
+Every active matrix ID reconciled exactly once: 3,470 parity cases passed,
+and all 167 existing target-only fault contracts passed in their separate
+lane. The 27 planned parity rows were not executed. No private unit-test
+executable ran, and no unit tests were added.
+
+The unfiltered LLVM report records 101,693/141,986 lines (71.621850%),
+20,556/31,936 branches (64.366232%), 5,634/9,123 functions (61.756001%), and
+154,917/220,119 regions (70.378750%). The alpha floors pass;
+`make coverage-complete` exits 2 at its final 100% gate after all tests pass.
+No source exclusions or threshold changes were introduced.
+
+The report and per-case results are retained outside `target/` under
+`.coverage-mcp/local-evidence/full/20261102-current/`. The report SHA-256 is
+`c2c44af02a511c5518741e7c4618721b861ccc6852eb09e542d1b876f89891bc`.
+The command, environment, tool versions, six instrumented executables and raw
+profiles are retained there. All 150 full-run source/setup hashes and 9,469
+fixture hashes remained unchanged during measurement; source snapshots and
+before/after hash manifests bind this local result to the checkout.
+
+Nine Coverage MCP CLI queries succeeded. The connector was unavailable;
+CLI imports remain source-unverified and test attribution unknown. The LLVM
+file summaries put 9,971 of 11,380 uncovered branch outcomes in AV1 entropy
+and block reconstruction. The all-children-deep B16x64/B64x16 inter-transform
+arms remain concrete input-generation candidates, with no cases added for
+those candidates in this refresh. Generic function groups overlap, so their
+gap counts are not added. This local report does not replace historical
+managed claims or establish an incremental gain against changed source.
+
+This refresh adds no runtime changes or timing samples. Existing style and
+platform checks retain their earlier source-bound scope. SSE2/AVX2 runtime
+performance, fastest-codec ranking, and 100% coverage remain unfinished.

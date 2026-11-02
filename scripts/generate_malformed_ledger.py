@@ -3,7 +3,7 @@
 
 QA-018 requires a maintained per-format malformed-class ledger with Pillow
 outcome, specification status, Rust error, and evidence origin for every
-active error class. The ledger is generated from
+active decode or sequence error class. The ledger is generated from
 ``tests/fixtures/coverage_matrix.json`` so it cannot drift from the fixture
 matrix: run with ``--check`` in CI and fail on any diff.
 """
@@ -125,7 +125,12 @@ def build_ledger() -> dict:
         rows = [
             row
             for row in fmt_data.get("decode", [])
-            if row.get("expect_error") or row.get("rust_expect_error")
+            if (
+                row.get("expect_error")
+                or row.get("expect_sequence_error")
+                or row.get("rust_expect_error")
+                or row.get("rust_expect_sequence_error")
+            )
         ]
         rows.sort(key=lambda row: row["id"])
         for row in rows:
@@ -158,6 +163,9 @@ def build_ledger() -> dict:
                     "pillow_status": row.get("oracle_status"),
                     "pillow_type": row.get("oracle_error_type"),
                     "pillow_message": row.get("oracle_error_message"),
+                    "sequence_status": row.get("sequence_status"),
+                    "sequence_error_type": row.get("sequence_error_type"),
+                    "sequence_error_message": row.get("sequence_error_message"),
                     "inspect_status": row.get("inspect_status"),
                     "verify_status": row.get("verify_status"),
                     "contracts": contracts,

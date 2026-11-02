@@ -17,11 +17,6 @@ use crate::types::{
 
 const MAX_BOXES: usize = 4_096;
 const MAX_RECORDS: usize = 4_096;
-// Item-property entries are retained as owned records. Keep their table
-// bounded independently from the enclosing-box and association budgets so a
-// validly-shaped `ipco` box cannot consume the entire parser budget first.
-const MAX_PROPERTIES: usize = 2_048;
-const MAX_COMPATIBLE_BRANDS: usize = 1_024;
 const VISUAL_SAMPLE_ENTRY_SIZE: usize = 78;
 const ALPHA_URN_MPEG_B: &[u8] = b"urn:mpeg:mpegB:cicp:systems:auxiliary:alpha";
 const ALPHA_URN_HEVC: &[u8] = b"urn:mpeg:hevc:2015:auxid:1";
@@ -192,14 +187,6 @@ impl<'a> Reader<'a> {
 }
 
 #[derive(Clone)]
-struct Brands {
-    major: FourCc,
-    minor_version: u32,
-    compatible_brands: Vec<FourCc>,
-    has_avis: bool,
-}
-
-#[derive(Clone)]
 enum Property {
     Ispe {
         width: u32,
@@ -309,35 +296,29 @@ struct Track {
 }
 
 /// Inspect AVIF container metadata without calling a native codec.
-pub(super) fn inspect(extracted: &super::samples::InspectedAvif<'_>) -> CodecResult<ImageInfo> {
-    inspect_inner_with_grid(extracted.input(), extracted.grid_properties())
+pub(super) fn inspect(extracted: super::samples::InspectedAvif<'_>) -> CodecResult<ImageInfo> {
+    let (data, grid_properties, brands) = extracted.into_container_parts();
+    inspect_inner_with_grid(data, grid_properties, brands)
 }
 
 fn inspect_inner_with_grid(
     data: &[u8],
     grid_properties: Option<AvifGridProperties>,
+    brands: super::samples::Brands,
 ) -> ParseResult<ImageInfo> {
     let mut budget = Budget::default();
     let mut reader = Reader::whole(data);
-    let first = next_box(&mut reader, true, &mut budget)
-        .map_err(|error| error.at(0, "avif_box"))?
-        .ok_or_else(|| parse_failure!())?;
-    if first.kind != *b"ftyp" {
-        return Err(parse_failure!());
-    }
-    let brands = parse_ftyp(first.payload).map_err(|error| error.at(0, "avif_box"))?;
     let mut meta = None;
     let mut movie = None;
 
     loop {
         let box_offset = reader.offset as u64;
-        match next_box(&mut reader, true, &mut budget)
-            .map_err(|error| error.at(box_offset, "avif_box"))
-        {
+        match next_box(&mut reader, &mut budget).map_err(|error| error.at(box_offset, "avif_box")) {
             Ok(Some(child)) => match child.kind {
                 kind if kind == *b"meta" => {
                     if meta.is_some() {
-                        return Err(parse_failure!());
+                        // The sample extractor has already enforced Pillow's duplicate-meta rule.
+                        continue;
                     }
                     meta = Some(
                         parse_meta(child.payload, &mut budget)
@@ -346,7 +327,8 @@ fn inspect_inner_with_grid(
                 }
                 kind if kind == *b"moov" => {
                     if movie.is_some() {
-                        return Err(parse_failure!());
+                        // Pillow inspects the first movie structure and ignores later copies.
+                        continue;
                     }
                     movie = Some(
                         parse_movie(child.payload, &mut budget)
@@ -356,27 +338,19 @@ fn inspect_inner_with_grid(
                 _ => {}
             },
             Ok(None) => break,
-            Err(error) => {
-                // Bytes after a complete still or sequence structure are
-                // trailing input and are ignored, matching Pillow/libavif.
-                let complete = meta.is_some() || (brands.has_avis && movie.is_some());
-                if !complete {
-                    return Err(error);
-                }
+            Err(_) => {
+                // `InspectedAvif` already guarantees a complete still or
+                // sequence, so an error in this second walk is trailing input.
                 break;
             }
         }
     }
 
-    if brands.has_avis && movie.is_none() {
-        return Err(parse_need_more!(reader.offset.saturating_add(8)));
-    }
-
-    let meta_details = match meta.as_ref() {
-        Some(meta) => meta.details_with_grid(grid_properties)?,
-        None if brands.has_avis => None,
-        None => return Err(parse_need_more!(reader.offset.saturating_add(8))),
-    };
+    let meta_details = meta
+        .as_ref()
+        .map(|meta| meta.details_with_grid(grid_properties))
+        .transpose()?
+        .flatten();
     let track_details = movie.as_ref().and_then(Movie::details);
     let prefer_tracks =
         brands.major == *b"avis" || (brands.major != *b"avif" && track_details.is_some());
@@ -423,11 +397,7 @@ fn image_info(details: Details) -> ParseResult<ImageInfo> {
 }
 
 // libavif 1.4.1 src/stream.c:248-305.
-fn next_box<'a>(
-    reader: &mut Reader<'a>,
-    top_level: bool,
-    budget: &mut Budget,
-) -> ParseResult<Option<BoxView<'a>>> {
+fn next_box<'a>(reader: &mut Reader<'a>, budget: &mut Budget) -> ParseResult<Option<BoxView<'a>>> {
     if reader.is_empty() {
         return Ok(None);
     }
@@ -444,9 +414,8 @@ fn next_box<'a>(
     }
     let header_size = reader.offset.saturating_sub(start);
     if size == 0 {
-        if !top_level {
-            return Err(parse_failure!());
-        }
+        // `inspect` receives only `InspectedAvif`; sample parsing has already
+        // rejected zero-size boxes inside nested containers.
         let payload = reader.take_remaining();
         return Ok(Some(BoxView { kind, payload }));
     }
@@ -459,37 +428,6 @@ fn next_box<'a>(
     }
     let payload = reader.take(size.saturating_sub(header_size))?;
     Ok(Some(BoxView { kind, payload }))
-}
-
-// libavif 1.4.1 src/read.c:4775-5031.
-fn parse_ftyp(payload: &[u8]) -> ParseResult<Brands> {
-    let mut reader = Reader::new(payload);
-    let major = reader.four_cc()?;
-    let minor_version = reader.u32()?;
-    if !reader.remaining().is_multiple_of(4) {
-        return Err(parse_failure!());
-    }
-    let mut has_avif = major == *b"avif";
-    let mut has_avis = major == *b"avis";
-    let mut compatible_brands = Vec::new();
-    for bytes in reader.data[reader.offset..].as_chunks::<4>().0 {
-        if compatible_brands.len() >= MAX_COMPATIBLE_BRANDS {
-            return Err(parse_failure!());
-        }
-        let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
-        has_avif |= brand == *b"avif";
-        has_avis |= brand == *b"avis";
-        compatible_brands.push(brand);
-    }
-    if !has_avif && !has_avis {
-        return Err(parse_failure!());
-    }
-    Ok(Brands {
-        major,
-        minor_version,
-        compatible_brands,
-        has_avis,
-    })
 }
 
 fn parse_full_box(reader: &mut Reader<'_>) -> ParseResult<(u8, u32)> {
@@ -505,87 +443,50 @@ fn parse_full_box_version_zero(reader: &mut Reader<'_>) -> ParseResult<u32> {
     Ok(flags)
 }
 
+#[cfg(coverage)]
+pub(super) fn parse_meta_for_coverage(payload: &[u8]) -> ParseResult<()> {
+    let mut budget = Budget::default();
+    parse_meta(payload, &mut budget).map(|_| ())
+}
+
 // libavif 1.4.1 src/read.c:3428-3511.
 fn parse_meta(payload: &[u8], budget: &mut Budget) -> ParseResult<Meta> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
-    let first = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
-    if first.kind != *b"hdlr" || parse_handler(first.payload)? != *b"pict" {
-        return Err(parse_failure!());
-    }
-
+    // `InspectedAvif` is produced only after the sample parser validates the
+    // required first-child picture handler and metadata uniqueness.
     let mut meta = Meta::default();
-    let mut pitm_seen = false;
-    let mut iinf_seen = false;
-    let mut iprp_seen = false;
-    let mut iref_seen = false;
     let mut iloc = None;
-    let mut idat = None;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         match child.kind {
-            kind if kind == *b"hdlr" => return Err(parse_failure!()),
             kind if kind == *b"pitm" => {
-                if pitm_seen {
-                    return Err(parse_failure!());
-                }
-                pitm_seen = true;
                 meta.primary_item_id = Some(parse_pitm(child.payload)?);
             }
             kind if kind == *b"iinf" => {
-                if iinf_seen {
-                    return Err(parse_failure!());
-                }
-                iinf_seen = true;
                 parse_iinf(child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iprp" => {
-                if iprp_seen {
-                    return Err(parse_failure!());
-                }
-                iprp_seen = true;
                 parse_iprp(child.payload, &mut meta, budget)?;
             }
             kind if kind == *b"iref" => {
-                if iref_seen {
-                    return Err(parse_failure!());
-                }
-                iref_seen = true;
                 parse_iref(child.payload, &mut meta, budget)?;
             }
-            kind if kind == *b"iloc" => {
-                if iloc.replace(child.payload).is_some() {
-                    return Err(parse_failure!());
-                }
-            }
-            kind if kind == *b"idat" => {
-                if idat.is_some() {
-                    return Err(parse_failure!());
-                }
-                idat = Some(child.payload);
-            }
+            kind if kind == *b"iloc" => iloc = Some(child.payload),
             _ => {}
         }
     }
-    if !pitm_seen || !iinf_seen || !iprp_seen {
-        return Err(parse_failure!());
-    }
     if let Some(iloc) = iloc {
-        parse_iloc(iloc, idat, &mut meta, budget)?;
+        parse_iloc(iloc, &mut meta, budget)?;
     }
     Ok(meta)
 }
 
-fn parse_iloc(
-    payload: &[u8],
-    idat: Option<&[u8]>,
-    meta: &mut Meta,
-    budget: &mut Budget,
-) -> ParseResult<()> {
+fn parse_iloc(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
+    // `InspectedAvif` is created only after the sample parser validates the
+    // iloc record structure. This pass projects declarations into the smaller
+    // container model; payload availability remains lazy until decode.
     let mut reader = Reader::new(payload);
     let (version, _) = parse_full_box(&mut reader)?;
-    if version > 2 {
-        return Err(parse_failure!());
-    }
     let field_sizes = reader.u16()?;
     let sizes = field_sizes.to_be_bytes();
     let offset_size = sizes[0] >> 4;
@@ -596,12 +497,6 @@ fn parse_iloc(
     } else {
         0
     };
-    if [offset_size, length_size, base_offset_size, index_size]
-        .into_iter()
-        .any(|width| !matches!(width, 0 | 4 | 8))
-    {
-        return Err(parse_failure!());
-    }
     let item_count = if version < 2 {
         usize::from(reader.u16()?)
     } else {
@@ -621,23 +516,12 @@ fn parse_iloc(
         } else {
             reader.u32()?
         };
-        if item_id == 0
-            || meta
-                .locations
-                .iter()
-                .any(|location| location.item_id() == item_id)
-        {
-            return Err(parse_failure!());
-        }
         let source = if matches!(version, 1 | 2) {
             let construction = reader.u16()?;
-            if construction & 0xfff0 != 0 {
-                return Err(parse_failure!());
-            }
-            match construction & 0x000f {
-                0 => AvifItemLocationSource::File,
-                1 => AvifItemLocationSource::Idat,
-                _ => return Err(parse_failure!()),
+            if construction & 0x000f == 1 {
+                AvifItemLocationSource::Idat
+            } else {
+                AvifItemLocationSource::File
             }
         } else {
             AvifItemLocationSource::File
@@ -663,17 +547,8 @@ fn parse_iloc(
             let _end = relative
                 .checked_add(extent_length)
                 .ok_or_else(|| parse_failure!())?;
-            match source {
-                // File extents are declarations during inspection. The sample
-                // reader checks their input bound immediately before reading
-                // item bytes, matching Pillow/libavif's lazy decode behavior.
-                AvifItemLocationSource::File => {}
-                AvifItemLocationSource::Idat => {
-                    // Inspection retains declared extents. The sample reader
-                    // checks their idat source bound before decoding payloads.
-                    let _ = idat.ok_or_else(|| parse_failure!())?;
-                }
-            }
+            // File and idat extents are declarations during inspection. The
+            // sample reader checks the selected source before decoding bytes.
             extents.push(AvifItemExtent::new(relative, extent_length));
         }
         meta.locations
@@ -690,9 +565,8 @@ fn parse_iloc(
 fn parse_handler(payload: &[u8]) -> ParseResult<FourCc> {
     let mut reader = Reader::new(payload);
     let _ = parse_full_box_version_zero(&mut reader)?;
-    if reader.u32()? != 0 {
-        return Err(parse_failure!());
-    }
+    // The sample parser has already rejected a nonzero reserved field.
+    reader.skip(4)?;
     let handler = reader.four_cc()?;
     reader.skip(12)?;
     let _ = reader.c_string()?;
@@ -708,9 +582,7 @@ fn parse_pitm(payload: &[u8]) -> ParseResult<u32> {
     } else {
         reader.u32()?
     };
-    if item_id == 0 {
-        return Err(parse_failure!());
-    }
+    // The sample parser rejects a zero primary item ID before this projection.
     Ok(item_id)
 }
 
@@ -724,19 +596,17 @@ fn parse_iinf(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
         _ => return Err(parse_failure!()),
     };
     for _ in 0..entry_count {
-        let child = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
-        if child.kind != *b"infe" {
-            return Err(parse_failure!());
-        }
+        let child = next_box(&mut reader, budget)?.ok_or_else(|| parse_failure!())?;
+        // The sample parser validates the entry kind and nonzero ID first.
         let item = parse_infe(child.payload)?;
         if meta.items.iter().any(|existing| existing.id == item.id) {
-            return Err(parse_failure!());
+            // Container inspection projects the first item entry, matching
+            // Pillow's lazy metadata result; decode validation rejects the
+            // duplicate before reading sample payloads.
+            continue;
         }
         budget.record_seen()?;
         meta.items.push(item);
-    }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
     }
     Ok(())
 }
@@ -749,9 +619,7 @@ fn parse_infe(payload: &[u8]) -> ParseResult<Item> {
         3 => reader.u32()?,
         _ => return Err(parse_failure!()),
     };
-    if id == 0 {
-        return Err(parse_failure!());
-    }
+    // The sample parser rejects zero item IDs before this projection.
     let _ = reader.u16()?;
     let kind = reader.four_cc()?;
     let _ = reader.c_string()?;
@@ -763,32 +631,19 @@ fn parse_infe(payload: &[u8]) -> ParseResult<Item> {
 
 // libavif 1.4.1 src/read.c:2913-3243.
 fn parse_iprp(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
+    // `samples::inspected` validates the complete metadata tree before this
+    // second pass extracts the smaller presentation model.
     let mut reader = Reader::new(payload);
-    let ipco = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
-    if ipco.kind != *b"ipco" {
-        return Err(parse_failure!());
-    }
+    let ipco = next_box(&mut reader, budget)?.ok_or_else(|| parse_failure!())?;
     parse_ipco(ipco.payload, meta, budget)?;
-    let mut ipma_seen = false;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
-        if child.kind != *b"ipma" || ipma_seen {
-            return Err(parse_failure!());
-        }
-        ipma_seen = true;
-        parse_ipma(child.payload, meta, budget)?;
-    }
-    if !ipma_seen {
-        return Err(parse_failure!());
-    }
-    Ok(())
+    let ipma = next_box(&mut reader, budget)?.ok_or_else(|| parse_failure!())?;
+    parse_ipma(ipma.payload, meta, budget)
 }
 
 fn parse_ipco(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
-    while let Some(child) = next_box(&mut reader, false, budget)? {
-        if meta.properties.len() >= MAX_PROPERTIES {
-            return Err(parse_failure!());
-        }
+    while let Some(child) = next_box(&mut reader, budget)? {
+        // The sample parser bounds this property list before the projection.
         budget.record_seen()?;
         meta.properties.push(parse_property(child)?);
     }
@@ -840,6 +695,7 @@ fn parse_property(property: BoxView<'_>) -> ParseResult<Property> {
     }
 }
 
+// ✅ VERIFIED: libavif 1.4.1 src/read.c:2491-2527. Bounded nclx tail bytes are ignored.
 fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
     let mut reader = Reader::new(payload);
     let color_type = reader.four_cc()?;
@@ -868,24 +724,17 @@ fn parse_colr(payload: &[u8]) -> ParseResult<Property> {
         matrix_coefficients: reader.u16()?,
         full_range: {
             let flags = reader.u8()?;
-            if flags & 0x7f != 0 {
-                return Err(parse_failure!());
-            }
+            // The sample parser rejects reserved bits before this validated
+            // metadata projection is reached.
             flags & 0x80 != 0
         },
     };
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(Property::Color(color))
 }
 
 fn parse_clli(payload: &[u8]) -> ParseResult<Property> {
     let mut reader = Reader::new(payload);
     let content_light_level = AvifContentLightLevel::new(reader.u16()?, reader.u16()?);
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(Property::ContentLightLevel {
         value: content_light_level,
         data: payload.to_vec(),
@@ -938,9 +787,7 @@ fn parse_irot(payload: &[u8]) -> ParseResult<Property> {
         3 => AvifRotation::CounterClockwise270,
         _ => return Err(parse_failure!()),
     };
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow/libavif uses the leading transform byte and ignores trailing data.
     Ok(Property::Rotation {
         value: rotation,
         data: payload.to_vec(),
@@ -965,7 +812,11 @@ fn parse_pasp(payload: &[u8]) -> ParseResult<Property> {
     let h_spacing = reader.u32()?;
     let v_spacing = reader.u32()?;
     if h_spacing == 0 || v_spacing == 0 || !reader.is_empty() {
-        return Err(parse_failure!());
+        // Pillow/libavif ignores unusable spacing and trailing payload bytes.
+        return Ok(Property::Other {
+            kind: *b"pasp",
+            data: payload.to_vec(),
+        });
     }
     Ok(Property::PixelAspectRatio {
         value: AvifPixelAspectRatio::new(h_spacing, v_spacing),
@@ -1024,9 +875,8 @@ fn parse_clap(payload: &[u8]) -> ParseResult<Property> {
 fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     let data = payload.to_vec();
     let mut reader = Reader::new(payload);
-    if reader.u8()? != 0x81 {
-        return Err(parse_failure!());
-    }
+    // `samples::inspected` validates the marker before this metadata projection.
+    reader.skip(1)?;
     let _ = reader.u8()?;
     let flags = reader.u8()?;
     let chroma_sample_position = AvifChromaSamplePosition::from_code(flags & 3);
@@ -1054,24 +904,18 @@ fn is_alpha_urn(urn: &[u8]) -> bool {
 }
 
 fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
+    // The validated sample-parser pass has already checked item ordering,
+    // association indices, essential zero indices, and trailing payload.
     let mut reader = Reader::new(payload);
     let (version, flags) = parse_full_box(&mut reader)?;
     let wide_index = flags & 1 != 0;
     let entry_count = reader.u32()?;
-    let mut previous_id = 0;
     for _ in 0..entry_count {
         let item_id = if version == 0 {
             u32::from(reader.u16()?)
         } else {
             reader.u32()?
         };
-        if item_id == 0 {
-            return Err(parse_failure!());
-        }
-        if item_id <= previous_id {
-            return Err(parse_failure!());
-        }
-        previous_id = item_id;
         let association_count = reader.u8()?;
         for _ in 0..association_count {
             let raw = if wide_index {
@@ -1084,15 +928,9 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             let essential = raw & essential_mask != 0;
             let property_index = raw & index_mask;
             if property_index == 0 {
-                if essential {
-                    return Err(parse_failure!());
-                }
                 continue;
             }
             let property_index = bounded_usize_u32(property_index.saturating_sub(1));
-            if property_index >= meta.properties.len() {
-                return Err(parse_failure!());
-            }
             budget.record_seen()?;
             meta.associations.push(Association {
                 item_id,
@@ -1101,29 +939,26 @@ fn parse_ipma(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             });
         }
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
     Ok(())
 }
 
 // libavif 1.4.1 src/read.c:3333-3415.
 fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResult<()> {
+    // `InspectedAvif` is created only after sample parsing rejects zero IDs
+    // and trailing bytes in reference records. This pass projects those
+    // validated relationships into the container metadata model.
     let mut reader = Reader::new(payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version > 1 {
         return Ok(());
     }
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         let mut references = Reader::new(child.payload);
         let from_id = if version == 0 {
             u32::from(references.u16()?)
         } else {
             references.u32()?
         };
-        if from_id == 0 {
-            return Err(parse_failure!());
-        }
         let count = references.u16()?;
         for _ in 0..count {
             let to_id = if version == 0 {
@@ -1131,18 +966,12 @@ fn parse_iref(payload: &[u8], meta: &mut Meta, budget: &mut Budget) -> ParseResu
             } else {
                 references.u32()?
             };
-            if to_id == 0 {
-                return Err(parse_failure!());
-            }
             budget.record_seen()?;
             meta.references.push(Reference {
                 kind: child.kind,
                 from_id,
                 to_id,
             });
-        }
-        if !references.is_empty() {
-            return Err(parse_failure!());
         }
     }
     Ok(())
@@ -1224,8 +1053,7 @@ impl Meta {
         {
             source_color = source_color.with_avif_content_light_level(content_light_level);
         }
-        // The bounded sample parser has already rejected duplicate primary
-        // `mdcv` associations before this independent source-property projection runs.
+        // Match the sample parser's first-associated-property projection.
         if let Some(mastering_display_color_volume) =
             self.associated(primary)
                 .find_map(|property| match property {
@@ -1291,7 +1119,9 @@ impl Meta {
         if !item_properties.is_empty() {
             source = source.with_avif_item_properties(item_properties);
         }
-        let item_plane_properties = self.non_primary_item_plane_properties(primary)?;
+        // `InspectedAvif` already passed the sample parser's alpha-dimension
+        // validation; this second pass only projects the retained declarations.
+        let item_plane_properties = self.non_primary_item_plane_properties(primary);
         if !item_plane_properties.is_empty() {
             source = source.with_avif_item_plane_properties(item_plane_properties);
         }
@@ -1310,37 +1140,33 @@ impl Meta {
             source = source.with_avif_grid_properties(grid_properties);
         }
         let mut transform = AvifTransformProperties::new();
+        // Pillow/libavif retains the first associated property of each kind.
         for property in self.associated(primary) {
             match property {
                 Property::Rotation {
                     value: rotation, ..
                 } => {
-                    if transform.rotation().is_some() {
-                        return Err(parse_failure!());
+                    if transform.rotation().is_none() {
+                        transform = transform.with_rotation(*rotation);
                     }
-                    transform = transform.with_rotation(*rotation);
                 }
                 Property::Mirror { value: mirror, .. } => {
-                    if transform.mirror().is_some() {
-                        return Err(parse_failure!());
+                    if transform.mirror().is_none() {
+                        transform = transform.with_mirror(*mirror);
                     }
-                    transform = transform.with_mirror(*mirror);
                 }
                 Property::PixelAspectRatio { value: ratio, .. } => {
-                    if transform.pixel_aspect_ratio().is_some() {
-                        return Err(parse_failure!());
+                    if transform.pixel_aspect_ratio().is_none() {
+                        transform = transform.with_pixel_aspect_ratio(*ratio);
                     }
-                    transform = transform.with_pixel_aspect_ratio(*ratio);
                 }
                 Property::CleanAperture {
                     value: clean_aperture,
                     ..
-                } => {
-                    if transform.clean_aperture().is_some() {
-                        return Err(parse_failure!());
-                    }
+                } if transform.clean_aperture().is_none() => {
                     transform = transform.with_clean_aperture(*clean_aperture);
                 }
+                Property::CleanAperture { .. } => {}
                 _ => {}
             }
         }
@@ -1490,10 +1316,7 @@ impl Meta {
             .collect()
     }
 
-    fn non_primary_item_plane_properties(
-        &self,
-        primary: u32,
-    ) -> ParseResult<Vec<AvifItemPlaneProperties>> {
+    fn non_primary_item_plane_properties(&self, primary: u32) -> Vec<AvifItemPlaneProperties> {
         let mut result = Vec::new();
         for item in &self.items {
             if item.id == primary {
@@ -1503,17 +1326,16 @@ impl Meta {
             let mut bit_depth = None;
             for property in self.associated(item.id) {
                 match property {
-                    Property::Ispe { width, height } => {
-                        if dimensions.replace((*width, *height)).is_some() {
-                            return Err(parse_failure!());
-                        }
+                    Property::Ispe { width, height } if dimensions.is_none() => {
+                        dimensions = Some((*width, *height));
                     }
-                    Property::Pixi { depth } if bit_depth.replace(*depth).is_some() => {
-                        return Err(parse_failure!());
+                    Property::Pixi { depth } if bit_depth.is_none() => {
+                        bit_depth = Some(*depth);
                     }
                     _ => {}
                 }
             }
+            // Pillow/libavif retains the first associated declaration of each kind.
             if dimensions.is_some() || bit_depth.is_some() {
                 let (width, height) =
                     dimensions.map_or((None, None), |(width, height)| (Some(width), Some(height)));
@@ -1522,7 +1344,7 @@ impl Meta {
                 ));
             }
         }
-        Ok(result)
+        result
     }
 
     fn non_primary_item_codec_properties(
@@ -1535,17 +1357,16 @@ impl Meta {
                 continue;
             }
             let mut codec = None;
+            // Match Pillow/libavif by keeping the first associated codec declaration.
             for property in self.associated(item.id) {
                 if let Property::Av1C {
                     depth,
                     chroma_sample_position,
                     data,
                 } = property
-                    && codec
-                        .replace((*depth, *chroma_sample_position, data.clone()))
-                        .is_some()
+                    && codec.is_none()
                 {
-                    return Err(parse_failure!());
+                    codec = Some((*depth, *chroma_sample_position, data.clone()));
                 }
             }
             if let Some((bit_depth, chroma_sample_position, data)) = codec {
@@ -1575,9 +1396,8 @@ impl Meta {
             .filter(|reference| reference.kind == *b"dimg" && reference.from_id == primary)
             .map(|reference| reference.to_id)
             .collect::<Vec<_>>();
-        if item_ids.is_empty() {
-            return Err(parse_failure!());
-        }
+        // Public inspection receives an `InspectedAvif` whose sample pass has
+        // already rejected a primary grid with no `dimg` children.
         Ok(item_ids)
     }
 
@@ -1589,10 +1409,10 @@ impl Meta {
     }
 
     fn alpha_targeting(&self, item_id: u32) -> ParseResult<Option<u32>> {
-        let mut matches = self
+        let result = self
             .references
             .iter()
-            .filter(|reference| {
+            .find(|reference| {
                 reference.kind == *b"auxl"
                     && reference.to_id == item_id
                     && self
@@ -1600,10 +1420,7 @@ impl Meta {
                         .any(|property| matches!(property, Property::AuxC { is_alpha: true, .. }))
             })
             .map(|reference| reference.from_id);
-        let result = matches.next();
-        if matches.next().is_some() {
-            return Err(parse_failure!());
-        }
+        // Pillow retains the first matching auxiliary-alpha relationship.
         Ok(result)
     }
 
@@ -1668,7 +1485,7 @@ impl Meta {
 fn parse_movie(payload: &[u8], budget: &mut Budget) -> ParseResult<Movie> {
     let mut reader = Reader::new(payload);
     let mut movie = Movie::default();
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         if child.kind == *b"trak" {
             budget.record_seen()?;
             movie.tracks.push(parse_track(child.payload, budget)?);
@@ -1681,39 +1498,19 @@ fn parse_movie(payload: &[u8], budget: &mut Budget) -> ParseResult<Movie> {
 }
 
 fn parse_track(payload: &[u8], budget: &mut Budget) -> ParseResult<Track> {
+    // `container::inspect` receives only `InspectedAvif`, so sample parsing
+    // has already validated required track boxes and duplicate relationships.
     let mut reader = Reader::new(payload);
     let mut track = Track::default();
-    let mut tkhd_seen = false;
-    let mut mdia_seen = false;
-    let mut tref_seen = false;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         match child.kind {
-            kind if kind == *b"tkhd" => {
-                if tkhd_seen {
-                    return Err(parse_failure!());
-                }
-                tkhd_seen = true;
-                parse_tkhd(child.payload, &mut track)?;
-            }
-            kind if kind == *b"mdia" => {
-                if mdia_seen {
-                    return Err(parse_failure!());
-                }
-                mdia_seen = true;
-                parse_mdia(child.payload, &mut track, budget)?;
-            }
+            kind if kind == *b"tkhd" => parse_tkhd(child.payload, &mut track)?,
+            kind if kind == *b"mdia" => parse_mdia(child.payload, &mut track, budget)?,
             kind if kind == *b"tref" => {
-                if tref_seen {
-                    return Err(parse_failure!());
-                }
-                tref_seen = true;
                 parse_tref(child.payload, &mut track, budget)?;
             }
             _ => {}
         }
-    }
-    if !tkhd_seen || !mdia_seen || track.id == 0 {
-        return Err(parse_failure!());
     }
     Ok(track)
 }
@@ -1742,7 +1539,7 @@ fn parse_tkhd(payload: &[u8], track: &mut Track) -> ParseResult<()> {
 
 fn parse_tref(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         if child.kind == *b"auxl" {
             let mut ids = Reader::new(child.payload);
             track.aux_for_id = Some(ids.u32()?);
@@ -1755,7 +1552,7 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     let mut reader = Reader::new(payload);
     let mut handler_seen = false;
     let mut minf_seen = false;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         match child.kind {
             kind if kind == *b"hdlr" => {
                 if !handler_seen {
@@ -1783,7 +1580,7 @@ fn parse_mdia(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
 fn parse_minf(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
     let mut stbl_seen = false;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         if child.kind == *b"stbl" {
             if stbl_seen {
                 return Err(parse_failure!());
@@ -1802,7 +1599,7 @@ fn parse_stbl(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
     let mut reader = Reader::new(payload);
     let mut stsz_seen = false;
     let mut stsd_seen = false;
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         match child.kind {
             kind if kind == *b"stsz" => {
                 let sample_count = parse_stsz(child.payload)?;
@@ -1837,21 +1634,19 @@ fn parse_stsz(payload: &[u8]) -> ParseResult<u32> {
         let entry_bytes = bounded_usize_u32(entry_bytes);
         reader.skip(entry_bytes)?;
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow/libavif stop after the declared entries and ignore bounded
+    // trailing bytes in the `stsz` box.
     Ok(sample_count)
 }
 
 fn parse_stsd(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
-    let (version, _) = parse_full_box(&mut reader)?;
-    if !matches!(version, 0 | 1) {
-        return Err(parse_failure!());
-    }
+    // `InspectedAvif` is created only after sample parsing validates the
+    // supported stsd versions (zero and one).
+    let _ = parse_full_box(&mut reader)?;
     let entry_count = reader.u32()?;
     for _ in 0..entry_count {
-        let sample = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
+        let sample = next_box(&mut reader, budget)?.ok_or_else(|| parse_failure!())?;
         if sample.kind != *b"av01" {
             continue;
         }
@@ -1861,9 +1656,8 @@ fn parse_stsd(payload: &[u8], track: &mut Track, budget: &mut Budget) -> ParseRe
             .ok_or_else(|| parse_failure!())?;
         parse_track_properties(properties, track, budget)?;
     }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // Pillow and libavif stop after the declared sample entries and ignore
+    // bounded trailing bytes in the `stsd` box.
     Ok(())
 }
 
@@ -1873,23 +1667,20 @@ fn parse_track_properties(
     budget: &mut Budget,
 ) -> ParseResult<()> {
     let mut reader = Reader::new(payload);
-    while let Some(child) = next_box(&mut reader, false, budget)? {
+    while let Some(child) = next_box(&mut reader, budget)? {
         match parse_property(child)? {
-            Property::Av1C { depth, .. } => {
-                if track.depth.is_some_and(|existing| existing != depth) {
-                    return Err(parse_failure!());
-                }
+            Property::Av1C { depth, .. } if track.depth.is_none() => {
+                // Pillow keeps the first sample-entry codec configuration and
+                // tolerates later duplicate av1C properties.
                 track.depth = Some(depth);
             }
-            Property::AuxC { is_alpha, .. } => {
-                if track
-                    .aux_is_alpha
-                    .is_some_and(|existing| existing != is_alpha)
-                {
-                    return Err(parse_failure!());
-                }
+            Property::Av1C { .. } => {}
+            Property::AuxC { is_alpha, .. } if track.aux_is_alpha.is_none() => {
+                // Preserve the first auxiliary type; duplicate properties do
+                // not replace Pillow's selected sample-entry value.
                 track.aux_is_alpha = Some(is_alpha);
             }
+            Property::AuxC { .. } => {}
             _ => {}
         }
     }

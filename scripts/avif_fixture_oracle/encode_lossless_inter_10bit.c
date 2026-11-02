@@ -113,15 +113,16 @@ int main(int argc, char **argv) {
       strcmp(argv[10], "ramp") != 0 && strcmp(argv[10], "texture") != 0;
   const int parse_bit_depth =
       argc == 12 && !parse_unsigned(argv[11], &bit_depth);
+  /* AV1 permits odd frame widths; I420 chroma planes round up as required. */
   if (parse_square || parse_rectangle || parse_patch_origin ||
       parse_patch_extent || parse_patch_pattern || parse_bit_depth ||
       (bit_depth != 10 && bit_depth != 12) || width < 9 ||
-      height < 9 || width > 64 || height > 64 || width % 4 != 0 ||
+      height < 9 || width > 64 || height > 64 ||
       height % 4 != 0 || speed > 10 || patch_width == 0 ||
       patch_height == 0 || patch_width >= width || patch_height >= height ||
       patch_origin_x > width - patch_width - 1 ||
       patch_origin_y > height - patch_height - 1 ||
-      (partition_size != 0 && partition_size != 32)) {
+      (partition_size != 0 && partition_size != 16 && partition_size != 32)) {
     fprintf(stderr, "invalid dimensions, speed, or AV1 partition size\n");
     return 1;
   }

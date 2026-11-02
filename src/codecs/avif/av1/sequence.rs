@@ -344,11 +344,6 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Av1Result<SequenceHeader> {
         let position = if x && y { bits.bits(2)? } else { 0 };
         (range, x, y, position)
     };
-    if matrix_coefficients == 0 && (subsampling_x | subsampling_y) {
-        return Err(malformed(
-            "identity color matrix cannot use chroma subsampling",
-        ));
-    }
     let separate_uv_delta_q = !monochrome && bits.bit()?;
     let film_grain_present = bits.bit()?;
     bits.trailing_bits()?;

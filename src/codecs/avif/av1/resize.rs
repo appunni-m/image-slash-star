@@ -165,22 +165,43 @@ pub(super) fn upscale_monochrome_plane(
     superres_denominator: u32,
     depth: SampleDepth,
 ) -> Av1Result<ReconstructedPlane> {
-    validate_header_geometry(
-        coded_width,
-        frame_height,
-        coded_width,
-        upscaled_width,
-        frame_height,
-        superres_denominator,
-    )?;
-    resize_plane(
+    upscale_monochrome_plane_with_geometry(
         plane,
-        PlaneResizeGeometry {
-            input_width: coded_width,
+        ResizeGeometry {
+            coded_width,
             source_width: coded_width,
             source_height: frame_height,
             output_width: upscaled_width,
             output_height: frame_height,
+            superres_denominator,
+        },
+        depth,
+    )
+}
+
+/// Resize a complete monochrome plane while retaining reconstructed padding.
+/// Placement uses the logical coded width; taps use the physical coded tail.
+pub(super) fn upscale_monochrome_plane_with_geometry(
+    plane: ReconstructedPlane,
+    geometry: ResizeGeometry,
+    depth: SampleDepth,
+) -> Av1Result<ReconstructedPlane> {
+    validate_header_geometry(
+        geometry.coded_width,
+        geometry.output_height,
+        geometry.coded_width,
+        geometry.output_width,
+        geometry.output_height,
+        geometry.superres_denominator,
+    )?;
+    resize_plane(
+        plane,
+        PlaneResizeGeometry {
+            input_width: geometry.coded_width,
+            source_width: geometry.source_width,
+            source_height: geometry.source_height,
+            output_width: geometry.output_width,
+            output_height: geometry.output_height,
         },
         depth,
         #[cfg(coverage)]

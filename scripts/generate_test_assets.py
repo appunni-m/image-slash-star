@@ -3444,6 +3444,17 @@ def gen_png():
         ]
     )
     high_color.save(d / "gif_rgb_high_color.png")
+    exact_palette_colors = [
+        (red * 36, green * 36, blue * 85)
+        for red in range(8)
+        for green in range(8)
+        for blue in range(4)
+    ]
+    if len(set(exact_palette_colors)) != 256:
+        raise RuntimeError("GIF exact-palette fixture must contain 256 distinct colors")
+    exactly_256_colors = Image.new("RGB", (16, 16))
+    exactly_256_colors.putdata(exact_palette_colors)
+    exactly_256_colors.save(d / "gif_rgb_exactly_256_colors.png")
     high_color_checkpoint = Image.new("RGB", (33, 33))
     high_color_checkpoint.putdata(
         [
@@ -12549,6 +12560,19 @@ def generate_avif_sequence_alpha_duration_mismatch_fixture():
     return fixture
 
 
+def generate_avif_sequence_alpha_timescale_mismatch_fixture():
+    """Change only the auxiliary alpha track's media timescale in the pinned sequence."""
+    source_path = OUT / "avif" / "10bit.avif"
+    source = source_path.read_bytes()
+    from avif_sample_table_fixtures import alpha_track_timescale_mismatch
+
+    candidate = alpha_track_timescale_mismatch(source)
+
+    fixture = OUT / "avif" / "sequence_alpha_timescale_mismatch.avif"
+    fixture.write_bytes(candidate)
+    return fixture
+
+
 def generate_avif_sequence_alpha_sample_count_mismatch_fixture():
     """Declare four auxiliary alpha samples while retaining five table entries."""
     source_path = OUT / "avif" / "10bit.avif"
@@ -12625,7 +12649,12 @@ def generate_avif_sequence_only_no_meta_fixture():
 def gen_avif():
     d = OUT / "avif"
     d.mkdir(parents=True, exist_ok=True)
+    from generate_avif_sequence_selection_fixtures import generate as generate_selection_fixture
+
+    generate_selection_fixture("duplicate_alpha_track")
+    generate_selection_fixture("no_color_track_candidate")
     generate_avif_sequence_alpha_duration_mismatch_fixture()
+    generate_avif_sequence_alpha_timescale_mismatch_fixture()
     generate_avif_sequence_alpha_sample_count_mismatch_fixture()
     write_avif_frame_id_width_error_fixture(d)
     write_avif_identity_color_matrix_error_fixture(d)
@@ -12702,7 +12731,7 @@ def gen_avif():
             output,
             format="AVIF",
             icc_profile=icc_profile,
-            quality=99,
+            quality=100,
             speed=8,
             max_threads=1,
             subsampling="4:4:4",
@@ -19933,6 +19962,21 @@ def main():
         help="generate only the AVIF alpha-track sample-count parity fixture",
     )
     parser.add_argument(
+        "--avif-sequence-alpha-timescale-mismatch",
+        action="store_true",
+        help="generate only the AVIF alpha-track media-timescale parity fixture",
+    )
+    parser.add_argument(
+        "--avif-sequence-duplicate-alpha-track",
+        action="store_true",
+        help="generate only the AVIF repeated auxiliary-alpha-track parity fixture",
+    )
+    parser.add_argument(
+        "--avif-sequence-no-color-track-candidate",
+        action="store_true",
+        help="generate only the AVIF missing sequence color-track candidate fixture",
+    )
+    parser.add_argument(
         "--avif-sequence-only-no-meta",
         action="store_true",
         help="generate only the AVIS-only sequence without still-image metadata",
@@ -19958,6 +20002,9 @@ def main():
         args.avif_h16x8_following_chroma,
         args.avif_sequence_alpha_duration_mismatch,
         args.avif_sequence_alpha_sample_count_mismatch,
+        args.avif_sequence_alpha_timescale_mismatch,
+        args.avif_sequence_duplicate_alpha_track,
+        args.avif_sequence_no_color_track_candidate,
         args.avif_sequence_only_no_meta,
     )
     selected_avif_fixture = any(selected_avif_fixtures)
@@ -20016,6 +20063,19 @@ def main():
         elif args.avif_sequence_alpha_sample_count_mismatch:
             fixture = generate_avif_sequence_alpha_sample_count_mismatch_fixture()
             print(f"Generated AVIF alpha sample-count fixture: {fixture}")
+        elif args.avif_sequence_alpha_timescale_mismatch:
+            fixture = generate_avif_sequence_alpha_timescale_mismatch_fixture()
+            print(f"Generated AVIF alpha timescale fixture: {fixture}")
+        elif args.avif_sequence_duplicate_alpha_track:
+            from generate_avif_sequence_selection_fixtures import generate
+
+            fixture = generate("duplicate_alpha_track")
+            print(f"Generated AVIF duplicate alpha-track fixture: {fixture}")
+        elif args.avif_sequence_no_color_track_candidate:
+            from generate_avif_sequence_selection_fixtures import generate
+
+            fixture = generate("no_color_track_candidate")
+            print(f"Generated AVIF no-color-track fixture: {fixture}")
         elif args.avif_sequence_only_no_meta:
             fixture = generate_avif_sequence_only_no_meta_fixture()
             print(f"Generated AVIF sequence-only fixture: {fixture}")

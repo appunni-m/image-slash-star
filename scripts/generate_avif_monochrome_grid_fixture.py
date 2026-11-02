@@ -8,6 +8,7 @@ canvas that exposes nine columns from the right-hand cell.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import io
 import struct
@@ -36,14 +37,20 @@ OUTPUT = (
     ROOT
     / "tests/fixtures/input/images/avif/portable_lossless_monochrome_grid_73x64.avif"
 )
+OUTPUT_32BIT = (
+    ROOT
+    / "tests/fixtures/input/images/avif/portable_lossless_monochrome_grid_32bit_dimensions_73x64.avif"
+)
 MANIFEST = ROOT / "manifest.yaml"
 
 EXPECTED_SOURCE_SHA256 = "bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d"
 EXPECTED_FIXTURE_SHA256 = "3e69167291d846470673b297e9a30e51d7027e182918b0a8c1d95f24719e9828"
+EXPECTED_32BIT_FIXTURE_SHA256 = "40991aa9bee645ee683cb8c562d9db17e3c834e0c6998db90890dc0a498cd2f3"
 EXPECTED_PIXELS_SHA256 = "a553e8c265e29b0644101cff0da8cb54ac351ac4541b86d095ad960445cea987"
 CELL_SIZE = (64, 64)
 GRID_SIZE = (73, 64)
 GRID_DESCRIPTOR = bytes.fromhex("0000000100490040")
+GRID_DESCRIPTOR_32BIT = bytes.fromhex("000100010000004900000040")
 MONO_AV1C = bytes.fromhex("81001c00")
 CELL_ORDER = (1, 5, 6, 2, 3)
 
@@ -417,6 +424,34 @@ def verify_fixture_structure(
         raise RuntimeError("generated AVIF grid lacks two alpha cells")
 
 
+def encoded_cells_from_fixture(
+    data: bytes,
+) -> tuple[tuple[bytes, bytes, bytes], tuple[bytes, bytes, bytes]]:
+    """Read the pinned color and alpha item payloads without re-encoding."""
+    top = parse_boxes(data, 0, len(data))
+    meta = unique_box(top, b"meta")
+    if meta is None:
+        raise RuntimeError("pinned AVIF grid is missing meta")
+    iloc = unique_box(children(data, meta, prefix=4), b"iloc")
+    if iloc is None:
+        raise RuntimeError("pinned AVIF grid is missing iloc")
+    locations = parse_iloc(data, iloc, idat=None)
+
+    def item_payload(item_id: int) -> bytes:
+        location = locations.get(item_id)
+        if location is None or location[0] != "file" or len(location[1]) != 1:
+            raise RuntimeError(f"pinned AVIF grid item {item_id} has invalid extents")
+        start, end = location[1][0]
+        if start < 0 or end <= start or end > len(data):
+            raise RuntimeError(f"pinned AVIF grid item {item_id} exceeds its source")
+        return data[start:end]
+
+    return (
+        (item_payload(2), item_payload(5), b""),
+        (item_payload(3), item_payload(6), b""),
+    )
+
+
 def expected_pixels(
     cell0: bytes,
     cell1: bytes,
@@ -480,41 +515,104 @@ def verify_fixture_pixels(
 
 
 def main() -> None:
-    manifest = yaml.safe_load(MANIFEST.read_text())
-    oracle.verify_primary_oracle(manifest)
-    if PILLOW_VERSION != "12.2.0" or features.version("avif") != "1.4.1":
-        raise RuntimeError("AVIF grid generation requires the pinned Pillow oracle")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify both pinned fixtures without invoking the Pillow encoder",
+    )
+    args = parser.parse_args()
 
     template = SOURCE.read_bytes()
     if sha256(template) != EXPECTED_SOURCE_SHA256:
         raise RuntimeError("source grid.avif differs from the pinned libavif fixture")
 
-    encoded_cells = (encode_cell(0), encode_cell(1))
-    fixture = assemble_fixture(template, encoded_cells)
-    pixels = verify_fixture_pixels(
-        fixture, encoded_cells[0][2], encoded_cells[1][2]
+    if args.check:
+        if not OUTPUT.is_file():
+            raise RuntimeError(f"required source AVIF grid is missing at {OUTPUT}")
+        fixture = OUTPUT.read_bytes()
+        if sha256(fixture) != EXPECTED_FIXTURE_SHA256:
+            raise RuntimeError("pinned monochrome AVIF grid fixture has changed")
+        encoded_cells = encoded_cells_from_fixture(fixture)
+        verify_fixture_structure(
+            fixture,
+            {
+                2: encoded_cells[0][0],
+                3: encoded_cells[1][0],
+                5: encoded_cells[0][1],
+                6: encoded_cells[1][1],
+            },
+        )
+    else:
+        manifest = yaml.safe_load(MANIFEST.read_text())
+        oracle.verify_primary_oracle(manifest)
+        if PILLOW_VERSION != "12.2.0" or features.version("avif") != "1.4.1":
+            raise RuntimeError("AVIF grid generation requires the pinned Pillow oracle")
+
+        encoded_cells = (encode_cell(0), encode_cell(1))
+        fixture = assemble_fixture(template, encoded_cells)
+        pixels = verify_fixture_pixels(
+            fixture, encoded_cells[0][2], encoded_cells[1][2]
+        )
+        fixture_hash = sha256(fixture)
+        if fixture_hash != EXPECTED_FIXTURE_SHA256:
+            raise RuntimeError(
+                "exact Pillow pixels passed, but the fixture bytes differ from the "
+                "prototype container hash cross-check: " + fixture_hash
+            )
+
+        if OUTPUT.exists():
+            if OUTPUT.read_bytes() != fixture:
+                raise RuntimeError(f"refusing to replace different AVIF fixture at {OUTPUT}")
+            print(f"Verified existing fixture: {OUTPUT}")
+        else:
+            OUTPUT.write_bytes(fixture)
+            print(f"Wrote fixture: {OUTPUT}")
+
+        print(f"pixels={len(pixels)} pillow_rgba_sha256={sha256(pixels)}")
+
+    wide_fixture = assemble_fixture(
+        template,
+        encoded_cells,
+        grid_descriptor=GRID_DESCRIPTOR_32BIT,
     )
-    fixture_hash = sha256(fixture)
-    if fixture_hash != EXPECTED_FIXTURE_SHA256:
+    wide_fixture_hash = sha256(wide_fixture)
+    if wide_fixture_hash != EXPECTED_32BIT_FIXTURE_SHA256:
         raise RuntimeError(
-            "exact Pillow pixels passed, but the fixture bytes differ from the "
-            "prototype container hash cross-check: " + fixture_hash
+            "32-bit grid dimensions changed the expected container bytes: "
+            + wide_fixture_hash
         )
 
-    if OUTPUT.exists():
-        if OUTPUT.read_bytes() != fixture:
-            raise RuntimeError(f"refusing to replace different AVIF fixture at {OUTPUT}")
-        print(f"Verified existing fixture: {OUTPUT}")
+    if not args.check:
+        wide_pixels = verify_fixture_pixels(
+            wide_fixture,
+            encoded_cells[0][2],
+            encoded_cells[1][2],
+            expected_hash=EXPECTED_PIXELS_SHA256,
+        )
+        print(f"pixels={len(wide_pixels)} pillow_rgba_sha256={sha256(wide_pixels)}")
+
+    if OUTPUT_32BIT.exists():
+        if OUTPUT_32BIT.read_bytes() != wide_fixture:
+            raise RuntimeError(
+                f"refusing to replace different AVIF fixture at {OUTPUT_32BIT}"
+            )
+        print(f"Verified existing fixture: {OUTPUT_32BIT}")
+    elif args.check:
+        raise RuntimeError(f"required 32-bit AVIF grid fixture is missing at {OUTPUT_32BIT}")
     else:
-        OUTPUT.write_bytes(fixture)
-        print(f"Wrote fixture: {OUTPUT}")
+        OUTPUT_32BIT.write_bytes(wide_fixture)
+        print(f"Wrote fixture: {OUTPUT_32BIT}")
 
     print(
         f"grid=2x1 cells=64x64 canvas={GRID_SIZE[0]}x{GRID_SIZE[1]} "
         f"descriptor={GRID_DESCRIPTOR.hex()}"
     )
     print(f"asset_sha256={sha256(fixture)}")
-    print(f"pixels={len(pixels)} pillow_rgba_sha256={sha256(pixels)}")
+    print(
+        f"32-bit-descriptor={GRID_DESCRIPTOR_32BIT.hex()} "
+        f"asset_sha256={wide_fixture_hash}"
+    )
 
 
 if __name__ == "__main__":

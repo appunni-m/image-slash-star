@@ -1,0 +1,53 @@
+diff --git a/av1/encoder/partition_search.c b/av1/encoder/partition_search.c
+index 81ac00be2a..0000000000 100644
+--- a/av1/encoder/partition_search.c
++++ b/av1/encoder/partition_search.c
+@@ -3950,7 +3950,14 @@ static void rd_pick_4partition(
+ 
+   // Calculate the total cost and update the best partition.
+   av1_rd_cost_update(x->rdmult, &part_search_state->sum_rdc);
+-  if (part_search_state->sum_rdc.rdcost < best_rdc->rdcost) {
++  const bool force_fixture_vertical4 =
++      cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1 &&
++      blk_params.bsize == BLOCK_64X64 &&
++      partition_type == PARTITION_VERT_4 &&
++      part_search_state->sum_rdc.rdcost < INT64_MAX;
++  if (part_search_state->sum_rdc.rdcost < best_rdc->rdcost ||
++      force_fixture_vertical4) {
+     *best_rdc = part_search_state->sum_rdc;
+     part_search_state->found_best_partition = true;
+     pc_tree->partitioning = partition_type;
+@@ -4123,3 +4130,15 @@ static void prune_4_way_partition_search(
+   prune_4_partition_using_split_info(cpi, x, part_search_state,
+                                      part4_search_allowed);
++  // This fixture proves the high-depth I444 B16x64 TX_MODE_SELECT path.
++  // Force a four-way vertical split only for its second frame's root block.
++  if (cpi->common.current_frame.frame_type == INTER_FRAME &&
++      cpi->common.current_frame.frame_number == 1 &&
++      bsize == BLOCK_64X64) {
++    part_search_state->terminate_partition_search = 0;
++    part_search_state->do_rectangular_split = 1;
++    part_search_state->partition_rect_allowed[VERT] = 1;
++    part_search_state->prune_rect_part[VERT] = 0;
++    part4_search_allowed[HORZ4] = 0;
++    part4_search_allowed[VERT4] = part_cfg->enable_1to4_partitions;
++  }
+ }
+diff --git a/av1/encoder/encodeframe.c b/av1/encoder/encodeframe.c
+index 73a7500000..0000000000 100644
+--- a/av1/encoder/encodeframe.c
++++ b/av1/encoder/encodeframe.c
+@@ -2689,8 +2689,11 @@ static void encode_frame_internal(AV1_COMP *cpi) {
+ 
+     if (!cm->tiles.large_scale) {
+       if (features->tx_mode == TX_MODE_SELECT &&
+-          cpi->td.mb.txfm_search_info.txb_split_count == 0)
++          cpi->td.mb.txfm_search_info.txb_split_count == 0 &&
++          !(current_frame->frame_type == INTER_FRAME &&
++            current_frame->frame_number == 1)) {
+         features->tx_mode = TX_MODE_LARGEST;
++      }
+     }
+   } else {
+     // This is needed if real-time speed setting is changed on the fly

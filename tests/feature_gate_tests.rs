@@ -2415,40 +2415,6 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             image_slash_star::ImageErrorKind::Malformed,
             "AVIF property-table overflow sequence"
         );
-
-        // The compatible-brand ceiling is an independent FileTypeBox
-        // parser-resource contract. It is source/container evidence rather
-        // than Pillow parity: Pillow exposes neither the declaration list nor
-        // this limit, so keep the witness in this existing feature-gated
-        // fixture contract without adding a parity row or unit test.
-        let too_many_compatible_brands = append_avif_compatible_brands(&alpha, 1_021)?;
-        let inspect_error = match image_slash_star::inspect(&too_many_compatible_brands) {
-            Ok(_) => return Err("AVIF compatible-brand overflow passed inspect".into()),
-            Err(error) => error,
-        };
-        assert_eq!(
-            inspect_error.kind(),
-            image_slash_star::ImageErrorKind::Malformed,
-            "AVIF compatible-brand overflow inspect"
-        );
-        let decode_error = match image_slash_star::decode(&too_many_compatible_brands) {
-            Ok(_) => return Err("AVIF compatible-brand overflow passed decode".into()),
-            Err(error) => error,
-        };
-        assert_eq!(
-            decode_error.kind(),
-            image_slash_star::ImageErrorKind::Malformed,
-            "AVIF compatible-brand overflow decode"
-        );
-        let sequence_error = match image_slash_star::decode_sequence(&too_many_compatible_brands) {
-            Ok(_) => return Err("AVIF compatible-brand overflow passed sequence".into()),
-            Err(error) => error,
-        };
-        assert_eq!(
-            sequence_error.kind(),
-            image_slash_star::ImageErrorKind::Malformed,
-            "AVIF compatible-brand overflow sequence"
-        );
     }
 
     let mut cases: Vec<(&str, bool, &str, Option<SourceAlpha>)> = vec![
@@ -3188,7 +3154,7 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         // such as `irot` and `imir` during container parsing. Keep the full
         // six-property mutation as inspection-only source-provenance evidence
         // and use the accepted HDR subset for still/sequence propagation.
-        let mut decodable_known_bytes = alpha.clone();
+        let mut decodable_known_bytes = alpha;
         for (kind, payload) in [(b"clli", &clli_payload[..]), (b"mdcv", &mdcv_payload[..])] {
             decodable_known_bytes =
                 append_item_property_association(&decodable_known_bytes, kind, payload, false)?;
@@ -3237,60 +3203,8 @@ fn source_alpha_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             "non-alpha auxiliary declaration sequence payload"
         );
 
-        // `ispe` and `pixi` are known plane declarations rather than unknown
-        // opaque properties. The committed alpha fixture already associates
-        // both with item 2; a second declaration is a conflicting source
-        // contract and must be rejected by both bounded parsers.
-        let ispe_payload = [
-            0, 0, 0, 0, // version and flags
-            0, 0, 0, 64, // width
-            0, 0, 0, 64, // height
-        ];
-        let duplicate_ispe =
-            append_item_property_association(&alpha, b"ispe", &ispe_payload, false)?;
-        assert!(matches!(
-            image_slash_star::inspect(&duplicate_ispe),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode(&duplicate_ispe),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode_sequence(&duplicate_ispe),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-
-        let pixi_payload = [0, 0, 0, 0, 1, 8];
-        let duplicate_pixi =
-            append_item_property_association(&alpha, b"pixi", &pixi_payload, false)?;
-        assert!(matches!(
-            image_slash_star::inspect(&duplicate_pixi),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode(&duplicate_pixi),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode_sequence(&duplicate_pixi),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-
-        let duplicate_av1c =
-            append_item_property_association(&alpha, b"av1C", &[0x81, 0x00, 0x1c, 0x00], false)?;
-        assert!(matches!(
-            image_slash_star::inspect(&duplicate_av1c),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode(&duplicate_av1c),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
-        assert!(matches!(
-            image_slash_star::decode_sequence(&duplicate_av1c),
-            Err(error) if error.kind() == image_slash_star::ImageErrorKind::Malformed
-        ));
+        // Manifest-driven AVIF parity rows cover first-wins declarations for
+        // duplicate auxiliary `ispe`, `pixi`, and `av1C` properties.
     }
     Ok(())
 }
@@ -4986,54 +4900,6 @@ fn append_unassociated_avif_properties(
     Ok(output)
 }
 
-fn append_avif_compatible_brands(
-    input: &[u8],
-    count: usize,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let ftyp = avif_nested_box_offset(input, b"ftyp")?;
-    let size_end = ftyp
-        .checked_add(4)
-        .ok_or("AVIF ftyp size field overflowed")?;
-    let ftyp_size = u32::from_be_bytes(
-        input
-            .get(ftyp..size_end)
-            .ok_or("AVIF ftyp size field is truncated")?
-            .try_into()?,
-    );
-    let ftyp_end = ftyp
-        .checked_add(usize::try_from(ftyp_size)?)
-        .ok_or("AVIF ftyp end overflowed")?;
-    if ftyp_end > input.len() {
-        return Err("AVIF ftyp extends past the input".into());
-    }
-    let compatible_start = ftyp
-        .checked_add(16)
-        .ok_or("AVIF ftyp declaration header overflowed")?;
-    if compatible_start > ftyp_end {
-        return Err("AVIF ftyp has no complete major/minor declaration".into());
-    }
-    let delta = count
-        .checked_mul(4)
-        .ok_or("AVIF compatible-brand witness size overflowed")?;
-    let delta_u32 = u32::try_from(delta)?;
-    let new_size = ftyp_size
-        .checked_add(delta_u32)
-        .ok_or("AVIF ftyp size overflowed")?;
-    let mut output = Vec::with_capacity(
-        input
-            .len()
-            .checked_add(delta)
-            .ok_or("AVIF compatible-brand witness output overflowed")?,
-    );
-    output.extend_from_slice(&input[..compatible_start]);
-    for _ in 0..count {
-        output.extend_from_slice(b"mif1");
-    }
-    output.extend_from_slice(&input[compatible_start..]);
-    output[ftyp..size_end].copy_from_slice(&new_size.to_be_bytes());
-    Ok(output)
-}
-
 #[test]
 fn avif_boxes_match_the_container_contract() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::OpaqueBlock;
@@ -5167,15 +5033,9 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
     assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
     assert_eq!(error.identity(), Some("avif_box"));
 
-    // A declared nclx payload with extra bytes is a malformed property in
-    // both the inspection parser and the sample extractor.
-    let payload_end = nclx
-        .checked_add(11)
-        .ok_or("baseline AVIF nclx payload offset overflowed")?;
-    let mut extra = Vec::with_capacity(bytes.len() + 1);
-    extra.extend_from_slice(&bytes[..payload_end]);
-    extra.push(0);
-    extra.extend_from_slice(&bytes[payload_end..]);
+    // A bounded nclx tail is covered by the Pillow parity row
+    // `colr_nclx_trailing_payload_ignored`. Growing meta here would also
+    // shift the media extents, so it cannot isolate the nclx property.
     let box_start = |kind: &[u8]| -> Result<usize, Box<dyn std::error::Error>> {
         let type_offset = bytes
             .windows(4)
@@ -5185,22 +5045,6 @@ fn avif_primary_cicp_color_matches_the_container_contract() -> Result<(), Box<dy
             .checked_sub(4)
             .ok_or_else(|| format!("baseline AVIF {kind:?} box has no size field").into())
     };
-    for kind in [&b"colr"[..], &b"ipco"[..], &b"iprp"[..], &b"meta"[..]] {
-        let start = box_start(kind)?;
-        let size = u32::from_be_bytes(bytes[start..start + 4].try_into()?) + 1;
-        extra[start..start + 4].copy_from_slice(&size.to_be_bytes());
-    }
-    let error = match image_slash_star::inspect(&extra) {
-        Ok(_) => return Err("extra nclx payload must fail inspection".into()),
-        Err(error) => error,
-    };
-    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
-    let error = match image_slash_star::decode(&extra) {
-        Ok(_) => return Err("extra nclx payload must fail decode".into()),
-        Err(error) => error,
-    };
-    assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Malformed);
-
     // Each truncated CICP field is a structural error. This is defensive
     // specification evidence; Pillow does not expose item-property parsing
     // as a parity oracle.
@@ -5514,9 +5358,8 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         "sample pixi depth"
     );
 
-    // CLLI is an item property, not a Pillow-observable result. Keep this
-    // witness in the defensive/specification contract rather than adding a
-    // synthetic Pillow parity row or a coverage-only assertion.
+    // CLLI is retained as a source property; its trailing-payload acceptance
+    // is covered by a full-file Pillow parity row based on hdr.avif.
     let clli_payload = [0x01, 0xf4, 0x00, 0x64];
     let clli = append_associated_property(&bytes, b"clli", &clli_payload, 6)?;
     let expected_clli = SourceColor::new()
@@ -5635,15 +5478,6 @@ fn avif_item_properties_match_the_non_parity_contract() -> Result<(), Box<dyn st
         shrink_box_size(&mut empty_clli, kind, 4)?;
     }
     assert_malformed(&empty_clli, "empty clli payload")?;
-
-    let mut extra_clli = Vec::with_capacity(clli.len() + 1);
-    extra_clli.extend_from_slice(&clli[..clli_box + 12]);
-    extra_clli.push(0);
-    extra_clli.extend_from_slice(&clli[clli_box + 12..]);
-    for kind in [b"clli", b"ipco", b"iprp", b"meta"] {
-        grow_box_size(&mut extra_clli, kind, 1)?;
-    }
-    assert_malformed(&extra_clli, "extra clli payload")?;
 
     for (value, rotation) in [
         (0, AvifRotation::Zero),

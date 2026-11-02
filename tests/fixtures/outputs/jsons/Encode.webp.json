@@ -3689,6 +3689,2086 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossy_method_2_q0_neutral_16x16",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q0_neutral_16x16.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_sha256": "cdb1eb5bdbc366ffdeb23f20ffb9baf2c8afb6c33b6080bfdfe52223dd4aa2d6",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q0_neutral_16x16.bin",
+      "encoded_ref_bytes": 42,
+      "encoded_ref_sha256": "b55205b499022573d995dc09bf80b230630676c2ccae93159c02bbaed88743a2",
+      "source_mode": "Rgb8",
+      "source_sha256": "f04d702e124c5ffe01e333f5916ed71240939824817a229c58a9582bb47b225e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_2_q80_neutral_16x16",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q80_neutral_16x16.bin",
+      "ref_bytes": 768,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        16
+      ],
+      "ref_sha256": "cdb1eb5bdbc366ffdeb23f20ffb9baf2c8afb6c33b6080bfdfe52223dd4aa2d6",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q80_neutral_16x16.bin",
+      "encoded_ref_bytes": 42,
+      "encoded_ref_sha256": "b6fceabc70fb36c090cf3e48d6768e2a9dcf00b4b5ffa81065cb40cca049948b",
+      "source_mode": "Rgb8",
+      "source_sha256": "f04d702e124c5ffe01e333f5916ed71240939824817a229c58a9582bb47b225e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_2_q0_neutral_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q0_neutral_17x19.bin",
+      "ref_bytes": 969,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "db88dc7e82e93d44dedeed649983bcc9fde1139cedb8e778d08add4371ad30c3",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q0_neutral_17x19.bin",
+      "encoded_ref_bytes": 56,
+      "encoded_ref_sha256": "353f8ca6f75bfeb60e238e0b965cec147c77ff28078cc0d7a49d1abdf029122b",
+      "source_mode": "Rgb8",
+      "source_sha256": "4e102738c3b04e356d58aacbbd2649fa112bdf582058f7a3124ce0d8014307e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_2_q80_neutral_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q80_neutral_17x19.bin",
+      "ref_bytes": 969,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "8adb08c96b955f3045ed5670c7c339fafdfe84d87313667af4887bc05fe79130",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q80_neutral_17x19.bin",
+      "encoded_ref_bytes": 58,
+      "encoded_ref_sha256": "b389e95e98222f456b43cef16679ada1eace8d0eb678ccd0d69ac94be313e1a0",
+      "source_mode": "Rgb8",
+      "source_sha256": "4e102738c3b04e356d58aacbbd2649fa112bdf582058f7a3124ce0d8014307e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_2_q0_sparse_64x64",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q0_sparse_64x64.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_sha256": "e542231cd7754c972f96d6d224ff9bad5b15a36c366b19541b74e85b3a44a88b",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q0_sparse_64x64.bin",
+      "encoded_ref_bytes": 82,
+      "encoded_ref_sha256": "6581be25e9c152df05f1b3329213c2a6fc9fda8371192cb6a2b2bb0284dc6ae7",
+      "source_mode": "Rgb8",
+      "source_sha256": "f0f0ca8e9c4d4dc3e5e94c4bb7537fff310e51b070948368ca6bf57e3ff7e9a4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_2_q80_sparse_64x64",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_2_q80_sparse_64x64.bin",
+      "ref_bytes": 12288,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_sha256": "1bf2803dfd687ac7097b4d371effb0e8e3a0fbff8e5a574a21d4650b5dc2d093",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_2_q80_sparse_64x64.bin",
+      "encoded_ref_bytes": 254,
+      "encoded_ref_sha256": "3de4ffcb0459330ac62cfeadfbdf329652d8cd31caff2ae1d65459f797bac983",
+      "source_mode": "Rgb8",
+      "source_sha256": "f0f0ca8e9c4d4dc3e5e94c4bb7537fff310e51b070948368ca6bf57e3ff7e9a4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m0_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m0_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 108,
+      "encoded_ref_sha256": "915812f2a6a07272c5a327032ad52a475ccd0e32059a1c4f6b5f29ec774b357f",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_horizontal_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m0_q80_horizontal_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "4695c2a5962afb62afa3cd380a0ea9cd42f787820477293a6363f3c26f7b47f8",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m0_q80_horizontal_17x19.bin",
+      "encoded_ref_bytes": 106,
+      "encoded_ref_sha256": "31130cb2bacf3da26ea19d17e32d62ce5c06ff07add7825ce19e30ccc9f05650",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_palette16_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m0_q80_palette16_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "f23e15899522766c869938a0955fef93a18fc36e37d00a04d04519bf473f37cb",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m0_q80_palette16_17x19.bin",
+      "encoded_ref_bytes": 198,
+      "encoded_ref_sha256": "780f6dfba0458b718b37fa560ebc2cc7432d6f09fbcf564bc592c87b57e5c598",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m0_q80_palette17_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m0_q80_palette17_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "e1b923f7e8f98d7407576e3122cd029060a4e3fbb3b509f9537cab3d5c66cf37",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m0_q80_palette17_17x19.bin",
+      "encoded_ref_bytes": 168,
+      "encoded_ref_sha256": "03e9409cc0d6fa9020b5711a0c7df123e1536990b40618aaf86191d222025e3a",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m2_q80_horizontal_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m2_q80_horizontal_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "4695c2a5962afb62afa3cd380a0ea9cd42f787820477293a6363f3c26f7b47f8",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m2_q80_horizontal_17x19.bin",
+      "encoded_ref_bytes": 106,
+      "encoded_ref_sha256": "fd0470f83bf245d21e2a1c3051983808e902a15455b016595901573484b1edae",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m3_q80_palette17_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m3_q80_palette17_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "e1b923f7e8f98d7407576e3122cd029060a4e3fbb3b509f9537cab3d5c66cf37",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m3_q80_palette17_17x19.bin",
+      "encoded_ref_bytes": 146,
+      "encoded_ref_sha256": "1351ca59bbbd7a4b992d354ac742f5abbccee5b7a1409f1f0f20cdff264aacc3",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m2_q80_random_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m2_q80_random_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "21ed9d17f7c07d7b237aed380c3aca6f911ffb43b2775d6e92d1b41daed1fdb1",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m2_q80_random_17x19.bin",
+      "encoded_ref_bytes": 408,
+      "encoded_ref_sha256": "a33abe920e731db7b8299c13dd5b4d13796785362cbeaf68cff096f8c913e671",
+      "source_mode": "Rgba8",
+      "source_sha256": "be166596257f7f6cc21cda7ab8f0435644df1e0d8c650f74fed7704a28b44998",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_effort_m6_q80_random_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_effort_m6_q80_random_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "21ed9d17f7c07d7b237aed380c3aca6f911ffb43b2775d6e92d1b41daed1fdb1",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_effort_m6_q80_random_17x19.bin",
+      "encoded_ref_bytes": 404,
+      "encoded_ref_sha256": "b5ed9a698506f250a9b6c992df44092fc71d82e7bc75b7f379d9873e6ebd28cd",
+      "source_mode": "Rgba8",
+      "source_sha256": "be166596257f7f6cc21cda7ab8f0435644df1e0d8c650f74fed7704a28b44998",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m1_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m1_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m1_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 104,
+      "encoded_ref_sha256": "ad23a5d391f857dfe3af0549188bc2ad5447f5384d77c0fd8dde79c609ac1e2b",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q0_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m2_q0_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "10616d3ca7a59ab47334965c47d791329f75515cf239b7f7a2d6460561c5a014",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m2_q0_combined_17x19.bin",
+      "encoded_ref_bytes": 106,
+      "encoded_ref_sha256": "7622f954bbd58607304a9886c827ec86322b083fe59bf6edb97fd965d24cb87a",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m2_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m2_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 108,
+      "encoded_ref_sha256": "c704d4b5dd84241d32c9c248c2ac1c05fcb34616122cb37493da2a8011b72307",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m3_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m3_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m3_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 104,
+      "encoded_ref_sha256": "c95527cd305769d8799a9725961a9c12ee3457895a5123004ac58e26e92d2d76",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m4_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m4_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m4_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 104,
+      "encoded_ref_sha256": "c95527cd305769d8799a9725961a9c12ee3457895a5123004ac58e26e92d2d76",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m5_q80_combined_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m5_q80_combined_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m5_q80_combined_17x19.bin",
+      "encoded_ref_bytes": 104,
+      "encoded_ref_sha256": "561e930ebe3201b540bb34fecdff8ee2ef87e389f372ce6b280dd85341c6a556",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m0_q80_vertical_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m0_q80_vertical_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "44ec172448d76eecadfff6807dea0894b5ad82347e6b5ab4dd7e30ec6172ea80",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m0_q80_vertical_17x19.bin",
+      "encoded_ref_bytes": 282,
+      "encoded_ref_sha256": "b7049ed269d264f56063c67b594501d1aa5f254d51b17aa2a4ac82892df1f4d5",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m2_q80_vertical_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m2_q80_vertical_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "44ec172448d76eecadfff6807dea0894b5ad82347e6b5ab4dd7e30ec6172ea80",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m2_q80_vertical_17x19.bin",
+      "encoded_ref_bytes": 106,
+      "encoded_ref_sha256": "1b52b079e119bf73b63f57c3e771106244f9fcf8cd5e2559a23078e092bb50c0",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m5_q80_vertical_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m5_q80_vertical_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "44ec172448d76eecadfff6807dea0894b5ad82347e6b5ab4dd7e30ec6172ea80",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m5_q80_vertical_17x19.bin",
+      "encoded_ref_bytes": 102,
+      "encoded_ref_sha256": "03243f44f23292173812267517f779cfa1d54571c9f11f9fa5e86b850e1d6ff9",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m6_q80_vertical_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m6_q80_vertical_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "44ec172448d76eecadfff6807dea0894b5ad82347e6b5ab4dd7e30ec6172ea80",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m6_q80_vertical_17x19.bin",
+      "encoded_ref_bytes": 102,
+      "encoded_ref_sha256": "03243f44f23292173812267517f779cfa1d54571c9f11f9fa5e86b850e1d6ff9",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_entropy_m4_q80_horizontal_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_entropy_m4_q80_horizontal_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "4695c2a5962afb62afa3cd380a0ea9cd42f787820477293a6363f3c26f7b47f8",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_entropy_m4_q80_horizontal_17x19.bin",
+      "encoded_ref_bytes": 100,
+      "encoded_ref_sha256": "6d46b324c32a427c9087698d7fc74b7c91aa14964191da8f1b0ee3df66aeeeb6",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_implicit_zero_palette_m0_q80_vertical_17x19",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_implicit_zero_palette_m0_q80_vertical_17x19.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "2420ba9d6449371f716f2e34ed2960f6e9662f2b76af7ef8cc2de2aed38a3f1d",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_implicit_zero_palette_m0_q80_vertical_17x19.bin",
+      "encoded_ref_bytes": 232,
+      "encoded_ref_sha256": "b50a73695c342408dfc9dfa436bef09f7a520177d28143adbbdaa97b10c5c07e",
+      "source_mode": "Rgba8",
+      "source_sha256": "cf7637501f4b73ef694a70dd68f1cc2f79ea4b65bce227364f92bc122db7c251",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_discontinuous_palette_m4_band_zero_128x128",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_discontinuous_palette_m4_band_zero_128x128.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "6d40a1fc8f9bf5d4ce57b3b93d2bc6f978068dfc11ce18f64ef7139a475547cf",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_discontinuous_palette_m4_band_zero_128x128.bin",
+      "encoded_ref_bytes": 14504,
+      "encoded_ref_sha256": "cac6fcbd581e7b7e38f5283b785e5e8716001a1a49db8576b0d77de5b55f42c4",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bca0d82b56e977a0e0538d0d52fc9e25bf4f6a9d4ec0896f6a171603341a1ef",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_discontinuous_palette_m4_band_nonzero_128x128",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_discontinuous_palette_m4_band_nonzero_128x128.bin",
+      "ref_bytes": 65536,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "5ae6d65fc32beb90333e4d471693925a96769134d537d010c06f7941f4f2f137",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_discontinuous_palette_m4_band_nonzero_128x128.bin",
+      "encoded_ref_bytes": 14478,
+      "encoded_ref_sha256": "392836e4125838055f16582de42ef4745b3e8a6694956f30bcfec4bfcdb013a7",
+      "source_mode": "Rgba8",
+      "source_sha256": "f7421695e2bd2e69027a8086080284b1ebc2e030e97a8053697d292d2ba49ef8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_transparent_column_m4_transparent_gradient_33x35",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_transparent_column_m4_transparent_gradient_33x35.bin",
+      "ref_bytes": 4620,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "632a4a688efa7862e516b82474de769d9363b561b2e58a9e379c3e9fa0123373",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_transparent_column_m4_transparent_gradient_33x35.bin",
+      "encoded_ref_bytes": 188,
+      "encoded_ref_sha256": "df225136d7492403711bd6dbc44659027cc674734af3da7631667c2aa0de8ab8",
+      "source_mode": "Rgba8",
+      "source_sha256": "584385b7c6cb9425cba7d9a526d7a8526fe54f57a94da5936d463f392953f84d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_transparent_column_m5_transparent_gradient_33x35",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_transparent_column_m5_transparent_gradient_33x35.bin",
+      "ref_bytes": 4620,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "632a4a688efa7862e516b82474de769d9363b561b2e58a9e379c3e9fa0123373",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_transparent_column_m5_transparent_gradient_33x35.bin",
+      "encoded_ref_bytes": 86,
+      "encoded_ref_sha256": "477c795d4120ec1c33347847161486055ee8ac165bdf29ff4df02db612b82c5b",
+      "source_mode": "Rgba8",
+      "source_sha256": "584385b7c6cb9425cba7d9a526d7a8526fe54f57a94da5936d463f392953f84d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_nonzero_palette_m0_thin_nonzero_33x1",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_nonzero_palette_m0_thin_nonzero_33x1.bin",
+      "ref_bytes": 132,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        33,
+        1
+      ],
+      "ref_sha256": "858a5836d8336698a2d4165337c8b2e6be7935c32da3d6b9a063e1f8d081247f",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_nonzero_palette_m0_thin_nonzero_33x1.bin",
+      "encoded_ref_bytes": 114,
+      "encoded_ref_sha256": "2adf9ae0c155b7e0e392a368732cd2086b27a2fa6f1271b6e75f7dbec927dc55",
+      "source_mode": "Rgba8",
+      "source_sha256": "c3cd03a3d95d1e01add194ef7335bdf9a2ba7a7a2f105d3cdddf451b26feb4bd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_combined_q0",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_combined_q0.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_combined_q0.bin",
+      "encoded_ref_bytes": 98,
+      "encoded_ref_sha256": "cef93f7e12e45d134d6ee3ad3bc50aff85e4415992fa95931e839d765210a8a9",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_combined_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_combined_q80.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "5c725a339f939b94b7016cad3d0bbf400cfda09c46fdb44dd48c27fd5c498ecd",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_combined_q80.bin",
+      "encoded_ref_bytes": 98,
+      "encoded_ref_sha256": "ea9e703f7f1dcac27d1d95a6deec23a6584ac73b5f3db570f9097317f70a9329",
+      "source_mode": "Rgba8",
+      "source_sha256": "3bc20a089d3539a69c5d98fd917d7414d392d507780ba65469cfd6d82e31e409",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_horizontal_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_horizontal_q80.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "4695c2a5962afb62afa3cd380a0ea9cd42f787820477293a6363f3c26f7b47f8",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_horizontal_q80.bin",
+      "encoded_ref_bytes": 94,
+      "encoded_ref_sha256": "1835dd44bb1a4c87fdde10b4e74d0d592f9c96853023d4e3e155429feb88ca27",
+      "source_mode": "Rgba8",
+      "source_sha256": "7e8cb835a943512b512c027738e57535c98d8ebb5b9659dc59aa4c7ecc0e5852",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette16_q0",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_palette16_q0.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "f23e15899522766c869938a0955fef93a18fc36e37d00a04d04519bf473f37cb",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_palette16_q0.bin",
+      "encoded_ref_bytes": 152,
+      "encoded_ref_sha256": "7aa3ee6f8301b99e57a3301f998b8863b8831d74203e9d261e75cfc81d842f7d",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette16_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_palette16_q80.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "f23e15899522766c869938a0955fef93a18fc36e37d00a04d04519bf473f37cb",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_palette16_q80.bin",
+      "encoded_ref_bytes": 152,
+      "encoded_ref_sha256": "aa28daabce84564186b8efd0bdaaf79aa46f70a397ee21cc235e35812d68828b",
+      "source_mode": "Rgba8",
+      "source_sha256": "5051667e06079ad8eb77a330d1425ec23039c89f1fffd5414185732b25154994",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_palette17_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_palette17_q80.bin",
+      "ref_bytes": 1292,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        17,
+        19
+      ],
+      "ref_sha256": "e1b923f7e8f98d7407576e3122cd029060a4e3fbb3b509f9537cab3d5c66cf37",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_palette17_q80.bin",
+      "encoded_ref_bytes": 132,
+      "encoded_ref_sha256": "dd519da76ac53160df2e62408c80e3c2625e5b9ebf0ea0ba9ded2cfed5a8b085",
+      "source_mode": "Rgba8",
+      "source_sha256": "7cdadeb31092da6723ccbe790cd7b5b55aa9b25d91f80fe36f3940fab8fc7ce9",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_thin_nonzero",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_thin_nonzero.bin",
+      "ref_bytes": 132,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        33,
+        1
+      ],
+      "ref_sha256": "858a5836d8336698a2d4165337c8b2e6be7935c32da3d6b9a063e1f8d081247f",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_thin_nonzero.bin",
+      "encoded_ref_bytes": 98,
+      "encoded_ref_sha256": "514ab0af3d2f6d89c36fa6b7bb09cd589fc1f81716ee28b2dd332be5560e60ff",
+      "source_mode": "Rgba8",
+      "source_sha256": "c3cd03a3d95d1e01add194ef7335bdf9a2ba7a7a2f105d3cdddf451b26feb4bd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_alpha_crunch_m6_column",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_alpha_crunch_m6_column.bin",
+      "ref_bytes": 132,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        1,
+        33
+      ],
+      "ref_sha256": "858a5836d8336698a2d4165337c8b2e6be7935c32da3d6b9a063e1f8d081247f",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_alpha_crunch_m6_column.bin",
+      "encoded_ref_bytes": 98,
+      "encoded_ref_sha256": "7ea1cdd3ba0b955fcbe0e624741a325f916a41f7d0de735c86eb31a1406fb658",
+      "source_mode": "Rgba8",
+      "source_sha256": "e7d6134981548f50c55ba5a8f09182a0313fe56586cd9dabd0457a7dbb32e32a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_palette_chain16_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_palette_chain16_q100.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "dde545fc07115bcecf57c2dc52007f3d27148af44714ba423a0f7133445f6570",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_palette_chain16_q100.bin",
+      "encoded_ref_bytes": 202,
+      "encoded_ref_sha256": "f879aa338e18ce380975d61844fd02a45c404906c245a24591b4921b0bf7d4b7",
+      "source_mode": "Rgba8",
+      "source_sha256": "5044b36010048450f53cf05e0538cb7bcd393363d284abd8553acb329867b173",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_palette_chain17_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_palette_chain17_q100.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "c74bc6af47999f1e217561ec81c9dcb16522085143c0eea1f9e42c3f3b8dae1c",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_palette_chain17_q100.bin",
+      "encoded_ref_bytes": 204,
+      "encoded_ref_sha256": "ea512d1d436d42e54ffde71914d09860b3c892a912a8e0de757a27aefc9819cf",
+      "source_mode": "Rgba8",
+      "source_sha256": "dade38f38fe83d0ba5ae0ad2f3a4c02baed4dfb239124c5413c0ac8d6655bae0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m4_palette_chain16_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m4_palette_chain16_q80.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "dde545fc07115bcecf57c2dc52007f3d27148af44714ba423a0f7133445f6570",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m4_palette_chain16_q80.bin",
+      "encoded_ref_bytes": 272,
+      "encoded_ref_sha256": "0cfaa2e05f63a8e673f79af852d520fa590e477b558e52da0af3f78f76841701",
+      "source_mode": "Rgba8",
+      "source_sha256": "5044b36010048450f53cf05e0538cb7bcd393363d284abd8553acb329867b173",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m0_palette_chain17_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m0_palette_chain17_q80.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "c74bc6af47999f1e217561ec81c9dcb16522085143c0eea1f9e42c3f3b8dae1c",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m0_palette_chain17_q80.bin",
+      "encoded_ref_bytes": 242,
+      "encoded_ref_sha256": "dc4b9bb7ae647ce0883570002ff5606966aac4e6dba5f75a8e2dda2ca9b06b9e",
+      "source_mode": "Rgba8",
+      "source_sha256": "dade38f38fe83d0ba5ae0ad2f3a4c02baed4dfb239124c5413c0ac8d6655bae0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_opaque_single_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_opaque_single_q100.bin",
+      "ref_bytes": 3,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_sha256": "f90b410170f63bfd37c1901e41d9adbf77760754110cfa937d30fefc7b2a40c4",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_opaque_single_q100.bin",
+      "encoded_ref_bytes": 32,
+      "encoded_ref_sha256": "da173f4034c396068d700ee720f61eb5d4aa74be47981968601a59bd44770191",
+      "source_mode": "Rgba8",
+      "source_sha256": "073992e3038438fa4383bb008a90e883b0cd18a97c2f5113fff580448d208c82",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_opaque_pair_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_opaque_pair_q100.bin",
+      "ref_bytes": 6,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        2
+      ],
+      "ref_sha256": "9668ba814ad8fcdafde8dc342cc081367db84f1d051215ea9cfec8e59b72737d",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_opaque_pair_q100.bin",
+      "encoded_ref_bytes": 36,
+      "encoded_ref_sha256": "aea4de4ef2c527ce7278281f9b2e87afac3b6df661863afbb58b5ad040713e90",
+      "source_mode": "Rgba8",
+      "source_sha256": "c7554919206ae25d8660e4ad057352c09c5de03ed85d412f02aa2bfd1bb08d34",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m4_zero_planes_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m4_zero_planes_q80.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "1fe5e024dd1c5ee4a581d13e79b370cf45ea74c572022a07dd483a20470d5c94",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m4_zero_planes_q80.bin",
+      "encoded_ref_bytes": 48,
+      "encoded_ref_sha256": "186a5b894e9455f65c274df52c947c24903ece23857f1840888f9b7f1f9d7e83",
+      "source_mode": "Rgba8",
+      "source_sha256": "4e8931d23066560d050d93c1747077ca842ea4ea74b6fad11a242498bf35c153",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_zero_planes_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_zero_planes_q100.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "1fe5e024dd1c5ee4a581d13e79b370cf45ea74c572022a07dd483a20470d5c94",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_zero_planes_q100.bin",
+      "encoded_ref_bytes": 48,
+      "encoded_ref_sha256": "186a5b894e9455f65c274df52c947c24903ece23857f1840888f9b7f1f9d7e83",
+      "source_mode": "Rgba8",
+      "source_sha256": "4e8931d23066560d050d93c1747077ca842ea4ea74b6fad11a242498bf35c153",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m4_zero_plane_transition_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m4_zero_plane_transition_q80.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "fa0bc4349f28147e76607a375cad2421384e0ba0c8989d553fa49f5a837aa252",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m4_zero_plane_transition_q80.bin",
+      "encoded_ref_bytes": 102,
+      "encoded_ref_sha256": "a6f88bd6577600019c3d519a7cf39f49f09cb78e2d64eba3dbd6d28d4df80395",
+      "source_mode": "Rgba8",
+      "source_sha256": "0068578a4eba2822ec0bbebe78c377ee70843acf02edc6f651648d2129cc98e8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_zero_plane_transition_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_zero_plane_transition_q100.bin",
+      "ref_bytes": 3465,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        33,
+        35
+      ],
+      "ref_sha256": "fa0bc4349f28147e76607a375cad2421384e0ba0c8989d553fa49f5a837aa252",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_zero_plane_transition_q100.bin",
+      "encoded_ref_bytes": 96,
+      "encoded_ref_sha256": "f43de0e4e8bacbd5b96358d39d2fa872591ca90474e3b0ddb7f2e3aaf0bcb4ca",
+      "source_mode": "Rgba8",
+      "source_sha256": "0068578a4eba2822ec0bbebe78c377ee70843acf02edc6f651648d2129cc98e8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m4_late_plane_transition_q80",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m4_late_plane_transition_q80.bin",
+      "ref_bytes": 201243,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        259,
+        259
+      ],
+      "ref_sha256": "a583510f630b3d970e8ccabe2d7b58fd545769e6190d35824a9b992bd5dbc525",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m4_late_plane_transition_q80.bin",
+      "encoded_ref_bytes": 84,
+      "encoded_ref_sha256": "ecf324adb03078fe2ea393e83e3727f44b56920945448fa79ace5da2e88ee727",
+      "source_mode": "Rgba8",
+      "source_sha256": "91699e7206b5525246a4bbcd2b87abced8c8f8e8c5048c7b110a969f7ccd01fd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossless_crunch_m6_late_plane_transition_q100",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_crunch_m6_late_plane_transition_q100.bin",
+      "ref_bytes": 201243,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        259,
+        259
+      ],
+      "ref_sha256": "a583510f630b3d970e8ccabe2d7b58fd545769e6190d35824a9b992bd5dbc525",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_crunch_m6_late_plane_transition_q100.bin",
+      "encoded_ref_bytes": 84,
+      "encoded_ref_sha256": "ecf324adb03078fe2ea393e83e3727f44b56920945448fa79ace5da2e88ee727",
+      "source_mode": "Rgba8",
+      "source_sha256": "91699e7206b5525246a4bbcd2b87abced8c8f8e8c5048c7b110a969f7ccd01fd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_1_intra16_candidate_pruning",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_1_intra16_candidate_pruning.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "eba3c40df99b2e07adf45457bf22296705b4c23a14be8bcd253e4f447b5e39af",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_1_intra16_candidate_pruning.bin",
+      "encoded_ref_bytes": 4088,
+      "encoded_ref_sha256": "25f437e80a4f5220d3297d35c1b2792b9d3307946749ba48e482d92026c8b630",
+      "source_mode": "Rgb8",
+      "source_sha256": "20eb48b4ef2a42d4842684930c2023f7d14ac343b825d19a185e8dda5b25f8b2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossy_q50",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_q50.bin",
       "ref_bytes": 49152,
@@ -6609,6 +8689,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossy_rgba_alpha_zero_palette_gap_token",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_zero_palette_gap_token.bin",
+      "ref_bytes": 1048576,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        512,
+        512
+      ],
+      "ref_sha256": "7c8bee506bf44fffd787780a3324fe9090a06062e486d4552246cb0680752dd2",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_rgba_alpha_zero_palette_gap_token.bin",
+      "encoded_ref_bytes": 650,
+      "encoded_ref_sha256": "f28f4b210e224dbdc8cdfc8b7def089847ae19b029b58fc40b98b9a0088f57e8",
+      "source_mode": "Rgba8",
+      "source_sha256": "0d5a554fec44c2de7f6e04f7c03f7c4fa9da67fb5acbc6cbd392a91cedd3d168",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossy_rgba_alpha_filtered_gradient_plane",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_rgba_alpha_filtered_gradient_plane.bin",
       "ref_bytes": 1048576,
@@ -7143,6 +9263,126 @@
       "encoded_ref_sha256": "4989ffb95ab4b7bd4f1d5feb61d80d9fe256278a1e8d90070835db628dbb3912",
       "source_mode": "Rgb8",
       "source_sha256": "00d0c6efd398dccf63b171fa0b9d946e336e64167349768ad3a0c385006f1806",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_bool_carry_run",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_carry_run.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "7c943fad7a207345125c9d559993ad933669bcdaaf9a138b598197ec8765b815",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_carry_run.bin",
+      "encoded_ref_bytes": 19102,
+      "encoded_ref_sha256": "204d203948a19866af09600912b53e522d59b3d24bc9fc7d83176857d2808829",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_bool_carry_method_0",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_carry_method_0.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "c91d3d4084935115f97daa395ad9f10541fc06e260f382e9d78f707d32f121f7",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_carry_method_0.bin",
+      "encoded_ref_bytes": 43540,
+      "encoded_ref_sha256": "2d14e9ced8480f16675a805cbac0754a7a3011fdc8f14c5e98ecfb56ef0ca83c",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_bool_carry_method_4",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_carry_method_4.bin",
+      "ref_bytes": 49152,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "d368aed4188e860d6bcfad1f30dcb44560f9b9d7156cedc4d502ad0fad4c4b1b",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_carry_method_4.bin",
+      "encoded_ref_bytes": 19126,
+      "encoded_ref_sha256": "bbe7389f8ca277553e749106adf59b04e5878dd9dc2c69b12884d6699a4428a9",
+      "source_mode": "Rgb8",
+      "source_sha256": "761b7a991fb2dc21c5e3f24050431230d830f7a205ae3216e3ca560d5b4ac497",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -8499,6 +10739,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossless_palette_alpha_tail",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette_alpha_tail.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "Rgba8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_sha256": "50f10bdd5a8fe762eeb87d2326daf4b27c699a504136c2ad74013068352b6f8e",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_palette_alpha_tail.bin",
+      "encoded_ref_bytes": 2208,
+      "encoded_ref_sha256": "94851aa4c60271918fd9d90da702b004c1a4e4099170fda58852d5698d8476de",
+      "source_mode": "Rgba8",
+      "source_sha256": "b749e47aa0f306c0c42c21e9d55ad6ddb36dfcfb419be5c3785f9bf8ce79f936",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossless_palette4_box_chain",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_palette4_box_chain.bin",
       "ref_bytes": 49200,
@@ -9129,6 +11409,186 @@
       "error_kind": "dimensions"
     },
     {
+      "id": "enc_dimension_limit_max_16383_vertical",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_dimension_limit_max_16383_vertical.bin",
+      "ref_bytes": 49149,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        16383
+      ],
+      "ref_sha256": "dd59e1bb7d408faf6c5061560ba04b66966e63c3da901e9304d86bdf1c6e71d7",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_dimension_limit_max_16383_vertical.bin",
+      "encoded_ref_bytes": 48,
+      "encoded_ref_sha256": "683450b4deccec15662f497ce4bc69d89112ebb510226308a90240babc319e1b",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b705847058c2ed781ae1c819e8b2f4ed8641fbfd36201b2efcf6d09a44e2c53",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_dimension_limit_max_16383_vertical",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_dimension_limit_max_16383_vertical.bin",
+      "ref_bytes": 49149,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        16383
+      ],
+      "ref_sha256": "3d63b4921841ee316f8e82718fcd994e8fe5b543d1f113c67e6dcf3d1389596a",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_dimension_limit_max_16383_vertical.bin",
+      "encoded_ref_bytes": 542,
+      "encoded_ref_sha256": "823be750133e21aa74bacf9cc7d64d9f33599b33ea092d7a5ab38daf589cae27",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b705847058c2ed781ae1c819e8b2f4ed8641fbfd36201b2efcf6d09a44e2c53",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_error_dimension_limit_16384_vertical",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "e96419f9a3689884605339b27794c33926af7aaf27a5ce786a59ec0be78311e4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "rust_kind": "dimensions",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+      "error_kind": "dimensions"
+    },
+    {
+      "id": "enc_error_dimension_limit_lossy_16384_vertical",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "Rgb8",
+      "source_sha256": "e96419f9a3689884605339b27794c33926af7aaf27a5ce786a59ec0be78311e4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+          "rust_kind": "dimensions",
+          "rust_format": "WEBP",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "encoding error 5: Image size exceeds WebP limit of 16383 pixels",
+      "error_kind": "dimensions"
+    },
+    {
       "id": "enc_lossy",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy.bin",
       "ref_bytes": 49152,
@@ -9343,6 +11803,86 @@
       "encoded_ref_sha256": "9c01cd551254909ec5028d6470d2f83af7ab936fc0146c9b9738432d40f6df10",
       "source_mode": "Rgb8",
       "source_sha256": "f60a0ce6bf4ce6baefba2b5e698f44a537ddec25a989c8ca48057b1d981402c7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_method_4_segment_cluster_full_span_48x48",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_method_4_segment_cluster_full_span_48x48.bin",
+      "ref_bytes": 6912,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        48,
+        48
+      ],
+      "ref_sha256": "22c22361fac58e94b0c7aec01dcb32c167cf9ca0ac2dd2b375267a388ba2b809",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_method_4_segment_cluster_full_span_48x48.bin",
+      "encoded_ref_bytes": 124,
+      "encoded_ref_sha256": "d1c1f5a9d134c2dfad0d64c16dc29c9a272a4e99fd04cb2688d5d64c46dc9096",
+      "source_mode": "Rgb8",
+      "source_sha256": "596f26ec405bc7d3f8751c140bcbce1d434af0d9495694afeea3b4407a4a53a1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_lossy_quality_80_method_0_intra4_macroblock_grid_32x32",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_quality_80_method_0_intra4_macroblock_grid_32x32.bin",
+      "ref_bytes": 3072,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        32,
+        32
+      ],
+      "ref_sha256": "44f95d7357fe9e9d70a4a6b837116677c3e4c074c1152960060926295a8e3919",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_quality_80_method_0_intra4_macroblock_grid_32x32.bin",
+      "encoded_ref_bytes": 490,
+      "encoded_ref_sha256": "90ddb4c7658388ed14087a006df8e147aefdb40b0c733fa0836a97003af8bf87",
+      "source_mode": "Rgb8",
+      "source_sha256": "6b8ff21ec037d123f4efd9a53623565f2aed6cb775ff66c83bc2fb1fb9413259",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

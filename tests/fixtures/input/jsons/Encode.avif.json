@@ -13,6 +13,254 @@
   },
   "cases": [
     {
+      "id": "enc_invalid_subsampling",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "18d0dcd567c88738923774a8dfaa470edd635d66c16ace15ab0331a6f57e02b5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "Invalid subsampling: invalid",
+          "rust_kind": "parameter",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "subsampling": "invalid"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_subsampling_alias",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "18d0dcd567c88738923774a8dfaa470edd635d66c16ace15ab0331a6f57e02b5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "Invalid subsampling: 444",
+          "rust_kind": "parameter",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "subsampling": "444"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "subsampling": "444"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_invalid_range",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "18d0dcd567c88738923774a8dfaa470edd635d66c16ace15ab0331a6f57e02b5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "Invalid range",
+          "rust_kind": "parameter",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "range": "invalid"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "range": "invalid"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_decoder_only_codec",
+      "source_asset": "2x3.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "18d0dcd567c88738923774a8dfaa470edd635d66c16ace15ab0331a6f57e02b5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "Invalid saving codec",
+          "rust_kind": "parameter",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "size": [
+          2,
+          3
+        ],
+        "color_type": "RGB",
+        "codec": "dav1d"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/2x3.png",
+        "method": "PIL.Image.Image.save",
+        "format": "AVIF",
+        "kwargs": {
+          "codec": "dav1d"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_invalid_quality",
       "source_asset": "2x3.png",
       "source_format": "png",

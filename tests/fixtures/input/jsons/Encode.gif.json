@@ -2109,6 +2109,106 @@
       }
     },
     {
+      "id": "enc_rgb_single_color_token_palette",
+      "source_asset": "1x1.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1x1.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgb_exactly_256_colors",
+      "source_asset": "gif_rgb_exactly_256_colors.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "a32e33136e76cf6d03e057efbb310e584856fe567dff8ac8f8ca6d133260d2d6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_exactly_256_colors.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_rgb_balanced_checkerboard_token_split",
       "source_asset": "gif_rgb_balanced_checkerboard.png",
       "source_format": "png",
@@ -2236,6 +2336,56 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgb_high_color_token_checkpoint.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgb_low_color_token_checkpoint",
+      "source_asset": "gif_rgb_token_checkpoint.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "fa3e4abe97d4e9ad76d9326571fe279878f9d4dc7a53d6e7507df07f90ea48cd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_token_checkpoint.png",
         "method": "PIL.Image.Image.save",
         "format": "GIF",
         "kwargs": {},
@@ -2615,6 +2765,56 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgba_mixed_token_compact_checkpoint.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgba_single_color_token_partition_base",
+      "source_asset": "gif_rgba_single_color_token_checkpoint.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "cbd18abee6ca2801675d763c078349b173d8f4148f8ab60f56f98f5cae65bd58",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_single_color_token_checkpoint.png",
         "method": "PIL.Image.Image.save",
         "format": "GIF",
         "kwargs": {},

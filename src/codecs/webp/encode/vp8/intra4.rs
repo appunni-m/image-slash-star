@@ -404,7 +404,7 @@ struct Intra4SelectionInput<'a> {
     lambda_i4: u32,
     lambda_mode: u32,
     texture_lambda: u32,
-    distortion_only: bool,
+    method: u8,
     coefficient_probabilities: &'a [[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 }
@@ -427,7 +427,7 @@ pub(super) fn select_macroblock(
     lambda_i4: u32,
     lambda_mode: u32,
     texture_lambda: u32,
-    distortion_only: bool,
+    method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Intra4Result {
@@ -445,7 +445,7 @@ pub(super) fn select_macroblock(
             lambda_i4,
             lambda_mode,
             texture_lambda,
-            distortion_only,
+            method,
             coefficient_probabilities,
             trellis,
         },
@@ -471,7 +471,7 @@ pub(super) fn select_macroblock_with_token(
     lambda_i4: u32,
     lambda_mode: u32,
     texture_lambda: u32,
-    distortion_only: bool,
+    method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
     token: &crate::CancellationToken,
@@ -490,7 +490,7 @@ pub(super) fn select_macroblock_with_token(
             lambda_i4,
             lambda_mode,
             texture_lambda,
-            distortion_only,
+            method,
             coefficient_probabilities,
             trellis,
         },
@@ -515,10 +515,12 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
         lambda_i4,
         lambda_mode,
         texture_lambda,
-        distortion_only,
+        method,
         coefficient_probabilities,
         trellis,
     } = input;
+    let distortion_only = method <= 2;
+    let compare_predictions = method == 2;
     let mut result = Intra4Result {
         modes: [Intra4Mode::Dc; 16],
         levels: [[0; 16]; 16],
@@ -530,6 +532,17 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
         score: u64::from(211_u32.wrapping_mul(lambda_mode)),
         nonzero: 0,
     };
+    if compare_predictions {
+        let average_quantizer = matrices
+            .y1
+            .q
+            .iter()
+            .map(|&value| u32::from(value))
+            .sum::<u32>()
+            .wrapping_add(8)
+            >> 4;
+        result.score = 1_000_u64.saturating_mul(u64::from(average_quantizer).pow(2));
+    }
 
     for block_y in 0_usize..4 {
         for block_x in 0_usize..4 {
@@ -596,6 +609,7 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                 result.modes[block_index.wrapping_sub(1)]
             };
             let context = usize::from(top_nonzero[block_x].wrapping_add(left_nonzero[block_y]));
+            let mut prediction_score = 0;
             let selected_mode = if distortion_only {
                 let mut selected: Option<(u32, Intra4Mode)> = None;
                 for mode in Intra4Mode::ALL {
@@ -618,7 +632,9 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
                     clippy::expect_used,
                     reason = "Intra4Mode::ALL statically contains the complete non-empty prediction set."
                 )]
-                Some(selected.expect("VP8 always has intra4 candidates").1)
+                let (score, mode) = selected.expect("VP8 always has intra4 candidates");
+                prediction_score = score;
+                Some(mode)
             } else {
                 None
             };
@@ -728,12 +744,12 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
             result.spectral_distortion = result.spectral_distortion.wrapping_add(spectral);
             result.header_cost = result.header_cost.wrapping_add(header);
             result.rate_cost = result.rate_cost.wrapping_add(rate);
-            result.score = result.score.wrapping_add(rd_score(
-                rate,
-                header,
-                distortion.wrapping_add(spectral),
-                lambda_mode,
-            ));
+            let score = if compare_predictions {
+                u64::from(prediction_score)
+            } else {
+                rd_score(rate, header, distortion.wrapping_add(spectral), lambda_mode)
+            };
+            result.score = result.score.wrapping_add(score);
             if nonzero {
                 result.nonzero |= 1_u32.wrapping_shl(block_index.to_le_bytes()[0].into());
             }

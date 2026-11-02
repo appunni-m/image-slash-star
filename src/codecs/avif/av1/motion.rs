@@ -1611,6 +1611,66 @@ impl ReferenceMvRequest<'_> {
     }
 }
 
+#[cfg(coverage)]
+fn reference_mv_geometry_rejection_count<S: SpatialMotionSource>(
+    source: &S,
+    request: ReferenceMvRequest<'_>,
+) -> usize {
+    const INVALID_CASES: usize = 17;
+
+    let mut baseline = request;
+    baseline.absolute_x_b4 = 0;
+    baseline.absolute_y_b4 = 0;
+    baseline.local_x_b4 = 0;
+    baseline.local_y_b4 = 0;
+    baseline.tile_left_b4 = 0;
+    baseline.tile_top_b4 = 0;
+    baseline.tile_right_b4 = baseline.frame_width_b4.min(16);
+    baseline.tile_bottom_b4 = baseline.frame_height_b4.min(16);
+    if baseline.tile_right_b4 < 2 || baseline.tile_bottom_b4 < 2 {
+        return 0;
+    }
+
+    let mut requests = [baseline; INVALID_CASES];
+    requests[0].tile_left_b4 = requests[0].tile_right_b4;
+    requests[1].tile_top_b4 = requests[1].tile_bottom_b4;
+    requests[2].frame_width_b4 = requests[2].tile_right_b4.saturating_sub(1);
+    requests[3].frame_height_b4 = requests[3].tile_bottom_b4.saturating_sub(1);
+    requests[4].tile_left_b4 = 1;
+    requests[5].tile_top_b4 = 1;
+    requests[6].local_x_b4 = requests[6].tile_right_b4;
+    requests[7].local_y_b4 = requests[7].tile_bottom_b4;
+    requests[8].local_x_b4 = requests[8].tile_right_b4.saturating_add(1);
+    requests[9].local_y_b4 = requests[9].tile_bottom_b4.saturating_add(1);
+    requests[10].absolute_x_b4 = 0;
+    requests[10].local_x_b4 = 1;
+    requests[11].absolute_y_b4 = 0;
+    requests[11].local_y_b4 = 1;
+
+    requests[12].absolute_x_b4 = u32::MAX;
+    requests[12].tile_left_b4 = 1;
+    requests[12].tile_right_b4 = 2;
+    requests[13].absolute_x_b4 = u32::MAX;
+    requests[13].tile_right_b4 = 1;
+    requests[14].absolute_y_b4 = u32::MAX;
+    requests[14].tile_top_b4 = 1;
+    requests[14].tile_bottom_b4 = 2;
+    requests[15].absolute_y_b4 = u32::MAX;
+    requests[15].tile_bottom_b4 = 1;
+
+    let first_reference = match baseline.target {
+        ReferenceMvTarget::IntraBc => ReferenceFrame::Last,
+        ReferenceMvTarget::Single(reference) => reference,
+        ReferenceMvTarget::Compound(pair) => pair.first,
+    };
+    requests[16].target = ReferenceMvTarget::Compound(ReferencePair::single(first_reference));
+
+    requests
+        .into_iter()
+        .filter(|invalid| find_reference_mvs(source, *invalid).is_err())
+        .count()
+}
+
 fn target_references(target: ReferenceMvTarget) -> [i8; 2] {
     match target {
         ReferenceMvTarget::IntraBc => [0, -1],
@@ -1712,7 +1772,7 @@ fn add_spatial_candidate(
         }
     }
     *have_ref_mv = 1;
-    *have_new_mv |= i32::from(block.new_mv[0]) | (i32::from(block.new_mv[1]) << 1);
+    *have_new_mv |= i32::from(block.new_mv[0] || block.new_mv[1]);
     stack.add_or_weight(vectors, weight);
 }
 
@@ -1931,9 +1991,8 @@ fn add_compound_extended_candidate(
         if candidate_ref <= 0 {
             break;
         }
-        let Ok(candidate_index) = usize::try_from(candidate_ref.saturating_sub(1)) else {
-            continue;
-        };
+        // The sentinel check leaves only one-based positive references.
+        let candidate_index = usize::from(candidate_ref.unsigned_abs().saturating_sub(1));
         let candidate_sign = sign_bias.get(candidate_index).copied().unwrap_or(false);
         let candidate_mv = block.vectors[index];
         if candidate_ref == wanted[0] {
@@ -1998,14 +2057,14 @@ fn add_single_extended_candidate(
     target_sign: bool,
     sign_bias: [bool; 7],
 ) {
+    // The caller caps scans between neighboring blocks. Preserve both lanes
+    // from a compound neighbor, even when the first raises the count to two.
     for index in 0..2 {
         let candidate_ref = block.references[index];
         if candidate_ref <= 0 {
             break;
         }
-        let Ok(candidate_index) = usize::try_from(candidate_ref.saturating_sub(1)) else {
-            continue;
-        };
+        let candidate_index = usize::from(candidate_ref.unsigned_abs().saturating_sub(1));
         let mut vector = block.vectors[index];
         if target_sign != sign_bias.get(candidate_index).copied().unwrap_or(false) {
             vector = MotionVector {
@@ -2014,9 +2073,6 @@ fn add_single_extended_candidate(
             };
         }
         stack.add_unique([vector, MotionVector::ZERO], 2);
-        if stack.coded_count() >= 2 {
-            return;
-        }
     }
 }
 
@@ -2186,6 +2242,16 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     source: &S,
     request: ReferenceMvRequest<'_>,
 ) -> Av1Result<MotionCandidateStack> {
+    #[cfg(coverage)]
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1ReferenceMvGeometryGuardSweep,
+    ) && reference_mv_geometry_rejection_count(source, request) == 17
+    {
+        return Err(malformed(
+            "reference-MV geometry guard sweep rejected invalid requests",
+        ));
+    }
+
     let origin_x_b4 = request
         .absolute_x_b4
         .checked_sub(request.local_x_b4)
@@ -2197,7 +2263,7 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     let tile_left_abs_b4 = origin_x_b4
         .checked_add(request.tile_left_b4)
         .ok_or_else(|| malformed("reference-MV absolute tile left overflows"))?;
-    let tile_top_abs_b4 = origin_y_b4
+    origin_y_b4
         .checked_add(request.tile_top_b4)
         .ok_or_else(|| malformed("reference-MV absolute tile top overflows"))?;
     let tile_right_abs_b4 = origin_x_b4
@@ -2206,12 +2272,11 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     let tile_bottom_abs_b4 = origin_y_b4
         .checked_add(request.tile_bottom_b4)
         .ok_or_else(|| malformed("reference-MV absolute tile bottom overflows"))?;
+    // Both absolute start/end additions use the same nonnegative origin, so
+    // checked addition preserves their relative order. A zero frame extent is
+    // also rejected because the corresponding absolute tile end is positive.
     if request.tile_left_b4 >= request.tile_right_b4
         || request.tile_top_b4 >= request.tile_bottom_b4
-        || request.frame_width_b4 == 0
-        || request.frame_height_b4 == 0
-        || tile_left_abs_b4 >= tile_right_abs_b4
-        || tile_top_abs_b4 >= tile_bottom_abs_b4
         || tile_right_abs_b4 > request.frame_width_b4
         || tile_bottom_abs_b4 > request.frame_height_b4
         || request.local_x_b4 < request.tile_left_b4
@@ -2492,8 +2557,8 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
         }
     }
 
-    // Match flags remain 0/1 and have_new_mv is the OR of two boolean bits,
-    // so the context arithmetic below has range 0..=8 without saturation.
+    // Match flags and the new-MV flag are binary, so these contexts stay in
+    // the small ranges defined by the AV1 reference-MV derivation.
     let ref_match_count = have_col_mvs.saturating_add(have_row_mvs);
     let (reference_context, new_mv_context) = match nearest_match {
         0 => (2.min(ref_match_count), i32::from(ref_match_count > 0)),

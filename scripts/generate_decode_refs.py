@@ -126,6 +126,11 @@ def is_pillow_codec_exception(error):
     """Recognize pinned Pillow input errors; propagate oracle environment failures."""
     from PIL import Image, UnidentifiedImageError
 
+    if isinstance(error, RuntimeError):
+        # libavif reports this stable decode failure for a complete AV1 input
+        # whose sequence header cannot be accepted by the image decoder.
+        return str(error) == "Failed to decode frame 0: Decoding of color planes failed"
+
     supported = (OSError, ValueError, SyntaxError, EOFError, Image.DecompressionBombError)
     if not isinstance(error, supported):
         return False
@@ -3191,6 +3196,69 @@ def sync_encode_rows(manifest, matrix, target_format=None):
 def sync_fault_contract_rows(manifest, matrix):
     """Keep target-only fault and defensive-branch contracts in the shared index."""
     allowed_faults = {
+        "av1.inter_translation.sample_depth_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.motion_predictor.zero_width": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.motion.reference_mv_geometry_guard_sweep": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.unfiltered_copy.source_x_end_overflow": {
+            "sequence_decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "av1.lossless_i444.first_partition_fallback": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "av1.diff_mask.first_plane_length_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.diff_mask.second_plane_length_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.diff_mask.output_plane_length_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.diff_mask.scratch_length_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.fill_empty_width": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.fill_empty_height": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.fill_scratch_short": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.invalid_mode": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.empty_width": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.empty_height": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.scratch_length_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.non_normative_width": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.inter_intra_mask.non_normative_height": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.reduce_empty_width": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.reduce_empty_height": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.wedge_mask.reduce_scratch_short": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "av1.segment_map.reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3279,6 +3347,36 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.i420_12bit_alpha.sample_count_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },
+        "avif.i420_12bit_alpha.zero_width": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.i420_12bit_alpha.nondivisible_luma_length": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.i420_12bit_alpha.zero_height": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.i420_12bit_alpha.u_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.i420_12bit_alpha.v_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.portable.y_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.portable.u_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.portable.v_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.portable.alpha_plane_length_mismatch": {
+            "decode_unsupported_then_retry_succeeds"
+        },
+        "avif.subsampled.identity_conversion": {
+            "decode_unsupported_then_retry_succeeds"
+        },
         "av1.superres.position_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
@@ -3360,6 +3458,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.rle.command_work_budget": {
             "decode_work_budget_exceeded_then_retry_succeeds"
         },
+        "bmp.encode.height_over_signed_limit": {
+            "encode_dimensions_error"
+        },
         "tiff.lzw.zero_expected_output": {
             "decode_error_then_retry_succeeds",
             "decode_with_token_error_then_retry_succeeds",
@@ -3400,6 +3501,21 @@ def sync_fault_contract_rows(manifest, matrix):
         "tiff.ycbcr.full_resolution_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
+        "tiff.ycbcr.rational_index_out_of_range": {
+            "inspection_error_then_retry_succeeds"
+        },
+        "tiff.ycbcr.floating_index_out_of_range": {
+            "inspection_error_then_retry_succeeds"
+        },
+        "tiff.directory.numeric_value_width_invalid": {
+            "inspection_incomplete_chain_then_retry_restores_parity"
+        },
+        "tiff.directory.numeric_value_width_remainder": {
+            "inspection_incomplete_chain_then_retry_restores_parity"
+        },
+        "tiff.directory.numeric_value_remainder_nonempty": {
+            "inspection_incomplete_chain_then_retry_restores_parity"
+        },
         "png.scanline.sample_buffer_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3425,6 +3541,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "webp.riff_sink.webp_form_type_mismatch": {
             "encode_invalid_riff_header_then_retry_matches_reference"
         },
+        "webp.riff_sink.declared_size_mismatch": {
+            "encode_invalid_riff_header_then_retry_matches_reference"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3447,13 +3566,22 @@ def sync_fault_contract_rows(manifest, matrix):
             "decode_error_then_retry_succeeds"
         },
         "avif.metadata.item_table_reservation": {
-            "decode_error_then_retry_succeeds"
+            "decode_error_then_retry_succeeds",
+            "inspection_error_then_retry_succeeds",
+        },
+        "avif.container.inspect_unvalidated_input": {
+            "inspection_error_then_retry_succeeds"
+        },
+        "avif.container.meta_full_box_version": {
+            "inspection_error_then_retry_succeeds"
         },
         "avif.metadata.item_location_table_reservation": {
-            "decode_error_then_retry_succeeds"
+            "decode_error_then_retry_succeeds",
+            "inspection_error_then_retry_succeeds",
         },
         "avif.metadata.item_extent_span_reservation": {
-            "decode_error_then_retry_succeeds"
+            "decode_error_then_retry_succeeds",
+            "inspection_error_then_retry_succeeds",
         },
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation": {
             "decode_error_then_retry_succeeds"
@@ -3464,6 +3592,17 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.frame.assembled_monochrome_cdef_active_map_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "av1.cdef.invalid_sample_depth": {"decode_error_then_retry_succeeds"},
+        "av1.cdef.direction_invalid_sample_depth": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.cdef.input_guard_sweep": {"decode_error_then_retry_succeeds"},
+        "av1.cdef.active_map_extent_mismatch": {"decode_error_then_retry_succeeds"},
+        "av1.cdef.active_strength_index_out_of_range": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.cdef.invalid_y_strength_count": {"decode_error_then_retry_succeeds"},
+        "av1.cdef.invalid_uv_strength_count": {"decode_error_then_retry_succeeds"},
         "av1.frame.tile_cell_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3590,40 +3729,83 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(f"{case_id}: fault point and contract must be strings")
         if point not in allowed_faults or contract not in allowed_faults.get(point, set()):
             raise RuntimeError(f"{case_id}: fault point or public contract is not allow-listed")
-        if row["operation"] == "inspect" and (
-            row["format"] != "png"
-            or not (
+        if row["operation"] == "inspect":
+            supported_png_inspection = row["format"] == "png" and (
                 point == "png.apng.sequence_counter_exhaustion"
                 and contract == "inspection_error_then_retry_succeeds"
                 or point == "png.inspect.signature_mismatch"
                 and contract == "inspection_invalid_signature_rejected"
             )
-        ):
-            raise RuntimeError(
-                f"{case_id}: inspect fault contracts must use a supported PNG inspection contract"
+            supported_avif_inspection = row["format"] == "avif" and (
+                point
+                in {
+                    "avif.container.inspect_unvalidated_input",
+                    "avif.container.meta_full_box_version",
+                    "avif.metadata.item_table_reservation",
+                    "avif.metadata.item_location_table_reservation",
+                    "avif.metadata.item_extent_span_reservation",
+                }
+                and contract == "inspection_error_then_retry_succeeds"
             )
-        if row["operation"] == "encode":
-            if row["format"] != "webp":
-                raise RuntimeError(f"{case_id}: encode fault contracts must use WebP")
-            expected_source_operation = (
-                "encode" if point.startswith("webp.riff_sink.") else "decode"
+            supported_tiff_inspection = row["format"] == "tiff" and (
+                point
+                in {
+                    "tiff.ycbcr.rational_index_out_of_range",
+                    "tiff.ycbcr.floating_index_out_of_range",
+                }
+                and contract == "inspection_error_then_retry_succeeds"
+                or point
+                in {
+                    "tiff.directory.numeric_value_width_invalid",
+                    "tiff.directory.numeric_value_width_remainder",
+                    "tiff.directory.numeric_value_remainder_nonempty",
+                }
+                and contract == "inspection_incomplete_chain_then_retry_restores_parity"
             )
-            if source_operation != expected_source_operation:
+            if not (
+                supported_png_inspection
+                or supported_avif_inspection
+                or supported_tiff_inspection
+            ):
                 raise RuntimeError(
-                    f"{case_id}: source_case operation must be {expected_source_operation}"
+                    f"{case_id}: inspect fault contract is not an allow-listed inspection contract"
                 )
-            if point == "webp.hash_chain.index_overflow":
-                valid_encode_contract = contract == "encode_invalid_dimensions_then_retry_succeeds"
-            else:
+        if row["operation"] == "encode":
+            if row["format"] == "bmp":
                 valid_encode_contract = (
-                    point.startswith("webp.riff_sink.")
-                    and contract == "encode_invalid_riff_header_then_retry_matches_reference"
+                    point == "bmp.encode.height_over_signed_limit"
+                    and contract == "encode_dimensions_error"
+                    and source_operation == "decode"
                 )
+            else:
+                if row["format"] != "webp":
+                    raise RuntimeError(f"{case_id}: unsupported encode fault-contract format")
+                expected_source_operation = (
+                    "encode" if point.startswith("webp.riff_sink.") else "decode"
+                )
+                if source_operation != expected_source_operation:
+                    raise RuntimeError(
+                        f"{case_id}: source_case operation must be {expected_source_operation}"
+                    )
+                if point == "webp.hash_chain.index_overflow":
+                    valid_encode_contract = contract == "encode_invalid_dimensions_then_retry_succeeds"
+                else:
+                    valid_encode_contract = (
+                        point.startswith("webp.riff_sink.")
+                        and contract == "encode_invalid_riff_header_then_retry_matches_reference"
+                    )
             if not valid_encode_contract:
                 raise RuntimeError(f"{case_id}: encode fault point has an invalid retry contract")
         if contract == "inspection_error_then_retry_succeeds" and row["operation"] != "inspect":
             raise RuntimeError(
                 f"{case_id}: inspection retry contract requires operation: inspect"
+            )
+        if (
+            contract == "inspection_incomplete_chain_then_retry_restores_parity"
+            and row["operation"] != "inspect"
+        ):
+            raise RuntimeError(
+                f"{case_id}: incomplete-chain retry contract requires operation: inspect"
             )
 
     matrix["fault_contracts"] = rows

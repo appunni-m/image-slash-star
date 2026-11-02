@@ -19,7 +19,11 @@ impl Intra16Mode {
     const ALL: [Self; 4] = [Self::Dc, Self::TrueMotion, Self::Vertical, Self::Horizontal];
 }
 
-fn flat_border_mode(source: &[u8; 256], has_top: bool, has_left: bool) -> Option<Intra16Mode> {
+pub(super) fn flat_border_mode(
+    source: &[u8; 256],
+    has_top: bool,
+    has_left: bool,
+) -> Option<Intra16Mode> {
     if (has_top && has_left) || source.iter().any(|&sample| sample != source[0]) {
         return None;
     }
@@ -296,12 +300,11 @@ pub(super) fn select(
     matrices: &SegmentMatrices,
     lambda_i16: u32,
     texture_lambda: u32,
-    fixed_mode: Option<Intra16Mode>,
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
 ) -> Intra16Candidate {
-    let distortion_only = method <= 1;
+    let distortion_only = method <= 2;
     let flat_border_mode = distortion_only
         .then(|| flat_border_mode(source, has_top, has_left))
         .flatten();
@@ -328,9 +331,7 @@ pub(super) fn select(
     let mut is_flat = method >= 3 && has_uniform_samples(source);
     let mut best = None;
     for mode in Intra16Mode::ALL {
-        if fixed_mode.is_some_and(|fixed| fixed != mode)
-            || selected_mode.is_some_and(|selected| selected != mode)
-        {
+        if selected_mode.is_some_and(|selected| selected != mode) {
             continue;
         }
         let mut candidate = evaluate(
@@ -350,6 +351,16 @@ pub(super) fn select(
             coefficient_probabilities,
             trellis,
         );
+        if method == 2 {
+            // Method two compares prediction error before quantization, using
+            // libwebp's fixed mode penalty instead of reconstructed RD cost.
+            let prediction = predict(mode, top, left, top_left, has_top, has_left);
+            candidate.score = u64::from(
+                256u32
+                    .saturating_mul(squared_error_16x16(source, &prediction))
+                    .saturating_add(106u32.saturating_mul(FIXED_MODE_COSTS[mode as usize])),
+            );
+        }
         if is_flat {
             is_flat = has_zero_ac_coefficients(&candidate.y1_levels);
             if is_flat {
@@ -372,7 +383,7 @@ pub(super) fn select(
             best = Some(candidate);
         }
     }
-    // `fixed_mode`, when present, is itself a member of this non-empty enum set.
+    // `selected_mode`, when present, is drawn from this non-empty enum set.
     #[allow(
         clippy::expect_used,
         reason = "Intra16Mode::ALL statically contains the complete non-empty prediction set."

@@ -22,7 +22,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Build | `make build` | Compiles the locked default-feature crate |
 | Format / fix | `make fmt` / `make fmt-fix` | Checks / rewrites Rust formatting |
 | Contracts | `make verify` | Legal, fixture, capability, roadmap, coverage-origin, and release-tool checks |
-| Lint | `make lint` | Strict debug/release, coverage-hook, and JPEG benchmark Clippy |
+| Lint | `make lint` | Rust formatting plus strict debug/release, coverage-hook, and JPEG benchmark Clippy |
 | Tests | `make test` | Rustdoc, all-feature tests, strict WASI Clippy, and feature/target lanes |
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
@@ -72,6 +72,17 @@ For focused exploration, pass one or more exact manifest keys to
 ```sh
 make coverage-selected COVERAGE_CASES='decode:webp:lossy_vp8 encode:png:enc_rgb'
 ```
+
+Full coverage uses `target/cargo-llvm-cov/full`; selected coverage uses
+`target/cargo-llvm-cov/selected`. Each is isolated from ordinary and feature-matrix
+builds. Full runs use Cargo's host layout and selected runs pass an explicit
+`--target`; sharing their cache lets LLVM-Cov collect old executables from both
+layouts and change the reported denominator. Existing cache contents are retained.
+Set `COVERAGE_TARGET_DIR` to relocate their parent, or set
+`COVERAGE_FULL_TARGET_DIR` and `COVERAGE_SELECTED_TARGET_DIR` individually. Keep
+each cache dedicated to its invocation layout. Direct script calls default to
+the selected cache and honor an explicit `CARGO_TARGET_DIR`. Local receipts
+record the resolved Cargo output directory.
 
 The runner rejects malformed, duplicate, unknown, and planned-only selections,
 then delegates canonical validation and execution to the existing Rust matrix

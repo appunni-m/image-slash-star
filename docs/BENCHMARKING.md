@@ -53,6 +53,31 @@ lanes. Those instrumented runs verify correctness and branch reachability; they
 are not performance measurements. AVIF has parity coverage there, but the
 paired timing comparison below measures JPEG only.
 
+## Local AVIF sequence decode probe
+
+The repository also includes `examples/avif_perf_probe.rs` for timing the
+public AVIF sequence decoder on one fixture. Run it from a repository
+checkout:
+
+```sh
+cargo run --release --locked --no-default-features --features avif \
+  --target-dir target/avif-perf-probe \
+  --example avif_perf_probe -- \
+  tests/fixtures/input/images/avif/animated_motion_temporal_mv_range_2048x128.avif 1
+```
+
+The example reads the input once, then prints one `iteration nanoseconds` row
+per timed decode. The optional third argument sets the number of unmeasured
+warm-up decodes (default `1`). Each timed call includes `decode_sequence` and
+destruction of its decoded output; file I/O, warm-up, and compilation are
+outside the timer. This probe does not compare results with an oracle. Use
+`make coverage-selected` with exact parity cases for correctness. For
+performance comparisons, collect equal-length runs in alternating A–B–B–A
+order on one host with identical release settings, and report the workload,
+machine, Rust version, run medians, and sample counts.
+This probe is a local diagnostic; it is separate from the published JPEG
+benchmark matrix and its results do not establish SSE2 or AVX2 runtime speed.
+
 ## Optional native x86 profiling
 
 To inspect the RGB 4:2:0 encoder hot path, run the `Profile x86 JPEG` workflow

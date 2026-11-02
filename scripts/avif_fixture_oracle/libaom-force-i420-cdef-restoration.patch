@@ -1,0 +1,55 @@
+diff --git a/av1/encoder/pickrst.c b/av1/encoder/pickrst.c
+index 3913d58351..3c71ad8c5d 100644
+--- a/av1/encoder/pickrst.c
++++ b/av1/encoder/pickrst.c
+@@ -894,6 +894,14 @@ static int count_sgrproj_bits(SgrprojInfo *sgrproj_info,
+   return bits;
+ }
+ 
++static int force_i420_cdef_restoration(const AV1_COMMON *cm) {
++  const SequenceHeader *const seq_params = cm->seq_params;
++  return seq_params->bit_depth == 10 && seq_params->subsampling_x &&
++         seq_params->subsampling_y && seq_params->enable_cdef &&
++         cm->superres_upscaled_width == 16 &&
++         cm->superres_upscaled_height == 16;
++}
++
+ static inline void search_sgrproj(const RestorationTileLimits *limits,
+                                   int rest_unit_idx, void *priv,
+                                   int32_t *tmpbuf, RestorationLineBuffers *rlbs,
+@@ -908,8 +916,12 @@ static inline void search_sgrproj(const RestorationTileLimits *limits,
+   const int bit_depth = cm->seq_params->bit_depth;
+ 
+   const int64_t bits_none = x->mode_costs.sgrproj_restore_cost[0];
+-  // Prune evaluation of RESTORE_SGRPROJ if 'skip_sgr_eval' is set
+-  if (rsc->skip_sgr_eval) {
++  const int force_restoration =
++      rsc->plane == AOM_PLANE_Y && force_i420_cdef_restoration(cm);
++  // Prune evaluation of RESTORE_SGRPROJ if 'skip_sgr_eval' is set. The
++  // fixture-only 10-bit I420 profile keeps one SGR search so its parity case
++  // can exercise CDEF followed by restoration.
++  if (rsc->skip_sgr_eval && !force_restoration) {
+     rsc->total_bits[RESTORE_SGRPROJ] += bits_none;
+     rsc->total_sse[RESTORE_SGRPROJ] += rsc->sse[RESTORE_NONE];
+     rusi->best_rtype[RESTORE_SGRPROJ - 1] = RESTORE_NONE;
+@@ -953,7 +965,8 @@ static inline void search_sgrproj(const RestorationTileLimits *limits,
+         (1 + DUAL_SGR_PENALTY_MULT * rsc->lpf_sf->dual_sgr_penalty_level);
+ 
+   RestorationType rtype =
+-      (cost_sgr < cost_none) ? RESTORE_SGRPROJ : RESTORE_NONE;
++      (cost_sgr < cost_none || force_restoration) ? RESTORE_SGRPROJ
++                                                  : RESTORE_NONE;
+   rusi->best_rtype[RESTORE_SGRPROJ - 1] = rtype;
+ 
+ #if DEBUG_LR_COSTING
+@@ -2191,6 +2204,10 @@ void av1_pick_filter_restoration(const YV12_BUFFER_CONFIG *src, AV1_COMP *cpi) {
+         }
+       }
+ 
++      if (plane == AOM_PLANE_Y && force_i420_cdef_restoration(cm)) {
++        best_rtype[plane] = RESTORE_SGRPROJ;
++      }
++
+       bits_this_size += rsc.total_bits[best_rtype[plane]];
+       sse_this_size += rsc.total_sse[best_rtype[plane]];
+     }

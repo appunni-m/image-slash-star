@@ -8,6 +8,52 @@ maps partition and transform-search controls to AOM encoder controls. It is
 used only to build fixture-generation tools; the Rust library and runtime do
 not depend on this patch.
 
+## B32x64 inter-transform fixtures
+
+The deep and topology profiles use one forced AV1 partition so each inter frame
+keeps two vertical B32x64 blocks. The deep profile reaches the deep transform
+tree; the topology profile reaches a mixed one-child split. The fixture-only patch
+[`libaom-lossy-inter-i420-deep-b32x64.patch`](libaom-lossy-inter-i420-deep-b32x64.patch)
+is applied to a separate copy of pinned libaom. It does not change the clean
+oracle checkout or the Rust decoder.
+
+Build patched libaom from the pinned source. The libavif archive from the
+fixture-controls build below supplies the encoder API; link it against the
+patched libaom archive for this fixture:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-deep-b32x64
+git -C target/oracle-staging/libaom-deep-b32x64 checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-deep-b32x64 apply "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i420-deep-b32x64.patch"
+cmake -S target/oracle-staging/libaom-deep-b32x64 -B target/oracle-staging/libaom-deep-b32x64-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-deep-b32x64-build -j 4
+
+clang -std=c11 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-superres/include \
+  -I target/oracle-staging/libavif-superres-build/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i420_b32x64.c \
+  target/oracle-staging/libavif-superres-build/libavif.a \
+  target/oracle-staging/libaom-deep-b32x64-build/libaom.a -lm \
+  -o target/oracle-staging/encode_lossy_inter_i420_b32x64
+
+target/oracle-staging/pillow122/bin/python3 \
+  scripts/generate_avif_lossy_inter_i420_b32x64.py \
+  --encoder target/oracle-staging/encode_lossy_inter_i420_b32x64
+target/oracle-staging/pillow122/bin/python3 \
+  scripts/generate_avif_lossy_inter_i420_b32x64.py --check
+target/oracle-staging/pillow122/bin/python3 \
+  scripts/generate_avif_lossy_inter_i420_b32x64.py \
+  --profile topology --encoder target/oracle-staging/encode_lossy_inter_i420_b32x64
+target/oracle-staging/pillow122/bin/python3 \
+  scripts/generate_avif_lossy_inter_i420_b32x64.py --profile topology --check
+```
+
+The generator normalizes sequence timestamps, requires repeat-encode stability,
+and verifies the exact two-frame RGB output with Pillow 12.2.0.
+
 Build the pinned libaom and libavif versions with CMake and Ninja:
 
 ```sh
@@ -43,6 +89,69 @@ Use the resulting `avifenc` with the generator. For example:
 ```sh
 .oracle-venv/bin/python scripts/generate_avif_8bit_superres_restoration.py \
   --avifenc target/oracle-staging/libavif-superres-build/avifenc
+```
+
+The 8-bit I422 companion is generated and checked with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_8bit_i422_superres_restoration.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_8bit_i422_superres_restoration.py --check
+```
+
+It uses the same pinned encoder profile, with 4:2:2 chroma and the exact
+largest-transform/SuperRes SGR bitstream checked before the Pillow RGB pins.
+
+The 10-bit I444 companion uses this same pinned encoder and compatibility
+patch. It disables transform-size search, retains the largest-transform mode,
+and requires SGR restoration on all three full-resolution planes. Regenerate
+it with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_hi10_i444_superres_restoration.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc
+```
+
+The generator checks that the inter frame is coded at 128x56, restored after
+super-resolution to 160x56, and decoded by the pinned Pillow runtime to the
+recorded RGB frames. Its `--check` mode verifies the retained AVIF without
+rebuilding the fixture encoder.
+
+## Combined 10-bit I420 CDEF and SGR restoration fixture
+
+Libaom's normal rate-distortion search selects either CDEF or SGR restoration
+for this tiny profile. The fixture-only patch
+[`libaom-force-i420-cdef-restoration.patch`](libaom-force-i420-cdef-restoration.patch)
+retains the SGR search for a single 16x16 10-bit I420 key frame and selects its
+computed luma filter parameters. Runtime code and the pinned Pillow decoder are
+unchanged.
+
+Apply the patch to the pinned libaom checkout from the build steps above, then
+build a separate archive and AVIF encoder:
+
+```sh
+git -C target/oracle-staging/libaom apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-force-i420-cdef-restoration.patch"
+cmake -S target/oracle-staging/libaom -B target/oracle-staging/libaom-force-i420-cdef-restoration-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/aom-force-i420-cdef-restoration-prefix"
+cmake --build target/oracle-staging/libaom-force-i420-cdef-restoration-build -j 4
+cmake --install target/oracle-staging/libaom-force-i420-cdef-restoration-build
+cmake -S target/oracle-staging/libavif-superres -B target/oracle-staging/libavif-force-i420-cdef-restoration-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=ON \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/aom-force-i420-cdef-restoration-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/aom-force-i420-cdef-restoration-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/aom-force-i420-cdef-restoration-prefix/include"
+cmake --build target/oracle-staging/libavif-force-i420-cdef-restoration-build --target avifenc -j 4
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i420_cdef_restoration \
+  --avifenc target/oracle-staging/libavif-force-i420-cdef-restoration-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i420_cdef_restoration --check
 ```
 
 Generate the equal-width no-op edge case with the same pinned encoder:
@@ -122,6 +231,14 @@ This full-range 33x17 I422 still signals denominator 9, with coded width 29
 and upscaled width 33. Restoration is disabled so decoding exercises the
 generic I422 super-resolution path. The generator checks the I422 sequence
 header and CICP values, repeat-encode stability, and exact Pillow RGB pixels.
+
+The 10-bit animated I422 companion is generated by
+`scripts/generate_avif_hi10_i422_superres_restoration.py`. Its inter frame is
+coded at 128x56, super-resolved to 160x56, and uses SGR restoration on all
+planes. Disabling transform-size search keeps the frame in
+`TX_MODE_LARGEST`, the high-depth restoration profile exercised by its Rust
+parity case. The generator normalizes sequence timestamps and checks both
+repeat-encode stability and exact Pillow 12.2.0 RGB frames.
 
 The clean pinned libavif checkout used by `scripts/generate_avif_loop_refs.py`
 must remain separate: that oracle checks that its source tree is unmodified.
@@ -250,6 +367,19 @@ segments stay lossy; both frames remain non-all-lossless. The bitstream check
 validates the clipped dimensions and mixed segment map before exact Pillow
 frames are written.
 
+The `--lossless-roi-residual` mode keeps its existing intra-predicted residual
+case. `--lossless-roi-impulse-residual` adds one residual at `(33,33)` while
+preserving inter prediction for the qindex-zero ROI. The fixture-only libaom
+patch selects 4x4 transforms for that leaf after state update, and the encoder
+trace must report `inter=1` and `skip_txfm=0`.
+
+Add `--bit-depth 10` to `scripts/generate_avif_mixed_lossless_inter_b32.py`
+with `--lossless-roi-impulse-residual` to generate the corresponding high-bit-
+depth parity fixture. Its AV1 sequence header must report 10-bit I420, while
+the inter-frame segment map remains mixed and the B32 ROI remains lossless.
+The same encoder trace, independent repeat runs, exact Pillow RGB frames, and
+native loop evidence are checked.
+
 Use isolated copies of the pinned sources, applying the existing clipped-B32
 fixture patch before the sequence-specific patches:
 
@@ -294,6 +424,10 @@ cc -std=c99 -O2 -Wall -Wextra -Werror \
 .oracle-venv/bin/python scripts/generate_avif_mixed_lossless_inter_b32.py \
   --encoder target/oracle-staging/encode-avif-mixed-lossless-inter-b32 \
   --canvas-size 60
+
+.oracle-venv/bin/python scripts/generate_avif_mixed_lossless_inter_b32.py \
+  --encoder target/oracle-staging/encode-avif-mixed-lossless-inter-b32 \
+  --lossless-roi-impulse-residual
 ```
 
 The generator writes a receipt under ignored `target/oracle-staging/` with
@@ -301,6 +435,34 @@ patch, encoder, bitstream, frame-header, trace, and Pillow identities. Only
 the three version-one BMFF timestamp pairs are normalized; all other bytes
 must be deterministic. Keep these patched builds apart from the clean pinned
 libavif checkout used by the loop observer.
+
+## Lossy 10-bit I420 B128x128 sequence
+
+`animated_lossy_wide_i420_10bit_b128x128.avif` is encoded from deterministic
+full-range 10-bit I420 planes by `encode_lossy_wide_i420_10bit.c`. The
+128x128 sequence uses one encoder thread, 128x128 superblocks, fixed 128-pixel
+partition limits, largest transforms, and active SGR restoration on all three
+planes. The generator checks repeatable timestamp-normalized bytes, exact
+Pillow 12.2.0 RGB frames, and the AV1 profile, bit depth, subsampling, frame
+types, transform mode, and restoration headers. These checks establish the
+configured encoder case and its public decode behavior; they do not claim a
+per-block encoder trace.
+
+Compile the helper against the static libraries from the pinned build above,
+then generate the fixture:
+
+```sh
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-superres/include \
+  -I target/oracle-staging/libavif-superres-build/include \
+  -I target/oracle-staging/aom-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_wide_i420_10bit.c \
+  target/oracle-staging/libavif-superres-build/libavif.a \
+  target/oracle-staging/aom-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossy-wide-i420-10bit
+.oracle-venv/bin/python scripts/generate_avif_lossy_wide_i420_10bit.py \
+  --encoder target/oracle-staging/encode-avif-lossy-wide-i420-10bit
+```
 
 ## Lossy wide I422 B128x64 sequence
 
@@ -492,6 +654,125 @@ and `eec41a0b35aefcb11f78418d9e1fbd3617ae6dcadb7182de12ca4293f1794487`.
 Independent pinned libavif evidence records repetition count zero (one total
 play). `make fixtures-check` validates the retained Pillow references.
 
+## Lossy inter I444 B8x16 TX_MODE_SELECT sequence
+
+`animated_lossy_inter_i444_b8x16_mode_select_64x64.avif` is a deterministic
+two-frame 64x64 8-bit I444 sequence. A fixture-only libaom patch forces the
+second frame's 16x16 inter partitions into vertical splits, producing B8x16
+leaves while retaining positive qindex and `TX_MODE_SELECT`. The Rust decoder
+is unchanged. The fixture retains both exact Pillow RGB frames and an
+independent pinned libavif one-play observation.
+
+Build the fixture encoder with the same pinned oracle revisions:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i444-b8x16-source
+git -C target/oracle-staging/libaom-i444-b8x16-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i444-b8x16-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i444-b8x16.patch"
+cmake -S target/oracle-staging/libaom-i444-b8x16-source \
+  -B target/oracle-staging/libaom-i444-b8x16-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i444-b8x16-prefix"
+cmake --build target/oracle-staging/libaom-i444-b8x16-build -j 4
+cmake --install target/oracle-staging/libaom-i444-b8x16-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i444-b8x16-source
+git -C target/oracle-staging/libavif-i444-b8x16-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i444-b8x16-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i444-b8x16-source \
+  -B target/oracle-staging/libavif-i444-b8x16-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i444-b8x16-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i444-b8x16-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i444-b8x16-prefix/include"
+cmake --build target/oracle-staging/libavif-i444-b8x16-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i444-b8x16-source/include \
+  -I target/oracle-staging/libavif-i444-b8x16-build/include \
+  -I target/oracle-staging/libaom-i444-b8x16-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i444_b8x16.c \
+  target/oracle-staging/libavif-i444-b8x16-build/libavif.a \
+  target/oracle-staging/libaom-i444-b8x16-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i444-b8x16
+.oracle-venv/bin/python scripts/generate_avif_inter_i444_b8x16.py \
+  --encoder target/oracle-staging/encode-avif-inter-i444-b8x16
+```
+
+The normalized fixture SHA-256 is
+`0187f7634e7ffb21019961fbb47091c3c2deaaccd88a04c043a7ffe1b05b8f93`. Pillow
+12.2.0 frame hashes are
+`88c35ff901b357eb27dd0b079351ce61ea088d2d8bd1ab4fb9a215f3fc6bf930` and
+`24c6d0c2cbe9558c7ce24811c04af120ac2e6cc811e2bb0b89377b699185d157`.
+`make verify-fixture-integrity` checks the retained references.
+
+## High-depth lossy inter I444 B16x64 mode-2 sequence
+
+`animated_lossy_inter_i444_b16x64_mode_select_10bit_64x64.avif` is a
+deterministic two-frame 64x64 full-range 10-bit I444 sequence. The fixture-only
+libaom patch forces a vertical four-way split at the second frame's 64x64
+root, creating exact B16x64 leaves. It also keeps `TX_MODE_SELECT` on that
+frame when libaom's normal no-split fallback would change the frame header to
+`TX_MODE_LARGEST`. Positive qindex and non-lossless segments keep the lossy
+transform path active. The patch does not change the Rust decoder. Both exact
+Pillow RGB frames and an independent pinned libavif one-play observation are
+retained.
+
+Build the fixture encoder from the pinned oracle revisions:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i444-b16x64-mode2-source
+git -C target/oracle-staging/libaom-i444-b16x64-mode2-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i444-b16x64-mode2-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i444-b16x64-mode2.patch"
+cmake -S target/oracle-staging/libaom-i444-b16x64-mode2-source \
+  -B target/oracle-staging/libaom-i444-b16x64-mode2-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i444-b16x64-mode2-prefix"
+cmake --build target/oracle-staging/libaom-i444-b16x64-mode2-build -j 4
+cmake --install target/oracle-staging/libaom-i444-b16x64-mode2-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i444-b16x64-mode2-source
+git -C target/oracle-staging/libavif-i444-b16x64-mode2-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i444-b16x64-mode2-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i444-b16x64-mode2-source \
+  -B target/oracle-staging/libavif-i444-b16x64-mode2-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_AOM_ENCODE=ON -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF \
+  -DAVIF_BUILD_APPS=OFF -DAVIF_BUILD_TESTS=OFF -DAVIF_BUILD_EXAMPLES=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i444-b16x64-mode2-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i444-b16x64-mode2-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i444-b16x64-mode2-prefix/include"
+cmake --build target/oracle-staging/libavif-i444-b16x64-mode2-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i444-b16x64-mode2-source/include \
+  -I target/oracle-staging/libavif-i444-b16x64-mode2-build/include \
+  -I target/oracle-staging/libaom-i444-b16x64-mode2-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i444_b16x64_mode2.c \
+  target/oracle-staging/libavif-i444-b16x64-mode2-build/libavif.a \
+  target/oracle-staging/libaom-i444-b16x64-mode2-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i444-b16x64-mode2
+.oracle-venv/bin/python scripts/generate_avif_inter_i444_b16x64_mode2.py \
+  --encoder target/oracle-staging/encode-avif-inter-i444-b16x64-mode2
+```
+
+The normalized fixture SHA-256 is
+`86fdcab5cc8355ec8706ea40ea3e9f75e8ee05a5b54c3043bf7416417bfe1de6`. Pillow
+12.2.0 frame hashes are
+`6de4e80faf42899e53568d005b9fcadaae744531ef886f308641dda0d33de8cb` and
+`e645285f52e17e263e9a67fe6b0aa9eb6d18b1cb4177e3857ec6092a348bff8d`.
+`make coverage-selected COVERAGE_CASES='decode:avif:animated_lossy_inter_i444_b16x64_mode_select_10bit_64x64'`
+executes the public parity row and retains its selected coverage report.
+
 ## Lossy inter I420 B16x64 TX_MODE_SELECT sequence
 
 `animated_lossy_inter_420_b16x64_mode_select_64x64.avif` is a two-frame 8-bit
@@ -596,6 +877,64 @@ monochrome AV1 sequence header, the lossless key and non-lossless
 `TX_MODE_SELECT` inter header, and exact Pillow RGB frames. The retained AVIF
 SHA-256 is `972330af1b5c8bd691dae557ccb6e70532959c52009f5e840aca73989975bf3c`.
 
+## Non-lossless qindex-zero I422 sequence
+
+`animated_lossy_inter_422_qindex0_mode_select_64x64.avif` is a two-frame
+64x64 8-bit I422 sequence. The quality-100 key frame remains lossless. A
+fixture-only libaom patch sets a luma DC quantizer delta of 2 on inter frame 1,
+so the second frame has base qindex zero but is not lossless. Chroma deltas
+stay zero; this preserves Pillow decoding while exercising the I422
+`TX_MODE_SELECT` qindex-zero input path.
+
+Build the fixture encoder from fresh pinned source checkouts:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-qindex0-source
+git -C target/oracle-staging/libaom-i422-qindex0-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i422-qindex0-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-qindex0-nonlossless-i422.patch"
+cmake -S target/oracle-staging/libaom-i422-qindex0-source \
+  -B target/oracle-staging/libaom-i422-qindex0-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i422-qindex0-prefix"
+cmake --build target/oracle-staging/libaom-i422-qindex0-build -j 4
+cmake --install target/oracle-staging/libaom-i422-qindex0-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i422-qindex0-source
+git -C target/oracle-staging/libavif-i422-qindex0-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i422-qindex0-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i422-qindex0-source \
+  -B target/oracle-staging/libavif-i422-qindex0-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i422-qindex0-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i422-qindex0-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i422-qindex0-prefix/include"
+cmake --build target/oracle-staging/libavif-i422-qindex0-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i422-qindex0-source/include \
+  -I target/oracle-staging/libavif-i422-qindex0-build/include \
+  -I target/oracle-staging/libaom-i422-qindex0-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i422_small_partitions.c \
+  target/oracle-staging/libavif-i422-qindex0-build/libavif.a \
+  target/oracle-staging/libaom-i422-qindex0-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i422-qindex0
+.oracle-venv/bin/python scripts/generate_avif_inter_422_qindex0_mode_select.py \
+  --encoder target/oracle-staging/encode-avif-inter-i422-qindex0
+```
+
+The generator requires two identical timestamp-normalized encodes, an
+8-bit I422 sequence header, a lossless key frame, a non-lossless qindex-zero
+`TX_MODE_SELECT` inter frame, exact Pillow 12.2.0 RGB frames, and this AVIF
+SHA-256: `062cec9bf86cfa7e5d2130baec72884dec70d96d9621578f91388612d21a1fab`.
+Run `make verify-fixture-integrity` to check the retained fixture and
+references without rebuilding the native encoder.
+
 ## Lossless 10-bit I420 B128 sequence
 
 `animated_lossless_inter_420_b128x128_10bit.avif` uses a 128x128 AV1
@@ -620,6 +959,59 @@ The generator requires two encodes to agree after normalizing only BMFF
 creation and modification timestamps. It validates the 128x128 superblock,
 key/inter all-lossless frame headers, and exact Pillow 12.2.0 RGB frames. Its
 `--check` mode runs from `make verify` without rebuilding the native encoder.
+
+## Lossless 8-bit I420 B4 partitions
+
+`animated_lossless_inter_420_b4x4_leaves_64x64.avif` contains two all-lossless
+64x64 I420 frames. The fixture encoder sets both AOM partition bounds to four
+pixels, disables rectangular partition forms, and moves a four-pixel luma
+patch between frames. The pinned Pillow decode and the Rust parity case retain
+both complete RGB frames.
+
+Build clean pinned libaom and libavif sources, applying only the repository's
+fixture-control patch to libavif:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-b4x4-source
+git -C target/oracle-staging/libaom-b4x4-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+cmake -S target/oracle-staging/libaom-b4x4-source -B target/oracle-staging/libaom-b4x4-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-b4x4-prefix"
+cmake --build target/oracle-staging/libaom-b4x4-build -j 4
+cmake --install target/oracle-staging/libaom-b4x4-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-b4x4-source
+git -C target/oracle-staging/libavif-b4x4-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-b4x4-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-b4x4-source -B target/oracle-staging/libavif-b4x4-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-b4x4-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-b4x4-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-b4x4-prefix/include"
+cmake --build target/oracle-staging/libavif-b4x4-build --target avif_static -j 4
+
+clang -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-b4x4-source/include \
+  -I target/oracle-staging/libavif-b4x4-build/include \
+  -I target/oracle-staging/libaom-b4x4-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_inter_i420_b4x4.c \
+  target/oracle-staging/libavif-b4x4-build/libavif.a \
+  target/oracle-staging/libaom-b4x4-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-lossless-inter-i420-b4x4
+.oracle-venv/bin/python scripts/generate_avif_lossless_inter_b4x4_fixture.py \
+  --encoder target/oracle-staging/encode-lossless-inter-i420-b4x4
+```
+
+The generator requires two timestamp-normalized encodes to match, verifies the
+all-lossless key/inter headers, and checks both exact Pillow 12.2.0 RGB frames.
+`make verify-fixture-integrity` checks the retained input without rebuilding
+the native encoder. Its AVIF SHA-256 is
+`8c588829bd49a125fee501c9cdcaa1e6f9c0e6f058084270eaa039688acc9748`.
 
 ## Lossless 8-bit I420 B128 partition witnesses
 
@@ -691,3 +1083,562 @@ superblock and all-lossless key/inter headers, and checks both exact Pillow
 RGB frames. `make verify` runs its `--check` mode without rebuilding the
 fixture encoder. The retained AVIF SHA-256 is
 `9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650`.
+
+The compound-prediction witness
+`animated_lossless_compound_vertical_i420_b64x128.avif` uses the same pinned
+libaom/libavif revisions and fixture-only vertical-partition patch. Reuse the
+`libaom-b64x128-prefix` and `libavif-b64x128-build` outputs built above, then
+compile its dedicated encoder and run the pinned generator:
+
+```sh
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-b64x128-source/include \
+  -I target/oracle-staging/libavif-b64x128-build/include \
+  -I target/oracle-staging/libaom-b64x128-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_compound_i420_b64x128.c \
+  target/oracle-staging/libavif-b64x128-build/libavif.a \
+  target/oracle-staging/libaom-b64x128-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossless-compound-i420-b64x128
+.oracle-venv/bin/python scripts/generate_avif_lossless_compound_tall_i420.py \
+  --encoder target/oracle-staging/encode-avif-lossless-compound-i420-b64x128
+```
+
+The fixture contains three 128x128, 8-bit I420 frames. The final all-lossless
+inter frame is the exact per-sample average of its two reference frames, and
+the fixture-only libaom patch forces the 128x128 root into two vertical
+B64x128 leaves. The generator normalizes only BMFF creation/modification
+timestamps when checking two encodes, then validates the AV1 headers and exact
+Pillow 12.2.0 pixels. Its `--check` mode is part of `make verify` and does not
+need the native encoder. The AVIF SHA-256 is
+`eb40e16aa47a612c272e29c2ad2cd62a7dc6115cce8cd40da1f1a01f95ec166a`.
+
+
+## Lossy inter I420 mixed B8x16 transform topology
+
+`animated_lossy_inter_420_b8x16_mixed_topology_64x64.avif` is a deterministic
+two-frame 64x64 8-bit I420 sequence. A fixture-only libaom patch forces
+vertical 16x16 inter partitions and a mixed transform tree inside each B8x16
+leaf: one 8x8 child splits into TX4x4 blocks while the other remains TX8x8.
+The sequence retains positive qindex and `TX_MODE_SELECT`; production Rust is
+unchanged. Its exact Pillow RGB frames and native libavif repetition evidence
+are retained with the parity row.
+
+Build the fixture encoder from the pinned libaom and libavif revisions:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i420-small-topology-source
+git -C target/oracle-staging/libaom-i420-small-topology-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i420-small-topology-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-lossy-inter-i420-b8x16-mixed-topology.patch"
+cmake -S target/oracle-staging/libaom-i420-small-topology-source \
+  -B target/oracle-staging/libaom-i420-small-topology-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i420-small-topology-prefix"
+cmake --build target/oracle-staging/libaom-i420-small-topology-build -j 4
+cmake --install target/oracle-staging/libaom-i420-small-topology-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i420-small-topology-source
+git -C target/oracle-staging/libavif-i420-small-topology-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i420-small-topology-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i420-small-topology-source \
+  -B target/oracle-staging/libavif-i420-small-topology-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i420-small-topology-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i420-small-topology-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i420-small-topology-prefix/include"
+cmake --build target/oracle-staging/libavif-i420-small-topology-build --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i420-small-topology-source/include \
+  -I target/oracle-staging/libavif-i420-small-topology-build/include \
+  -I target/oracle-staging/libaom-i420-small-topology-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossy_inter_i420_b8x16_mixed_topology.c \
+  target/oracle-staging/libavif-i420-small-topology-build/libavif.a \
+  target/oracle-staging/libaom-i420-small-topology-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-inter-i420-b8x16-mixed-topology
+.oracle-venv/bin/python scripts/generate_avif_inter_i420_b8x16_mixed_topology.py \
+  --encoder target/oracle-staging/encode-avif-inter-i420-b8x16-mixed-topology
+```
+
+The normalized fixture SHA-256 is
+`07e1d146cf7a3c5f565fab5eddecd19ae53cca665a70faf6078e1b05baeebe12`.
+Pillow 12.2.0 frame hashes are
+`ab8e6ce0ad869b8fc5e75f48f4200167244d2358e269843964ceee22ed541255` and
+`a6e8b64042b5adf6f2c9dc444c35e6d96c0151b59e91ae5b6eabcbeea8be8cbf`.
+
+## Narrow inter chroma and transform-context regressions
+
+`encode_narrow_inter.c` and `libaom-narrow-inter.patch` produce complete
+64x16 and 16x64 two-frame AVIF sequences. The input-only patch forces 16x16
+inter roots into four horizontal or vertical strips; libaom chooses the valid
+prediction modes, motion vectors, transform trees and coefficients. No Rust
+output or expected pixel data enters the producer. Qualities 45, 70 and 99
+exercise different quantization and split choices. Fifteen 8-bit inputs cover
+4:2:0 in both orientations, horizontal 4:2:2, and 4:4:4 in both orientations.
+Ten quality-99 companions cover the same geometry at 10 and 12 bits. Their
+native transform traces include deep horizontal and mixed vertical trees.
+Four additional 10/12-bit vertical inputs use the `fine` content pattern to
+reach fully split 4x16 inter transform trees in both 4:2:0 and 4:4:4.
+Nine further inputs freeze probability CDFs on both frames across 8, 10 and
+12 bits in 4:2:0, horizontal 4:2:2 and 4:4:4. Three selective-update inputs
+retain adaptive key-frame CDFs and freeze the following inter-frame CDFs.
+They exercise valid entropy state transitions through ordinary libaom controls;
+the generator verifies both complete frame headers and exact pinned input hashes.
+Vertical 4:2:2 probes are retained in local investigation evidence because the
+pinned Pillow decoder rejects their second frame; they are not successful parity
+cases. The native leaf observations establish 16x4 and 4x16 inter geometry.
+
+The 4:2:0 cases regress chroma carriers shared by adjacent luma blocks with
+different motion vectors. The horizontal quality-99 4:4:4 case also regresses a
+mixed narrow transform tree: a split first child cannot lower the four-pixel
+axis context for the next child. Public parity checks every frame's exact RGB
+pixels, dimensions, mode and sequence metadata against live pinned Pillow.
+Native loop observations are collected independently by
+`scripts/generate_avif_loop_refs.py`.
+
+Use clean pinned native source repositories at the paths below. Archive copies
+keep fixture instrumentation separate without creating branches or worktrees:
+
+```sh
+mkdir -p target/oracle-staging/libaom-narrow-source
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 |
+  tar -x -C target/oracle-staging/libaom-narrow-source
+git apply --directory=target/oracle-staging/libaom-narrow-source \
+  scripts/avif_fixture_oracle/libaom-narrow-inter.patch
+cmake -S target/oracle-staging/libaom-narrow-source \
+  -B target/oracle-staging/libaom-narrow-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-narrow-build -j 4
+
+mkdir -p target/oracle-staging/libavif-narrow-source
+git -C target/oracle-staging/libavif-loop-clean-source \
+  archive 6543b22b5bc706c53f038a16fe515f921556d9b3 |
+  tar -x -C target/oracle-staging/libavif-narrow-source
+git apply --directory=target/oracle-staging/libavif-narrow-source \
+  scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch
+cmake -S target/oracle-staging/libavif-narrow-source \
+  -B target/oracle-staging/libavif-narrow-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-narrow-build/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-narrow-source"
+cmake --build target/oracle-staging/libavif-narrow-build --target avif_static -j 4
+
+mkdir -p target/oracle-staging/narrow-inter-tools
+for orientation in horizontal vertical; do
+  case "$orientation" in
+    horizontal) fixture_width=64; fixture_height=16 ;;
+    vertical) fixture_width=16; fixture_height=64 ;;
+  esac
+  for layout in 420 422 444; do
+    if [ "$orientation:$layout" = vertical:422 ]; then continue; fi
+    for quality in 45 70 99; do
+      cc -std=c99 -O2 -Wall -Wextra -Werror \
+        -DFIXTURE_WIDTH="$fixture_width" -DFIXTURE_HEIGHT="$fixture_height" \
+        -DFIXTURE_FORMAT="AVIF_PIXEL_FORMAT_YUV$layout" -DFIXTURE_QUALITY="$quality" \
+        -I target/oracle-staging/libavif-narrow-source/include \
+        -I target/oracle-staging/libavif-narrow-build/include \
+        -I target/oracle-staging/libaom-narrow-source \
+        scripts/avif_fixture_oracle/encode_narrow_inter.c \
+        target/oracle-staging/libavif-narrow-build/libavif.a \
+        target/oracle-staging/libaom-narrow-build/libaom.a -lz -lm -lpthread \
+        -o "target/oracle-staging/narrow-inter-tools/encode-$orientation-$layout-$quality"
+    done
+  done
+done
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --encoder-dir target/oracle-staging/narrow-inter-tools
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py --check
+```
+
+The generator normalizes BMFF creation timestamps, requires two independent
+encodes to agree, and pins every complete source digest. `--check` needs only
+the committed inputs and pinned Pillow; `make verify-fixture-integrity` includes
+that check. Pixel expectations remain in the ordinary oracle reference files.
+Each producer accepts `OUTPUT.avif select BIT_DEPTH [coarse|fine] [CDF_MODE]`, where
+`BIT_DEPTH` is 8, 10 or 12. The default `coarse` pattern preserves the original
+inputs. The `fine` pattern uses per-pixel texture and a bounded second-frame
+perturbation while retaining temporal correlation. These are source pixel
+controls; libaom chooses the residual transforms. The generator selects the
+registered depth and pattern while reusing the same orientation, layout and
+quality binary.
+
+Omitting `CDF_MODE` preserves the original inputs. Mode `0` disables updates
+on every frame, mode `1` requests adaptive updates, and mode `2` selects updates
+per frame. The pinned libaom encoder enables updates on the key frame and
+disables them on the shown inter frame for these mode-2 sequences. For example,
+`encode-vertical-420-99 frozen.avif select 12 fine 0` produces a high-depth
+frozen-CDF input; replacing the final `0` with `2` selects the transition case.
+The generator's `cdf_mode` field supplies this input control, never expected
+pixels or target decoder state. Exact pixels and sequence observations are
+collected separately from live pinned Pillow and the native loop oracle.
+
+## Narrow 8x32 and 32x8 inter transform trees
+
+The same producer accepts `-DFIXTURE_ROOT_SIZE=32` at compile time. Its default
+remains 16, preserving all earlier inputs. With
+`libaom-wide8-inter.patch`, 32x32 roots form four 8x32 or 32x8 inter leaves in
+a 32x64 or 64x32 sequence. Forty-two inputs cover monochrome, 4:2:0, horizontal
+4:2:2 and 4:4:4 at 8/10/12 bits and qualities 70/99. Fine residual detail lets
+libaom choose shallow, mixed and fully split child transforms. Independent
+scalar dav1d traces witness those choices; public parity checks exact live
+Pillow RGB frames and sequence metadata.
+
+The pinned native chroma-size table maps an 8x32 vertical leaf in 4:2:2 to
+`BLOCK_INVALID`. The fixture patch preserves that table's validity checks, and
+the producer rejects vertical 4:2:2 requests before encoding. Six exploratory
+native producer failures are retained as investigation evidence; they produced
+no public input and are not Pillow parity failures or fault-contract cases.
+The same validity restriction applies to the earlier 4x16 vertical leaves.
+
+Build a separate native source archive with the wide-leaf patch, keeping the
+16x16-root library for the earlier fixtures. These are ordinary source/build
+directories under `target/`, not Git worktrees:
+
+```sh
+mkdir -p target/oracle-staging/libaom-wide8-source
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 |
+  tar -x -C target/oracle-staging/libaom-wide8-source
+git apply --directory=target/oracle-staging/libaom-wide8-source \
+  scripts/avif_fixture_oracle/libaom-wide8-inter.patch
+cmake -S target/oracle-staging/libaom-wide8-source \
+  -B target/oracle-staging/libaom-wide8-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-wide8-build -j 4
+
+for orientation in horizontal vertical; do
+  case "$orientation" in
+    horizontal) fixture_width=64; fixture_height=32 ;;
+    vertical) fixture_width=32; fixture_height=64 ;;
+  esac
+  for layout in 400 420 422 444; do
+    if [ "$orientation:$layout" = vertical:422 ]; then continue; fi
+    for quality in 70 99; do
+      cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=32 \
+        -DFIXTURE_WIDTH="$fixture_width" -DFIXTURE_HEIGHT="$fixture_height" \
+        -DFIXTURE_FORMAT="AVIF_PIXEL_FORMAT_YUV$layout" -DFIXTURE_QUALITY="$quality" \
+        -I target/oracle-staging/libavif-narrow-source/include \
+        -I target/oracle-staging/libavif-narrow-build/include \
+        -I target/oracle-staging/libaom-wide8-source \
+        scripts/avif_fixture_oracle/encode_narrow_inter.c \
+        target/oracle-staging/libavif-narrow-build/libavif.a \
+        target/oracle-staging/libaom-wide8-build/libaom.a -lz -lm -lpthread \
+        -o "target/oracle-staging/narrow-inter-tools/encode-wide8-$orientation-$layout-$quality"
+    done
+  done
+done
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --encoder-dir target/oracle-staging/narrow-inter-tools
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py --check
+```
+
+These cases bring the shared generator to 83 inputs. Its optional `--variant` selector
+can regenerate one case; every generated input requires two independent encodes
+with equal normalized bytes. Header validation includes monochrome signaling,
+bit depth, chroma layout and CDF-control metadata where specified. Expected
+pixels remain independently collected Pillow observations.
+
+## Narrow 16x64 and 64x16 inter transform trees
+
+`libaom-wide16-inter.patch` forces valid 64x64 inter roots into four 16x64 or
+64x16 leaves. Compile the same producer with `-DFIXTURE_ROOT_SIZE=64` and use
+128x64 horizontal or 64x128 vertical dimensions. Forty-two additional inputs
+cover monochrome, 4:2:0, horizontal 4:2:2 and 4:4:4 at 8/10/12 bits and qualities
+70/99, with the `fine` content pattern. The default root size remains 16.
+
+Repeat the preceding wide8 archive and CMake steps with `wide16` paths and
+`libaom-wide16-inter.patch`. In the producer loop, replace the root-size macro
+with 64 and use the dimensions above; name its outputs
+`encode-wide16-$orientation-$layout-$quality` in the shared encoder directory.
+Keep the existing narrow and wide8 tools there so the generator can reproduce
+all 125 maintained inputs. The generator requires two byte-identical normalized
+encodes for every input; the previous 83 source digests remain unchanged.
+
+The pinned native chroma-size table also rejects vertical 16x64 leaves in
+4:2:2. Both the partition patch and producer preserve that restriction; the
+producer returns an error before allocating or writing output. Such requests
+are producer diagnostics, not public parity or fault-contract cases.
+
+Independent scalar dav1d traces witness shallow, mixed and fully split trees.
+Public parity compares both complete frames and sequence metadata with live
+pinned Pillow. These inputs exposed two Rust reconstruction defects: thin
+64-pixel subsampled chroma omitted the existing inherited-transform mapping,
+and mixed 4:4:4 trees loaded only the first terminal's neighbor contexts.
+Both are covered by the ordinary manifest rows, without private unit tests or
+target-specific expected pixels in the producer.
+
+## Adjacent square-64 chroma neighbor regressions
+
+`scripts/generate_avif_square64_neighbor_fixtures.py` maintains eighteen
+five-frame 128x128 sequences in 4:2:2 and 4:4:4, at 8/10/12 bits and qualities
+70/95/99. A gray key frame precedes colored checker periods of 2, 4, 8 and
+16 pixels. Ordinary encoder controls hold partition roots at 64x64 while
+libaom chooses transform sizes and references. No native partition patch is
+needed. The 10/12-bit planar sources include nonzero low sample bits.
+
+Pinned Pillow produces the 8-bit inputs. The pinned libavif 1.4.1/libaom 3.13.2
+`avifenc` consumes the independent high-depth Y4M sources:
+
+```sh
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_square64_neighbor_fixtures.py \
+  --encoder target/oracle-staging/libavif-superres-build/avifenc
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_square64_neighbor_fixtures.py --check
+```
+
+Regeneration requires two normalized encodes to agree with each pinned input
+digest. `--output-dir` keeps investigation copies outside the maintained
+fixture directory; `--variant` selects one source recipe. `--check` reads the
+retained files and verifies AV1 headers and live Pillow sequence metadata,
+without encoding or writing fixtures. The standard fixture-integrity target
+includes this check.
+
+These cases regress propagation of the complete chroma neighbor grid between
+adjacent blocks when luma transforms split deeply. All eighteen fail on the
+preceding Rust decoder and match exact live Pillow frames after the fix.
+Native transform/loop observations and expected pixels are collected
+independently by the existing reference workflows; this producer reads no
+target output or expected pixels.
+
+## Mixed lossless/lossy super-resolution inter sequences
+
+`scripts/generate_avif_mixed_superres_fixtures.py` produces twenty distinct
+80x48 two-frame inputs: monochrome, I420, I422 and I444 at 8/10/12 bits with
+neutral filters, plus active luma SGR restoration at 8/10 bits. An ordinary
+lossy key precedes an inter frame coded at width 64 and displayed at width 80.
+Segment 1 has qindex zero; the other segments retain qindex 140. Independent
+planar samples retain nonzero low bits at high depth. The input generator
+reads neither Rust outputs nor reference pixels; standard reference collectors
+own the exact Pillow frames and native sequence observations.
+
+The native fixture patches forward super-resolution configuration and a
+bounded ROI map, permit its use in the ordinary RD encoder path, retain an
+explicit non-temporal map, and allow qindex zero. They apply the ROI to inter
+frames only. All arithmetic and AV1 encoding still run in pinned libaom.
+Pinned libavif disables 12-bit encoder restoration; the generator preserves
+that control and omits the four byte-identical restoration requests. It does
+not claim 12-bit restoration inputs. The final twenty inputs reproduce twice
+and independently parsed headers must confirm their actual segment, scaling
+and restoration features before they are written.
+
+Using the already available clean pinned sources, build without installation:
+
+```sh
+avif_case_dir="$PWD/target/oracle-staging/mixed-superres-producer"
+mkdir -p "$avif_case_dir/aom-source" "$avif_case_dir/avif-source"
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 | tar -x -C "$avif_case_dir/aom-source"
+git -C target/oracle-staging/libavif-loop-clean-source archive 6543b22b5bc706c53f038a16fe515f921556d9b3 | tar -x -C "$avif_case_dir/avif-source"
+patch -d "$avif_case_dir/aom-source" -p1 < scripts/avif_fixture_oracle/libaom-mixed-superres.patch
+patch -d "$avif_case_dir/avif-source" -p1 < scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch
+patch -d "$avif_case_dir/avif-source" -p1 < scripts/avif_fixture_oracle/libavif-mixed-superres.patch
+cmake -S "$avif_case_dir/aom-source" -B "$avif_case_dir/aom-build" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic -DENABLE_TESTS=OFF \
+  -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build "$avif_case_dir/aom-build" -j 4
+cmake -S "$avif_case_dir/avif-source" -B "$avif_case_dir/avif-build" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DAVIF_CODEC_AOM=SYSTEM \
+  -DAVIF_CODEC_AOM_DECODE=OFF -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF \
+  -DAVIF_BUILD_APPS=OFF -DAOM_LIBRARY="$avif_case_dir/aom-build/libaom.a" \
+  -DAOM_INCLUDE_DIR="$avif_case_dir/aom-source"
+cmake --build "$avif_case_dir/avif-build" --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I "$avif_case_dir/avif-source/include" -I "$avif_case_dir/avif-build/include" \
+  scripts/avif_fixture_oracle/encode_mixed_superres.c \
+  "$avif_case_dir/avif-build/libavif.a" "$avif_case_dir/aom-build/libaom.a" \
+  -lz -lm -lpthread -o "$avif_case_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_mixed_superres_fixtures.py \
+  --encoder "$avif_case_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_mixed_superres_fixtures.py --check
+```
+
+Only the input producer uses these patches. No runtime dependency, native
+fallback, unsafe Rust, fault hook or private unit test is added. The ordinary
+fixture-verification target checks the twenty complete input digests and AV1
+features. The investigation also retains public inputs that originally exposed
+unsupported monochrome/mixed-key and ordinary nonsegmented super-resolution
+paths. Subsequent sections describe their separate parity cases; they do not
+change these twenty inputs.
+
+## Ordinary monochrome super-resolution inter sequences
+
+The same producer accepts an optional final `ordinary` argument. This skips
+only the fixture ROI option and emits ordinary lossy key/inter samples with
+no segmentation. Its default mixed-segment invocation and all twenty pinned
+mixed input digests remain unchanged. Build it with the pinned recipe above,
+then run:
+
+```sh
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_monochrome_superres_fixtures.py \
+  --encoder "$avif_case_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_monochrome_superres_fixtures.py --check
+```
+
+This generalized input-only generator retains the three neutral 8/10/12-bit
+recipes unchanged and adds ordinary 8/10-bit sequences with active luma SGR
+restoration. All five use inter width 64 displayed at 80x48, with ordinary
+lossy key frames. Each complete file reproduces twice and must match its
+pinned digest and independently parsed AV1 features before writing. The two
+SGR inputs are the complete public workloads that exposed the restoration
+performance follow-up; they now also participate in the normal parity matrix.
+The earlier `generate_avif_monochrome_neutral_superres_fixtures.py` is renamed
+to reflect both profiles. Existing case IDs and input bytes do not change.
+
+The input generator owns no expected pixels or target results. Live
+Pillow/native collectors and the standard public matrix own observations.
+
+## Ordinary I422 neutral super-resolution inter sequences
+
+The same pinned producer and final `ordinary` argument also generate 8-bit
+4:2:2 key/inter sequences with restoration, deblocking, CDEF and segmentation
+inactive. Build the producer with the pinned recipe above, then run:
+
+```sh
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_i422_neutral_superres_fixtures.py \
+  --encoder "$avif_case_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_i422_neutral_superres_fixtures.py --check
+```
+
+The four input-only recipes cover display extents 40x16, 80x48 and 128x64,
+super-resolution denominators 9, 10 and 16, and an odd coded width of 71.
+The 64-pixel-high case exercises geometry beyond the separate active-restoration
+profile's height limit. All four complete files reproduce twice and are checked
+against pinned digests and independently parsed AV1 features. These inputs own
+no expected pixels or Rust results; the standard live Pillow/native collectors
+supply frame and sequence observations for public manifest parity.
+
+## Monochrome sequences with mixed lossless/lossy key segments
+
+`generate_avif_monochrome_mixed_key_fixtures.py` retains the five input-only 80x48
+sequences with a mixed-segment key frame followed by a 64x48 inter frame
+upscaled to 80x48. Four recipes vary the key pixels, including 8-, 10- and
+12-bit input and two native speed settings. The flat 8-bit recipe covers the
+same key admission failure as the retained investigation input; it is a new
+complete file, not a byte reproduction of that earlier input.
+
+Use a separate input producer: apply `libaom-mixed-key-segmentation.patch`
+after `libaom-mixed-superres.patch` to enable the existing fixture ROI controls
+on key frames as well as inter frames. This profile changes the AOM library
+used to generate inputs. Keep the preceding producer for its twenty mixed,
+five ordinary monochrome and four ordinary I422 recipes. The updated C
+program reproduced all twenty-nine preceding recipes twice against their
+unchanged complete digests when linked to that preceding library.
+
+The following recipe exports the already available pinned sources into a new
+build directory without creating a Git checkout or installing dependencies:
+
+```sh
+avif_key_dir="$PWD/target/oracle-staging/mixed-key-superres-producer"
+mkdir -p "$avif_key_dir/aom-source" "$avif_key_dir/avif-source"
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 | tar -x -C "$avif_key_dir/aom-source"
+git -C target/oracle-staging/libavif-loop-clean-source archive 6543b22b5bc706c53f038a16fe515f921556d9b3 | tar -x -C "$avif_key_dir/avif-source"
+patch -d "$avif_key_dir/aom-source" -p1 < scripts/avif_fixture_oracle/libaom-mixed-superres.patch
+patch -d "$avif_key_dir/aom-source" -p1 < scripts/avif_fixture_oracle/libaom-mixed-key-segmentation.patch
+patch -d "$avif_key_dir/avif-source" -p1 < scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch
+patch -d "$avif_key_dir/avif-source" -p1 < scripts/avif_fixture_oracle/libavif-mixed-superres.patch
+cmake -S "$avif_key_dir/aom-source" -B "$avif_key_dir/aom-build" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DENABLE_TESTS=OFF \
+  -DENABLE_EXAMPLES=OFF -DENABLE_TOOLS=OFF -DENABLE_DOCS=OFF -DCONFIG_AV1_DECODER=1
+cmake --build "$avif_key_dir/aom-build" --target aom -j 4
+cmake -S "$avif_key_dir/avif-source" -B "$avif_key_dir/avif-build" -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DAVIF_BUILD_APPS=OFF \
+  -DAVIF_BUILD_TESTS=OFF -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_DAV1D=OFF \
+  -DAVIF_CODEC_LIBGAV1=OFF -DAVIF_LIBYUV=OFF \
+  -DAOM_LIBRARY="$avif_key_dir/aom-build/libaom.a" -DAOM_INCLUDE_DIR="$avif_key_dir/aom-source"
+cmake --build "$avif_key_dir/avif-build" --target avif_static -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I "$avif_key_dir/avif-source/include" -I "$avif_key_dir/avif-build/include" \
+  scripts/avif_fixture_oracle/encode_mixed_superres.c \
+  "$avif_key_dir/avif-build/libavif.a" "$avif_key_dir/aom-build/libaom.a" \
+  -lz -lm -lpthread -o "$avif_key_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_monochrome_mixed_key_fixtures.py \
+  --encoder "$avif_key_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_monochrome_mixed_key_fixtures.py --check
+```
+
+This profile keeps the AOM decoder enabled because static libavif also refers
+to its decoder entry point. Its producer version is
+`libavif 1.4.1 (aom [enc/dec]:v3.13.2)`. The optional final `mixed-key`
+argument varies the key-frame pixels; omitting it retains the flat-key input
+pattern. The generator owns no expected pixels or Rust outcomes. It encodes
+each recipe twice, normalizes only sequence timestamps, and validates complete
+input digests and independently parsed AV1 features before writing. All twenty-six
+actual sequence headers disable restoration and all frame restoration types
+are NONE, including the fast flat recipe that requests restoration from AOM.
+The public parity matrix and live Pillow/native observers own the expected
+frame pixels and timing. The Rust decoder uses no native fallback.
+
+The same generator now includes nine boundary recipes: varied 8/10/12-bit
+key/inter sequences at 40x16, 60x20 and 128x128. Their inter coded widths are
+32, 48 and 64 respectively. The first two use denominator 10; the largest uses
+16. The 60x20 inputs exercise four-pixel key-frame and bottom-edge tails;
+the 128x128 key covers the admitted size bound. Named input recipes preserve
+the original five IDs, parameters and complete file bytes. All twenty-six
+recipes reproduce twice using the unchanged producer and must pass the same
+complete-digest and independent-header checks.
+
+Twelve additional varied-key recipes exercise inter coded widths 71, 100 and
+102 at 8/10/12 bits. Display sizes are 80x20 (denominator 9), 112x20
+(denominator 9), and 128x20/128x128 (denominator 10). The logical resize width
+sets the phase, while native taps read the complete reconstructed coded tail,
+rounded up to eight pixels. The 20-row cases also check a padded bottom edge.
+The public Rust candidate matches live pinned Pillow for still output and both
+frames in every sequence. The standard reference collectors retain pixels;
+the producer supplies inputs only.
+
+The earlier width-admission-only experiment remains rejected evidence in the
+boundary checkpoint. The follow-up separates physical reconstruction from
+logical resize geometry and removes an unnecessary 8-bit monochrome exclusion
+from the checked segment-lossless WHT grid. Neither change adds a native Rust
+runtime fallback or establishes every legal mixed-segment sequence profile.
+
+## Color mixed-segment key and coded-tail sequences
+
+`generate_avif_color_mixed_key_fixtures.py` uses the same separately patched
+mixed-key producer described above. Its 72 input-only recipes cover I420, I422
+and I444 at 8/10/12 bits, with flat and varied key pixels. Both frames carry
+mixed lossless/lossy segment maps. Complete file digests bind these recipes;
+Pillow and the independent native observer supply expected frames and timing.
+
+The dimensions are 128x48 with denominator 10 (inter width 102), 80x20 with
+denominator 9 (width 71), and 112x20 with denominator 9 (width 100). These
+exercise non-four-aligned logical widths, rounded physical coded tails,
+subsampled chroma and 20-row bottom edges. Varied keys require nonconstant
+residual reconstruction; flat keys retain the same segmentation syntax.
+The producer version remains `libavif 1.4.1 (aom [enc/dec]:v3.13.2)`.
+
+Nine recipes pass the optional `motion-key` argument. Their 128x48 second
+source frame samples the pattern four luma pixels to the right and two rows
+down, with the corresponding chroma offsets for each layout. This supplies
+distinct temporal source pixels at coded width 102; the encoder chooses the
+motion vectors and residuals. The original 54 recipes retain their complete
+bytes. No recipe stores expected decoded pixels.
+
+Nine further recipes pass `integer-key`, which enables libaom's public
+`tune-content=screen` option and disables palette coding. Equal varied source
+frames let its native content detector select integer-only motion on the inter
+frame; IntraBC remains disabled. The generator independently requires both
+`allow_screen_content_tools` and `force_integer_mv` in the parsed frame headers.
+These I420/I422/I444 8/10/12-bit inputs retain mixed segments and super-resolution
+from coded width 102. All preceding 63 recipes reproduce their complete bytes.
+
+```sh
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_color_mixed_key_fixtures.py \
+  --encoder "$avif_key_dir/produce"
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_color_mixed_key_fixtures.py --check
+```
+
+Every recipe is encoded twice with only timestamp normalization; both complete
+files must match the pinned digest and independently parsed header features.
+The existing twenty inter-only recipes and twenty-six monochrome mixed-key
+recipes retain their parameters and complete bytes. The Makefile's ordinary
+fixture verification includes the color recipe check. This producer changes
+no Rust runtime dependency, native fallback, fault hook or unit-test policy.

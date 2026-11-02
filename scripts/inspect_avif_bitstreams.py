@@ -83,11 +83,21 @@ class Reader:
         return value
 
 
-def parse_boxes(data: bytes, start: int, end: int) -> list[Box]:
+def parse_boxes(
+    data: bytes,
+    start: int,
+    end: int,
+    *,
+    count: int | None = None,
+    ignore_trailing_short_header: bool = False,
+    ignore_trailing_incomplete_box: bool = False,
+) -> list[Box]:
     boxes = []
     offset = start
-    while offset < end:
+    while offset < end and (count is None or len(boxes) < count):
         if end - offset < 8:
+            if ignore_trailing_short_header:
+                break
             raise ValueError(f"truncated box header at {offset}")
         size = struct.unpack_from(">I", data, offset)[0]
         kind = data[offset + 4 : offset + 8]
@@ -101,10 +111,15 @@ def parse_boxes(data: bytes, start: int, end: int) -> list[Box]:
             header_size += 16
         if size == 0:
             size = end - offset
+        if ignore_trailing_incomplete_box and any(box.kind == b"mdat" for box in boxes):
+            if size < header_size or size > end - offset:
+                break
         if size < header_size or size > end - offset:
             raise ValueError(f"invalid {display_fourcc(kind)} box size at {offset}")
         boxes.append(Box(kind, offset, size, header_size))
         offset += size
+    if count is not None and len(boxes) != count:
+        raise ValueError("box count exceeds its parent payload")
     return boxes
 
 
@@ -178,7 +193,10 @@ def parse_infe(data: bytes, box: Box) -> tuple[int, bytes]:
     return item_id, kind
 
 
-def parse_iinf(data: bytes, box: Box) -> dict[int, bytes]:
+def parse_iinf(
+    data: bytes, box: Box, *, first_duplicate_wins: bool = False
+) -> dict[int, bytes]:
+    """Parse item types, optionally retaining the first duplicate ID for enrichment."""
     version, _, reader = full_box_reader(data, box)
     if version == 0:
         entry_count = reader.u16()
@@ -193,6 +211,8 @@ def parse_iinf(data: bytes, box: Box) -> dict[int, bytes]:
     for entry in entries:
         item_id, kind = parse_infe(data, entry)
         if item_id in result:
+            if first_duplicate_wins:
+                continue
             raise ValueError("duplicate infe item ID")
         result[item_id] = kind
     return result
@@ -260,12 +280,9 @@ def parse_iprp_properties(
             index = raw & (0x7FFF if wide else 0x7F)
             if index in alpha_properties:
                 result.add(item_id)
-            if index in av1c_properties:
-                if item_id in configs:
-                    raise ValueError("multiple av1C properties for one item")
+            # Pillow/libavif retains the first associated codec declaration.
+            if index in av1c_properties and item_id not in configs:
                 configs[item_id] = av1c_properties[index]
-    if reader.offset != reader.end:
-        raise ValueError("trailing ipma bytes")
     return result, configs
 
 
@@ -516,7 +533,8 @@ def parse_stsd_config(data: bytes, box: Box) -> dict[str, object] | None:
     version, _, reader = full_box_reader(data, box)
     if version not in (0, 1):
         raise ValueError("unsupported stsd version")
-    for sample in parse_boxes(data, reader.offset + 4, reader.end):
+    entry_count = reader.u32()
+    for sample in parse_boxes(data, reader.offset, reader.end, count=entry_count):
         if sample.kind != b"av01":
             continue
         properties = parse_boxes(data, sample.payload_start + 78, sample.end)
@@ -648,35 +666,60 @@ def inspect_color_configurations(path: Path) -> list[dict[str, object]]:
     The full ``inspect`` report retains its independent extent checks.
     """
     data = path.read_bytes()
-    top = parse_boxes(data, 0, len(data))
-    meta = unique_box(top, b"meta", required=False)
-    moov = unique_box(top, b"moov", required=False)
+    # Pillow accepts incomplete trailing top-level headers or payloads after a
+    # complete image. This enrichment runs only after Pillow has opened it.
+    top = parse_boxes(
+        data,
+        0,
+        len(data),
+        ignore_trailing_short_header=True,
+        ignore_trailing_incomplete_box=True,
+    )
+    media_data = next((box for box in top if box.kind == b"mdat"), None)
+
+    def first_top_level(kind: bytes) -> Box | None:
+        matching = [box for box in top if box.kind == kind]
+        before_media_data = [
+            box
+            for box in matching
+            if media_data is None or box.start < media_data.start
+        ]
+        # This helper enriches bit depth from the first structure Pillow reads;
+        # the parity runner separately observes whether Pillow accepts duplicates.
+        candidates = before_media_data or matching
+        return candidates[0] if candidates else None
+
+    meta = first_top_level(b"meta")
+    moov = first_top_level(b"moov")
     if meta is not None:
         boxes = children(data, meta, prefix=4)
-        pitm = unique_box(boxes, b"pitm")
-        iinf = unique_box(boxes, b"iinf")
-        iprp = unique_box(boxes, b"iprp")
-        iref = unique_box(boxes, b"iref", required=False)
-        assert pitm is not None and iinf is not None and iprp is not None
-        primary = parse_pitm(data, pitm)
-        item_types = parse_iinf(data, iinf)
-        _, configs = parse_iprp_properties(data, iprp)
-        if item_types.get(primary) == b"av01":
-            color_ids = [primary]
-        elif item_types.get(primary) == b"grid":
-            references = parse_iref(data, iref) if iref is not None else []
-            color_ids = [
-                to_id
-                for kind, from_id, to_id in references
-                if kind == b"dimg" and from_id == primary
+        pitm = unique_box(boxes, b"pitm", required=False)
+        if pitm is not None:
+            iinf = unique_box(boxes, b"iinf")
+            iprp = unique_box(boxes, b"iprp")
+            iref = unique_box(boxes, b"iref", required=False)
+            assert iinf is not None and iprp is not None
+            primary = parse_pitm(data, pitm)
+            item_types = parse_iinf(data, iinf, first_duplicate_wins=True)
+            _, configs = parse_iprp_properties(data, iprp)
+            if item_types.get(primary) == b"av01":
+                color_ids = [primary]
+            elif item_types.get(primary) == b"grid":
+                references = parse_iref(data, iref) if iref is not None else []
+                color_ids = [
+                    to_id
+                    for kind, from_id, to_id in references
+                    if kind == b"dimg" and from_id == primary
+                ]
+                if not color_ids:
+                    raise ValueError("grid primary item has no dimg children")
+            else:
+                raise ValueError("primary item is not AV1 or grid")
+            configurations = [
+                configs[item_id] for item_id in color_ids if item_id in configs
             ]
-            if not color_ids:
-                raise ValueError("grid primary item has no dimg children")
-        else:
-            raise ValueError("primary item is not AV1 or grid")
-        configurations = [configs[item_id] for item_id in color_ids if item_id in configs]
-        if configurations:
-            return configurations
+            if configurations:
+                return configurations
     configurations = []
     if moov is not None:
         for track in children(data, moov):
