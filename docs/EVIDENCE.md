@@ -1,8 +1,34 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,684 total rows: 3,016 decode /
-inspect / verify rows and 668 encode rows. Of those, 3,016 decode rows are
+The current public evidence matrix contains 3,689 total rows: 3,021 decode /
+inspect / verify rows and 668 encode rows. Of those, 3,021 decode rows are
 active and 641 encode rows are active; 27 encode rows remain planned.
+
+## Incomplete TIFF integer subsampling pairs — 2026-11-02
+
+Five public decode cases retain Pillow's default 2-by-2 YCbCr clumps when tag
+530 contains only one value. They cover BYTE, LONG, SBYTE, SSHORT, and SLONG;
+the existing SHORT cases remain unchanged. Each incomplete tag stores `1`, so
+using that value instead of ignoring the incomplete pair changes decoding.
+The pinned Apple ARM64 Pillow oracle independently reproduces the exact RGB
+pixels, inspection, verification, and sequence observations.
+
+The five-case selected run passes, and a fresh selected run of all 438 active
+TIFF decode cases passes with stable source and fixture identities. In that
+run, `src/codecs/tiff/inspect.rs` covers 140/140 branches, compared with
+135/140 in the retained pre-publication full report. Its other metrics remain
+460/483 lines, 27/32 functions, and 677/711 regions in the TIFF-only run.
+Duplicate LLVM source spans for the integer match alternatives are preserved
+in the raw report; the Coverage MCP coordinate view coalesces those spans.
+No full-suite percentage or named-case coverage attribution is inferred.
+
+Reports and local receipts remain outside `target/` under
+`.coverage-mcp/local-evidence/selected/20261102T072413.107722Z-1cbcb9ce611d4565965d53342ebac1c0/`
+and
+`.coverage-mcp/local-evidence/selected/20261102T072657.671780Z-fe371f157bc748a2a56cb8a4bd622dde/`.
+Codec source, dependencies, feature selection, and lint policy are unchanged;
+this fixture-only change makes no latency claim. All 3,684 previous matrix
+rows and their canonical observations are preserved.
 
 ## Publication and canonical x86 JPEG word boundaries — 2026-11-02
 
@@ -16137,7 +16163,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b255ebc4d4cc7d8159cec92ddff7f44b6120a83acf83d7a489b01b1995aa42c5`; matrix `51dab2922f3866c42930a192971ecc5baa81765d238b040baab3b240e4ac9fe2`.
+- Current fixture integrity only: manifest `b94ac16ec3e4df0c2f19c2220f6adfcab8482a695f7bc57042ffbc15835d31e7`; matrix `cdc8421236bc037c514401a93592dd046a4d3ef7e15deaac011fb3b7fef98630`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

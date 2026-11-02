@@ -9984,6 +9984,26 @@ formats:
       description: Pillow defaults incomplete SHORT YCbCr subsampling values
       test_assets:
       - ycbcr_subsampling_short_count_lzw_2x2.tiff
+    - id: ycbcr_subsampling_byte_count_one_lzw_2x2
+      description: Pillow ignores an incomplete BYTE subsampling pair and retains default 2-by-2 clumps
+      test_assets:
+      - ycbcr_subsampling_byte_count_one_lzw_2x2.tiff
+    - id: ycbcr_subsampling_long_count_one_lzw_2x2
+      description: Pillow ignores an incomplete LONG subsampling pair and retains default 2-by-2 clumps
+      test_assets:
+      - ycbcr_subsampling_long_count_one_lzw_2x2.tiff
+    - id: ycbcr_subsampling_signed_byte_count_one_lzw_2x2
+      description: Pillow ignores an incomplete signed BYTE subsampling pair and retains default 2-by-2 clumps
+      test_assets:
+      - ycbcr_subsampling_signed_byte_count_one_lzw_2x2.tiff
+    - id: ycbcr_subsampling_signed_short_count_one_lzw_2x2
+      description: Pillow ignores an incomplete signed SHORT subsampling pair and retains default 2-by-2 clumps
+      test_assets:
+      - ycbcr_subsampling_signed_short_count_one_lzw_2x2.tiff
+    - id: ycbcr_subsampling_signed_long_count_one_lzw_2x2
+      description: Pillow ignores an incomplete signed LONG subsampling pair and retains default 2-by-2 clumps
+      test_assets:
+      - ycbcr_subsampling_signed_long_count_one_lzw_2x2.tiff
     - id: ycbcr_subsampling_unsupported_pair_lzw_2x2
       description: Unsupported YCbCr subsampling opens and verifies but fails during pixel decoding
       test_assets:
