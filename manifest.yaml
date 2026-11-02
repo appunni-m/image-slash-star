@@ -15311,11 +15311,74 @@ formats:
       - animated_operating_point_high_tier.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_ignored_temporal_layer
+      description: Five-frame AVIF ignores an empty frame OBU on unselected temporal layer one while preserving every original frame and duration
+      test_assets:
+      - animated_ignored_temporal_layer.avif
+      status: active
+      pixel_reference_case: animated
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_ignored_spatial_layer
+      description: Five-frame AVIF ignores an empty frame OBU on unselected spatial layer one while preserving every original frame and duration
+      test_assets:
+      - animated_ignored_spatial_layer.avif
+      status: active
+      pixel_reference_case: animated
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_animated_ignored_layer_payload_exceeds_sample
+      description: Five-frame AVIF with an ignored temporal-layer OBU whose declared payload exceeds its bounded sample passes header verification but rejects still and sequence decoding
+      test_assets:
+      - error_animated_ignored_layer_payload_exceeds_sample.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_decoder_model_without_operating_point_parameters
       description: Five-frame AVIF sequence enables decoder-model timing while its operating-point parameter flag remains clear
       test_assets:
       - animated_decoder_model_without_operating_point_parameters.avif
       status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_display_tick
+      description: Complete five-frame AVIF container bounds its sequence payload inside the display-tick field; header verification succeeds while still and sequence decoding reject the truncated clock
+      test_assets:
+      - error_sequence_truncated_display_tick.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_time_scale
+      description: Complete five-frame AVIF container bounds its sequence payload inside the time-scale field; header verification succeeds while still and sequence decoding reject the truncated clock
+      test_assets:
+      - error_sequence_truncated_time_scale.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_decoder_tick
+      description: Complete five-frame AVIF container bounds its sequence payload inside the decoder-tick field; header verification succeeds while still and sequence decoding reject the truncated decoder clock
+      test_assets:
+      - error_sequence_truncated_decoder_tick.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_operating_point
+      description: Complete five-frame AVIF container bounds its sequence payload inside the operating-point identifier; header verification succeeds while still and sequence decoding reject truncated layer selection
+      test_assets:
+      - error_sequence_truncated_operating_point.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_frame_bounds
+      description: Complete five-frame AVIF container bounds its sequence payload inside the maximum frame dimensions; header verification succeeds while still and sequence decoding reject truncated geometry
+      test_assets:
+      - error_sequence_truncated_frame_bounds.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: error_sequence_truncated_color_configuration
+      description: Complete five-frame AVIF container bounds its sequence payload inside color configuration; header verification succeeds while still and sequence decoding reject truncated color syntax
+      test_assets:
+      - error_sequence_truncated_color_configuration.avif
+      status: active
+      expect_error: true
       pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_order_hint_disabled
       description: Five-frame AVIF sequence uses ordinary AV1 headers with order hints disabled

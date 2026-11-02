@@ -32,6 +32,8 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
+    "animated_ignored_temporal_layer": ("animated_ignored_temporal_layer.avif", "1ba3cb1481a80a6e776b5c42199defca0c51f82a6c92ccbebe044a7ff2ad3276"),
+    "animated_ignored_spatial_layer": ("animated_ignored_spatial_layer.avif", "93410e0c7dd6cc3048c3a741ad95ffcf87617bdd9fe9725df181bd1df34cb39e"),
     "animated_mixed_lossless_key_superres_420_8bit_integer_mv_s3_128x48_d10": ("animated_mixed_lossless_key_superres_420_8bit_integer_mv_s3_128x48_d10.avif", "ad52321fb01335ed4ea68990a12d0680b0c9a124fc2647302685b820b686595f"),
     "animated_mixed_lossless_key_superres_420_10bit_integer_mv_s3_128x48_d10": ("animated_mixed_lossless_key_superres_420_10bit_integer_mv_s3_128x48_d10.avif", "5695f864c484707f0cf3fa13fdb52641e20f168745007906b7174cf151a13c92"),
     "animated_mixed_lossless_key_superres_420_12bit_integer_mv_s3_128x48_d10": ("animated_mixed_lossless_key_superres_420_12bit_integer_mv_s3_128x48_d10.avif", "549243ce45a00247538054f47626f2c4c4e08fa99e0070c27f7da2480d57a106"),

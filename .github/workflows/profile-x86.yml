@@ -1,5 +1,22 @@
 name: Profile x86 JPEG
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/profile-x86.yml'
+      - 'benchmarks/jpeg-production/rust/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/config.toml'
+      - 'rust-toolchain.toml'
+      - 'src/lib.rs'
+      - 'src/types/**'
+      - 'src/codecs/mod.rs'
+      - 'src/codecs/error.rs'
+      - 'src/codecs/jpeg/**'
+      - 'src/cancel.rs'
+      - 'src/encode_options.rs'
+      - 'src/encode_policy.rs'
+      - 'src/diagnostic.rs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,6 +60,16 @@ jobs:
             echo "The x86 profile lane requires an AVX2-capable host" >&2
             exit 1
           fi
+          git diff --exit-code
+          git diff --cached --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
+          git rev-parse HEAD > "$output/source-revision.txt"
+          source_paths=(Cargo.toml Cargo.lock rust-toolchain.toml README.md
+            src benchmarks/jpeg-production/rust .github/workflows/profile-x86.yml)
+          if git cat-file -e HEAD:.cargo/config.toml 2>/dev/null; then
+            source_paths+=(.cargo/config.toml)
+          fi
+          git archive --format=tar --output="$output/source.tar" HEAD -- "${source_paths[@]}"
       - name: Install perf for the hosted runner kernel
         run: |
           set -euo pipefail
@@ -69,13 +96,25 @@ jobs:
           command -v objdump | tee -a "$output/perf-package.txt"
           perf --version | tee "$output/perf-version.txt"
           perf -vv > "$output/perf-capabilities.txt" 2>&1
-      - name: Check whether hardware sampling is available
+      - name: Check whether native sampling is available
         run: |
           set -euo pipefail
           output=target/benchmarks/jpeg/simd-x86_64/profile
           perf_mode=timed-benchmark
-          if perf stat -e cycles:u -- sleep 1 > "$output/perf-stat-preflight.txt" 2>&1; then
-            if perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+          # This job owns a fresh hosted VM. Permit only per-process,
+          # user-space sampling and restore its original policy below.
+          sysctl -n kernel.perf_event_paranoid > "$output/perf-policy.before.txt"
+          if ! sudo sysctl -w kernel.perf_event_paranoid=2 \
+            > "$output/perf-policy-set.txt" 2>&1; then
+            cat "$output/perf-policy-set.txt" >&2
+          fi
+          sysctl -n kernel.perf_event_paranoid > "$output/perf-policy.effective.txt"
+          perf_event=cycles:u
+          if ! perf stat -e "$perf_event" -- sleep 1 > "$output/perf-stat-cycles.txt" 2>&1; then
+            perf_event=cpu-clock:u
+          fi
+          if perf stat -e "$perf_event" -- sleep 1 > "$output/perf-stat-preflight.txt" 2>&1; then
+            if perf record --freq=997 -e "$perf_event" --call-graph=dwarf,8192 \
               -o "$output/perf-preflight.data" -- \
               python3 -c 'from timeit import timeit; timeit("sum(range(1000))", number=200_000)' \
               > "$output/perf-record-preflight.stdout.txt" \
@@ -96,7 +135,11 @@ jobs:
           PY
                 ); then
                   if (( samples >= 250 )); then
-                    perf_mode=cycles-dwarf
+                    if [[ "$perf_event" == cycles:u ]]; then
+                      perf_mode=cycles-dwarf
+                    else
+                      perf_mode=cpu-clock-dwarf
+                    fi
                     printf 'preflight_sample_count=%s\n' "$samples" >> "$output/perf-mode.txt"
                   else
                     printf 'perf_preflight=insufficient_samples:%s\n' "$samples" >> "$output/perf-mode.txt"
@@ -116,11 +159,12 @@ jobs:
           fi
           printf 'profiling_mode=%s\n' "$perf_mode" | tee -a "$output/perf-mode.txt"
           printf 'PERF_MODE=%s\n' "$perf_mode" >> "$GITHUB_ENV"
+          printf 'PERF_EVENT=%s\n' "$perf_event" >> "$GITHUB_ENV"
           if [[ "$perf_mode" == "timed-benchmark" ]]; then
-            echo "Hardware sampling is unavailable; public-API timing and linked assembly will still be collected."
+            echo "Native sampling is unavailable; public-API timing and linked assembly will still be collected."
           else
-            echo "Hardware cycle sampling with DWARF call graphs is available."
-            printf 'profile_event=cycles:u frequency_hz=997 call_graph=dwarf,8192\n' >> "$output/perf-mode.txt"
+            printf 'Native sampling with DWARF call graphs is available: %s\n' "$perf_event"
+            printf 'profile_event=%s frequency_hz=997 call_graph=dwarf,8192\n' "$perf_event" >> "$output/perf-mode.txt"
           fi
       - name: Build and profile exact public RGB 4:2:0 encodes
         run: |
@@ -128,6 +172,7 @@ jobs:
           output=target/benchmarks/jpeg/simd-x86_64/profile
           minimum_samples=1000
           perf_mode=${PERF_MODE:-timed-benchmark}
+          perf_event=${PERF_EVENT:-cycles:u}
           timed_fallback_required=0
 
           sample_count() {
@@ -149,7 +194,8 @@ jobs:
             local variant=$1
             local flags=$2
             local target_dir="target/jpeg-profile-${variant}"
-            local binary="${target_dir}/release/jpeg-production-matrix-rust"
+            local built_binary="${target_dir}/release/jpeg-production-matrix-rust"
+            local binary="$output/${variant}.profiled-binary"
 
             {
               printf 'variant=%s\n' "$variant"
@@ -159,10 +205,14 @@ jobs:
               rustc +"$RUST_TOOLCHAIN" -Vv
               cargo +"$RUST_TOOLCHAIN" -V
             } >> "$output/build-metadata.txt"
-            CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="$flags" \
+            env -u CARGO_ENCODED_RUSTFLAGS CARGO_INCREMENTAL=0 \
+              CARGO_TARGET_DIR="$target_dir" RUSTFLAGS="$flags" \
               cargo +"$RUST_TOOLCHAIN" build \
                 --manifest-path benchmarks/jpeg-production/rust/Cargo.toml \
-                --release --locked
+                --release --locked 2>&1 | tee "$output/${variant}.build.log"
+            cp "$built_binary" "$binary"
+            cmp "$built_binary" "$binary"
+            sha256sum "$built_binary" "$binary" >> "$output/binary-sha256.txt"
 
             objdump -d -S -l -C -M intel "$binary" > "$output/${variant}.disassembly.txt"
             python3 - "$output/${variant}.disassembly.txt" \
@@ -217,15 +267,15 @@ jobs:
               local report="$output/${variant}-${size}.report.txt"
               local samples
               printf 'variant=%s size=%s iterations=%s\n' "$variant" "$size" "$iterations" >> "$output/run-metadata.txt"
-              if [[ "$perf_mode" == "cycles-dwarf" ]]; then
-                if perf record --freq=997 -e cycles:u --call-graph=dwarf,8192 \
+              if [[ "$perf_mode" != "timed-benchmark" ]]; then
+                if perf record --freq=997 -e "$perf_event" --call-graph=dwarf,8192 \
                   -o "$profile" -- "$binary" encode "$size" "$size" rgb 85 420 0 0 0 "$iterations" \
                   > "$output/${variant}-${size}.stdout.txt" \
                   2> "$output/${variant}-${size}.stderr.txt" \
                   && test -s "$profile" \
                   && perf report --stdio --header --inline -i "$profile" > "$report"; then
                   if samples=$(sample_count "$report") && (( samples >= minimum_samples )); then
-                    printf 'measurement_mode=cycles-dwarf event=cycles:u frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s size=%s\n' "$samples" "$variant" "$size" >> "$output/run-metadata.txt"
+                    printf 'measurement_mode=%s event=%s frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s size=%s\n' "$perf_mode" "$perf_event" "$samples" "$variant" "$size" >> "$output/run-metadata.txt"
                     if perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" \
                       > "$output/${variant}-${size}.annotate.txt"; then
                       continue
@@ -254,7 +304,7 @@ jobs:
           if (( timed_fallback_required )); then
             printf 'timed_fallback=uniform_matrix_after_profile_failure\n' >> "$output/run-metadata.txt"
             for variant in sse2 avx2; do
-              binary="target/jpeg-profile-${variant}/release/jpeg-production-matrix-rust"
+              binary="$output/${variant}.profiled-binary"
               for size in 512 1024; do
                 if [[ "$size" == 512 ]]; then
                   iterations=2000
@@ -295,11 +345,61 @@ jobs:
                   raise SystemExit(f"profiled SSE2/AVX2 output mismatch for {size}: {sse2} != {avx2}")
               print(f"{size}x{size} RGB 4:2:0 profile outputs match: {sse2[2]}")
           PY
+      - name: Restore the runner sampling policy
+        if: always()
+        run: |
+          set -euo pipefail
+          output=target/benchmarks/jpeg/simd-x86_64/profile
+          if [[ -f "$output/perf-policy.before.txt" ]]; then
+            previous=$(cat "$output/perf-policy.before.txt")
+            [[ "$previous" =~ ^-?[0-9]+$ ]]
+            if [[ "$(sysctl -n kernel.perf_event_paranoid)" != "$previous" ]]; then
+              sudo sysctl -w "kernel.perf_event_paranoid=$previous"
+            fi
+            sysctl -n kernel.perf_event_paranoid > "$output/perf-policy.restored.txt"
+            test "$(cat "$output/perf-policy.restored.txt")" = "$previous"
+          fi
+      - name: Inventory the actual profiling evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import os
+          import subprocess
+
+          root = Path("target/benchmarks/jpeg/simd-x86_64/profile")
+          root.mkdir(parents=True, exist_ok=True)
+          inventory = {}
+          for path in sorted(root.rglob("*")):
+              if not path.is_file() or path.name == "inventory.json":
+                  continue
+              with path.open("rb") as stream:
+                  digest = hashlib.file_digest(stream, "sha256").hexdigest()
+              inventory[path.relative_to(root).as_posix()] = {
+                  "bytes": path.stat().st_size,
+                  "sha256": digest,
+              }
+          receipt = {
+              "scope": "Native profiling diagnostics; no latency or full parity claim",
+              "source_revision": subprocess.check_output(
+                  ["git", "rev-parse", "HEAD"], text=True
+              ).strip(),
+              "workflow_revision": os.environ["GITHUB_SHA"],
+              "event": os.environ["GITHUB_EVENT_NAME"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "files": inventory,
+          }
+          (root / "inventory.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          PY
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: x86-jpeg-profiles-${{ github.run_id }}
           overwrite: true
+          include-hidden-files: true
           path: target/benchmarks/jpeg/simd-x86_64/profile/
           if-no-files-found: warn
           retention-days: 90

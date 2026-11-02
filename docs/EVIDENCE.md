@@ -1,8 +1,41 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,742 total rows: 3,068 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,068 decode rows are
+The current public evidence matrix contains 3,751 total rows: 3,077 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,077 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF selected and ignored operating-point layers — 2026-11-02
+
+Three new complete animation inputs exercise AV1 operating-point selection
+through ordinary public parity. The existing `animated_opidc_0x101` control
+selects temporal and spatial layer zero with explicit frame extensions.
+Two neighbors insert an empty frame OBU on
+unselected temporal layer one or spatial layer one before the first selected
+frame. Pinned Pillow ignores those OBUs and preserves all five complete RGB
+frames and their durations. A third input claims a payload larger than its
+bounded sample on an ignored layer; both Pillow and Rust reject decoding
+after successful header verification. Layer selection does not bypass the
+envelope bounds check.
+
+The pinned producer repairs BMFF sample lengths and the primary-item extent,
+checks the rewritten container independently, and compares every accepted
+frame and duration with the live source animation. Only then do positive
+manifest rows share its pixel references. These cases require no production
+Rust change, codec unit test, target-only fault, lint exception, dependency,
+unsafe code, or coverage exclusion.
+
+Complete files, live Pillow frame buffers, standalone public still/sequence
+release clients and actual executables, source identities, and receipts are
+retained in
+`.coverage-mcp/local-evidence/parity/avif-operating-point-lead-20261102/`.
+The independent sequence client matches all fifteen complete accepted frame
+buffers and the malformed outcome. Canonical selected coverage uses the
+original animation, retained selected-layer control, and three new rows;
+its execution and source/fixture guards
+determine whether a coverage claim is compatible. The preceding raw AVIF
+profile located the skip-layer gap but includes additional integration-test
+and standard-library paths, so its totals are not a full-suite measurement.
+Historical measurements and release floors remain unchanged.
 
 ## AVIF final OBU without a size field — 2026-11-02
 
@@ -16341,7 +16374,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9cc2324722e31a85750d44d72ce84b2349fbf1bac62afa81c5dd4339f9fbabec`; matrix `25f90270fbe1244e382598270c8f9cc6ece73078a23e290e37c508177e3d3357`.
+- Current fixture integrity only: manifest `600e19042a0d86c93fcf5c1e99df807a6509450346734f50db6929eda9775478`; matrix `d8f6395a53460121fa7d5d7aa54bd0e39ad1048209803933c10fa75e024e9d11`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
