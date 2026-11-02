@@ -80,16 +80,21 @@ benchmark matrix and its results do not establish SSE2 or AVX2 runtime speed.
 
 ## Optional native x86 profiling
 
-To inspect the RGB 4:2:0 encoder hot path, run the `Profile x86 JPEG` workflow
-manually from Actions. It builds optimized SSE2 and AVX2 binaries with debug
+The `Profile x86 JPEG` workflow runs for pull requests that change the JPEG
+implementation, its build inputs, or the profiling workflow. It can also be
+run manually from Actions. It builds optimized SSE2 and AVX2 binaries with debug
 line information, then samples the public `encode` call for the existing
 512×512 and 1024×1024 RGB Q85 4:2:0 workloads. The job installs the Linux
 `perf` tools matching its booted kernel and records the resolved package and
-tool versions. Its artifact includes host and build metadata, raw perf data,
+tool versions. Its artifact retains the actual profiled executables, an
+immutable Git source archive, source revision, build logs, and a SHA-256
+inventory alongside host and build metadata, raw perf data,
 actual sample counts, inline-aware reports, annotated sampled assembly,
 source-mapped converter disassembly with ISA counts scoped to the aligned
-converter, and output hashes. The runner must expose user-space cycle events and support DWARF call graphs; the
-preflight fails with logs if it cannot collect those samples.
+converter, and output hashes. Hardware sampling requires user-space cycle
+events and DWARF call graphs. If preflight or sampling cannot collect enough
+usable samples, the job records the reason and falls back to public-API timing
+and linked assembly. That fallback does not establish sampled hotspots.
 
 Treat these profiles as hotspot attribution only. They include conversion data
 movement as well as arithmetic, and sampling overhead makes them unsuitable for
