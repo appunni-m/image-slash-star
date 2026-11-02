@@ -38,8 +38,6 @@ use super::samples::{EncodedPlane, EncodedSample, ExtractedAvif};
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::AvifColorProperties;
 
-const MAX_OBUS_PER_SAMPLE: usize = 4_096;
-
 type Av1Result<T> = CodecResult<T>;
 
 fn malformed(stage: &'static str) -> CodecError {
@@ -116,13 +114,11 @@ fn validate_sample_and_return_temporal_unit(
 ) -> Av1Result<u64> {
     let data = SegmentedData::new(input, &sample.spans)?;
     let mut offset = 0_usize;
-    let mut obu_count = 0_usize;
     let mut frame_bearing = false;
+    // Each accepted OBU consumes at least its header and size byte. The
+    // bounded sample therefore limits this loop, including empty padding
+    // OBUs; an extra count cap would reject otherwise valid Pillow inputs.
     while offset < data.len() {
-        obu_count = obu_count.saturating_add(1);
-        if obu_count > MAX_OBUS_PER_SAMPLE {
-            return Err(malformed("sample contains too many OBUs"));
-        }
         // The loop condition proves the logical OBU header byte is present.
         let header = data.validated_byte(offset);
         offset = offset.saturating_add(1);

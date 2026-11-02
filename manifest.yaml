@@ -14927,6 +14927,31 @@ formats:
       status: active
       pixel_reference_case: hdr
       pure_rust_work_item: AVF-COLOR-001
+    - id: padding_4096_obus
+      description: RGB AVIF with 4093 empty padding OBUs before the original temporal delimiter, sequence header, and frame preserves exact baseline pixels
+      test_assets:
+      - padding_4096_obus.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: padding_4097_obus
+      description: RGB AVIF with 4097 total OBUs remains valid and preserves exact baseline pixels beyond the former arbitrary count limit
+      test_assets:
+      - padding_4097_obus.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: padding_8192_obus
+      description: RGB AVIF with 8189 empty padding OBUs before the original image data preserves exact baseline pixels
+      test_assets:
+      - padding_8192_obus.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_padding_8192_obus_truncated_frame
+      description: Padding-heavy AVIF with a bounded item extent and a one-byte-short final frame passes header verification but rejects frame and sequence decoding
+      test_assets:
+      - error_padding_8192_obus_truncated_frame.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: grid
       description: AVIF with a 1x2 color grid and per-cell alpha items
       test_assets:
