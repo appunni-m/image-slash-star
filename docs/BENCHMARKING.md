@@ -154,11 +154,33 @@ measurements are investigation evidence; they do not publish a speed claim or
 gate changes on noisy timing differences. The original report hashes, source
 revision, environment, measurement policy, and every result remain identifiable.
 For pull requests, that job also compares the base and candidate revisions with
-an interleaved A-B-B-A run on 128×128 Q10, 512×512 Q10, and 128×128 Q85 RGB
-4:2:0 encoding under SSE2 and AVX2. It checks the encoded outputs byte for byte
-before timing and retains the measurements at
-`revision-abba/summary.json`; interpret the ratios as focused evidence, not a
-project-wide speed claim.
+six interleaved A-B-B-A cohorts per workload under SSE2 and AVX2. The RGB
+4:2:0 workloads cover 128×128 Q10, 512×512 Q10, 128×128 Q85, 512×512 Q85,
+1024×1024 Q85, 128×128 Q100, and the odd 63×65 Q85 image. Complete encoded
+outputs must match before timing. Each sample records its executable SHA-256;
+the summary retains all cohort ratios and reports their paired median at
+`revision-abba/summary.json`. These remain focused hosted-runner observations.
+
+The control builds from a retained Git source archive in a temporary directory
+under the output directory. It creates no worktree and leaves Git state
+unchanged. The archive digest, source-file hashes, immutable revision, and tree
+identity accompany the measurements. Local output must stay inside the
+repository. The runner accepts `--cases` for exact matrix workloads and
+`--cohorts` for one to twenty repeated quartets; its default remains one
+quartet, while CI explicitly selects six.
+
+A 2026-11-02 AVX2 eight-block reciprocal experiment was rejected by this
+procedure. On the AMD EPYC 7763 host, RGB 512×512 Q85 4:2:0 gained 0.19%
+by median paired ratio across six cohorts, below its predeclared 3% minimum.
+The SSE2 RGB 128×128 Q10 guard was 2.43% slower, above its 2% limit. Complete
+JPEG bytes matched for all fourteen revision/workload comparisons, and all
+forty SSE2/AVX2 public output hashes and byte lengths matched. The original
+arithmetic was restored. These observations identify executable revision
+`485e879fea0208bfbfd323288cf2d5b48a6f4691` (PR merge tree for candidate
+`19d6e0df75dcb935663e0134106184f41f6e56df`) in
+[native benchmark run 41472576351](https://github.com/appunni-m/image-slash-star/actions/runs/41472576351).
+The raw artifact and audited cohort ratios are retained locally in
+`.coverage-mcp/local-evidence/ci/pr159-x86-benchmark-20261102/`.
 Local paths and hostnames are omitted from the public presentation.
 
 Fixture-harness timing from `benchmark_fixture_workloads.py` measures harness

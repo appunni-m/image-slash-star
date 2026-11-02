@@ -57098,6 +57098,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "grid_unreferenced_alpha_items",
+          "type": "decode",
+          "format": "avif",
+          "category": "grid",
+          "description": "RGB AVIF 1x2 color grid ignores unreferenced auxiliary alpha items while preserving exact 80x80 clipped color output",
+          "asset": "grid_unreferenced_alpha_items.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "4f687d744f2afefcf00d387b5c21607d6e52922593b249e9dcf194a1da13926b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_grid_unreferenced_alpha_items_avif.bin",
+          "ref_sha256": "f9a11555c837abeb321bdedd737638cc4a62c1784ad58f9b699fd49d3288c019",
+          "ref_bytes": 19200,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            80,
+            80
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "animated.avif",
           "category": "animated",
           "description": "Five-frame AVIF with exact frame pixels and timing",
@@ -244961,6 +245039,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_gray_zero_q100.bin",
           "encoded_ref_bytes": 337,
           "encoded_ref_sha256": "9077beb13a65b7d163bdafae012ccdce86d817c1d00bf15056012ea8f69d3d10",
@@ -244973,17 +245061,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_gray_zero_q1",
@@ -245017,6 +245095,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_gray_zero_q1.bin",
           "encoded_ref_bytes": 281,
           "encoded_ref_sha256": "5e2ea59daa29b98499b21cb055b4fd8ec687aec65151c3d36b5c6b1a8b6b9433",
@@ -245029,17 +245117,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_gray_full_q100",
@@ -245073,6 +245151,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_gray_full_q100.bin",
           "encoded_ref_bytes": 335,
           "encoded_ref_sha256": "9c5356365b645b297fe6cebd6eae04a9c2c085bd56654f9c7ae3005ab3bc1c4d",
@@ -245085,17 +245173,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_gray_full_q1",
@@ -245129,6 +245207,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_gray_full_q1.bin",
           "encoded_ref_bytes": 281,
           "encoded_ref_sha256": "a5997f8f14afade2c1fdc01818f860262812504125912d89451f43890078393f",
@@ -245141,17 +245229,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_checker_q100",
@@ -245185,6 +245263,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_checker_q100.bin",
           "encoded_ref_bytes": 1146,
           "encoded_ref_sha256": "a20ad6c10ed31b1cc727e17d1bb5770892669a8529ab5c6ad836dc43660b77b9",
@@ -245197,17 +245285,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_checker_q1",
@@ -245241,6 +245319,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_checker_q1.bin",
           "encoded_ref_bytes": 567,
           "encoded_ref_sha256": "5571a19613d715f0b50d0b639b0e1f6c8304a4ed9732a3151ee25e3be59422b0",
@@ -245253,17 +245341,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_checker_tail_q100",
@@ -245297,6 +245375,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_checker_tail_q100.bin",
           "encoded_ref_bytes": 878,
           "encoded_ref_sha256": "e243af67a898cd1e424d4a2e25e69463c6f2443852b98c72cffd8ff141592ffb",
@@ -245309,17 +245397,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_checker_tail_q1",
@@ -245353,6 +245431,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_checker_tail_q1.bin",
           "encoded_ref_bytes": 543,
           "encoded_ref_sha256": "4416a0c16ec4380bf5b4db7d0b83a9dbc94c8435c5538208460a2c8818421eec",
@@ -245365,17 +245453,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_stripes_q100",
@@ -245409,6 +245487,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_stripes_q100.bin",
           "encoded_ref_bytes": 826,
           "encoded_ref_sha256": "890d87fc602aa32629c073cfffb37dd986aa25eae0aacd75c8afa48c7d1382d7",
@@ -245421,17 +245509,7 @@
             16
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_stripes_q1",
@@ -245465,6 +245543,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_stripes_q1.bin",
           "encoded_ref_bytes": 538,
           "encoded_ref_sha256": "ef5652ae2bf8ff1dabb3c510f0b57a0eaa75a106a1a4479c8412f5ace50c36a9",
@@ -245477,17 +245565,7 @@
             16
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_cmyk_checker_q100",
@@ -245522,6 +245600,16 @@
           },
           "source_mode": "CMYK",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_cmyk_checker_q100.bin",
           "encoded_ref_bytes": 1193,
           "encoded_ref_sha256": "62ba6f2db8da60b1e943cfa4c55caa310f072e3b5f8c646362bcb7f8c5fd5ed7",
@@ -245534,17 +245622,7 @@
             8
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_cmyk_checker_q1",
@@ -245579,6 +245657,16 @@
           },
           "source_mode": "CMYK",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_cmyk_checker_q1.bin",
           "encoded_ref_bytes": 797,
           "encoded_ref_sha256": "28853a352f125d6d978cfd5f1c982e08f4ddef854fa85239abfac48a9809d3d1",
@@ -245589,6 +245677,332 @@
           "ref_size": [
             32,
             8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_420_q1",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q1",
+          "params": {
+            "quality": 1,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+          "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q1.bin",
+          "encoded_ref_bytes": 705,
+          "encoded_ref_sha256": "77535c28045d6f8946df11c5f777ab79bc7a72379793ee5cf8d5d47853573fb7",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q1.bin",
+          "ref_sha256": "93e11a7e9b062f14e9f3deac1c6d8b8f86752cc8eb3994f00619b99085554c40",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_420_q85",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q85",
+          "params": {
+            "quality": 85,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+          "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q85.bin",
+          "encoded_ref_bytes": 853,
+          "encoded_ref_sha256": "b31cfe9eee6b8943d2b76f14501ed0942b63be17ff4e8ff9cbd5ddd1d90bdc0c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q85.bin",
+          "ref_sha256": "8ef911276007f48a434992eff675532cd7e2a935488152edf1b2e814ff970a78",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_420_q100",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 64x16 RGB black, white, checker, stripe and ramp blocks exercise baseline 4:2:0 eight-block luma quantization at Q100",
+          "params": {
+            "quality": 100,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_64x16.png",
+          "source_sha256": "74c33118599d54978dee6728c591088fe34650954cb38148279aed607581ab4f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q100.bin",
+          "encoded_ref_bytes": 977,
+          "encoded_ref_sha256": "0fe1bcde107202f0b4c7da64aa349cb0618ea12d01d024922d2753ecd0523058",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q100.bin",
+          "ref_sha256": "791b46442305b4cfbc1cd22db9b49a1a7f224ef34081cb5b4dbbc9418cecae74",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_tail_420_q1",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q1",
+          "params": {
+            "quality": 1,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+          "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q1.bin",
+          "encoded_ref_bytes": 852,
+          "encoded_ref_sha256": "179285242cb26d341ca301a0e6282e1add2405939ea2ea09556cb94cb3f7903f",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q1.bin",
+          "ref_sha256": "82a8ca2b220bcf7afc457f5b59fd6ed0188baca2edd6b21a19a0cdd3f4044452",
+          "ref_bytes": 5763,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            113,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_tail_420_q85",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q85",
+          "params": {
+            "quality": 85,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+          "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q85.bin",
+          "encoded_ref_bytes": 1187,
+          "encoded_ref_sha256": "38dcb8465151fc9284eba56215a7f5e11e7d9618b20685a0cdf4a60e73798c03",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q85.bin",
+          "ref_sha256": "80da960b6cb17a87051c1b2770f5e8460a99ca9caf0960f802e2645877370e48",
+          "ref_bytes": 5763,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            113,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_fdct_rgb_luma_extremes_tail_420_q100",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "fdct",
+          "description": "Complete 113x17 full-range RGB blocks exercise baseline 4:2:0 eight-block luma quantization with right and bottom replication at Q100",
+          "params": {
+            "quality": 100,
+            "subsampling": "420",
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_fdct_rgb_luma_extremes_tail_113x17.png",
+          "source_sha256": "c42f0f9c0bd5789f28987dd43b440e15164f800abc86b14205a3b9021e257a8d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q100.bin",
+          "encoded_ref_bytes": 1444,
+          "encoded_ref_sha256": "e9b752f38ab281dab7030727fcdb426bf2c5e1b06fc96f6e5b21e6c15b5f1a0e",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q100.bin",
+          "ref_sha256": "f5d75f858bb8bb13905aec351e7d91ae9ad65216dfe4f476d5d966041c3a4d69",
+          "ref_bytes": 5763,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            113,
+            17
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false,
@@ -348969,12 +349383,12 @@
     }
   },
   "summary": {
-    "total_rows": 3690,
-    "decode_rows": 3022,
-    "encode_rows": 668,
+    "total_rows": 3697,
+    "decode_rows": 3023,
+    "encode_rows": 674,
     "formats": 8,
-    "assets_available": 3018,
-    "decode_active": 3022,
+    "assets_available": 3019,
+    "decode_active": 3023,
     "decode_planned": 0,
     "encode_not_wired": 27
   },

@@ -16,6 +16,8 @@ SOURCES = (
     ("rgb_checker_tail", "RGB", 33, 9),
     ("rgb_stripes", "RGB", 64, 16),
     ("cmyk_checker", "CMYK", 32, 8),
+    ("rgb_luma_extremes", "RGB", 64, 16),
+    ("rgb_luma_extremes_tail", "RGB", 113, 17),
 )
 
 
@@ -25,6 +27,21 @@ def source_pixels(name: str, mode: str, width: int, height: int) -> bytes:
         return bytes(width * height)
     if name == "gray_full":
         return bytes([255]) * (width * height)
+    if name in {"rgb_luma_extremes", "rgb_luma_extremes_tail"}:
+        pixels = bytearray()
+        for y in range(height):
+            for x in range(width):
+                patterns = (
+                    0, 255,
+                    255 * ((x + y) % 2),
+                    255 * ((x + y + 1) % 2),
+                    255 * (x % 2), 255 * (y % 2),
+                    (x % 8) * 36, (y % 8) * 36,
+                )
+                value = patterns[((x // 8) + (y // 8)) % len(patterns)]
+                # Matching RGB channels preserve the full luma sample range.
+                pixels.extend((value, value, value))
+        return bytes(pixels)
     return bytes(
         255 if (x + (0 if name == "rgb_stripes" else y) + channel) % 2 else 0
         for y in range(height)

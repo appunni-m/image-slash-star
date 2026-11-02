@@ -33,9 +33,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 1244 rows total, 1244 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 1245 rows total, 1245 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, 5 active parity cases and 27 explicit planned gaps.
-- Whole matrix: 3,690 rows total, 3,022 active decode rows, 641 active encode rows, 0 planned decode rows, and 27 planned encode rows.
+- Whole matrix: 3,697 rows total, 3,023 active decode rows, 647 active encode rows, 0 planned decode rows, and 27 planned encode rows.
 
 Nine integer-motion mixed-key cases now cover I420/I422/I444 at 8/10/12 bits
 with exact Pillow still/sequence output. The fresh full run passes 139 integration

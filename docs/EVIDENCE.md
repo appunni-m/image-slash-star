@@ -1,8 +1,58 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,690 total rows: 3,022 decode /
-inspect / verify rows and 668 encode rows. Of those, 3,022 decode rows are
-active and 641 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,697 total rows: 3,023 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,023 decode rows are
+active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG full-range samples in AVX2 batch geometry — 2026-11-02
+
+Six public encode rows combine complete 64x16 and 113x17 RGB sources with
+baseline 4:2:0 at Q1, Q85, and Q100. Each block row mixes black, white,
+checker, inverse-checker, stripe, and ramp patterns. Equal RGB channels
+preserve the full luma range, including the large signed DC coefficients
+that smaller alternating-color cases do not produce.
+
+The 64x16 image reaches an eight-block luma packet on AVX2. The odd 113x17
+image also exercises right and bottom replication. Pinned Pillow supplies
+complete JPEG bytes; a separate native ARM64 public encoder probe matches
+all six outputs exactly. The manifest-driven matrix checks those same
+complete outputs, and native x86 CI executes the rows under SSE2 and AVX2.
+These are numerical boundary parity cases, not a claim of newly covered
+global branch outcomes or a refreshed full-suite percentage.
+
+Inputs, live Pillow references, public probe outputs and executable, and
+source receipts are retained outside `target/` in
+`.coverage-mcp/local-evidence/parity/jpeg-eight-lane-extremes-staging-20261102/`.
+The rejected reciprocal experiment and its measured regression limits are
+documented in [Benchmarking](BENCHMARKING.md); codec arithmetic is unchanged.
+
+## AVIF color grids with unattached alpha items — 2026-11-02
+
+`decode:avif:grid_unreferenced_alpha_items` removes the two auxiliary-alpha
+relationships from the existing 80x80 color grid. A sibling `free` box keeps
+all item offsets and AV1 payload bytes unchanged; the alpha items remain
+well-formed but unattached. Pinned Pillow accepts the complete file as RGB,
+with the exact color channels of the original RGBA grid. The 2,373-byte input
+SHA-256 is
+`4f687d744f2afefcf00d387b5c21607d6e52922593b249e9dcf194a1da13926b`;
+its 19,200-byte RGB output SHA-256 is
+`f9a11555c837abeb321bdedd737638cc4a62c1784ad58f9b699fd49d3288c019`.
+
+The canonical selected run passes the original and unattached-alpha grid
+rows (2/2). Source and fixture guards remain unchanged during execution.
+Compared with byte-identical source files in the retained full report, the
+pair observes three previously unobserved branch outcomes in
+`validate_grid_with_token`: absent cell alpha, absent alpha canvas, and no
+alpha placement. Duplicate LLVM records are combined by source span and arm
+using OR; these observations do not establish a refreshed full-suite
+percentage. All 1,244 existing AVIF decode rows, other format rows, fault
+contracts, and existing raw output bytes remain unchanged.
+
+The report, actual test executable, raw and merged profiles, 139 source/setup
+files, fixture receipts, and producer recipe are retained outside `target/`
+in `.coverage-mcp/local-evidence/parity/avif-grid-unreferenced-alpha-20261102/`.
+This is local selected-test evidence, not a managed Coverage MCP execution.
+No codec implementation or runtime dispatch changes are required.
 
 ## Reduced AV1 inter transform alphabet — 2026-11-02
 
@@ -16192,7 +16242,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4ae52290abff26fd7aeff96192efc4fb211448706db59fbb4a1f89d2fd510c6e`; matrix `5db167183e95c695e53aa2a481266b1ace28ec902ed87be2fbbdfaffd1cbc4c8`.
+- Current fixture integrity only: manifest `97d2e3174631170ea5967924be4293ea44430fe81bd1da7b847c0c3db2940031`; matrix `a5f93956eb875ca38b36343b4a0b6e0ff5b34275349d02b936e0238a19192136`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
