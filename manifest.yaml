@@ -14901,6 +14901,11 @@ formats:
       description: AVIF with a 1x2 color grid and per-cell alpha items
       test_assets:
       - grid.avif
+    - id: grid_unreferenced_alpha_items
+      description: RGB AVIF 1x2 color grid ignores unreferenced auxiliary alpha items while preserving exact 80x80 clipped color output
+      test_assets:
+      - grid_unreferenced_alpha_items.avif
+      status: active
     - id: animated
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
