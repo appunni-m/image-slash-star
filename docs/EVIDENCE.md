@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,751 total rows: 3,077 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,077 decode rows are
+The current public evidence matrix contains 3,757 total rows: 3,083 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,083 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF selected and ignored operating-point layers — 2026-11-02
@@ -16374,7 +16374,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `600e19042a0d86c93fcf5c1e99df807a6509450346734f50db6929eda9775478`; matrix `d8f6395a53460121fa7d5d7aa54bd0e39ad1048209803933c10fa75e024e9d11`.
+- Current fixture integrity only: manifest `154ca22b8acd14e91b8d8879e674b034bde6f405202a90c460b838ee1e5e38eb`; matrix `6ec8c12717d75f9b0ecca79e793b9d6dae29bd7ba54b32d674672301e9968fc8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21272,3 +21272,33 @@ Coverage MCP recognizes each locally derived source receipt and passing test
 status, but returns `incomparable` for their comparison: embedding the changed
 matrix produces different test-executable build IDs. This evidence is local,
 not managed Coverage MCP attribution. It makes no performance claim.
+
+## AVIF sequence EOF boundaries and native profile attribution, 2026-11-03
+
+Six ordinary malformed AVIF inputs stop the internal sequence header before
+the decoder-model flag, buffer-removal delay width, frame-width field size,
+maximum frame width, frame-ID flag, and order-hint flag. Complete BMFF sample
+and primary-item extents remain consistent. Pinned Pillow header verification
+succeeds and decoding rejects each input; the public Rust decoder agrees.
+The existing healthy decoder-model animation remains the complete control.
+
+The focused manifest campaign passes seven cases, including that control, with
+139 codec/build/test source hashes unchanged. Public input probes identify six
+distinct previously uncovered sequence-parser regions against the retained
+full baseline, with an identical 492-region mapping. Complete unfiltered LLVM
+exports and actual invoked executables are retained under
+`.coverage-mcp/local-evidence/parity/avif-sequence-boundary-probe-20261102/`.
+This is a source-region projection, not a new whole-repository coverage run.
+All 3,751 preceding matrix rows, 1,299 preceding AVIF observations, 167 existing
+target-only fault rows, and the native loop index remain unchanged. No codec
+unit tests or new target-only faults are added.
+
+The native profiler now pins Cargo release debug information without stripping
+or split files and requires actual ELF DWARF sections and converter source-line
+mapping. A small CLI counts bounded raw perf sample records instead of rounded
+report headers. Five retained native profiles reproduce their exact counts;
+seven local public JPEG workloads retain identical complete encoded bytes
+between the original and revised debug builds. These diagnostic checks do not
+establish a runtime speedup. The preceding native profile lacks DWARF line
+information; its function self samples remain usable, while source-line and
+complete-unwind claims are withheld.
