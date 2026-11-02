@@ -154,11 +154,20 @@ measurements are investigation evidence; they do not publish a speed claim or
 gate changes on noisy timing differences. The original report hashes, source
 revision, environment, measurement policy, and every result remain identifiable.
 For pull requests, that job also compares the base and candidate revisions with
-an interleaved A-B-B-A run on 128×128 Q10, 512×512 Q10, and 128×128 Q85 RGB
-4:2:0 encoding under SSE2 and AVX2. It checks the encoded outputs byte for byte
-before timing and retains the measurements at
-`revision-abba/summary.json`; interpret the ratios as focused evidence, not a
-project-wide speed claim.
+six interleaved A-B-B-A cohorts per workload under SSE2 and AVX2. The RGB
+4:2:0 workloads cover 128×128 Q10, 512×512 Q10, 128×128 Q85, 512×512 Q85,
+1024×1024 Q85, 128×128 Q100, and the odd 63×65 Q85 image. Complete encoded
+outputs must match before timing. Each sample records its executable SHA-256;
+the summary retains all cohort ratios and reports their paired median at
+`revision-abba/summary.json`. These remain focused hosted-runner observations.
+
+The control builds from a retained Git source archive in a temporary directory
+under the output directory. It creates no worktree and leaves Git state
+unchanged. The archive digest, source-file hashes, immutable revision, and tree
+identity accompany the measurements. Local output must stay inside the
+repository. The runner accepts `--cases` for exact matrix workloads and
+`--cohorts` for one to twenty repeated quartets; its default remains one
+quartet, while CI explicitly selects six.
 Local paths and hostnames are omitted from the public presentation.
 
 Fixture-harness timing from `benchmark_fixture_workloads.py` measures harness

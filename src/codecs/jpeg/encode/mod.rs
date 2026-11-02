@@ -3235,14 +3235,19 @@ fn fdct_quantize_eight_coefficient_major(
     for (coefficient, values) in samples.iter().copied().enumerate() {
         let values = values.to_array();
         let divisor = quantizer.divisors[coefficient];
-        let reciprocal = quantizer.reciprocals[coefficient];
+        // The two-pass ISLOW FDCT bounds the magnitude by 8193. Divisors
+        // are 8..=2040, so the rounded numerator is at most 9213, below
+        // 2^16. A ceiling 16-bit reciprocal therefore overestimates by
+        // less than one; the existing downward correction stays exact.
+        // Rounding ceil(2^32 / d) upward here gives ceil(2^16 / d).
+        let reciprocal = (quantizer.reciprocals[coefficient] + 65_535) >> 16;
         let rounding = divisor >> 1;
         let numerators = values.map(|value| value.unsigned_abs() + rounding);
-        let products = u32x8::new(numerators)
-            .widening_mul(u32x8::splat(reciprocal))
-            .to_array();
+        // The largest product is below 9213 * 8192, fitting in u32. Keep
+        // all eight AVX2 lanes instead of widening each product to u64.
+        let quotients = ((u32x8::new(numerators) * u32x8::splat(reciprocal)) >> 16u32).to_array();
         for lane in 0usize..8 {
-            let mut quotient = (products[lane] >> 32) as u32;
+            let mut quotient = quotients[lane];
             quotient -= u32::from(quotient * divisor > numerators[lane]);
 
             let magnitude = quotient as i32;

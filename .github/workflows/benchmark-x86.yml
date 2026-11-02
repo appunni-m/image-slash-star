@@ -144,6 +144,9 @@ jobs:
             --baseline-revision "$BASE_REVISION" \
             --sse2-target-dir target/jpeg-simd-x86_64-sse2 \
             --avx2-target-dir target/jpeg-simd-x86_64-avx2 \
+            --cohorts 6 \
+            --cases rgb-128-q10-420 rgb-512-q10-420 rgb-128-q85-420 \
+              rgb-512-q85-420 rgb-1024-q85-420 rgb-128-q100-420 rgb-63x65-q85-420 \
             --output target/benchmarks/jpeg/simd-x86_64/revision-abba/summary.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
