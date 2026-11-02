@@ -91,8 +91,13 @@ immutable Git source archive, source revision, build logs, and a SHA-256
 inventory alongside host and build metadata, raw perf data,
 actual sample counts, inline-aware reports, annotated sampled assembly,
 source-mapped converter disassembly with ISA counts scoped to the aligned
-converter, and output hashes. Hardware sampling requires user-space cycle
-events and DWARF call graphs. If preflight or sampling cannot collect enough
+converter, and output hashes. The job records and temporarily sets the
+[per-process user-space sampling policy](https://www.kernel.org/doc/html/latest/admin-guide/perf-security.html#unprivileged-users)
+to `2` on its [fresh hosted VM](https://docs.github.com/en/actions/concepts/runners/github-hosted-runners),
+then restores the original setting in an unconditional cleanup step. It prefers
+hardware `cycles:u` events and uses software `cpu-clock:u` samples when cycle
+counters are unavailable; the recorded event identifies which was collected.
+Both sampling modes require DWARF call graphs. If preflight or sampling cannot collect enough
 usable samples, the job records the reason and falls back to public-API timing
 and linked assembly. That fallback does not establish sampled hotspots.
 
