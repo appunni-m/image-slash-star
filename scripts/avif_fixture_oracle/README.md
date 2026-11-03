@@ -1392,6 +1392,36 @@ The libavif archive uses the fixture-control patch documented above for the
 `enable-tx-size-search` encoder option. The independent loop-count observation
 and exact Pillow frames are retained through the regular AVIF oracle workflows.
 
+## Horizontal B8x4 4:4:4 TX_MODE_SELECT inter sequence
+
+`animated_lossy_inter_444_b8x4_mode_select_64x64.avif` reuses the horizontal
+B8x4 libaom patch and producer from the 4:2:0 case, with a full 4:4:4 plane
+set. It is a two-frame, 64x64, 8-bit lossy sequence using the coarse pattern,
+quality 70, root size 8 and TX_MODE_SELECT. The key-frame path remains
+unchanged. The generator verifies repeat-encode stability and both frame
+headers; Pillow RGB references and libavif loop evidence are collected
+independently.
+
+Compile the producer against the patched horizontal B8x4 libaom build and the
+pinned libavif build, using the full-resolution 4:4:4 pixel format:
+
+```sh
+mkdir -p target/oracle-staging/narrow-inter-b8x4-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_WIDTH=64 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV444 -DFIXTURE_QUALITY=70 \
+  -I target/oracle-staging/libavif-narrow-source/include \
+  -I target/oracle-staging/libavif-narrow-build/include \
+  -I target/oracle-staging/libaom-narrow-b8x4-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b8x4-build/libaom.a -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b8x4-tools/encode-square-444-70
+target/oracle-pillow312-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossy_inter_444_b8x4_mode_select_64x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b8x4-tools
+```
+
 ## Vertical B4x8 TX_MODE_SELECT inter sequence
 
 `animated_lossy_inter_420_b4x8_mode_select_64x64.avif` is a two-frame, 64x64,

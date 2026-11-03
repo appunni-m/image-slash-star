@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,832 total rows: 3,158 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,158 decode rows are
+The current public evidence matrix contains 3,833 total rows: 3,159 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,159 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -16662,7 +16662,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b1ea62b18af0e76dc2d1465813de4cb120d17064b83f59af44c086079ea75063`; matrix `e9d0874ee512df66905b97553f49dd833fc425db44146ecd9a91c2740a43e7ad`.
+- Current fixture integrity only: manifest `66705052b57d8ce745b5423a8a053cd4febdd476d2521cd55aff059da492e8f5`; matrix `c128a2e9b8cbe9970bd1ba4474a157bf6050c534ddc1b84d629890c06cc7d793`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21671,6 +21671,28 @@ report is retained at
 `.coverage-mcp/local-evidence/selected/20261103T115120.739619Z-94bd8a99d3214c7c99165e5aeb94172c/coverage.json`;
 its SHA-256 is
 `ca3bd1a4abf1d0406223dfc56541e00de03e26dc0a36cb0b8dcc276d2d9bb47f`. Coverage
+MCP marks the selected measurement source as unverified and test attribution
+as unknown, so this is selected-case evidence rather than a whole-suite
+coverage claim. No Rust runtime code or unit tests changed, and this parity
+case makes no performance claim.
+
+## AV1 4:4:4 B8x4 inter geometry parity — 2026-11-03
+
+The public parity row
+`decode:avif:animated_lossy_inter_444_b8x4_mode_select_64x64` adds the
+horizontal B8x4 TX_MODE_SELECT inter sequence in 8-bit 4:4:4. Selected parity
+passed 1/1 and matched both 64x64 RGB frames byte-for-byte with Pillow 12.2.0.
+The retained frame hashes are
+`62f80b849b2615a028e9d8b7be51e37e63752922898439d37ebc89bd4f69dfe6` and
+`73367a93996d2e243c46f0c3b52c50ea43fdcee83e3c18452efcf37dd833bd04`. The
+pinned libavif observer decoded both frames and reported one total play.
+
+The selected LLVM report records 14 observations for both the exact B8x4
+block-size check and its width check at `src/codecs/avif/av1/block.rs:49889`.
+The report is retained at
+`.coverage-mcp/local-evidence/selected/20261103T122912.661948Z-16a2daa8324d475e86779b2654eac6ba/coverage.json`;
+its SHA-256 is
+`eddea33238563fb8a3edeb63b732a8df98bf2212127fe8e98e01a27d7526e985`. Coverage
 MCP marks the selected measurement source as unverified and test attribution
 as unknown, so this is selected-case evidence rather than a whole-suite
 coverage claim. No Rust runtime code or unit tests changed, and this parity
