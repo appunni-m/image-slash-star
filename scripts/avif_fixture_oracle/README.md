@@ -1537,6 +1537,44 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
   --variant animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64 --check
 ```
 
+## Odd-width 10-bit lossless B4x8 inter edge
+
+`animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif` is a two-frame,
+full-range 10-bit I420 sequence. The pinned AOM producer forces vertical
+B4x8 leaves; its all-lossless frames use `ONLY_4X4`, and the final right-edge
+leaf has one visible luma column. Pillow 12.2.0 decodes both frames. The public
+still-image API matches the first frame exactly; the sequence API currently
+returns typed `Unsupported` because its lossless grid requires visible extents
+in complete 4x4 transform units. The matrix records that Rust sequence limit
+separately from the successful still-image pixel parity. This row does not
+reach the later inter-transform guard at `entropy.rs:7069`: the current public
+sequence path stops in `validate_first_partition` for inter frames before it
+walks transform leaves. The selected coverage report therefore leaves both
+regions at that guard uncovered.
+
+Reuse the pinned narrow-B4x8 AOM and libavif build from the preceding section.
+Build a separate producer with odd dimensions and q100, then verify the
+complete-file digest and AV1 headers:
+
+```sh
+mkdir -p target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_NARROW_VERTICAL=1 -DFIXTURE_WIDTH=65 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV420 -DFIXTURE_QUALITY=100 \
+  -I target/oracle-staging/libavif-narrow-source/include \
+  -I target/oracle-staging/libavif-narrow-build/include \
+  -I target/oracle-staging/libaom-narrow-b4x8-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b4x8-build/libaom.a -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b4x8-odd-edge-tools/encode-odd65x64-420-100
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_65x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_65x64 --check
+```
+
 ## Vertical B4x8 4:4:4 TX_MODE_SELECT inter sequence
 
 `animated_lossy_inter_444_b4x8_mode_select_64x64.avif` reuses the vertical

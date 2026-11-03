@@ -17085,6 +17085,15 @@ formats:
       test_assets:
       - animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif
       status: active
+    - id: animated_lossless_inter_420_b4x8_10bit_odd_65x64
+      description: Two-frame 65x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with vertical B4x8 inter leaves clipped to one visible luma column at the right edge
+      test_assets:
+      - animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif
+      status: active
+      expect_sequence_error: false
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: unsupported
+      rust_sequence_error_reason: The pure-Rust AV1 sequence renderer does not yet reconstruct inter-frame color surfaces. It returns typed Unsupported before entropy leaf parsing, so this row records the odd-width B4x8 input and first-frame parity without claiming sequence-frame transform coverage.
     - id: animated_lossy_inter_444_b4x8_mode_select_64x64
       description: Two-frame 64x64 8-bit 4:4:4 lossy AVIF sequence whose inter partition tree is forced into vertical B4x8 leaves and signals TX_MODE_SELECT at positive qindex
       test_assets:
