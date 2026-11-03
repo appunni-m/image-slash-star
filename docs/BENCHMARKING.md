@@ -229,6 +229,17 @@ establish native x86 speed or full-suite parity. If the committed decoder
 source changes, the workflow also checks its SHA-256 against the measured
 candidate recorded in the plan.
 
+The decoder-refill candidate was rejected by the [native x86 run on
+2026-11-03](https://github.com/appunni-m/image-slash-star/actions/runs/41600308930)
+on an AMD EPYC 9V45 host. Across six paired cohorts, the SSE2 primary gain was
+-0.16% (two cohorts faster), and its progressive guard was 2.22% slower. The
+AVX2 primary gain was 0.80% (three cohorts faster). Both missed the 3% gain
+and six-cohorts-faster requirements; the SSE2 guard also exceeded its 2%
+slowdown limit. All eight complete decoded pixel-buffer pairs matched. The
+candidate source was not adopted despite its positive local ARM64 screen. The
+retained artifact ZIP has SHA-256
+`130cec9518190d2c5163f272ed4c73c21125aa3d80bae052397ba9213422b2a8`.
+
 The native reservoir-capacity experiment was also rejected in
 [run 41533813985](https://github.com/appunni-m/image-slash-star/actions/runs/41533813985).
 Across six paired cohorts, SSE2 primary gain was -1.0652% (zero cohorts faster)
