@@ -209,6 +209,16 @@ FIXTURES = {
         "layout": "444",
         "restoration": 1
     },
+    "animated_mixed_lossless_superres_444_10bit_loopfilter_80x48": {
+        "depth": 10,
+        "input_sha256": "e7c75ed78f3ba1ef3bcd4c56c32e7ea832901cfcc41b0282a05c1bce4cfda646",
+        "inter_segment_qindex": [124, 0, 124, 124, 124, 124, 124, 124],
+        "layout": "444",
+        "loop_filter": True,
+        "quality": 45,
+        "restoration": 0,
+        "speed": 10
+    },
     "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64": {
         "coded_width": 64,
         "depth": 10,
