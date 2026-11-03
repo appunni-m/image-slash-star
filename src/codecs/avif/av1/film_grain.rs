@@ -928,9 +928,6 @@ fn generate_scaling(points: &[[u32; 2]]) -> Av1Result<Vec<i32>> {
             i32::try_from(pair[1][1]).map_err(|_| malformed("film-grain scaling value invalid"))?,
         );
         let dx = end_x.saturating_sub(start_x);
-        if dx == 0 {
-            continue;
-        }
         let half = dx / 2;
         let numerator = 65_536_usize
             .checked_add(half)
@@ -1340,8 +1337,10 @@ fn blend(
     grain_min: i32,
     grain_max: i32,
 ) -> Av1Result<i32> {
+    // A subsampled axis overlaps one chroma sample, so chroma always uses its
+    // first weight pair. Luma overlap spans two samples and uses both pairs.
     let (old_weight, current_weight) = if chroma {
-        if index == 0 { (23_i64, 22_i64) } else { (0, 0) }
+        (23_i64, 22_i64)
     } else if index == 0 {
         (27, 17)
     } else {
