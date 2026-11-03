@@ -1,0 +1,47 @@
+{
+  "schema": "image-slash-star/jpeg-patch-experiment@1",
+  "status": "diagnostic_only_shipping_rust_unchanged",
+  "operation": "decode",
+  "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
+  "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
+  "patch_sha256": "c367dc1ff3ab545257dfcac168f58371bcfc8f6d5be4094e0de1458db21d4f7f",
+  "source_guards": {
+    "src/codecs/jpeg/decode/bit_reader.rs": "41c82b4e21cc1a75230b3ea8e82b2ef71662c7f0cd6ae99264bff2644a96ec87"
+  },
+  "variants": [
+    "sse2",
+    "avx2"
+  ],
+  "primary": "decode-gray-512-420",
+  "guards": [
+    "decode-gray-512-422",
+    "decode-rgb-baseline-128",
+    "decode-progressive-long-scan-128"
+  ],
+  "cohorts": 6,
+  "admission": {
+    "primary_gain_minimum_percent": 3,
+    "all_primary_cohorts_must_be_faster": true,
+    "guard_slowdown_limit_percent": 2,
+    "complete_output_bytes_must_match": true,
+    "exact_pillow_parity_required_before_adoption": true,
+    "arm64_shipping_code_must_remain_portable": true
+  },
+  "arm64_screen": {
+    "report_sha256": "004aa43f0a83607c7b279e0ed4975a903f24e23bbd44cbcac5bf474c8848d918",
+    "selected_parity_report_sha256": "0539645f015f368aeafafb5a01ce1e46aadadbe4f5f8c2c01445b83e1d9608d6",
+    "selected_parity_rows": 22,
+    "primary_gain_percent": 10.3793072802586,
+    "primary_cohorts_faster": 6,
+    "guard_paired_gain_percent": {
+      "decode-gray-512-422": 9.97781214422973,
+      "decode-rgb-baseline-128": -0.58041435449436,
+      "decode-progressive-long-scan-128": 0.11512155625986
+    },
+    "note": "Local Apple ARM64 A-B-B-A diagnostics only. They do not establish x86 SSE2/AVX2 performance or full-suite parity."
+  },
+  "candidate_guards": {
+    "src/codecs/jpeg/decode/bit_reader.rs": "c3618ba201329cb31899bea47fad845d832a6202a1ef93be317737b1830e2096"
+  },
+  "patch_format": "Zero-context unified diff; exact baseline and compiled candidate file digests are both required."
+}

@@ -1,0 +1,50 @@
+diff --git a/src/codecs/jpeg/decode/bit_reader.rs b/src/codecs/jpeg/decode/bit_reader.rs
+index e56ef4e1f..5126716b2 100644
+--- a/src/codecs/jpeg/decode/bit_reader.rs
++++ b/src/codecs/jpeg/decode/bit_reader.rs
+@@ -172,0 +173 @@ pub(super) struct FastBitReader<'a> {
++    bulk_refill_enabled: bool,
+@@ -178,0 +180,2 @@ pub(super) struct FastBitReader<'a> {
++const BULK_REFILL_MIN_BYTES: usize = 64 * 1024;
++
+@@ -184,0 +188 @@ impl<'a> FastBitReader<'a> {
++            bulk_refill_enabled: end.saturating_sub(start) >= BULK_REFILL_MIN_BYTES,
+@@ -262,0 +267,28 @@ impl<'a> FastBitReader<'a> {
++    #[inline(always)]
++    fn append_unstuffed_bytes(&mut self, byte_count: usize) -> bool {
++        let (padding, bit_count) = match byte_count {
++            6 => (2, 48),
++            7 => (1, 56),
++            _ => return false,
++        };
++        let Some(end) = self.pos.checked_add(byte_count) else {
++            return false;
++        };
++        if end > self.end {
++            return false;
++        }
++        let Some(bytes) = self.data.get(self.pos..end) else {
++            return false;
++        };
++        if bytes.contains(&0xFF) {
++            return false;
++        }
++
++        let mut padded = [0_u8; 8];
++        padded[padding..].copy_from_slice(bytes);
++        self.buf = self.buf.wrapping_shl(bit_count) | u64::from_be_bytes(padded);
++        self.pos = end;
++        self.bits = self.bits.wrapping_add(bit_count);
++        true
++    }
++
+@@ -265,0 +298,9 @@ impl<'a> FastBitReader<'a> {
++            // Small entropy segments do not amortize the byte-scan probe.
++            if self.bulk_refill_enabled {
++                if self.bits <= 8 && self.append_unstuffed_bytes(7) {
++                    continue;
++                }
++                if self.bits <= 16 && self.append_unstuffed_bytes(6) {
++                    continue;
++                }
++            }

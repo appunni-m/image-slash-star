@@ -42,6 +42,28 @@ VARIANTS = {
     "sse2": "-C target-cpu=x86-64",
     "avx2": "-C target-cpu=x86-64 -C target-feature=+avx2",
 }
+DECODE_CASES = {
+    "decode-gray-512-420": {
+        "case": "decode-gray-512-420",
+        "fixture": "tests/fixtures/input/images/jpeg/grayscale_sampling_420_512x512.jpg",
+        "iterations": 200,
+    },
+    "decode-gray-512-422": {
+        "case": "decode-gray-512-422",
+        "fixture": "tests/fixtures/input/images/jpeg/grayscale_sampling_422_512x512.jpg",
+        "iterations": 200,
+    },
+    "decode-rgb-baseline-128": {
+        "case": "decode-rgb-baseline-128",
+        "fixture": "tests/fixtures/input/images/jpeg/jpeg_rgb_128x128_baseline.jpg",
+        "iterations": 500,
+    },
+    "decode-progressive-long-scan-128": {
+        "case": "decode-progressive-long-scan-128",
+        "fixture": "tests/fixtures/input/images/jpeg/progressive_refinement_long_scan.jpg",
+        "iterations": 500,
+    },
+}
 
 
 def load_benchmark_matrix():
@@ -279,8 +301,23 @@ def build_revision_pair(
     return pair
 
 
-def run_sample(binary: Path, case: dict[str, object], matrix) -> dict[str, str]:
-    command = matrix.encode_arguments(binary, case)
+def sample_arguments(
+    binary: Path, case: dict[str, object], matrix, operation: str
+) -> list[str]:
+    if operation == "decode":
+        return [
+            str(binary),
+            "decode",
+            str(ROOT / str(case["fixture"])),
+            str(case["iterations"]),
+        ]
+    return matrix.encode_arguments(binary, case)
+
+
+def run_sample(
+    binary: Path, case: dict[str, object], matrix, operation: str
+) -> dict[str, str]:
+    command = sample_arguments(binary, case, matrix, operation)
     completed = subprocess.run(
         command,
         cwd=ROOT,
@@ -296,10 +333,20 @@ def run_sample(binary: Path, case: dict[str, object], matrix) -> dict[str, str]:
     return matrix.parse_report(completed.stdout)
 
 
-def emit_output(binary: Path, case: dict[str, object], destination: Path, matrix) -> bytes:
-    command = matrix.encode_arguments(binary, case)
-    command[1] = "emit"
-    command[-1] = str(destination)
+def emit_output(
+    binary: Path, case: dict[str, object], destination: Path, matrix, operation: str
+) -> bytes:
+    if operation == "decode":
+        command = [
+            str(binary),
+            "decode-emit",
+            str(ROOT / str(case["fixture"])),
+            str(destination),
+        ]
+    else:
+        command = matrix.encode_arguments(binary, case)
+        command[1] = "emit"
+        command[-1] = str(destination)
     completed = subprocess.run(
         command,
         cwd=ROOT,
@@ -342,7 +389,14 @@ def main() -> int:
         help="optional prebuilt AVX2 directory for untimed exact-output comparison",
     )
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--cases", nargs="+", default=CASES, help="exact matrix workload names")
+    parser.add_argument(
+        "--operation", choices=("encode", "decode"), default="encode",
+        help="public JPEG operation to compare",
+    )
+    parser.add_argument(
+        "--cases", nargs="+", default=CASES,
+        help="exact workload names for the selected operation",
+    )
     parser.add_argument("--cohorts", type=int, default=1, help="A-B-B-A quartets per workload (1–20)")
     args = parser.parse_args()
     if not 1 <= args.cohorts <= 20:
@@ -371,7 +425,11 @@ def main() -> int:
     )
 
     matrix = load_benchmark_matrix()
-    case_by_name = {case["case"]: case for case in matrix.CASES}
+    case_by_name = (
+        {case["case"]: case for case in matrix.CASES}
+        if args.operation == "encode"
+        else DECODE_CASES
+    )
     missing_cases = sorted(set(args.cases).difference(case_by_name))
     if missing_cases:
         raise RuntimeError(f"benchmark matrix is missing required cases: {missing_cases}")
@@ -441,23 +499,32 @@ def main() -> int:
                 case = case_by_name[case_name]
                 exact_dir = output.parent / "correctness" / variant
                 exact_dir.mkdir(parents=True, exist_ok=True)
-                control_output = exact_dir / f"{case_name}-control.jpg"
-                candidate_output = exact_dir / f"{case_name}-candidate.jpg"
-                control_bytes = emit_output(control_binary, case, control_output, matrix)
-                candidate_bytes = emit_output(candidate_binary, case, candidate_output, matrix)
+                output_suffix = ".bin" if args.operation == "decode" else ".jpg"
+                control_output = exact_dir / f"{case_name}-control{output_suffix}"
+                candidate_output = exact_dir / f"{case_name}-candidate{output_suffix}"
+                control_bytes = emit_output(
+                    control_binary, case, control_output, matrix, args.operation
+                )
+                candidate_bytes = emit_output(
+                    candidate_binary, case, candidate_output, matrix, args.operation
+                )
                 if control_bytes != candidate_bytes:
                     raise RuntimeError(
-                        f"baseline and candidate JPEG bytes differ for {variant}/{case_name}"
+                        f"baseline and candidate operation outputs differ for {variant}/{case_name}"
                     )
                 prebuilt_match = None
                 if variant in prebuilt_binaries:
-                    prebuilt_output = exact_dir / f"{case_name}-prebuilt.jpg"
+                    prebuilt_output = exact_dir / f"{case_name}-prebuilt{output_suffix}"
                     prebuilt_bytes = emit_output(
-                        Path(prebuilt_binaries[variant]["binary"]), case, prebuilt_output, matrix
+                        Path(prebuilt_binaries[variant]["binary"]),
+                        case,
+                        prebuilt_output,
+                        matrix,
+                        args.operation,
                     )
                     if prebuilt_bytes != candidate_bytes:
                         raise RuntimeError(
-                            f"prebuilt and archived candidate JPEG bytes differ for {variant}/{case_name}"
+                            f"prebuilt and archived candidate operation outputs differ for {variant}/{case_name}"
                         )
                     prebuilt_match = True
                 exact_outputs.append(
@@ -483,12 +550,13 @@ def main() -> int:
                         binary = control_binary if subject == "control" else candidate_binary
                         load_before = load_average()
                         sample_started = time.time_ns()
-                        report = run_sample(binary, case, matrix)
+                        report = run_sample(binary, case, matrix, args.operation)
                         sample_finished = time.time_ns()
                         records.append(
                             {
                                 "variant": variant,
                                 "case": case_name,
+                                "operation": args.operation,
                                 "cohort": cohort,
                                 "order": order,
                                 "subject": subject,
@@ -497,7 +565,7 @@ def main() -> int:
                                 else candidate_revision,
                                 "binary": str(binary),
                                 "binary_sha256": binary_identities[variant][subject],
-                                "command": matrix.encode_arguments(binary, case),
+                                "command": sample_arguments(binary, case, matrix, args.operation),
                                 "load_before": load_before,
                                 "load_after": load_average(),
                                 "started_unix_ns": sample_started,
@@ -570,7 +638,8 @@ def main() -> int:
     report = {
         "schema": "image-slash-star/jpeg-revision-abba@4" if candidate_patch is not None else "image-slash-star/jpeg-revision-abba@3",
         "status": "completed",
-        "scope": "public JPEG encoder, same-host interleaved A-B-B-A",
+        "scope": f"public JPEG {args.operation}, same-host interleaved A-B-B-A",
+        "operation": args.operation,
         "started_at_utc": started_at,
         "finished_at_utc": completed_at,
         "github_run_id": os.environ.get("GITHUB_RUN_ID"),
@@ -597,10 +666,10 @@ def main() -> int:
         "prebuilt_binaries": prebuilt_binaries,
         "binary_sha256": binary_identities,
         "correctness_policy": (
-            "Baseline and candidate JPEG outputs are byte-for-byte compared before timing. "
-            "Patched implementation Pillow parity is not established by production CI and remains required before adoption."
+            "Baseline and candidate operation outputs are byte-for-byte compared before timing. "
+            "Patched implementation Pillow parity is not established by this experiment and remains required before adoption."
             if candidate_patch is not None else
-            "Baseline and candidate JPEG outputs are byte-for-byte compared before timing; x86 coverage CI separately runs exact Pillow parity cases."
+            "Baseline and candidate operation outputs are byte-for-byte compared before timing; x86 coverage CI separately runs exact Pillow parity cases."
         ),
         "exact_outputs": exact_outputs,
         "summaries": summaries,

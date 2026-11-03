@@ -40,6 +40,9 @@ def main() -> int:
         raise RuntimeError("unsupported JPEG experiment plan")
     if plan["variants"] != ["sse2", "avx2"]:
         raise RuntimeError("native experiment requires both SSE2 and AVX2")
+    operation = plan.get("operation", "encode")
+    if operation not in {"encode", "decode"}:
+        raise RuntimeError("unsupported JPEG experiment operation")
     patch = repository_path(Path(plan["patch"]))
     if digest(patch) != plan["patch_sha256"]:
         raise RuntimeError("experiment patch differs from the predeclared plan")
@@ -62,6 +65,7 @@ def main() -> int:
         "--baseline-revision", revision,
         "--candidate-patch", str(patch),
         "--variants", *plan["variants"],
+        "--operation", operation,
         "--cohorts", str(plan["cohorts"]),
         "--cases", *cases,
         "--output", str(output),
@@ -83,6 +87,8 @@ def main() -> int:
         raise RuntimeError("experiment baseline and candidate must share one committed source")
     if report["candidate_patch"]["sha256"] != plan["patch_sha256"]:
         raise RuntimeError("measured patch differs from the predeclared plan")
+    if report.get("operation", "encode") != operation:
+        raise RuntimeError("measured operation differs from the predeclared plan")
     if report["host"]["machine"].lower() not in {"x86_64", "amd64"}:
         raise RuntimeError("experiment was not executed on native x86-64 hardware")
     if set(report["variants"]) != set(plan["variants"]) or report["workloads"] != cases:
@@ -133,7 +139,8 @@ def main() -> int:
     passed = all(row["performance_gate_passed"] for row in gates)
     result = {
         "schema": "image-slash-star/jpeg-patch-experiment-result@1",
-        "scope": "Native x86 diagnostic patch experiment; shipping implementation unchanged",
+        "scope": f"Native x86 diagnostic {operation} patch experiment; shipping implementation unchanged",
+        "operation": operation,
         "producer_revision": revision,
         "plan_sha256": digest(plan_path),
         "producer_sha256": digest(Path(__file__)),

@@ -261,6 +261,16 @@ fn benchmark_encode(args: &[String], with_token: bool) -> Result<(), Box<dyn Err
     report(operation, iterations, total.elapsed().as_nanos(), samples)
 }
 
+fn emit_decoded(args: &[String]) -> Result<(), Box<dyn Error>> {
+    if args.len() != 4 {
+        return Err(invalid_input("decode-emit JPEG OUTPUT"));
+    }
+    let jpeg = std::fs::read(argument(args, 2, "JPEG path")?)?;
+    let output = decode(&jpeg)?;
+    std::fs::write(argument(args, 3, "output path")?, output.content.pixels)?;
+    Ok(())
+}
+
 fn benchmark_decode(args: &[String]) -> Result<(), Box<dyn Error>> {
     if args.len() != 4 {
         return Err(invalid_input("decode JPEG ITERATIONS"));
@@ -305,8 +315,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         "encode" => benchmark_encode(&args, false),
         "encode-token" => benchmark_encode(&args, true),
         "decode" => benchmark_decode(&args),
+        "decode-emit" => emit_decoded(&args),
         _ => Err(invalid_input(
-            "operation must be emit, emit-token, encode, encode-token, or decode",
+            "operation must be emit, emit-token, encode, encode-token, decode, or decode-emit",
         )),
     }
 }

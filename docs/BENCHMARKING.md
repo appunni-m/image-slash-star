@@ -206,15 +206,28 @@ file hashes and complete changed source files. Version-4 reports identify the
 experimental patch explicitly; patched bytes are never represented as committed
 Rust blobs. Complete JPEG outputs must match before timing starts.
 
-The native x86 workflow measures the reservoir-capacity experiment when that
-plan or patch changes in a pull request. Its predeclared gate requires at least
-3% primary paired gain in both SSE2 and AVX2, all six primary cohorts faster,
-and no guard median slowdown above 2%. `experiment-result.json` records the
-result separately from CI success. A rejected candidate is a completed
-diagnostic experiment. A successful timing gate still requires exact pinned
-Pillow parity and an architecture policy before adopting source changes.
-The earlier failed ARM64 reservoir screen remains recorded in the plan; it
-does not establish x86 latency or justify changing ARM64 shipping code.
+The native x86 workflow measures a patch experiment when its committed plan or
+patch changes in a pull request or a push to `main`. The reservoir-capacity
+gate requires at least 3% primary paired gain in both SSE2 and AVX2, all six
+primary cohorts faster, and no guard median slowdown above 2%.
+`experiment-result.json` records the result separately from CI success. A
+rejected candidate is a completed diagnostic experiment. A successful timing
+gate still requires exact pinned Pillow parity and an architecture policy
+before adopting source changes. The earlier failed ARM64 reservoir screen
+remains recorded in its plan; it does not establish x86 latency or justify
+changing ARM64 shipping code.
+
+The same workflow measures the JPEG entropy-reader bulk-refill candidate from
+[`decoder-refill.json`](../benchmarks/jpeg-production/experiments/decoder-refill.json)
+and its pinned patch. Its primary workload is 512×512 grayscale 4:2:0, with
+grayscale 4:2:2, small baseline RGB, and a progressive long-scan image as
+guards. The gate requires at least 3% paired gain in both SSE2 and AVX2, all
+six primary cohorts faster, and no guard slowdown above 2%; complete decoded
+pixel buffers must match before timing. The plan records a local ARM64 screen
+and selected parity results as supporting evidence only. Those results do not
+establish native x86 speed or full-suite parity. If the committed decoder
+source changes, the workflow also checks its SHA-256 against the measured
+candidate recorded in the plan.
 
 The native reservoir-capacity experiment was also rejected in
 [run 41533813985](https://github.com/appunni-m/image-slash-star/actions/runs/41533813985).
