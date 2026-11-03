@@ -4,6 +4,25 @@ The current public evidence matrix contains 3,826 total rows: 3,152 decode /
 inspect / verify rows and 674 encode rows. Of those, 3,152 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
+## AV1 chroma-grain overlap and scaling invariants — 2026-11-03
+
+Two more film-grain branches were unreachable after public parameter checks.
+Scaling points are strictly increasing before `generate_scaling`, so its
+zero-width interval skip was redundant; zero intervals now reach the existing
+checked-division error. Chroma overlap spans one sample along a subsampled
+axis, so `blend` always receives index zero when using chroma weights. Removed
+that redundant index condition while retaining both luma weight pairs.
+
+The existing public I422 U-only, I422 10-bit overlap/restricted-range, and
+malformed non-increasing-Y parity rows passed 3/3 with exact Pillow outcomes.
+The selected local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261103T053658.094666Z-f975453674d64bc1a05c35c50f741bed/coverage.json`
+(SHA-256 `de1567295f1b69a93e95a3ae398745701635d2bd9a64fee606ccea76505a627f`).
+It records both chroma and luma blend branches in this selected run. This is
+local selected evidence, not a Coverage MCP receipt or a full-suite coverage
+result; the full baseline was not refreshed. No new matrix rows or unit tests
+were added.
+
 ## AV1 chroma-only film-grain guard cleanup — 2026-11-03
 
 `apply_chroma_ar_lut` already exits the central coefficient loop when Y
