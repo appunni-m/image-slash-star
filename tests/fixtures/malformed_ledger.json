@@ -3,36 +3,6 @@
   "formats": {
     "avif": [
       {
-        "asset": "animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif",
-        "class": "animated_lossless_inter_420_b4x8_10bit_odd_65x64",
-        "contracts": {
-          "decode_sequence": {
-            "origin": "defensive_model",
-            "pillow_message": null,
-            "pillow_type": null,
-            "rust_format": "AVIF",
-            "rust_kind": "unsupported",
-            "rust_message": "non_empty"
-          }
-        },
-        "description": "Two-frame 65x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with vertical B4x8 inter leaves clipped to one visible luma column at the right edge",
-        "inspect_status": "ok",
-        "origins": [
-          "defensive_model",
-          "independent_implementation",
-          "pillow_fixture",
-          "specification_reference"
-        ],
-        "pillow_message": null,
-        "pillow_status": "ok",
-        "pillow_type": null,
-        "sequence_error_message": null,
-        "sequence_error_type": null,
-        "sequence_status": null,
-        "spec_status": "ambiguous",
-        "verify_status": "ok"
-      },
-      {
         "asset": "animated_lossless_inter_i422_clipped_b32x32_49x64.avif",
         "class": "animated_lossless_inter_i422_clipped_b32x32_49x64",
         "contracts": {
@@ -39958,7 +39928,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 238,
+      "avif": 237,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -39968,19 +39938,19 @@
       "webp": 142
     },
     "by_origin": {
-      "defensive_model": 6,
-      "independent_implementation": 2,
-      "pillow_fixture": 902,
-      "specification_reference": 238
+      "defensive_model": 5,
+      "independent_implementation": 1,
+      "pillow_fixture": 901,
+      "specification_reference": 237
     },
     "by_spec_status": {
-      "ambiguous": 37,
+      "ambiguous": 36,
       "not_the_format": 41,
       "spec_violation": 543,
       "tolerated": 1,
       "truncated": 280
     },
-    "classes": 902,
+    "classes": 901,
     "formats": 8
   }
 }
