@@ -1327,6 +1327,18 @@ VARIANTS = {
         "root_size": 64,
         "sha256": "a10d281a2423a1e7bf7420c8cb8e6233a8cb5f9aeb194186a1e067daee3767c8"
     },
+    "animated_lossy_inter_420_b8x4_mode_select_64x64": {
+        "bit_depth": 8,
+        "height": 64,
+        "input_name": "square-420-q70",
+        "layout": "420",
+        "pattern": "coarse",
+        "quality": 70,
+        "root_size": 8,
+        "sha256": "7b5dfcb2983abdfc8882e551729ec94ce9e05361565bbb81473d41c8dbe3acdb",
+        "transform_mode": "select",
+        "width": 64
+    },
 }
 
 FIXTURE_SHA256 = {name: spec["sha256"] for name, spec in VARIANTS.items()}
@@ -1365,6 +1377,10 @@ def validate(path: Path, spec: dict) -> None:
                for sequence in sequences)
         or headers[1].get("all_lossless") is not False):
         raise RuntimeError(f"unexpected AV1 header contract: {path}")
+    expected_transform_mode = spec.get("transform_mode")
+    if (expected_transform_mode is not None
+        and headers[1].get("transform_mode") != expected_transform_mode):
+        raise RuntimeError(f"unexpected AV1 transform mode: {path}")
     if "cdf_mode" in spec:
         expected_frozen = {
             0: [True, True],

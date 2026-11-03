@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,829 total rows: 3,155 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,155 decode rows are
+The current public evidence matrix contains 3,830 total rows: 3,156 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,156 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -16662,7 +16662,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b74e8d6f9b327b666d626b5cd4f9ac5ab34cb31345ec61876d383885be37d3f3`; matrix `fa60f5a3bc1a67c29cb02fe73d222e0d0a1d1f79191c6c9d9c1cb31f6e4fb91b`.
+- Current fixture integrity only: manifest `376a3f5f9076780bc990a75496b21b71f796e763d04d263fa9d5e3bbfdefc84a`; matrix `e3340907b958f47632439aafcdd101a9913d0511ca2f488f02877f90c5db46c5`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21612,3 +21612,23 @@ An 8-bit 4:4:4 candidate was excluded after the public Rust decode path returned
 libavif references decoded it. That remains a decoder parity gap for a later
 implementation pass. No runtime code or unit tests changed in this campaign,
 and it makes no performance claim.
+
+## AV1 exact B8x4 inter geometry parity — 2026-11-03
+
+The new public parity row `decode:avif:animated_lossy_inter_420_b8x4_mode_select_64x64`
+uses a deterministic two-frame lossy 8-bit 4:2:0 input. Its inter frame reaches
+the exact B8x4 geometry guard at `src/codecs/avif/av1/block.rs:49889` while
+retaining TX_MODE_SELECT. The selected run passed 1/1 parity row, matching both
+64x64 RGB frames byte-for-byte with pinned Pillow 12.2.0. The pinned native AVIF
+observer independently decoded both frames and reported one total play.
+
+Coverage MCP's full-report baseline had zero true-arm hits at that source guard;
+the selected LLVM report records 12 true hits for each of the two short-circuit
+condition spans. The reports are retained outside `target/` under
+`.coverage-mcp/local-evidence/full/20261103-ca295c920-current/` and
+`.coverage-mcp/local-evidence/selected/20261103T102040.663199Z-c589049aeed24b2699cf6d1b71f6649d/`.
+The selected report SHA-256 is
+`0a0624e1838004ab68591f0c4e5aa06ba2c12492da3b8fce462ac633525ee4ac`. The local
+`coverage-mcp gaps` result marks source identity unverified and test attribution
+unknown; this is selected-case evidence, not a whole-suite coverage gain or a
+managed source/build receipt. No runtime code or unit tests changed.
