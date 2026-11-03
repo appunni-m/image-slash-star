@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,835 total rows: 3,161 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,161 decode rows are
+The current public evidence matrix contains 3,836 total rows: 3,162 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,162 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -6622,6 +6622,26 @@ unverified and test attribution as unknown. It cannot read the refreshed
 report from this managed worktree, so the local counters are selected-scope
 evidence only; no full-suite or marginal coverage gain is claimed. No Rust
 unit tests were added.
+
+## AVIF narrow qindex zero inter parity — 2026-11-03
+
+Added active row
+`decode:avif:animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64`. The
+deterministic 64×64 8-bit I420 sequence has a lossless key frame followed by a
+`TX_MODE_SELECT` inter frame with base qindex zero and chroma quantizer deltas
+of 2. Its narrow B4×8 transform geometry exposed an intra-coded block where
+generic intra transform selection checked `segment_lossless` but not the base
+qindex. Passing the segment qindex preserves the implicit DCT_DCT choice and
+keeps coefficient decoding aligned.
+
+The selected public parity run passed 1/1 with all 12,288 RGB bytes matching
+Pillow. The pinned fixture generator check also passed. Its selected report is
+`.coverage-mcp/local-evidence/selected/20261103T155915.218400Z-e016d2ff385040159ad7c0daa314d31e/coverage.json`.
+Its SHA-256 is
+`d9cf5279002d0d3da1f61b6f11278305b1c0732c40c27552db8e5f3e48befa67`. This is
+selected-scope evidence, not an aggregate coverage claim. No SIMD performance
+measurement was part of this correctness fix, and no Rust unit tests were
+added.
 
 ## I444 compound split parity — 2026-10-26
 
@@ -16662,7 +16682,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `569eec0c1b14ecf5f3a5ea85b52d6c27a00d49f627f47921a2f39f0366d5f35d`; matrix `c1e4aa29ecf3383e50dc93ae9f5e0cba3d2c1be4e22b4e423be5ea9932a274d6`.
+- Current fixture integrity only: manifest `d8a815c86b069ebaa5ca36b9f8c3a1bf0ac695b22bf9459837d501c3bf724470`; matrix `59e90c0ee200b462e3fe0b84fd12172439cf2aa0f75393989af07fece28f7a3b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

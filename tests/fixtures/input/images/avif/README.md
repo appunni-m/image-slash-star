@@ -2211,3 +2211,16 @@ and canvas through 256 pixels per frame axis. Grain and active post-filter or
 independently decoded tile profiles retain their previous admission limits.
 Live Pillow supplies exact public frames; separate native observations supply
 loop counts. `--check` reads retained inputs without encoding or rewriting.
+
+## Vertical B4x8 qindex-zero non-lossless 4:2:0 sequence
+
+`animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif` is produced
+with the fixture-only vertical B4x8 and qindex-zero AOM patches documented in
+`scripts/avif_fixture_oracle/README.md`. The inter frame has base qindex zero,
+zero luma DC delta, and chroma DC/AC deltas of two; the key frame is
+all-lossless. The native producer is repeat-encoded and the generator pins the
+normalized complete-file digest. SHA-256:
+`bfc6c0756fcf2bceda38f6830b89c2e72b55d067e5b3816bd2661007d2fa41ee`.
+Pillow 12.2.0 decodes two 64x64 RGB frames with 100 ms durations; their hashes
+are `2279a056bd14eb2e81ea15baa98bef134aa0d0cfc5ae960ffb142c40b4960ea4` and
+`ef83c285e5d4ddf2f3ad70cc98493568b6ecc5da664cffbc2b416ee2bfc0432f`.
