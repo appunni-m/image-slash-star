@@ -1,4 +1,4 @@
-This bundle records 612 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 604 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2166 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 613 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 605 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2169 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
@@ -83,11 +83,13 @@ sequence. The identical table retains five Pillow frames; a later four-sample
 mapping yields four. Both match the native repetition observations. The loop
 evidence records the exact runtime and header identities because a clean
 libavif source checkout was unavailable when these observations were made.
-The 4:2:2 source adds
-horizontal chroma ownership while a small block moves between frames. The
-16x16 I422 CDEF source pins the active one-entry strength set on its inter
-frame, with no loop filtering or restoration. The
-large 4:2:0 source covers large inter blocks. The 64x64 all-lossless 4:2:0
+The 4:2:2 source adds horizontal chroma ownership while a small block moves
+between frames. The 16x16 I422 CDEF source pins the active one-entry strength
+set on its inter frame, with no loop filtering or restoration. The active-loop
+filter I422 companion has one lossy 16x16 inter frame with nonzero Y/U/V
+deblocking, no CDEF or restoration, and exact two-frame Pillow RGB parity. The
+pinned native observer confirms both frames and infinite repetition. The large
+4:2:0 source covers large inter blocks. The 64x64 all-lossless 4:2:0
 source forces fixed 4x4 inter partitions around a moving luma patch. The 17x17 4:2:0
 source moves a patch near the bottom-right corner and exposes an inter-intra
 context edge plus odd-width chroma upsampling at the final visible column. Both

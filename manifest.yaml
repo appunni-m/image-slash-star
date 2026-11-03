@@ -16892,6 +16892,11 @@ formats:
       test_assets:
       - animated_lossy_inter_422_small_partitions_32x64.avif
       status: active
+    - id: animated_lossy_inter_i422_loopfilter_active_16x16
+      description: Two-frame 16x16 lossy 8-bit I422 AVIF sequence with nonzero Y/U/V loop-filter levels on the inter frame
+      test_assets:
+      - animated_lossy_inter_i422_loopfilter_active_16x16.avif
+      status: active
     - id: animated_lossy_inter_422_qindex0_mode_select_64x64
       description: Two-frame 64x64 8-bit I422 AVIF sequence whose lossless key frame is followed by a TX_MODE_SELECT inter frame at non-lossless qindex zero
       test_assets:

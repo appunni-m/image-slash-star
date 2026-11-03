@@ -747,6 +747,10 @@ FIXTURES = {
         "animated_lossy_inter_422_small_partitions_32x64.avif",
         "f150bd51312eee0a9e7dccc57b3d26fc08899c400d82565b839d704e98c6c029",
     ),
+    "lossy_inter_i422_loopfilter_active_16x16": (
+        "animated_lossy_inter_i422_loopfilter_active_16x16.avif",
+        "757c9fc631ecee8522b14e66fafc6aebcbe90aa2bd5a3cc2d27df472e7440481",
+    ),
     "lossy_inter_422_qindex0_mode_select_64x64": (
         "animated_lossy_inter_422_qindex0_mode_select_64x64.avif",
         "062cec9bf86cfa7e5d2130baec72884dec70d96d9621578f91388612d21a1fab",

@@ -117,6 +117,50 @@ super-resolution to 160x56, and decoded by the pinned Pillow runtime to the
 recorded RGB frames. Its `--check` mode verifies the retained AVIF without
 rebuilding the fixture encoder.
 
+## Active 8-bit I422 inter-frame loop filter
+
+The 16x16 I422 loop-filter parity case needs an inter frame with nonzero
+deblocking levels. Libaom's rate-distortion search selects zero for this small
+profile, so the fixture-only patch
+[`libaom-force-i422-inter-loopfilter.patch`](libaom-force-i422-inter-loopfilter.patch)
+sets the levels to one for only 8-bit 16x16 I422 inter frames. The encoder then
+applies the signaled filter normally. The generator also disables reference-frame
+motion vectors and compound modes so the inter frame meets the decoder's bounded
+profile. These controls change only the fixture producer; the checked AVIF is
+decoded by the pinned Pillow oracle and the Rust decoder.
+
+Build the pinned sources in separate staging copies, then generate and check
+the fixture:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-loopfilter
+git -C target/oracle-staging/libaom-i422-loopfilter checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i422-loopfilter apply "$PWD/scripts/avif_fixture_oracle/libaom-force-i422-inter-loopfilter.patch"
+cmake -S target/oracle-staging/libaom-i422-loopfilter -B target/oracle-staging/libaom-i422-loopfilter-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/aom-i422-loopfilter-prefix"
+cmake --build target/oracle-staging/libaom-i422-loopfilter-build -j 4
+cmake --install target/oracle-staging/libaom-i422-loopfilter-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i422-loopfilter
+git -C target/oracle-staging/libavif-i422-loopfilter checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i422-loopfilter apply "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i422-loopfilter -B target/oracle-staging/libavif-i422-loopfilter-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=ON \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/aom-i422-loopfilter-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/aom-i422-loopfilter-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/aom-i422-loopfilter-prefix/include"
+cmake --build target/oracle-staging/libavif-i422-loopfilter-build --target avifenc -j 4
+
+.oracle-venv/bin/python scripts/generate_avif_inter_i422_loopfilter_16x16.py \
+  --avifenc target/oracle-staging/libavif-i422-loopfilter-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_inter_i422_loopfilter_16x16.py --check
+```
+
 ## Combined 10-bit I420 CDEF and SGR restoration fixture
 
 Libaom's normal rate-distortion search selects either CDEF or SGR restoration
