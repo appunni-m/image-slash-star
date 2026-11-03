@@ -1364,6 +1364,19 @@ VARIANTS = {
         "transform_mode": "select",
         "width": 64
     },
+    "animated_lossless_inter_420_b4x8_10bit_odd_65x64": {
+        "all_lossless": True,
+        "bit_depth": 10,
+        "height": 64,
+        "input_name": "odd65x64-420-q100",
+        "layout": "420",
+        "producer_mode": "largest",
+        "quality": 100,
+        "root_size": 8,
+        "sha256": "e8d516335b32147ca7895d1408f38465229115d8dba1e98728a0cf1576e9bdfe",
+        "transform_mode": "only_4x4",
+        "width": 65
+    },
     "animated_lossy_inter_444_b4x8_mode_select_64x64": {
         "bit_depth": 8,
         "height": 64,
@@ -1424,7 +1437,11 @@ def validate(path: Path, spec: dict) -> None:
                or sequence.get("subsampling_y") != int(layout in ("400", "420"))
                or sequence.get("monochrome") != (layout == "400")
                for sequence in sequences)
-        or headers[1].get("all_lossless") is not False):
+        or headers[1].get("all_lossless") is not spec.get("all_lossless", False)
+        or (
+            spec.get("all_lossless", False)
+            and headers[0].get("all_lossless") is not True
+        )):
         raise RuntimeError(f"unexpected AV1 header contract: {path}")
     expected_transform_mode = spec.get("transform_mode")
     if (expected_transform_mode is not None
@@ -1444,6 +1461,20 @@ def validate(path: Path, spec: dict) -> None:
             or any(inter_quantization.get(name) != 2 for name in chroma_deltas)
         ):
             raise RuntimeError(f"unexpected qindex-zero non-lossless header: {path}")
+    if spec.get("all_lossless"):
+        for header in headers:
+            quantization = header.get("quantization", {})
+            if quantization.get("base") != 0 or any(
+                quantization.get(name) != 0
+                for name in (
+                    "y_dc_delta",
+                    "u_dc_delta",
+                    "u_ac_delta",
+                    "v_dc_delta",
+                    "v_ac_delta",
+                )
+            ):
+                raise RuntimeError(f"unexpected all-lossless quantization header: {path}")
     if "cdf_mode" in spec:
         expected_frozen = {
             0: [True, True],
@@ -1473,7 +1504,12 @@ def main() -> None:
             with tempfile.TemporaryDirectory(prefix="avif-narrow-inter-") as directory:
                 paths = [Path(directory) / f"encoded-{repeat}.avif" for repeat in range(2)]
                 for path in paths:
-                    command = [str(encoder), str(path), "select", str(spec.get("bit_depth", 8))]
+                    command = [
+                        str(encoder),
+                        str(path),
+                        spec.get("producer_mode", "select"),
+                        str(spec.get("bit_depth", 8)),
+                    ]
                     if "pattern" in spec or "cdf_mode" in spec:
                         command.append(spec.get("pattern", "coarse"))
                     if "cdf_mode" in spec:

@@ -55436,6 +55436,71 @@
       ]
     },
     {
+      "id": "animated_lossless_inter_420_b4x8_10bit_odd_65x64",
+      "asset": "animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif",
+      "asset_sha256": "e8d516335b32147ca7895d1408f38465229115d8dba1e98728a0cf1576e9bdfe",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture",
+        "rust_sequence_contract": "defensive_model"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": true,
+      "rust_sequence_error_kind": "unsupported",
+      "rust_sequence_error_reason": "The pure-Rust AV1 sequence renderer does not yet reconstruct inter-frame color surfaces. It returns typed Unsupported before entropy leaf parsing, so this row records the odd-width B4x8 input and first-frame parity without claiming sequence-frame transform coverage.",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_lossy_inter_444_b4x8_mode_select_64x64",
       "asset": "animated_lossy_inter_444_b4x8_mode_select_64x64.avif",
       "asset_sha256": "0487f033b08cb65706a45af3325bf7c41717b7e5aeb8fc92581e55b6a256bcfe",

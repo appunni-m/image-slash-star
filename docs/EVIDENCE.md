@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,836 total rows: 3,162 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,162 decode rows are
+The current public evidence matrix contains 3,837 total rows: 3,163 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,163 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -16682,7 +16682,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d8a815c86b069ebaa5ca36b9f8c3a1bf0ac695b22bf9459837d501c3bf724470`; matrix `59e90c0ee200b462e3fe0b84fd12172439cf2aa0f75393989af07fece28f7a3b`.
+- Current fixture integrity only: manifest `3311c6866189338b9bc72b84c7d1255eb70bfdf61e2e92a9188632079d8398e6`; matrix `ae07b74a60d3bf45087a4d05a5c245e0ff0d18d47a252528fc9ef5944a07a98f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21737,3 +21737,29 @@ MCP labels the report source unverified and test attribution unknown, so this
 records a selected branch observation rather than a whole-suite coverage
 gain. No Rust runtime code or unit tests changed, and this parity case makes
 no performance claim.
+
+## AV1 odd-width high-depth lossless inter edge — 2026-11-03
+
+Added the public parity row
+`decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_65x64`. The two-frame
+65x64 full-range 10-bit I420 AVIF has lossless B4x8 inter leaves, with one
+visible luma column at the odd right edge. Pillow 12.2.0 decodes both frames;
+the public still-image API matches frame zero exactly (12,480 RGB bytes,
+SHA-256 `006469f39295cec2dc6e36ecf1900ee939ca3bd060a4bdc88f22c5b2d47beef0`).
+The independent pinned libavif 1.4.1 observer decodes two frames, reports
+repetition count zero, and produces stable output. Rust sequence decoding
+retains its typed AVIF `Unsupported` contract for this unsupported sequence
+path. The selected public parity row passed 1/1.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261103T164118.806573Z-237b6f7486d84adf9ceb4bcca0ffe686/coverage.json`
+(SHA-256
+`e351f37125fa7bc77c20732197d9da95ecbcf65c291cc666c6438b2c92a9b371`).
+Coverage MCP still reports two uncovered regions at
+`src/codecs/avif/av1/entropy.rs:7069`. The public inter-sequence path exits in
+`validate_first_partition` for inter frames at line 22081 before transform
+leaf parsing, so a parity input cannot reach this guard until inter-frame
+reconstruction is integrated into that path. The selected report is local
+evidence with source identity unverified and test attribution unknown; it is
+not a whole-suite coverage claim. No unit tests or Rust runtime changes were
+added, and the full coverage baseline was not refreshed.

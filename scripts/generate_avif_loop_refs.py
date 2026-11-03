@@ -464,6 +464,10 @@ FIXTURES = {
         "animated_lossless_inter_420_b32x32_10bit.avif",
         "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
     ),
+    "lossless_inter_420_b4x8_10bit_odd_65x64": (
+        "animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif",
+        "e8d516335b32147ca7895d1408f38465229115d8dba1e98728a0cf1576e9bdfe",
+    ),
     "lossless_inter_420_b32x32_10bit_partition32_full_texture": (
         "animated_lossless_inter_420_b32x32_10bit_partition32_full_texture.avif",
         "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257",
