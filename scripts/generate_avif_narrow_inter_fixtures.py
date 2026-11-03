@@ -1437,9 +1437,10 @@ def validate(path: Path, spec: dict) -> None:
                or sequence.get("subsampling_y") != int(layout in ("400", "420"))
                or sequence.get("monochrome") != (layout == "400")
                for sequence in sequences)
-        or any(
-            header.get("all_lossless") is not spec.get("all_lossless", False)
-            for header in headers
+        or headers[1].get("all_lossless") is not spec.get("all_lossless", False)
+        or (
+            spec.get("all_lossless", False)
+            and headers[0].get("all_lossless") is not True
         )):
         raise RuntimeError(f"unexpected AV1 header contract: {path}")
     expected_transform_mode = spec.get("transform_mode")
