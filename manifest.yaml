@@ -15404,6 +15404,54 @@ formats:
       - animated_buffer_removal_time_selected_temporal_one.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_width32_zero
+      description: A 32-bit decoder buffer-removal timestamp of zero preserves all five frames and durations
+      test_assets:
+      - animated_buffer_removal_time_width32_zero.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_width32_maximum
+      description: The maximum 32-bit decoder buffer-removal timestamp preserves all five frames and durations
+      test_assets:
+      - animated_buffer_removal_time_width32_maximum.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_points32_width1_zero
+      description: Thirty-two admitted operating points with one-bit zero timestamps preserve the sequence
+      test_assets:
+      - animated_buffer_removal_time_points32_width1_zero.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_points32_width1_one
+      description: Thirty-two admitted operating points with one-bit unit timestamps preserve the sequence
+      test_assets:
+      - animated_buffer_removal_time_points32_width1_one.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_points32_width32_maximum
+      description: Thirty-two admitted operating points with maximum 32-bit timestamps preserve the sequence
+      test_assets:
+      - animated_buffer_removal_time_points32_width32_maximum.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_points32_mixed_width32_maximum
+      description: Mixed decoder-model flags across thirty-two operating points preserve maximum-width timestamps
+      test_assets:
+      - animated_buffer_removal_time_points32_mixed_width32_maximum.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_points32_ignored_width32_maximum
+      description: Unselected operating points with maximum-width timestamps preserve all decoded frames
+      test_assets:
+      - animated_buffer_removal_time_points32_ignored_width32_maximum.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_buffer_removal_time_all_layers_width32_maximum
+      description: An all-layer operating-point mask with maximum-width timestamps preserves the sequence
+      test_assets:
+      - animated_buffer_removal_time_all_layers_width32_maximum.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: error_buffer_removal_time_excluded_implicit_layer
       description: A temporal-one mask excludes an implicit temporal-zero first frame and public still and sequence decoding reject
       test_assets:
