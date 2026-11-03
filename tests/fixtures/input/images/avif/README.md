@@ -2080,6 +2080,18 @@ AV1 frame header, and Pillow 12.2.0/libavif 1.4.1 RGB bytes are checked by
 RGB reference SHA-256 is
 `c99bfa3e07e5637aaf1b41db938b495bc8c43067c674be61753957f12d12e119`.
 
+`coverage_i420_intra_cdef_10bit_15x16.avif` is a 15x16 full-range 10-bit
+I420 key frame with active single-entry CDEF. The luma plane has a partial
+right CDEF edge, while each visible 8-sample chroma row ends on a 4-sample
+chroma CDEF boundary. This exercises edge sampling that must stop at the
+visible chroma extent even though luma extends its partial edge. The
+deterministic Y4M source, repeated pinned libaom encodes, AV1 frame header,
+and Pillow 12.2.0/libavif 1.4.1 RGB bytes are checked by
+`scripts/generate_avif_intra_filters.py`. The AVIF SHA-256 is
+`43fef444f1e0144c74f60752ea255ac2d3f36d594c8172dbf09b57a6c5497b96`, and the
+RGB reference SHA-256 is
+`53e32b2c9de70cf7f2bf975e136c0e4f9517dbe73b755010de3b839c1ba799b3`.
+
 ## Film-grain depth and inactive-plane inputs
 
 The 34 `filmgrain_*_64x64.avif` inputs in

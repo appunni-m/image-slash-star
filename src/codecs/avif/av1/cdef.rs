@@ -672,7 +672,7 @@ fn frame_coordinate<const EXTEND_FRAME_EDGES: bool>(
         return (coordinate < coded_extent).then_some(coordinate);
     }
     if extend_partial_edge {
-        return Some(coordinate.min(coded_extent.checked_sub(1)?));
+        return (coordinate < coded_extent).then_some(coordinate);
     }
     None
 }

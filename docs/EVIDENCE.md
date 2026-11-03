@@ -1,8 +1,35 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,826 total rows: 3,152 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,152 decode rows are
+The current public evidence matrix contains 3,827 total rows: 3,153 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,153 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AV1 CDEF aligned chroma edge parity — 2026-11-03
+
+Added `decode:avif:coverage_i420_intra_cdef_10bit_15x16` to cover a CDEF
+boundary not reached by the existing odd-size cases. With a 15-pixel I420
+luma width, the corresponding visible chroma width is 8 and ends on a complete
+four-sample CDEF block. This reaches the in-plane boundary path for chroma
+while the luma plane still exercises its partial right edge.
+
+The case exposed an incorrect edge extension in `frame_coordinate`: samples
+beyond a coded plane were clamped to its last coded sample. AV1 treats those
+tap locations as unavailable. The decoder now rejects coordinates at or past
+the coded extent and still preserves hidden samples that lie inside it. The
+new row initially differed from the pinned Pillow output in 30 of 720 RGB
+bytes at the final column; after the fix, the exact output matches. The
+existing 9x9 and 9x16 CDEF rows plus this 15x16 case pass 3/3.
+
+The final one-row selection passes 1/1 and records 798 in-plane and 819
+out-of-plane decisions at the coded-extent guard. Its selected LLVM report is
+`.coverage-mcp/local-evidence/selected/av1-cdef-chroma-align-15x16-final-20261103/coverage.json`
+(SHA-256 `743609b3a4f1b4fd910d3c9a4815c8e03b07ec21cf5032d2306862f0b9908eb`);
+the adjacent local evidence receipt has SHA-256
+`6d5c4bfa70ae8f21d7c26c9971d6641d3716fb463ac710a81632626258b9e6c5`. The
+source inventory hash remained the same before and after this selected run.
+This is local selected evidence, not a Coverage MCP receipt or a full-suite
+coverage result. No unit tests were added and the full coverage baseline was
+not refreshed.
 
 ## AV1 chroma-grain overlap and scaling invariants — 2026-11-03
 
@@ -16617,7 +16644,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3040688525cdd44e8e1d1a17bcc40843d9061b73d3f35624c4845a781dac5270`; matrix `e31096b39c77a215dc0f555589eaf4cdc58d1925a12593bc7bfa8a64cb45641b`.
+- Current fixture integrity only: manifest `d9a9c4b7aeb38950ec1e1d9ac6a13614053f1f238c8b4b71234531bcb07b4d78`; matrix `5b1bf87ab522d1542f243ec03da64d02346a9d99ae671c250ac945f64c895225`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

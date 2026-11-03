@@ -20,7 +20,7 @@ from inspect_av1_obus import inspect as inspect_obus
 
 ROOT = Path(__file__).resolve().parent.parent
 STAGING_ROOT = ROOT / "target" / "oracle-staging"
-AVIFENC_VERSION = "Version: 1.4.1 (aom [enc]:3.13.2)"
+AVIFENC_VERSION = "Version: 1.4.1 (aom [enc]:v3.13.2)"
 PINNED_PILLOW = (
     "12.2.0",
     "1.4.1",
@@ -147,6 +147,26 @@ VARIANTS = {
         asset_sha256="9349dd957c42e2f39e8863893e1e86eb996bd112611f5543b2c4fa3e28c312fc",
         rgb_sha256="c99bfa3e07e5637aaf1b41db938b495bc8c43067c674be61753957f12d12e119",
         width=9,
+        height=16,
+    ),
+    "i420_cdef_chroma_aligned_right_edge": FixtureVariant(
+        fixture_stem="coverage_i420_intra_cdef_10bit_15x16",
+        chroma_tag="420p10",
+        subsampling_x=1,
+        subsampling_y=1,
+        seed=0x12A915,
+        enable_cdef=True,
+        enable_restoration=False,
+        restoration_types=(0, 0, 0),
+        restoration_unit_size_log2=(8, 8),
+        cdef_bits=0,
+        cdef_damping=5,
+        cdef_y_strengths=(27,),
+        cdef_uv_strengths=(57,),
+        source_sha256="3be737be15e559208f7d77cf2aee16fc1d81f041c8cb3c2eb5f201c430d6590e",
+        asset_sha256="43fef444f1e0144c74f60752ea255ac2d3f36d594c8172dbf09b57a6c5497b96",
+        rgb_sha256="53e32b2c9de70cf7f2bf975e136c0e4f9517dbe73b755010de3b839c1ba799b3",
+        width=15,
         height=16,
     ),
     "i420_cdef_restoration": FixtureVariant(
