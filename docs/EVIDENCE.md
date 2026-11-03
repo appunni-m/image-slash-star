@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,833 total rows: 3,159 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,159 decode rows are
+The current public evidence matrix contains 3,835 total rows: 3,161 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,161 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
