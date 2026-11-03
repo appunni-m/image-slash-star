@@ -52,6 +52,10 @@ class FixtureVariant:
     rgb_sha256: str
     width: int = WIDTH
     height: int = HEIGHT
+    quality: int = 40
+    luma_amplitude: int = 160
+    luma_step: int = 1
+    flat_chroma: bool = False
 
 
 VARIANTS = {
@@ -108,6 +112,28 @@ VARIANTS = {
         source_sha256="ace43f33a1d3c68bfdc27e34e3c9d32530bde72d9718a5fb761b775db6585d0e",
         asset_sha256="3407c458add1348d2e0f0a73f8aaaa862fd435a18eb7c563b8461d89541656d2",
         rgb_sha256="c53e98f018266ced6203f60ddd618a1f321962fd333cafb0acea0fdd6485e987",
+    ),
+    "i420_cdef_low_variance": FixtureVariant(
+        fixture_stem="coverage_i420_intra_cdef_10bit_low_variance_16x16",
+        chroma_tag="420p10",
+        subsampling_x=1,
+        subsampling_y=1,
+        seed=0x12A500,
+        enable_cdef=True,
+        enable_restoration=False,
+        restoration_types=(0, 0, 0),
+        restoration_unit_size_log2=(8, 8),
+        cdef_bits=0,
+        cdef_damping=3,
+        cdef_y_strengths=(4,),
+        cdef_uv_strengths=(0,),
+        source_sha256="118a6673e70f4c297a39c9810474a36b2762bd0ea51ce41987dfc0891095bb08",
+        asset_sha256="ce827c0c80e25f416bc5c03b9a577dd2cf71d2ab1a08715e7f7891a462210056",
+        rgb_sha256="1f975d71bfac9a6becec7fb48dd1713abb6d24be0758bdbb53d61aaac09286fe",
+        quality=95,
+        luma_amplitude=1,
+        luma_step=4,
+        flat_chroma=True,
     ),
     "i420_cdef_odd_edge": FixtureVariant(
         fixture_stem="coverage_i420_intra_cdef_10bit_9x9",
@@ -274,23 +300,32 @@ def y4m_source(variant: FixtureVariant) -> bytes:
     width, height = variant.width, variant.height
     for _ in range(width * height):
         generator.randrange(1024)
-    luma = [512 + generator.randrange(-160, 161) for _ in range(width * height)]
+    luma = [
+        512 + variant.luma_step * generator.randrange(
+            -variant.luma_amplitude, variant.luma_amplitude + 1
+        )
+        for _ in range(width * height)
+    ]
     chroma_width = (width + (1 << variant.subsampling_x) - 1) // (
         1 << variant.subsampling_x
     )
     chroma_height = (height + (1 << variant.subsampling_y) - 1) // (
         1 << variant.subsampling_y
     )
-    chroma_u = [
-        256 + ((x * 127 + y * 61) % 512)
-        for y in range(chroma_height)
-        for x in range(chroma_width)
-    ]
-    chroma_v = [
-        768 - ((x * 71 + y * 89) % 512)
-        for y in range(chroma_height)
-        for x in range(chroma_width)
-    ]
+    if variant.flat_chroma:
+        chroma_u = [512] * (chroma_width * chroma_height)
+        chroma_v = chroma_u.copy()
+    else:
+        chroma_u = [
+            256 + ((x * 127 + y * 61) % 512)
+            for y in range(chroma_height)
+            for x in range(chroma_width)
+        ]
+        chroma_v = [
+            768 - ((x * 71 + y * 89) % 512)
+            for y in range(chroma_height)
+            for x in range(chroma_width)
+        ]
     planes = b"".join(
         struct.pack(f"<{len(samples)}H", *samples)
         for samples in (luma, chroma_u, chroma_v)
@@ -310,7 +345,7 @@ def encode_command(
 ) -> list[str]:
     """Return pinned libaom settings for one 10-bit intra filter profile."""
 
-    command = [str(avifenc), "-q", "40", "-s", "0", "-j", "1"]
+    command = [str(avifenc), "-q", str(variant.quality), "-s", "0", "-j", "1"]
     advanced_options = (
         ("min-partition-size", "16"),
         ("max-partition-size", "16"),
