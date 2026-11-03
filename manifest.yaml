@@ -18687,6 +18687,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_444_10bit_loopfilter_80x48.avif
       status: active
+    - id: avif_loopfilter_sharpness_420_8bit_still_128x128
+      description: 128x128 8-bit 420 AVIF still with sharpness 7 and active Y/U/V deblocking; exact Pillow RGB parity
+      test_assets:
+      - avif_loopfilter_sharpness_420_8bit_still_128x128.avif
+      status: active
     - id: animated_mixed_lossless_superres_444_10bit_filmgrain_128x64
       description: Two-frame 128x64 10-bit 444 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
       test_assets:

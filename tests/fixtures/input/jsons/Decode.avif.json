@@ -73124,6 +73124,58 @@
       ]
     },
     {
+      "id": "avif_loopfilter_sharpness_420_8bit_still_128x128",
+      "asset": "avif_loopfilter_sharpness_420_8bit_still_128x128.avif",
+      "asset_sha256": "0a00c49e15b5b66fdb7c0b2ac130698c3f4ab52a2863b5a762b5e938351beb78",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/avif_loopfilter_sharpness_420_8bit_still_128x128.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64",
       "asset": "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64.avif",
       "asset_sha256": "14d1effed3e3c34e17ca86936ba332d28cbcd25376f2a642ff7fd1d4d1e673c6",

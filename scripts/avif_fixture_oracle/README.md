@@ -1668,3 +1668,20 @@ The existing twenty inter-only recipes and twenty-six monochrome mixed-key
 recipes retain their parameters and complete bytes. The Makefile's ordinary
 fixture verification includes the color recipe check. This producer changes
 no Rust runtime dependency, native fallback, fault hook or unit-test policy.
+
+## AVIF still with active loop-filter sharpness
+
+`encode_avif_loopfilter_sharpness.c` produces the public 128x128 8-bit 4:2:0
+still fixture with AOM loop-filter sharpness 7 and nonzero Y/U/V levels. Build
+the pinned libavif 1.4.1/AOM 3.13.2 libraries using the source and patch steps
+in “Mixed-segment super-resolution fixtures”, then compile and reproduce it:
+
+```sh
+sharpness_dir="$PWD/target/oracle-staging/loopfilter-sharpness-producer"
+cc -std=c99 -O2 -Wall -Wextra -Werror   -I "$sharpness_dir/avif-source/include"   -I "$sharpness_dir/avif-build/include"   scripts/avif_fixture_oracle/encode_avif_loopfilter_sharpness.c   "$sharpness_dir/avif-build/libavif.a"   "$sharpness_dir/aom-build/libaom.a"   -lz -lm -lpthread -o "$sharpness_dir/produce"
+.oracle-venv/bin/python scripts/generate_avif_loopfilter_sharpness.py   --encoder "$sharpness_dir/produce"
+.oracle-venv/bin/python scripts/generate_avif_loopfilter_sharpness.py --check
+```
+
+The checker verifies repeatable bytes, the encoded frame's sharpness and
+deblocking levels, and Pillow's 128x128 RGB decode.
