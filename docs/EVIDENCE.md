@@ -21740,26 +21740,28 @@ no performance claim.
 
 ## AV1 odd-width high-depth lossless inter edge — 2026-11-03
 
-Added the public parity row
+The public parity row
 `decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_65x64`. The two-frame
 65x64 full-range 10-bit I420 AVIF has lossless B4x8 inter leaves, with one
 visible luma column at the odd right edge. Pillow 12.2.0 decodes both frames;
 the public still-image API matches frame zero exactly (12,480 RGB bytes,
 SHA-256 `006469f39295cec2dc6e36ecf1900ee939ca3bd060a4bdc88f22c5b2d47beef0`).
 The independent pinned libavif 1.4.1 observer decodes two frames, reports
-repetition count zero, and produces stable output. Rust sequence decoding
-retains its typed AVIF `Unsupported` contract for this unsupported sequence
-path. The selected public parity row passed 1/1.
+repetition count zero, and produces stable output. Rust now admits this
+bounded high-depth I420 sequence profile. The inter decoder processes the
+complete TX4x4 residual cells that overlap the clipped B4x8 right edge, then
+publishes only the visible luma column. The selected public parity row passes
+1/1 with exact parity for both sequence frames.
 
 The selected LLVM report is
-`.coverage-mcp/local-evidence/selected/20261103T164118.806573Z-237b6f7486d84adf9ceb4bcca0ffe686/coverage.json`
+`.coverage-mcp/local-evidence/selected/20261103T175749.790567Z-3e4966b9177943f1bae45a9d706b4a92/coverage.json`
 (SHA-256
-`e351f37125fa7bc77c20732197d9da95ecbcf65c291cc666c6438b2c92a9b371`).
-Coverage MCP still reports two uncovered regions at
-`src/codecs/avif/av1/entropy.rs:7069`. The public inter-sequence path exits in
-`validate_first_partition` for inter frames at line 22081 before transform
-leaf parsing, so a parity input cannot reach this guard until inter-frame
-reconstruction is integrated into that path. The selected report is local
-evidence with source identity unverified and test attribution unknown; it is
-not a whole-suite coverage claim. No unit tests or Rust runtime changes were
-added, and the full coverage baseline was not refreshed.
+`ea9a639d31369ae48b04c02cafa75194d405bd3520df4a3c68d00a0bd0c8abeb`). This
+receipt is local evidence with source identity unverified and test attribution
+unknown. A Coverage MCP query of this selected report identifies the
+unexecuted high-depth fallback in `decode_inter_transform_size`; this valid
+fixture follows the admitted lossless-grid path instead. The query is useful
+for locating the remaining edge, but the local report does not prove a
+suite-wide coverage change. The successful parity run independently proves
+the public pixel behavior. No unit tests or SIMD changes were added, and the
+full coverage baseline was not refreshed.
