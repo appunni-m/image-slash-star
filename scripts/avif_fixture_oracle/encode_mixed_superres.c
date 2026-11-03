@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     const int valid_mode = mode == NULL || !strcmp(mode, "ordinary") ||
         !strcmp(mode, "mixed-key") || !strcmp(mode, "motion-key") ||
         !strcmp(mode, "integer-key") || !strcmp(mode, "film-grain") ||
-        !strcmp(mode, "film-grain-cdef");
+        !strcmp(mode, "film-grain-cdef") || !strcmp(mode, "loopfilter");
     if ((argc != 10 && argc != 11) ||
         !valid_mode ||
         !number(argv[2],32,256,&width) || !number(argv[3],16,128,&height) ||
@@ -76,6 +76,7 @@ int main(int argc, char **argv)
     const int film_grain = mode != NULL &&
         (!strcmp(mode, "film-grain") || !strcmp(mode, "film-grain-cdef"));
     const int film_grain_cdef = mode != NULL && !strcmp(mode, "film-grain-cdef");
+    const int active_loop_filter = mode != NULL && !strcmp(mode, "loopfilter");
     for (size_t n=0;n<sizeof(controls)/sizeof(controls[0]);++n) {
         if (ordinary &&
             !strcmp(controls[n][0], "fixture-roi-mixed-superres")) { continue; }
@@ -83,6 +84,9 @@ int main(int argc, char **argv)
             !strcmp(controls[n][0], "film-grain-test")) { continue; }
         const char *value = film_grain_cdef && !strcmp(controls[n][0], "enable-cdef")
             ? "1" : controls[n][1];
+        if (active_loop_filter && !strcmp(controls[n][0], "loopfilter-control")) {
+            value = "1";
+        }
         if (avifEncoderSetCodecSpecificOption(encoder,controls[n][0],value)!=AVIF_RESULT_OK) { goto cleanup; }
     }
     if (avifEncoderSetCodecSpecificOption(encoder,"superres-denominator",den)!=AVIF_RESULT_OK ||

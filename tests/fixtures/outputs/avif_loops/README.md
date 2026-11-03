@@ -1,4 +1,4 @@
-This bundle records 609 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 601 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2157 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 611 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 603 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2163 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;

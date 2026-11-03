@@ -1152,6 +1152,7 @@ FIXTURES = {
     'animated_mixed_lossless_superres_420_8bit_neutral_80x48': ('animated_mixed_lossless_superres_420_8bit_neutral_80x48.avif', 'eb779d61beadb9e5e05ccb34834860a8ce39b451be13c207b3c1f0ea30395d21'),
     'animated_mixed_lossless_superres_420_8bit_filmgrain_80x48': ('animated_mixed_lossless_superres_420_8bit_filmgrain_80x48.avif', '4486713a624c8282f82f165aadacbf6a6dfda4244375dcae2878cb550cb4fea1'),
     'animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48': ('animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48.avif', 'dcc57c6d407a6c842ffc83e9e94855f548c58f7bc8a68d198f12847fa84628a2'),
+    'animated_mixed_lossless_superres_420_8bit_loopfilter_80x48': ('animated_mixed_lossless_superres_420_8bit_loopfilter_80x48.avif', 'd34b4d36352a5401c5320b9576b26ab3a6a6b7587b1e38e078549b367a4f0b3b'),
     'animated_mixed_lossless_superres_420_8bit_sgr_80x48': ('animated_mixed_lossless_superres_420_8bit_sgr_80x48.avif', '706483e6149e8b8aeab31f85344aaad8f38b3fda125cad40db65134d0db43048'),
     'animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48': ('animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48.avif', 'c9bbded2b96c08a2a2e5792bee2f313858e7889727e7eb6c99eba059c3905563'),
     'animated_mixed_lossless_superres_422_10bit_neutral_80x48': ('animated_mixed_lossless_superres_422_10bit_neutral_80x48.avif', 'af446607101962de4733065bc5770cd9a7ff66714cf6dc3861ee41e5dd20d3c2'),

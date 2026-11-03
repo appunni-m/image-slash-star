@@ -123,6 +123,16 @@ FIXTURES = {
         "layout": "420",
         "restoration": 0
     },
+    "animated_mixed_lossless_superres_420_8bit_loopfilter_80x48": {
+        "depth": 8,
+        "input_sha256": "d34b4d36352a5401c5320b9576b26ab3a6a6b7587b1e38e078549b367a4f0b3b",
+        "inter_segment_qindex": [124, 0, 124, 124, 124, 124, 124, 124],
+        "layout": "420",
+        "loop_filter": True,
+        "quality": 45,
+        "restoration": 0,
+        "speed": 10
+    },
     "animated_mixed_lossless_superres_420_8bit_sgr_80x48": {
         "depth": 8,
         "input_sha256": "706483e6149e8b8aeab31f85344aaad8f38b3fda125cad40db65134d0db43048",
@@ -274,6 +284,12 @@ def validate(path: Path, name: str) -> None:
         if (cdef is None or not cdef.get("y_strengths") or not cdef.get("uv_strengths")
                 or not any(cdef["y_strengths"]) or not any(cdef["uv_strengths"])):
             raise RuntimeError(f"{name}: inter frame must carry active CDEF strengths")
+    if recipe.get("loop_filter") and any(
+            not any(frame.get("loop_filter", {}).get("level_y", []))
+            or not frame.get("loop_filter", {}).get("level_u")
+            or not frame.get("loop_filter", {}).get("level_v")
+            for frame in frames):
+        raise RuntimeError(f"{name}: key and inter frames need active Y, U and V loop filters")
     if (key.get("frame_type") != "key" or key.get("frame_width") != width
             or key.get("frame_height") != height or key.get("superres_enabled") is not False
             or key.get("segmentation", {}).get("enabled") is not False):
@@ -290,7 +306,9 @@ def validate(path: Path, name: str) -> None:
             or any(segment.get("reference") != -1 or segment.get("skip") is not False
                    or segment.get("global_motion") is not False
                    for segment in segmentation.get("segments", []))
-            or inter.get("segment_qindex") != [140, 0, 140, 140, 140, 140, 140, 140]
+            or inter.get("segment_qindex") != recipe.get(
+                "inter_segment_qindex", [140, 0, 140, 140, 140, 140, 140, 140]
+            )
             or inter.get("segment_lossless") != [False, True, False, False, False, False, False, False]
             or inter.get("restoration", {}).get("types") != [expected_restoration, 0, 0]):
         raise RuntimeError(f"{name}: inter frame lacks the mixed super-resolution input features")
@@ -305,12 +323,15 @@ def generate(encoder: Path, destination: Path, name: str) -> None:
         for attempt in range(2):
             path = Path(temporary) / f"{attempt}.avif"
             command = [str(encoder), str(path), str(width), str(height), str(recipe["depth"]),
-                       recipe["layout"], "45", "3", str(recipe.get("denominator", 10)),
+                       recipe["layout"], str(recipe.get("quality", 45)),
+                       str(recipe.get("speed", 3)), str(recipe.get("denominator", 10)),
                        str(recipe["restoration"])]
             if recipe.get("cdef"):
                 command.append("film-grain-cdef")
             elif recipe.get("film_grain"):
                 command.append("film-grain")
+            elif recipe.get("loop_filter"):
+                command.append("loopfilter")
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 raise RuntimeError(f"native producer failed ({result.returncode}): {result.stderr}")
