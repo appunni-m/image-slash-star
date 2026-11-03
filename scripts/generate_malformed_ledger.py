@@ -23,10 +23,9 @@ LEDGER_PATH = ROOT / "tests" / "fixtures" / "malformed_ledger.json"
 # derivable from the class id/description text. Values:
 #   spec_violation | truncated | not_the_format | tolerated | ambiguous
 SPEC_STATUS_OVERRIDES: dict[str, str] = {
-    # Pillow decodes these complete AVIF sequences. Their current portable
+    # Pillow decodes this complete AVIF sequence. Its current portable
     # sequence-decoder gap is an implementation limitation, not evidence that
-    # either input violates the AVIF specification.
-    "avif:animated_lossless_inter_420_b4x8_10bit_odd_65x64": "ambiguous",
+    # the input violates the AVIF specification.
     "avif:animated_lossless_inter_i422_clipped_b32x32_49x64": "ambiguous",
     "jpeg:malformed_markers_fill_marker_only": "ambiguous",
     # These complete JPEGs retain all entropy bytes and terminal EOI. They

@@ -5539,6 +5539,30 @@ fn inter_lossless_grid_clipped_b32_geometry_supported(geometry: InterLosslessGri
         && (visible_width < 32 || visible_height < 32)
 }
 
+/// Admit the final 4x8 I420 leaf when an odd frame edge exposes only 1–3 luma columns.
+fn inter_lossless_grid_clipped_b4x8_i420_geometry_supported(
+    geometry: InterLosslessGridGeometry,
+) -> bool {
+    let InterLosslessGridGeometry {
+        block_size,
+        layout,
+        visible_width,
+        visible_height,
+        frame_width,
+        bit_depth,
+    } = geometry;
+    block_size == BlockSize::B4x8
+        && layout == PixelLayout::I420
+        && matches!(bit_depth, 10 | 12)
+        && frame_width > visible_width
+        && frame_width <= 67
+        && (1..=3).contains(&visible_width)
+        && visible_height == 8
+        && frame_width
+            .checked_sub(visible_width)
+            .is_some_and(|block_origin| block_origin.is_multiple_of(4))
+}
+
 fn inter_lossless_grid_geometry_supported(
     geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
@@ -5602,7 +5626,8 @@ fn inter_lossless_grid_geometry_supported(
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && ((visible_width, visible_height) == block_size.pixel_dimensions()
-            || inter_lossless_grid_clipped_b32_geometry_supported(geometry))
+            || inter_lossless_grid_clipped_b32_geometry_supported(geometry)
+            || inter_lossless_grid_clipped_b4x8_i420_geometry_supported(geometry))
 }
 
 /// Segment-lossless residuals in a mixed frame still follow the fixed WHT
@@ -19921,10 +19946,19 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && context.frame_width <= 64
         && context.frame_height <= 64
         && (context.frame_width < 64 || context.frame_height < 64);
+    // Admit one partially visible B4x8 at the right edge of a 64px frame.
+    // The single-tile/profile checks below still bound the retained frame
+    // state, while block decoding clips publication to the visible columns.
+    let clipped_high_depth_lossless_b4x8_edge = context.all_lossless
+        && layout == PixelLayout::I420
+        && !context.superres_enabled
+        && (65..=67).contains(&context.frame_width)
+        && context.frame_height == 64;
     let single_tile_dimensions_supported = context.frame_width != 0
         && context.frame_height != 0
         && ((context.frame_width.is_multiple_of(4) && context.frame_height.is_multiple_of(4))
-            || clipped_high_depth_lossless_b32)
+            || clipped_high_depth_lossless_b32
+            || clipped_high_depth_lossless_b4x8_edge)
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && (superres_layout

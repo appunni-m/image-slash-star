@@ -1542,15 +1542,24 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
 `animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif` is a two-frame,
 full-range 10-bit I420 sequence. The pinned AOM producer forces vertical
 B4x8 leaves; its all-lossless frames use `ONLY_4X4`, and the final right-edge
-leaf has one visible luma column. Pillow 12.2.0 decodes both frames. The public
-still-image API matches the first frame exactly; the sequence API currently
-returns typed `Unsupported` because its lossless grid requires visible extents
-in complete 4x4 transform units. The matrix records that Rust sequence limit
-separately from the successful still-image pixel parity. This row does not
-reach the later inter-transform guard at `entropy.rs:7069`: the current public
-sequence path stops in `validate_first_partition` for inter frames before it
-walks transform leaves. The selected coverage report therefore leaves both
-regions at that guard uncovered.
+leaf has one visible luma column. Pillow 12.2.0 decodes both frames. The Rust
+sequence decoder now admits this bounded 10-bit I420 profile, reconstructs
+the TX4x4 lossless terminals that overlap the clipped B4x8 edge, and clips
+publication to the frame's visible width. The manifest compares both frames
+against their exact Pillow references. This fixture also covers the
+sub-transform-width luma edge while chroma keeps its complete 4x4 transform
+footprint.
+
+The selected parity command is:
+
+```sh
+make coverage-selected \
+  COVERAGE_CASES='decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_65x64'
+```
+
+It passed for the 12,480-byte still-image reference and both sequence-frame
+references. The selected LLVM report is retained as local evidence; it does
+not establish whole-suite coverage or source-bound Coverage MCP attribution.
 
 Reuse the pinned narrow-B4x8 AOM and libavif build from the preceding section.
 Build a separate producer with odd dimensions and q100, then verify the
