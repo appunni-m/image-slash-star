@@ -115,6 +115,14 @@ FIXTURES = {
         "layout": "420",
         "restoration": 0
     },
+    "animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48": {
+        "cdef": True,
+        "depth": 8,
+        "film_grain": True,
+        "input_sha256": "dcc57c6d407a6c842ffc83e9e94855f548c58f7bc8a68d198f12847fa84628a2",
+        "layout": "420",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_420_8bit_sgr_80x48": {
         "depth": 8,
         "input_sha256": "706483e6149e8b8aeab31f85344aaad8f38b3fda125cad40db65134d0db43048",
@@ -261,6 +269,11 @@ def validate(path: Path, name: str) -> None:
     if recipe.get("film_grain") and any(
             not frame.get("film_grain", {}).get("y_points") for frame in frames):
         raise RuntimeError(f"{name}: key and inter frames must carry active film grain")
+    if recipe.get("cdef"):
+        cdef = frames[1].get("cdef")
+        if (cdef is None or not cdef.get("y_strengths") or not cdef.get("uv_strengths")
+                or not any(cdef["y_strengths"]) or not any(cdef["uv_strengths"])):
+            raise RuntimeError(f"{name}: inter frame must carry active CDEF strengths")
     if (key.get("frame_type") != "key" or key.get("frame_width") != width
             or key.get("frame_height") != height or key.get("superres_enabled") is not False
             or key.get("segmentation", {}).get("enabled") is not False):
@@ -294,7 +307,9 @@ def generate(encoder: Path, destination: Path, name: str) -> None:
             command = [str(encoder), str(path), str(width), str(height), str(recipe["depth"]),
                        recipe["layout"], "45", "3", str(recipe.get("denominator", 10)),
                        str(recipe["restoration"])]
-            if recipe.get("film_grain"):
+            if recipe.get("cdef"):
+                command.append("film-grain-cdef")
+            elif recipe.get("film_grain"):
                 command.append("film-grain")
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             if result.returncode != 0:

@@ -4066,10 +4066,10 @@ fn mixed_segment_superres_postfilter_profile(
     })
 }
 
-/// Select the disjoint mixed-segment super-resolution profile whose completed
-/// surface is resized first and receives display-only film grain later during
-/// frame materialization. All coded-frame filters and restoration stay neutral
-/// so grain cannot contaminate a retained reference surface.
+/// Select the mixed-segment super-resolution profile whose completed surface
+/// is resized before display-only film grain is materialized. Deblocking and
+/// restoration stay neutral; CDEF may filter the completed coded surface
+/// before resizing.
 fn mixed_segment_superres_film_grain_supported(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
@@ -4077,11 +4077,9 @@ fn mixed_segment_superres_film_grain_supported(
     if !mixed_segment_superres_structure_common(context)
         || !context.frame_tools.film_grain_present
         || context.frame_tools.restoration_present
-        || context.restoration_types != [None; 3]
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
-        || context.frame_tools.cdef.is_some()
         || PixelLayout::from_sequence(
             context.monochrome,
             context.subsampling_x,

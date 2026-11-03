@@ -1,8 +1,25 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,822 total rows: 3,148 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,148 decode rows are
+The current public evidence matrix contains 3,823 total rows: 3,149 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,149 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF mixed-segment super-resolution with CDEF and film grain — 2026-11-03
+
+Added `decode:avif:animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48`.
+The pinned libavif 1.4.1/AOM 3.13.2 input combines mixed-segment 4:2:0
+super-resolution, active inter-frame CDEF, and display film grain. Both 80×48
+RGB frames match the pinned Pillow 12.2.0 output exactly. The generator checks
+the fixture digest and active CDEF strengths.
+
+The local selected `cargo llvm-cov` run passed all 34 selected mixed-superres
+rows and one ordinary AVIF control. Its source and fixture inventories stayed
+unchanged during execution. The retained report is
+`.coverage-mcp/local-evidence/selected/20261103T021139.218417Z-43ec103ff51e4576adebd5638867eac1/`.
+Coverage MCP was not queried: this session has no MCP receipt-registration or
+CLI bridge, and the local receipt records source as unverified and test status
+as unknown. This selected run does not establish global coverage; the four
+100% coverage metrics remain open.
 
 ## AVIF implicit layer IDs and frame timing — 2026-11-03
 
@@ -16505,7 +16522,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `c129afb3fc06841b10c7ded983d0c63e1cec5ad53518b28c5327b4a86c229c75`; matrix `1ba18600fc5db3cd150981a04b93a5218161cdd27093a2f091748badae08e3c8`.
+- Current fixture integrity only: manifest `3649204f27794e7150b5e2b22b5da012d775e5cf729ca23de0046d0a6c8eb33a`; matrix `8e54ec53ca095ba108e01a7de78e4ce89e75b219b139d58b6d2ad2d28652efa5`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
