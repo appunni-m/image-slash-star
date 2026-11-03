@@ -521,6 +521,84 @@ pub(crate) fn coverage_guard_rejection_count(
     let direction_source_length_rejected =
         direction_for_block(short_source, dimensions, block, parameters.bit_depth).is_none();
     let direction_bit_depth_rejected = direction_for_block(source, dimensions, block, 7).is_none();
+    let edge_zero_visible_width_rejected =
+        EdgePadding::for_frame((0, dimensions.1), (8, 8)).is_none();
+    let edge_zero_visible_height_rejected =
+        EdgePadding::for_frame((dimensions.0, 0), (8, 8)).is_none();
+    let edge_zero_block_width_rejected = EdgePadding::for_frame(dimensions, (0, 8)).is_none();
+    let edge_zero_block_height_rejected = EdgePadding::for_frame(dimensions, (8, 0)).is_none();
+    let direction_zero_width_rejected =
+        direction_for_block(&[], (0, dimensions.1), block, parameters.bit_depth).is_none();
+    let direction_zero_height_rejected =
+        direction_for_block(&[], (dimensions.0, 0), block, parameters.bit_depth).is_none();
+
+    let oversized_visible_width = EdgePadding {
+        visible_width: dimensions.0.saturating_add(1),
+        visible_height: dimensions.1,
+        extend_right: false,
+        extend_bottom: false,
+    };
+    let direction_visible_width_rejected = direction_for_block_with_edge_padding(
+        source,
+        dimensions,
+        block,
+        parameters.bit_depth,
+        oversized_visible_width,
+    )
+    .is_none();
+    let oversized_visible_height = EdgePadding {
+        visible_width: dimensions.0,
+        visible_height: dimensions.1.saturating_add(1),
+        extend_right: false,
+        extend_bottom: false,
+    };
+    let direction_visible_height_rejected = direction_for_block_with_edge_padding(
+        source,
+        dimensions,
+        block,
+        parameters.bit_depth,
+        oversized_visible_height,
+    )
+    .is_none();
+
+    let partial_right = EdgePadding {
+        visible_width: dimensions.0.saturating_sub(1),
+        visible_height: dimensions.1,
+        extend_right: false,
+        extend_bottom: false,
+    };
+    let mut right_edge_block = block;
+    right_edge_block.x = dimensions.0.saturating_sub(8);
+    let direction_partial_right_rejected = direction_for_block_with_edge_padding(
+        source,
+        dimensions,
+        right_edge_block,
+        parameters.bit_depth,
+        partial_right,
+    )
+    .is_none();
+    let partial_bottom = EdgePadding {
+        visible_width: dimensions.0,
+        visible_height: dimensions.1.saturating_sub(1),
+        extend_right: false,
+        extend_bottom: false,
+    };
+    let mut bottom_edge_block = block;
+    bottom_edge_block.y = dimensions.1.saturating_sub(8);
+    let direction_partial_bottom_rejected = direction_for_block_with_edge_padding(
+        source,
+        dimensions,
+        bottom_edge_block,
+        parameters.bit_depth,
+        partial_bottom,
+    )
+    .is_none();
+    right_edge_block.x = dimensions.0.saturating_sub(7);
+    let direction_past_width_rejected =
+        direction_for_block(source, dimensions, right_edge_block, parameters.bit_depth).is_none();
+    bottom_edge_block.y = dimensions.1.saturating_sub(7);
+    let direction_past_height_rejected =
+        direction_for_block(source, dimensions, bottom_edge_block, parameters.bit_depth).is_none();
 
     let filter_source_length_rejected =
         filter_block_into(short_source, dimensions, block, parameters, &mut output).is_none();
@@ -552,6 +630,64 @@ pub(crate) fn coverage_guard_rejection_count(
     invalid_block.y = dimensions.1;
     let filter_y_rejected =
         filter_block_into(source, dimensions, invalid_block, parameters, &mut output).is_none();
+    let filter_visible_width_rejected = filter_block_into_with_edge_padding(
+        source,
+        dimensions,
+        block,
+        parameters,
+        &mut output,
+        oversized_visible_width,
+    )
+    .is_none();
+    let filter_visible_height_rejected = filter_block_into_with_edge_padding(
+        source,
+        dimensions,
+        block,
+        parameters,
+        &mut output,
+        oversized_visible_height,
+    )
+    .is_none();
+    let mut filter_right_edge_block = block;
+    filter_right_edge_block.x = dimensions.0.saturating_sub(block.width);
+    let filter_partial_right_rejected = filter_block_into_with_edge_padding(
+        source,
+        dimensions,
+        filter_right_edge_block,
+        parameters,
+        &mut output,
+        partial_right,
+    )
+    .is_none();
+    let mut filter_bottom_edge_block = block;
+    filter_bottom_edge_block.y = dimensions.1.saturating_sub(block.height);
+    let filter_partial_bottom_rejected = filter_block_into_with_edge_padding(
+        source,
+        dimensions,
+        filter_bottom_edge_block,
+        parameters,
+        &mut output,
+        partial_bottom,
+    )
+    .is_none();
+    filter_right_edge_block.x = dimensions.0.saturating_sub(block.width).saturating_add(1);
+    let filter_past_width_rejected = filter_block_into(
+        source,
+        dimensions,
+        filter_right_edge_block,
+        parameters,
+        &mut output,
+    )
+    .is_none();
+    filter_bottom_edge_block.y = dimensions.1.saturating_sub(block.height).saturating_add(1);
+    let filter_past_height_rejected = filter_block_into(
+        source,
+        dimensions,
+        filter_bottom_edge_block,
+        parameters,
+        &mut output,
+    )
+    .is_none();
     let mut invalid_parameters = parameters;
     invalid_parameters.bit_depth = 7;
     let filter_bit_depth_rejected =
@@ -589,6 +725,18 @@ pub(crate) fn coverage_guard_rejection_count(
         direction_y_rejected,
         direction_source_length_rejected,
         direction_bit_depth_rejected,
+        edge_zero_visible_width_rejected,
+        edge_zero_visible_height_rejected,
+        edge_zero_block_width_rejected,
+        edge_zero_block_height_rejected,
+        direction_zero_width_rejected,
+        direction_zero_height_rejected,
+        direction_visible_width_rejected,
+        direction_visible_height_rejected,
+        direction_partial_right_rejected,
+        direction_partial_bottom_rejected,
+        direction_past_width_rejected,
+        direction_past_height_rejected,
         filter_source_length_rejected,
         filter_direction_rejected,
         filter_zero_width_rejected,
@@ -597,6 +745,12 @@ pub(crate) fn coverage_guard_rejection_count(
         filter_large_height_rejected,
         filter_x_rejected,
         filter_y_rejected,
+        filter_visible_width_rejected,
+        filter_visible_height_rejected,
+        filter_partial_right_rejected,
+        filter_partial_bottom_rejected,
+        filter_past_width_rejected,
+        filter_past_height_rejected,
         filter_bit_depth_rejected,
         filter_output_length_rejected,
         sample_at_zero_width_rejected,

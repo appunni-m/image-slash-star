@@ -3399,7 +3399,7 @@ fn execute_fault_contract(
             "decode: AVIF AV1 validation failed: invalid AV1 bitstream: monochrome CDEF direction is unavailable",
         ),
         "av1.cdef.input_guard_sweep" => Some(
-            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF guard sweep rejected 19 invalid inputs",
+            "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF guard sweep rejected 37 invalid inputs",
         ),
         "av1.cdef.active_map_extent_mismatch" => Some(
             "decode: AVIF AV1 validation failed: invalid AV1 bitstream: CDEF metadata maps have invalid extents",
