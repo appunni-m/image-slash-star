@@ -18682,6 +18682,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_444_10bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_444_10bit_loopfilter_80x48
+      description: Two-frame 80x48 10-bit 444 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and nonzero Y/U/V deblocking on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_444_10bit_loopfilter_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_444_10bit_filmgrain_128x64
       description: Two-frame 128x64 10-bit 444 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
       test_assets:

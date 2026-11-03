@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,824 total rows: 3,150 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,150 decode rows are
+The current public evidence matrix contains 3,825 total rows: 3,151 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,151 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF mixed-segment super-resolution with CDEF and film grain — 2026-11-03
@@ -37,6 +37,27 @@ its local receipt SHA-256 is
 `3c67077b3407e32b43eb958d93581a193c873b36ea51c12123bd814cca8715b4`. This is
 local selected evidence, not a Coverage MCP receipt or full-suite coverage
 result. No Rust unit tests or production-source changes were added.
+
+## AV1 10-bit 4:4:4 mixed-super-resolution deblocking parity — 2026-11-03
+
+Added `decode:avif:animated_mixed_lossless_superres_444_10bit_loopfilter_80x48`.
+The two-frame 80×48 10-bit 4:4:4 sequence uses a coded inter width of 64,
+denominator-10 super-resolution, mixed lossless/lossy inter segments, and
+nonzero Y/U/V deblocking on both frames. The pinned libavif/AOM producer
+reproduces the 3,810-byte fixture twice; an independent pinned libavif
+observation decodes both frames and reports infinite repetition. Pillow 12.2.0
+produces exact 11,520-byte RGB references for both frames (`abcb8903…2305` and
+`00068330…eefe5`). The selected parity run passed 1/1.
+
+The local selected LLVM report is
+`.coverage-mcp/local-evidence/selected/av1-mixed-superres-444-10bit-loopfilter-20261103/final/coverage.json`
+(SHA-256 `af4815dd99946029456343e6ab54ed79dece84c625997fd2eca2c52c3663c383`);
+its local receipt SHA-256 is
+`04ab0586b5010948f749487ee45c47291bf0360073636cd2340228ae023c3de0`.
+In this selected run, `src/codecs/avif/av1/filter.rs` covered 135/252 branches
+(53.57%). This is local selected evidence, not a Coverage MCP receipt or a
+whole-repository coverage result. No Rust unit tests or production-source
+changes were added.
 
 ## AVIF implicit layer IDs and frame timing — 2026-11-03
 
@@ -16539,7 +16560,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4f9e3d15bffa67217daa515f31b00530eb9e3b0d88d4d4f0204ad62536009e4c`; matrix `a61ef84c8f1436c7796d7046918a90dcf56f330ad0d923fcb4754cf15918f5d7`.
+- Current fixture integrity only: manifest `350bdf0514bceab56868a7e4f9878ac2f5801e79ed87011fc1c88e2a3be58691`; matrix `00a2a5bae735a8268f1c7fb194ea5535832b4b2770c732f162a371289a1a232c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
