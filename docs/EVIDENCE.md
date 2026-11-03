@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,825 total rows: 3,151 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,151 decode rows are
+The current public evidence matrix contains 3,826 total rows: 3,152 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,152 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF mixed-segment super-resolution with CDEF and film grain — 2026-11-03
@@ -58,6 +58,29 @@ In this selected run, `src/codecs/avif/av1/filter.rs` covered 135/252 branches
 (53.57%). This is local selected evidence, not a Coverage MCP receipt or a
 whole-repository coverage result. No Rust unit tests or production-source
 changes were added.
+
+## AV1 loop-filter sharpness parity — 2026-11-03
+
+Added `decode:avif:avif_loopfilter_sharpness_420_8bit_still_128x128`, a
+128x128 8-bit 4:2:0 still whose key frame carries sharpness 7 and active
+Y/U/V deblocking. The pinned libavif 1.4.1/AOM 3.13.2 producer reproduced the
+input twice with identical bytes (SHA-256
+`0a00c49e15b5b66fdb7c0b2ac130698c3f4ab52a2863b5a762b5e938351beb78)).
+Pillow 12.2.0 supplied the exact 49,152-byte RGB reference
+(`5e2824bb560253f7dfdfff3a641c73217d35ca0b62cce96910039df1bd2721a0`);
+the selected public parity run passed 1/1.
+
+The local selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261103T042707.955830Z-d4a9dab2d48c4a94b137b9e978336c6f/coverage.json`
+(SHA-256
+`fd5c3aa8cfbce28e6088a93cda7cf3ce93fc1dfb734348697b44205b31415570`);
+`src/codecs/avif/av1/filter.rs` covered 88/252 branches for this selected
+row, and the sharpness branch at line 528 recorded 384 hits. Its local receipt
+SHA-256 is
+`125cec8c4d4b00e5926468fe65fd3a45d4d2f23448101bc2525f95e49b5b1f9f`.
+Coverage MCP was unavailable, so this is local selected evidence only, not a
+managed attribution or full-suite coverage claim. No Rust unit tests or
+production-code changes were added.
 
 ## AVIF implicit layer IDs and frame timing — 2026-11-03
 
@@ -16560,7 +16583,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `350bdf0514bceab56868a7e4f9878ac2f5801e79ed87011fc1c88e2a3be58691`; matrix `00a2a5bae735a8268f1c7fb194ea5535832b4b2770c732f162a371289a1a232c`.
+- Current fixture integrity only: manifest `3040688525cdd44e8e1d1a17bcc40843d9061b73d3f35624c4845a781dac5270`; matrix `e31096b39c77a215dc0f555589eaf4cdc58d1925a12593bc7bfa8a64cb45641b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

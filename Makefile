@@ -145,6 +145,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_avif_narrow_inter_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_square64_neighbor_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_mixed_superres_fixtures.py --check
+	$(PYTHON) scripts/generate_avif_loopfilter_sharpness.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_superres_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_i422_neutral_superres_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_mixed_key_fixtures.py --check
