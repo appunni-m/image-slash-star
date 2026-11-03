@@ -1438,6 +1438,25 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
   --encoder-dir target/oracle-staging/narrow-inter-b4x8-tools
 ```
 
+## Vertical B4x8 4:4:4 TX_MODE_SELECT inter sequence
+
+`animated_lossy_inter_444_b4x8_mode_select_64x64.avif` reuses the vertical
+B4x8 partition patch and producer from the 4:2:0 case above, with a full
+4:4:4 input plane set. It is a two-frame, 64x64, 8-bit lossy sequence using
+the coarse pattern, quality 70, and TX_MODE_SELECT. The generator checks
+complete-file identity across two native encodes and validates both frame
+headers with the pinned AV1 inspector; Pillow references are collected
+independently.
+
+Build the producer with `FIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV444`,
+`FIXTURE_ROOT_SIZE=8`, and `FIXTURE_NARROW_VERTICAL=1`, then run:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossy_inter_444_b4x8_mode_select_64x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-tools
+```
+
 ## Narrow 8x32 and 32x8 inter transform trees
 
 The same producer accepts `-DFIXTURE_ROOT_SIZE=32` at compile time. Its default

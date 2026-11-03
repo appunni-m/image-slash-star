@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,831 total rows: 3,157 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,157 decode rows are
+The current public evidence matrix contains 3,832 total rows: 3,158 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,158 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -16662,7 +16662,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5cfd2313adcc58c7067e7d58782f7545d45c5717caa186e9813b3bfaf15b4481`; matrix `0a2552f82b7595682814576a45fcbd1c7d3a61bcae0590c97f2b9c87994a0aff`.
+- Current fixture integrity only: manifest `b1ea62b18af0e76dc2d1465813de4cb120d17064b83f59af44c086079ea75063`; matrix `e9d0874ee512df66905b97553f49dd833fc425db44146ecd9a91c2740a43e7ad`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21653,3 +21653,25 @@ MCP marks the local measurement source as unverified and test attribution as
 unknown, so this is selected-case evidence rather than a whole-suite coverage
 claim. No Rust runtime code or unit tests changed, and this parity case makes
 no performance claim.
+
+## AV1 4:4:4 B4x8 inter geometry parity — 2026-11-03
+
+The public parity row
+`decode:avif:animated_lossy_inter_444_b4x8_mode_select_64x64` adds a vertical
+B4x8 TX_MODE_SELECT inter sequence in 8-bit 4:4:4. Selected parity passed 1/1
+and matched both 64x64 RGB frames byte-for-byte with Pillow 12.2.0. The pinned
+libavif observer independently decoded both frames and reported one total
+play. The retained frame hashes are
+`f3bd9d9b5393974efe11e1273ba728f3fcb56803a0335a4c49b26ca9856c0811` and
+`43a7e9fd294fde37a6c5c5887c468097134a5409b51da72bc2d141e5931e92c1`.
+
+The selected LLVM report records 15 observations for the exact B4x8 block-size
+arm and 15 for its width check at `src/codecs/avif/av1/block.rs:49887`. The
+report is retained at
+`.coverage-mcp/local-evidence/selected/20261103T115120.739619Z-94bd8a99d3214c7c99165e5aeb94172c/coverage.json`;
+its SHA-256 is
+`ca3bd1a4abf1d0406223dfc56541e00de03e26dc0a36cb0b8dcc276d2d9bb47f`. Coverage
+MCP marks the selected measurement source as unverified and test attribution
+as unknown, so this is selected-case evidence rather than a whole-suite
+coverage claim. No Rust runtime code or unit tests changed, and this parity
+case makes no performance claim.
