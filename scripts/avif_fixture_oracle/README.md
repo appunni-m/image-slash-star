@@ -1392,6 +1392,52 @@ The libavif archive uses the fixture-control patch documented above for the
 `enable-tx-size-search` encoder option. The independent loop-count observation
 and exact Pillow frames are retained through the regular AVIF oracle workflows.
 
+## Vertical B4x8 TX_MODE_SELECT inter sequence
+
+`animated_lossy_inter_420_b4x8_mode_select_64x64.avif` is a two-frame, 64x64,
+8-bit 4:2:0 lossy sequence. Its fixture-only patch
+[`libaom-narrow-inter-b4x8.patch`](libaom-narrow-inter-b4x8.patch) forces the
+second frame's B8x8 partition roots into vertical B4x8 leaves. The key-frame
+path and libaom's prediction, coefficient and valid transform-size choices
+remain unchanged. The input uses the coarse pattern, quality 70, root size 8,
+and TX_MODE_SELECT. `FIXTURE_NARROW_VERTICAL=1` orients the low-frequency
+residual region with the vertical leaves. The generator checks normalized
+complete-file identity across two native encodes and validates both frame
+headers with the pinned AV1 inspector. Pillow frame references are collected
+separately.
+
+Archive the pinned AOM source, apply the fixture-only patch, and build it with
+the generic narrow inter configuration described above. Link the producer to
+the pinned patched libavif build:
+
+```sh
+mkdir -p target/oracle-staging/libaom-narrow-b4x8-source
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 |
+  tar -x -C target/oracle-staging/libaom-narrow-b4x8-source
+git apply --directory=target/oracle-staging/libaom-narrow-b4x8-source \
+  scripts/avif_fixture_oracle/libaom-narrow-inter-b4x8.patch
+cmake -S target/oracle-staging/libaom-narrow-b4x8-source \
+  -B target/oracle-staging/libaom-narrow-b4x8-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-narrow-b4x8-build -j 4
+mkdir -p target/oracle-staging/narrow-inter-b4x8-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_NARROW_VERTICAL=1 -DFIXTURE_WIDTH=64 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV420 -DFIXTURE_QUALITY=70 \
+  -I target/oracle-staging/libavif-narrow-source/include \
+  -I target/oracle-staging/libavif-narrow-build/include \
+  -I target/oracle-staging/libaom-narrow-b4x8-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b4x8-build/libaom.a -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b4x8-tools/encode-square-420-70
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossy_inter_420_b4x8_mode_select_64x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-tools
+```
+
 ## Narrow 8x32 and 32x8 inter transform trees
 
 The same producer accepts `-DFIXTURE_ROOT_SIZE=32` at compile time. Its default

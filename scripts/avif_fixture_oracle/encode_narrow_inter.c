@@ -13,6 +13,12 @@
 #if FIXTURE_ROOT_SIZE != 8 && FIXTURE_ROOT_SIZE != 16 && FIXTURE_ROOT_SIZE != 32 && FIXTURE_ROOT_SIZE != 64
 #error "narrow inter fixtures require 8x8, 16x16, 32x32, or 64x64 partition roots"
 #endif
+#ifndef FIXTURE_NARROW_VERTICAL
+#define FIXTURE_NARROW_VERTICAL 0
+#endif
+#if FIXTURE_NARROW_VERTICAL != 0 && FIXTURE_NARROW_VERTICAL != 1
+#error "FIXTURE_NARROW_VERTICAL must be 0 or 1"
+#endif
 #define FIXTURE_STRING_INNER(value) #value
 #define FIXTURE_STRING(value) FIXTURE_STRING_INNER(value)
 
@@ -33,8 +39,10 @@ static uint8_t sample_value(unsigned frame, unsigned x, unsigned y, int plane,
     // keep its maximum transform. The other three leaves retain textured
     // residuals so the frame still signals TX_MODE_SELECT.
     const unsigned first_leaf_extent = FIXTURE_ROOT_SIZE / 4U;
+    const int narrow_leaf_is_vertical =
+        FIXTURE_NARROW_VERTICAL || FIXTURE_WIDTH < FIXTURE_HEIGHT;
     if (mode_select_content &&
-        (FIXTURE_WIDTH >= FIXTURE_HEIGHT ? y < first_leaf_extent : x < first_leaf_extent)) {
+        (narrow_leaf_is_vertical ? x < first_leaf_extent : y < first_leaf_extent)) {
         const unsigned base = plane == AVIF_CHAN_Y ? 48U :
                               plane == AVIF_CHAN_U ? 96U : 144U;
         const unsigned frame_delta = frame == 0 ? 0U :
