@@ -2256,13 +2256,36 @@
       "case_names": [
         "animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "91b67b7884bb9516af9fccf994d6ffc3a89f39c03951ed4be9d26b685d23bb8a",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_420_8bit_loopfilter_80x48"
+      ]
     }
   ],
   "artifacts": [
     {
       "bytes": 43952,
       "path": "README.md",
-      "sha256": "92898b8dbd0df8e571bf4fe5c31e4120807a2ad630e62db269eb7a39e3bf4d83"
+      "sha256": "551872283e6f19a606e031139464a2a9b225ca9f4dadbbce8d22df707e2374cd"
     },
     {
       "bytes": 2267,
@@ -4058,6 +4081,11 @@
       "bytes": 2472,
       "path": "inputs/animated_mixed_lossless_superres_420_8bit_filmgrain_80x48.avif",
       "sha256": "4486713a624c8282f82f165aadacbf6a6dfda4244375dcae2878cb550cb4fea1"
+    },
+    {
+      "bytes": 2469,
+      "path": "inputs/animated_mixed_lossless_superres_420_8bit_loopfilter_80x48.avif",
+      "sha256": "d34b4d36352a5401c5320b9576b26ab3a6a6b7587b1e38e078549b367a4f0b3b"
     },
     {
       "bytes": 2248,
@@ -9998,6 +10026,16 @@
       "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_420_8bit_filmgrain_80x48/frame_1.bin",
       "sha256": "41b2fa44d2071e2bc111a6df38d1fe6bae221e527cb7a16c0e75132fd60ac1a3"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_420_8bit_loopfilter_80x48/frame_0.bin",
+      "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_420_8bit_loopfilter_80x48/frame_1.bin",
+      "sha256": "df65607b52e1e2e7e0fb36ca58b98dcf824700378abd8bf03f6142ce554f02ca"
     },
     {
       "bytes": 11520,
@@ -48092,6 +48130,55 @@
       "repeat_equal": true,
       "source": "animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48",
       "source_sha256": "dcc57c6d407a6c842ffc83e9e94855f548c58f7bc8a68d198f12847fa84628a2"
+    },
+    {
+      "input_bytes": 2469,
+      "input_path": "inputs/animated_mixed_lossless_superres_420_8bit_loopfilter_80x48.avif",
+      "input_sha256": "d34b4d36352a5401c5320b9576b26ab3a6a6b7587b1e38e078549b367a4f0b3b",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_420_8bit_loopfilter_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "91b67b7884bb9516af9fccf994d6ffc3a89f39c03951ed4be9d26b685d23bb8a",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "df65607b52e1e2e7e0fb36ca58b98dcf824700378abd8bf03f6142ce554f02ca",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_420_8bit_loopfilter_80x48",
+      "source_sha256": "d34b4d36352a5401c5320b9576b26ab3a6a6b7587b1e38e078549b367a4f0b3b"
     }
   ],
   "oracle": {

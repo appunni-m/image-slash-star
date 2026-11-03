@@ -1429,7 +1429,7 @@ target output or expected pixels.
 
 ## Mixed lossless/lossy super-resolution inter sequences
 
-`scripts/generate_avif_mixed_superres_fixtures.py` produces thirty-two
+`scripts/generate_avif_mixed_superres_fixtures.py` produces thirty-four
 two-frame inputs. The original twenty-four cover monochrome, I420, I422 and
 I444 at 8/10/12 bits with neutral filters, active luma SGR restoration at
 8/10 bits, and the existing monochrome/I420 film-grain combinations. Eight
@@ -1438,6 +1438,8 @@ additional active-grain inputs cover 400 10/12-bit, 420 12-bit, and 422
 super-resolution denominator 16 and coded width 64 to stay within the
 decoder's bounded I444 grain geometry. Most inputs use an ordinary lossy key
 followed by an inter frame coded at width 64 and displayed at width 80.
+The added 8-bit I420 loop-filter case enables nonzero Y, U and V deblocking on
+both frames while retaining mixed-segment horizontal super-resolution.
 Segment 1 has qindex zero; the other segments retain qindex 140. Independent
 planar samples retain nonzero low bits at high depth. The input generator reads
 neither Rust outputs nor reference pixels; standard reference collectors own
@@ -1449,9 +1451,9 @@ explicit non-temporal map, and allow qindex zero. They apply the ROI to inter
 frames only. All arithmetic and AV1 encoding still run in pinned libaom.
 Pinned libavif disables 12-bit encoder restoration; the generator preserves
 that control and omits the four byte-identical restoration requests. It does
-not claim 12-bit restoration inputs. All thirty-two inputs reproduce twice
-and independently parsed headers must confirm their actual segment, scaling,
-restoration and film-grain features before they are written.
+not claim 12-bit restoration inputs. All thirty-four inputs reproduce twice
+and independently parsed headers confirm their actual segment, scaling,
+restoration, film-grain, CDEF and loop-filter features before they are written.
 
 Using the already available clean pinned sources, build without installation:
 
@@ -1486,7 +1488,7 @@ target/oracle-pillow312-venv/bin/python scripts/generate_avif_mixed_superres_fix
 
 Only the input producer uses these patches. No runtime dependency, native
 fallback, unsafe Rust, fault hook or private unit test is added. The ordinary
-fixture-verification target checks the thirty-two complete input digests and AV1
+fixture-verification target checks the thirty-four complete input digests and AV1
 features. The investigation also retains public inputs that originally exposed
 unsupported monochrome/mixed-key and ordinary nonsegmented super-resolution
 paths. Subsequent sections describe their separate parity cases; they do not

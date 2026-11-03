@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,823 total rows: 3,149 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,149 decode rows are
+The current public evidence matrix contains 3,824 total rows: 3,150 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,150 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF mixed-segment super-resolution with CDEF and film grain — 2026-11-03
@@ -20,6 +20,23 @@ Coverage MCP was not queried: this session has no MCP receipt-registration or
 CLI bridge, and the local receipt records source as unverified and test status
 as unknown. This selected run does not establish global coverage; the four
 100% coverage metrics remain open.
+
+## AV1 mixed-super-resolution active deblocking parity — 2026-11-03
+
+Added `decode:avif:animated_mixed_lossless_superres_420_8bit_loopfilter_80x48`.
+The 80×48 8-bit 4:2:0 sequence uses super-resolution denominator 10 and
+nonzero Y/U/V deblocking on both its key and inter frames. Pinned AOM 3.13.2
+accepts the sequence, and the two RGB frames match Pillow 12.2.0 exactly
+(`abcb8903…2305` and `df65607b…f02ca`). The focused selected parity run passed
+1/1 with exact 11,520-byte RGB output.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261103T030016.796649Z-3deb9e53bf524471bc6a97fef91aa91f/coverage.json`
+(SHA-256 `a283fb33b4c3a3cd79b0296d3860f453a76806524f8b242efbf63c946e9d2f70`);
+its local receipt SHA-256 is
+`3c67077b3407e32b43eb958d93581a193c873b36ea51c12123bd814cca8715b4`. This is
+local selected evidence, not a Coverage MCP receipt or full-suite coverage
+result. No Rust unit tests or production-source changes were added.
 
 ## AVIF implicit layer IDs and frame timing — 2026-11-03
 
@@ -16522,7 +16539,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3649204f27794e7150b5e2b22b5da012d775e5cf729ca23de0046d0a6c8eb33a`; matrix `8e54ec53ca095ba108e01a7de78e4ce89e75b219b139d58b6d2ad2d28652efa5`.
+- Current fixture integrity only: manifest `4f9e3d15bffa67217daa515f31b00530eb9e3b0d88d4d4f0204ad62536009e4c`; matrix `a61ef84c8f1436c7796d7046918a90dcf56f330ad0d923fcb4754cf15918f5d7`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
