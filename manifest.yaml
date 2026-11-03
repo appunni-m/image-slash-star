@@ -16276,6 +16276,11 @@ formats:
       test_assets:
       - animated_lossless_inter_i422_fixed_b16x16_64x64.avif
       status: active
+    - id: animated_lossless_inter_i444_fixed_b64x64_64x64
+      description: Two-frame 64x64 8-bit 4:4:4 all-lossless AVIF sequence with textured chroma residuals and fixed 64x64 partitions
+      test_assets:
+      - animated_lossless_inter_i444_fixed_b64x64_64x64.avif
+      status: active
     - id: animated_lossless_inter_420_b8x16
       description: Two-frame 8x16 4:2:0 all-lossless AVIF sequence with a translated patch and a rectangular B8x16 inter transform
       test_assets:

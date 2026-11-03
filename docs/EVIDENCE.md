@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,838 total rows: 3,164 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,164 decode rows are
+The current public evidence matrix contains 3,839 total rows: 3,165 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,165 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF all-lossless I422 B16x16 parity and selected coverage — 2026-11-04
@@ -16709,7 +16709,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `54e9a46178c6b2a28d138a038639066428f052b9631645f8e90dfbec17b5ee6a`; matrix `87ada957f8e3fede164f281f4bd61a06bd9e8015066a010cc69fe1b51010ccde`.
+- Current fixture integrity only: manifest `e41cbf606906ba2c06b4bd68d4f4e8d52d07d0b5d3f1f871386859f966afb1ff`; matrix `4d776660765da7c1061d6ccc9a8b388f51fd7d579ed42b5ac4af0f3770a751b4`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21792,3 +21792,38 @@ for locating the remaining edge, but the local report does not prove a
 suite-wide coverage change. The successful parity run independently proves
 the public pixel behavior. No unit tests or SIMD changes were added, and the
 full coverage baseline was not refreshed.
+
+## Lossless I444 Square64 sequence parity and fallback contract — 2026-11-04
+
+The new public row
+`decode:avif:animated_lossless_inter_i444_fixed_b64x64_64x64` adds an exact
+two-frame 64x64 8-bit lossless I444 sequence with textured chroma residuals.
+The pinned Pillow 12.2.0 references cover both RGB frames byte-for-byte, and
+the pinned native libavif observer confirms two frames with infinite
+repetition. The sequence parity harness and the selected matrix parity row
+both pass. The generator checks repeat encoding, frame hashes, all-lossless
+I444 headers, fixed 64x64 partitions, and the canonical input digest.
+
+The selected sequence parity measurement did not cover the first-partition
+fallback: its ordinary complete-frame path stays in the supported decoder.
+The existing target-only fault contract
+`fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`
+injects `Av1LosslessI444FirstPartitionFallback` while decoding a separate
+10-bit lossless I444 still. It compares the public decode result with Pillow,
+then requires a clean retry to match. The contract passed 1/1 with
+`oracle_status: not_applicable`. Coverage MCP reports zero remaining branch
+gaps at `src/codecs/avif/av1/block.rs:20993` for this retained fault-contract
+measurement.
+
+The selected matrix report is
+`.coverage-mcp/local-evidence/selected/20261103T205918.907601Z-c58830d120c44384ab44e06cd5f61e5a/coverage.json`
+(SHA-256 `2f75094b2a5d38edc22c417fb89d773250d07c652dba04cb3147ed95249d5d4b`).
+The target-only fault-contract report is
+`.coverage-mcp/local-evidence/selected/20261103T211820.742902Z-aaced1ef9ff84eaa89744cc32ca628b4/coverage.json`
+(SHA-256 `a00a24d285dc3d07e27d69b4b69f7cfc99f818254c2551613452c9a798438edd`).
+Both are local selected measurements with source identity unverified and test
+attribution unknown. The targeted zero-gap result does not claim complete
+repository coverage; the retained fault report still has 29,943 of 31,998
+branches unobserved overall. No runtime implementation changed, no unit tests
+were added, and no performance gain is claimed. Strict Rust lint and x86-64
+SSE2/AVX2 lint both pass.

@@ -572,6 +572,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "filmgrain_inactive_reference_reuse_i444_64x64",
         "lossless_inter_420_b16x16",
         "lossless_inter_420_b8x16",
+        "lossless_inter_i444_fixed_b64x64_64x64",
         "lossless_inter_intra_i444_b8x8_20x20",
         "odd_dimensions_inter_intra_boundary_420",
         "lossy_interintra_420_nowedge_b16x16_64x64",
@@ -766,6 +767,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
                 matrix_sequence_case("animated_lossless_inter_420_b16x16")
             }
             "lossless_inter_420_b8x16" => matrix_sequence_case("animated_lossless_inter_420_b8x16"),
+            "lossless_inter_i444_fixed_b64x64_64x64" => {
+                matrix_sequence_case("animated_lossless_inter_i444_fixed_b64x64_64x64")
+            }
             "lossless_inter_intra_i444_b8x8_20x20" => {
                 matrix_sequence_case("animated_lossless_inter_intra_i444_b8x8_20x20")
             }
