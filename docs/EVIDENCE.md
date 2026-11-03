@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,827 total rows: 3,153 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,153 decode rows are
+The current public evidence matrix contains 3,828 total rows: 3,154 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,154 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
@@ -30,6 +30,24 @@ source inventory hash remained the same before and after this selected run.
 This is local selected evidence, not a Coverage MCP receipt or a full-suite
 coverage result. No unit tests were added and the full coverage baseline was
 not refreshed.
+
+## AV1 CDEF low-variance parity — 2026-11-03
+
+Added `decode:avif:coverage_i420_intra_cdef_10bit_low_variance_16x16`, a
+16x16 full-range 10-bit I420 key frame with active CDEF and nonzero but low
+luma direction variance. The parity row passes 1/1 against the pinned Pillow
+12.2.0/libavif 1.4.1 RGB output. Its selected LLVM report records nine takes
+of the `variance >> 6 == 0` arm in `adjust_primary_strength` and three takes
+of the zero-variance early return.
+
+The report is
+`.coverage-mcp/local-evidence/selected/cdef-low-variance-final-20261103/coverage.json`
+(SHA-256 `bfc56e8b6f934ee20309936f509ba30e913b84ab724d3c9f6efe958840f4d021`);
+the adjacent local evidence receipt has SHA-256
+`9725baf0e278cfa0f50f747209e4713ff064b2fa87094890d66bd3512fbf41a9`. This is
+local selected evidence, not a Coverage MCP receipt or a full-suite coverage
+result. No unit tests were added and the full coverage baseline was not
+refreshed.
 
 ## AV1 chroma-grain overlap and scaling invariants — 2026-11-03
 
@@ -16644,7 +16662,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d9a9c4b7aeb38950ec1e1d9ac6a13614053f1f238c8b4b71234531bcb07b4d78`; matrix `5b1bf87ab522d1542f243ec03da64d02346a9d99ae671c250ac945f64c895225`.
+- Current fixture integrity only: manifest `aad38501d6a92eea297f7712a6233c46ee72a2295584a5374e8bd988610a6ca0`; matrix `1716512171479ce6ba902b16d7e0f86f2263b72f1b761faa12e33915cf9a7fe2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

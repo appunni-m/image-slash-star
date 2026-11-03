@@ -17376,6 +17376,11 @@ formats:
       test_assets:
       - coverage_i420_intra_cdef_10bit_15x16.avif
       status: active
+    - id: coverage_i420_intra_cdef_10bit_low_variance_16x16
+      description: Single-frame full-range 10-bit I420 AVIF with active CDEF and nonzero low luma direction variance
+      test_assets:
+      - coverage_i420_intra_cdef_10bit_low_variance_16x16.avif
+      status: active
     - id: coverage_i420_intra_cdef_restoration_10bit_16x16
       description: Single-frame full-range 10-bit I420 AVIF with 16x16 intra CDEF and SGR luma restoration
       test_assets:

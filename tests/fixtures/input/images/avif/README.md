@@ -2092,6 +2092,17 @@ and Pillow 12.2.0/libavif 1.4.1 RGB bytes are checked by
 RGB reference SHA-256 is
 `53e32b2c9de70cf7f2bf975e136c0e4f9517dbe73b755010de3b839c1ba799b3`.
 
+`coverage_i420_intra_cdef_10bit_low_variance_16x16.avif` is a 16x16
+full-range 10-bit I420 key frame with active single-entry CDEF and low but
+nonzero luma direction variance. The decoded luma exercises the low-variance
+primary-strength adjustment while neutral chroma keeps the input deterministic.
+The fixture generator verifies the sequence and frame syntax, repeats the
+pinned libaom encode, and checks the Pillow 12.2.0/libavif 1.4.1 RGB reference.
+The AVIF SHA-256 is
+`ce827c0c80e25f416bc5c03b9a577dd2cf71d2ab1a08715e7f7891a462210056`, and the
+RGB reference SHA-256 is
+`1f975d71bfac9a6becec7fb48dd1713abb6d24be0758bdbb53d61aaac09286fe`.
+
 ## Film-grain depth and inactive-plane inputs
 
 The 34 `filmgrain_*_64x64.avif` inputs in
