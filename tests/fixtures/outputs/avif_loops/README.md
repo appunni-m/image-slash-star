@@ -667,3 +667,10 @@ to pinned libavif 1.4.1 decode both frames and report repetition count zero
 (one total play). Pinned Pillow 12.2.0 observes both exact RGB frames at 100 ms;
 the complete input and frame buffers are retained. Its separately compiled
 observer identity is recorded in `additional_collections`.
+
+`lossy_inter_444_b4x8_mode_select_64x64` is a two-frame 8-bit 4:4:4 sequence
+with an inter frame forced into vertical B4x8 leaves. Two independent calls
+to pinned libavif 1.4.1 decode both frames and report repetition count zero
+(one total play). Pinned Pillow 12.2.0 observes both exact RGB frames at 100 ms;
+the complete input and frame buffers are retained. Its separately compiled
+observer identity is recorded in `additional_collections`.

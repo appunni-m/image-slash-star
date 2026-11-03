@@ -1351,6 +1351,18 @@ VARIANTS = {
         "transform_mode": "select",
         "width": 64
     },
+    "animated_lossy_inter_444_b4x8_mode_select_64x64": {
+        "bit_depth": 8,
+        "height": 64,
+        "input_name": "square-444-q70",
+        "layout": "444",
+        "pattern": "coarse",
+        "quality": 70,
+        "root_size": 8,
+        "sha256": "0487f033b08cb65706a45af3325bf7c41717b7e5aeb8fc92581e55b6a256bcfe",
+        "transform_mode": "select",
+        "width": 64
+    },
 }
 
 FIXTURE_SHA256 = {name: spec["sha256"] for name, spec in VARIANTS.items()}
