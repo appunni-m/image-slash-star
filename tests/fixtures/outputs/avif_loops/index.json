@@ -2049,6 +2049,190 @@
       "case_names": [
         "animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "902fef87ed6ac7c2889928adf5239d9fd49b95f0d909be013be5ee42b7f993fa",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_400_10bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "6e57e89b10f5db71b5de63a2c538538914ac62381f9a3da2dcf8fcec02832027",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_400_12bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "4c2afde1cdea571bcd2627a873e8f2f43a7939348ffcdc1be3b09733ea96df90",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_420_12bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "870372cec588c70c1f3190f540203b2a0f37b1f6fba1feb71a89eb6fef6c52e6",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_422_8bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "aa2d5fd2609791c4a99685bcbdccf3e8fc3cbc56ab9f74129f9ac84511d042cb",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_422_10bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "a948d3044907e64e47de4174396361c41ecd8679f4cad0d486e3ce4f8dae6015",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_422_12bit_filmgrain_80x48"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "77df27a90a0ee83e29fdf189906a4f6baf508118a28c944d36297648cc4ed147",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "a0d27ba2675e39b00859c6a937b01f45e042813f9b069ab0ac8d2b96b7d2c989",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_mixed_lossless_superres_444_12bit_filmgrain_128x64"
+      ]
     }
   ],
   "artifacts": [
@@ -3778,6 +3962,11 @@
       "sha256": "85a572ef7210bb5ca9027ced056f404faa9cbf0c5ff1f54f72825da7fff77e8d"
     },
     {
+      "bytes": 1864,
+      "path": "inputs/animated_mixed_lossless_superres_400_10bit_filmgrain_80x48.avif",
+      "sha256": "eb12b32b20cf07fcf25191c18f710c04a62d4451cbd54094e2acb98ffc01d531"
+    },
+    {
       "bytes": 1777,
       "path": "inputs/animated_mixed_lossless_superres_400_10bit_neutral_80x48.avif",
       "sha256": "6748e3ac11be0ee1f4d06191e4981419de26a71f992ac3074cb4fcdcdbf46125"
@@ -3786,6 +3975,11 @@
       "bytes": 1782,
       "path": "inputs/animated_mixed_lossless_superres_400_10bit_sgr_80x48.avif",
       "sha256": "c6ec5a4851183d0d06c3af9b43f1aca419656b1c1e3eb1ea28624fd902d37eb2"
+    },
+    {
+      "bytes": 1798,
+      "path": "inputs/animated_mixed_lossless_superres_400_12bit_filmgrain_80x48.avif",
+      "sha256": "8b05f1891e4720bf3906e9905641e4f23137c5284a3cdb165cf5241e527000d2"
     },
     {
       "bytes": 1711,
@@ -3823,6 +4017,11 @@
       "sha256": "dbe51bd886ae6b5077c33f836f269098d8904099235e8a46baa76774d0ec7b44"
     },
     {
+      "bytes": 2353,
+      "path": "inputs/animated_mixed_lossless_superres_420_12bit_filmgrain_80x48.avif",
+      "sha256": "aaa8f784f24357bc84ce212b8e995f68b251d4a84152c3953e6e76af865a1589"
+    },
+    {
       "bytes": 2129,
       "path": "inputs/animated_mixed_lossless_superres_420_12bit_neutral_80x48.avif",
       "sha256": "8dd67ec59bd9fb4f40cf6a518ffca77905f7541044f10c5875e5b9c4c82bd40b"
@@ -3848,6 +4047,11 @@
       "sha256": "c9bbded2b96c08a2a2e5792bee2f313858e7889727e7eb6c99eba059c3905563"
     },
     {
+      "bytes": 2845,
+      "path": "inputs/animated_mixed_lossless_superres_422_10bit_filmgrain_80x48.avif",
+      "sha256": "f9bc47d21bfa3e40d7724547603a25ae171170ca8b12264f437b20df7f7108ba"
+    },
+    {
       "bytes": 2621,
       "path": "inputs/animated_mixed_lossless_superres_422_10bit_neutral_80x48.avif",
       "sha256": "af446607101962de4733065bc5770cd9a7ff66714cf6dc3861ee41e5dd20d3c2"
@@ -3858,9 +4062,19 @@
       "sha256": "707f9011d2bfc877ac0f51800ef8bc5661971294e7defacc5508eaa676470575"
     },
     {
+      "bytes": 2716,
+      "path": "inputs/animated_mixed_lossless_superres_422_12bit_filmgrain_80x48.avif",
+      "sha256": "7cd21564db3da0e82a20270034e9c85f7e7551e14f520cbe9b3bb141efa27e99"
+    },
+    {
       "bytes": 2492,
       "path": "inputs/animated_mixed_lossless_superres_422_12bit_neutral_80x48.avif",
       "sha256": "da6d31fc9ac3f7687c8273eda7f66f91995c6f1dc1e41bca3c98fd7d3d7450e9"
+    },
+    {
+      "bytes": 2866,
+      "path": "inputs/animated_mixed_lossless_superres_422_8bit_filmgrain_80x48.avif",
+      "sha256": "41a52794082870ba454795331fbe40dcb1a9fa12fed53acd821150f7afb0998b"
     },
     {
       "bytes": 2642,
@@ -3873,6 +4087,11 @@
       "sha256": "a6f709522cf9a32d8430f4fb1833f38a8e3905379369406da4dfdda21558d082"
     },
     {
+      "bytes": 3577,
+      "path": "inputs/animated_mixed_lossless_superres_444_10bit_filmgrain_128x64.avif",
+      "sha256": "14d1effed3e3c34e17ca86936ba332d28cbcd25376f2a642ff7fd1d4d1e673c6"
+    },
+    {
       "bytes": 3270,
       "path": "inputs/animated_mixed_lossless_superres_444_10bit_neutral_80x48.avif",
       "sha256": "bb40405f9a5a057e09c9f17b02fba7be8a289e5f7b83dd8e24d5b275d1ed8f1f"
@@ -3881,6 +4100,11 @@
       "bytes": 3277,
       "path": "inputs/animated_mixed_lossless_superres_444_10bit_sgr_80x48.avif",
       "sha256": "4abbb1d3a14c6fa89f42501572349e277c12478d36678102163c4359da89a8d6"
+    },
+    {
+      "bytes": 3320,
+      "path": "inputs/animated_mixed_lossless_superres_444_12bit_filmgrain_128x64.avif",
+      "sha256": "00c469a1475ddeffeefa69a9a314c3bf4f172596ebcf2b826bd457dbc70222da"
     },
     {
       "bytes": 3106,
@@ -9599,6 +9823,16 @@
     },
     {
       "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_400_10bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "45add73c777ea13e01a5598182e95715cae9d7ae85c6531e2fd106dfb9bc29cc"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_400_10bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "01de67ab4565c92c90373d4c93f8081c397ab8a894bd48948669200046a21e4e"
+    },
+    {
+      "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_400_10bit_neutral_80x48/frame_0.bin",
       "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
     },
@@ -9616,6 +9850,16 @@
       "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_400_10bit_sgr_80x48/frame_1.bin",
       "sha256": "03d258af23eba19c70b9ecffb7f96a4c3792287ba810a11512679b6b3b3cf056"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_400_12bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "89139aeec9f89acfc16aa04fe3f115176fe9de0a5ff5411200bc2ea5bcce562d"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_400_12bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "14b1c8ea0b5457e79154424170d2a964a31c6d28437e2840d0e398d343219e78"
     },
     {
       "bytes": 11520,
@@ -9689,6 +9933,16 @@
     },
     {
       "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_420_12bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "0845e16dbf5f221edabdf60345a3741db81ec98fd91c5e1a6dde30f1d3f60d75"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_420_12bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "144b38dba5eb9346c796131b1bb38d2d2ca3e77399f6ff52c841711cf2bcbcc9"
+    },
+    {
+      "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_420_12bit_neutral_80x48/frame_0.bin",
       "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
     },
@@ -9739,6 +9993,16 @@
     },
     {
       "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_10bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "6d22b5959ee40cc29db56bc92f5c419412d7c0ff01c2bfff64578a4deeff1037"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_10bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "03f76227ba59d70f0f31659e2526c8bd1d89bcf20719afaf1ead7d1ab2da9046"
+    },
+    {
+      "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_422_10bit_neutral_80x48/frame_0.bin",
       "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
     },
@@ -9759,6 +10023,16 @@
     },
     {
       "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_12bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "e945a6633530c79654e15635ad8aa8c9fe49085afc8174053cfabd2724c14071"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_12bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "3d0e70921eee3d44245f65cd20eef47abe64e583248b45f6b9f7b7b9b5b04cf9"
+    },
+    {
+      "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_422_12bit_neutral_80x48/frame_0.bin",
       "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
     },
@@ -9766,6 +10040,16 @@
       "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_422_12bit_neutral_80x48/frame_1.bin",
       "sha256": "0bd6b4230b242a205425e76b049c76f033eddf94d227e98a85bc72d119b2755d"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_8bit_filmgrain_80x48/frame_0.bin",
+      "sha256": "2c07cf2243d7926fc39a444ddd4f5b46e0136b261b28ad48b6349a0ca7dde716"
+    },
+    {
+      "bytes": 11520,
+      "path": "pixels/animated_mixed_lossless_superres_422_8bit_filmgrain_80x48/frame_1.bin",
+      "sha256": "6c7b5454234ba7d8227fdb3411c333b5ff16ba0a05f2290edbbf3c9741b2dc06"
     },
     {
       "bytes": 11520,
@@ -9788,6 +10072,16 @@
       "sha256": "53f4b8f8459859d0fe0f1161f293e64b3ac5933e75215242f46c6700e90c1f72"
     },
     {
+      "bytes": 24576,
+      "path": "pixels/animated_mixed_lossless_superres_444_10bit_filmgrain_128x64/frame_0.bin",
+      "sha256": "e69d4c85fd496005fe428ca84ee5dd97aef7d93835f7b5b3cb379fb4878c59bd"
+    },
+    {
+      "bytes": 24576,
+      "path": "pixels/animated_mixed_lossless_superres_444_10bit_filmgrain_128x64/frame_1.bin",
+      "sha256": "341991a84c0dbe8de8c6d9a80eb61043fcf1df5fc7030c44a21f8268461285bc"
+    },
+    {
       "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_444_10bit_neutral_80x48/frame_0.bin",
       "sha256": "abcb890330c2fad7103d755250a34ebe23bff713470aa2f844f820e0b2cb2305"
@@ -9806,6 +10100,16 @@
       "bytes": 11520,
       "path": "pixels/animated_mixed_lossless_superres_444_10bit_sgr_80x48/frame_1.bin",
       "sha256": "c565b8b4b1472246e4e82c2c09f87fcfd65567b8d1ef40bb38d027c316108a06"
+    },
+    {
+      "bytes": 24576,
+      "path": "pixels/animated_mixed_lossless_superres_444_12bit_filmgrain_128x64/frame_0.bin",
+      "sha256": "5729b8c186604353aac3a7a88aff09a6b7dde465d7bf3a773e017438f35acce9"
+    },
+    {
+      "bytes": 24576,
+      "path": "pixels/animated_mixed_lossless_superres_444_12bit_filmgrain_128x64/frame_1.bin",
+      "sha256": "d59864d48db18211685dcd23a2f7ca5bfaeea00a97701b625251331a2d8e01a4"
     },
     {
       "bytes": 11520,
@@ -47309,6 +47613,398 @@
       "repeat_equal": true,
       "source": "animated_buffer_removal_time_all_layers_width32_maximum",
       "source_sha256": "0cf2df00e877b1185927730f8a0228a0d1f033dded79fdc14f70aa2214f6a605"
+    },
+    {
+      "input_bytes": 1864,
+      "input_path": "inputs/animated_mixed_lossless_superres_400_10bit_filmgrain_80x48.avif",
+      "input_sha256": "eb12b32b20cf07fcf25191c18f710c04a62d4451cbd54094e2acb98ffc01d531",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_400_10bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "902fef87ed6ac7c2889928adf5239d9fd49b95f0d909be013be5ee42b7f993fa",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "45add73c777ea13e01a5598182e95715cae9d7ae85c6531e2fd106dfb9bc29cc",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "01de67ab4565c92c90373d4c93f8081c397ab8a894bd48948669200046a21e4e",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_400_10bit_filmgrain_80x48",
+      "source_sha256": "eb12b32b20cf07fcf25191c18f710c04a62d4451cbd54094e2acb98ffc01d531"
+    },
+    {
+      "input_bytes": 1798,
+      "input_path": "inputs/animated_mixed_lossless_superres_400_12bit_filmgrain_80x48.avif",
+      "input_sha256": "8b05f1891e4720bf3906e9905641e4f23137c5284a3cdb165cf5241e527000d2",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_400_12bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "6e57e89b10f5db71b5de63a2c538538914ac62381f9a3da2dcf8fcec02832027",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "89139aeec9f89acfc16aa04fe3f115176fe9de0a5ff5411200bc2ea5bcce562d",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "14b1c8ea0b5457e79154424170d2a964a31c6d28437e2840d0e398d343219e78",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_400_12bit_filmgrain_80x48",
+      "source_sha256": "8b05f1891e4720bf3906e9905641e4f23137c5284a3cdb165cf5241e527000d2"
+    },
+    {
+      "input_bytes": 2353,
+      "input_path": "inputs/animated_mixed_lossless_superres_420_12bit_filmgrain_80x48.avif",
+      "input_sha256": "aaa8f784f24357bc84ce212b8e995f68b251d4a84152c3953e6e76af865a1589",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_420_12bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "4c2afde1cdea571bcd2627a873e8f2f43a7939348ffcdc1be3b09733ea96df90",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "0845e16dbf5f221edabdf60345a3741db81ec98fd91c5e1a6dde30f1d3f60d75",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "144b38dba5eb9346c796131b1bb38d2d2ca3e77399f6ff52c841711cf2bcbcc9",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_420_12bit_filmgrain_80x48",
+      "source_sha256": "aaa8f784f24357bc84ce212b8e995f68b251d4a84152c3953e6e76af865a1589"
+    },
+    {
+      "input_bytes": 2866,
+      "input_path": "inputs/animated_mixed_lossless_superres_422_8bit_filmgrain_80x48.avif",
+      "input_sha256": "41a52794082870ba454795331fbe40dcb1a9fa12fed53acd821150f7afb0998b",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_422_8bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "870372cec588c70c1f3190f540203b2a0f37b1f6fba1feb71a89eb6fef6c52e6",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "2c07cf2243d7926fc39a444ddd4f5b46e0136b261b28ad48b6349a0ca7dde716",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "6c7b5454234ba7d8227fdb3411c333b5ff16ba0a05f2290edbbf3c9741b2dc06",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_422_8bit_filmgrain_80x48",
+      "source_sha256": "41a52794082870ba454795331fbe40dcb1a9fa12fed53acd821150f7afb0998b"
+    },
+    {
+      "input_bytes": 2845,
+      "input_path": "inputs/animated_mixed_lossless_superres_422_10bit_filmgrain_80x48.avif",
+      "input_sha256": "f9bc47d21bfa3e40d7724547603a25ae171170ca8b12264f437b20df7f7108ba",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_422_10bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "aa2d5fd2609791c4a99685bcbdccf3e8fc3cbc56ab9f74129f9ac84511d042cb",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "6d22b5959ee40cc29db56bc92f5c419412d7c0ff01c2bfff64578a4deeff1037",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "03f76227ba59d70f0f31659e2526c8bd1d89bcf20719afaf1ead7d1ab2da9046",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_422_10bit_filmgrain_80x48",
+      "source_sha256": "f9bc47d21bfa3e40d7724547603a25ae171170ca8b12264f437b20df7f7108ba"
+    },
+    {
+      "input_bytes": 2716,
+      "input_path": "inputs/animated_mixed_lossless_superres_422_12bit_filmgrain_80x48.avif",
+      "input_sha256": "7cd21564db3da0e82a20270034e9c85f7e7551e14f520cbe9b3bb141efa27e99",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_422_12bit_filmgrain_80x48",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "a948d3044907e64e47de4174396361c41ecd8679f4cad0d486e3ce4f8dae6015",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "e945a6633530c79654e15635ad8aa8c9fe49085afc8174053cfabd2724c14071",
+            "size": [
+              80,
+              48
+            ]
+          },
+          {
+            "bytes": 11520,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "3d0e70921eee3d44245f65cd20eef47abe64e583248b45f6b9f7b7b9b5b04cf9",
+            "size": [
+              80,
+              48
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_422_12bit_filmgrain_80x48",
+      "source_sha256": "7cd21564db3da0e82a20270034e9c85f7e7551e14f520cbe9b3bb141efa27e99"
+    },
+    {
+      "input_bytes": 3577,
+      "input_path": "inputs/animated_mixed_lossless_superres_444_10bit_filmgrain_128x64.avif",
+      "input_sha256": "14d1effed3e3c34e17ca86936ba332d28cbcd25376f2a642ff7fd1d4d1e673c6",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "77df27a90a0ee83e29fdf189906a4f6baf508118a28c944d36297648cc4ed147",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 24576,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "e69d4c85fd496005fe428ca84ee5dd97aef7d93835f7b5b3cb379fb4878c59bd",
+            "size": [
+              128,
+              64
+            ]
+          },
+          {
+            "bytes": 24576,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "341991a84c0dbe8de8c6d9a80eb61043fcf1df5fc7030c44a21f8268461285bc",
+            "size": [
+              128,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64",
+      "source_sha256": "14d1effed3e3c34e17ca86936ba332d28cbcd25376f2a642ff7fd1d4d1e673c6"
+    },
+    {
+      "input_bytes": 3320,
+      "input_path": "inputs/animated_mixed_lossless_superres_444_12bit_filmgrain_128x64.avif",
+      "input_sha256": "00c469a1475ddeffeefa69a9a314c3bf4f172596ebcf2b826bd457dbc70222da",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_mixed_lossless_superres_444_12bit_filmgrain_128x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "a0d27ba2675e39b00859c6a937b01f45e042813f9b069ab0ac8d2b96b7d2c989",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 24576,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "5729b8c186604353aac3a7a88aff09a6b7dde465d7bf3a773e017438f35acce9",
+            "size": [
+              128,
+              64
+            ]
+          },
+          {
+            "bytes": 24576,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "d59864d48db18211685dcd23a2f7ca5bfaeea00a97701b625251331a2d8e01a4",
+            "size": [
+              128,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_mixed_lossless_superres_444_12bit_filmgrain_128x64",
+      "source_sha256": "00c469a1475ddeffeefa69a9a314c3bf4f172596ebcf2b826bd457dbc70222da"
     }
   ],
   "oracle": {

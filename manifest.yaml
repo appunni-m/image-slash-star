@@ -18552,10 +18552,20 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_400_10bit_sgr_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_400_10bit_filmgrain_80x48
+      description: Two-frame 80x48 10-bit 400 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_400_10bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_400_12bit_neutral_80x48
       description: Two-frame 80x48 12-bit 400 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
       test_assets:
       - animated_mixed_lossless_superres_400_12bit_neutral_80x48.avif
+      status: active
+    - id: animated_mixed_lossless_superres_400_12bit_filmgrain_80x48
+      description: Two-frame 80x48 12-bit 400 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_400_12bit_filmgrain_80x48.avif
       status: active
     - id: animated_mixed_lossless_superres_400_8bit_neutral_80x48
       description: Two-frame 80x48 8-bit 400 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
@@ -18592,6 +18602,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_420_12bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_420_12bit_filmgrain_80x48
+      description: Two-frame 80x48 12-bit 420 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_420_12bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_420_8bit_neutral_80x48
       description: Two-frame 80x48 8-bit 420 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
       test_assets:
@@ -18617,6 +18632,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_422_10bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_422_10bit_filmgrain_80x48
+      description: Two-frame 80x48 10-bit 422 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_422_10bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_422_10bit_sgr_80x48
       description: Two-frame 80x48 10-bit 422 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
       test_assets:
@@ -18627,10 +18647,20 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_422_12bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_422_12bit_filmgrain_80x48
+      description: Two-frame 80x48 12-bit 422 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_422_12bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_422_8bit_neutral_80x48
       description: Two-frame 80x48 8-bit 422 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
       test_assets:
       - animated_mixed_lossless_superres_422_8bit_neutral_80x48.avif
+      status: active
+    - id: animated_mixed_lossless_superres_422_8bit_filmgrain_80x48
+      description: Two-frame 80x48 8-bit 422 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_422_8bit_filmgrain_80x48.avif
       status: active
     - id: animated_mixed_lossless_superres_422_8bit_sgr_80x48
       description: Two-frame 80x48 8-bit 422 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
@@ -18642,6 +18672,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_444_10bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_444_10bit_filmgrain_128x64
+      description: Two-frame 128x64 10-bit 444 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_444_10bit_filmgrain_128x64.avif
+      status: active
     - id: animated_mixed_lossless_superres_444_10bit_sgr_80x48
       description: Two-frame 80x48 10-bit 444 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
       test_assets:
@@ -18651,6 +18686,11 @@ formats:
       description: Two-frame 80x48 12-bit 444 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
       test_assets:
       - animated_mixed_lossless_superres_444_12bit_neutral_80x48.avif
+      status: active
+    - id: animated_mixed_lossless_superres_444_12bit_filmgrain_128x64
+      description: Two-frame 128x64 12-bit 444 AVIF with mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_444_12bit_filmgrain_128x64.avif
       status: active
     - id: animated_mixed_lossless_superres_444_8bit_neutral_80x48
       description: Two-frame 80x48 8-bit 444 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
