@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,814 total rows: 3,140 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,140 decode rows are
+The current public evidence matrix contains 3,822 total rows: 3,148 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,148 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF implicit layer IDs and frame timing — 2026-11-03
@@ -16505,7 +16505,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6f92d6af7235fb6dc996f229ebed7521b79efaad1e3b9b288267391a54f5ffc4`; matrix `484d1e9d4a7c5ce276e94f417ae446f2085766cd2084758eff52b244a5b4b68f`.
+- Current fixture integrity only: manifest `c129afb3fc06841b10c7ded983d0c63e1cec5ad53518b28c5327b4a86c229c75`; matrix `1ba18600fc5db3cd150981a04b93a5218161cdd27093a2f091748badae08e3c8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -21433,3 +21433,25 @@ between the original and revised debug builds. These diagnostic checks do not
 establish a runtime speedup. The preceding native profile lacks DWARF line
 information; its function self samples remain usable, while source-line and
 complete-unwind claims are withheld.
+
+## Mixed-super-resolution film-grain parity — 2026-11-03
+
+Eight new AVIF decode rows cover active display grain with mixed-segment
+super-resolution: 400 at 10/12 bits, 420 at 12 bits, 422 at 8/10/12 bits, and
+444 at 10/12 bits. The 4:4:4 cases use 128x64 display dimensions and a coded
+width of 64 to fit the decoder's bounded grain geometry. The pinned producer
+reproduced all eight inputs twice, and the selected parity campaign passed 8/8
+exact RGB frame comparisons against Pillow 12.2.0.
+
+Coverage MCP's selected-report query found eight branch arms still uncovered in
+`mixed_segment_superres_film_grain_supported`. The report is retained at
+`.coverage-mcp/local-evidence/selected/20261103T010050.321471Z-d354387b8c274118a45abea21f0b4209/`;
+it is a local, selected-only measurement with unverified source identity and
+unknown test attribution, so it does not establish a whole-repository coverage
+gain.
+
+An 8-bit 4:4:4 candidate was excluded after the public Rust decode path returned
+`Unsupported` without a retained primary surface, while the pinned Pillow and
+libavif references decoded it. That remains a decoder parity gap for a later
+implementation pass. No runtime code or unit tests changed in this campaign,
+and it makes no performance claim.

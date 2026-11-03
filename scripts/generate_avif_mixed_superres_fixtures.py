@@ -31,9 +31,23 @@ FIXTURES = {
         "layout": "400",
         "restoration": 1
     },
+    "animated_mixed_lossless_superres_400_10bit_filmgrain_80x48": {
+        "depth": 10,
+        "film_grain": True,
+        "input_sha256": "eb12b32b20cf07fcf25191c18f710c04a62d4451cbd54094e2acb98ffc01d531",
+        "layout": "400",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_400_12bit_neutral_80x48": {
         "depth": 12,
         "input_sha256": "a538876e087283a7d2596e3f5ef87446869308895c34736f5887c8fab5006529",
+        "layout": "400",
+        "restoration": 0
+    },
+    "animated_mixed_lossless_superres_400_12bit_filmgrain_80x48": {
+        "depth": 12,
+        "film_grain": True,
+        "input_sha256": "8b05f1891e4720bf3906e9905641e4f23137c5284a3cdb165cf5241e527000d2",
         "layout": "400",
         "restoration": 0
     },
@@ -74,6 +88,13 @@ FIXTURES = {
         "input_sha256": "dbe51bd886ae6b5077c33f836f269098d8904099235e8a46baa76774d0ec7b44",
         "layout": "420",
         "restoration": 1
+    },
+    "animated_mixed_lossless_superres_420_12bit_filmgrain_80x48": {
+        "depth": 12,
+        "film_grain": True,
+        "input_sha256": "aaa8f784f24357bc84ce212b8e995f68b251d4a84152c3953e6e76af865a1589",
+        "layout": "420",
+        "restoration": 0
     },
     "animated_mixed_lossless_superres_420_12bit_neutral_80x48": {
         "depth": 12,
@@ -119,15 +140,36 @@ FIXTURES = {
         "layout": "422",
         "restoration": 1
     },
+    "animated_mixed_lossless_superres_422_10bit_filmgrain_80x48": {
+        "depth": 10,
+        "film_grain": True,
+        "input_sha256": "f9bc47d21bfa3e40d7724547603a25ae171170ca8b12264f437b20df7f7108ba",
+        "layout": "422",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_422_12bit_neutral_80x48": {
         "depth": 12,
         "input_sha256": "da6d31fc9ac3f7687c8273eda7f66f91995c6f1dc1e41bca3c98fd7d3d7450e9",
         "layout": "422",
         "restoration": 0
     },
+    "animated_mixed_lossless_superres_422_12bit_filmgrain_80x48": {
+        "depth": 12,
+        "film_grain": True,
+        "input_sha256": "7cd21564db3da0e82a20270034e9c85f7e7551e14f520cbe9b3bb141efa27e99",
+        "layout": "422",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_422_8bit_neutral_80x48": {
         "depth": 8,
         "input_sha256": "9c0b476ffff1a1665073179d6c8bddf5f8e87e22d817b871c6f6a1f538fadca1",
+        "layout": "422",
+        "restoration": 0
+    },
+    "animated_mixed_lossless_superres_422_8bit_filmgrain_80x48": {
+        "depth": 8,
+        "film_grain": True,
+        "input_sha256": "41a52794082870ba454795331fbe40dcb1a9fa12fed53acd821150f7afb0998b",
         "layout": "422",
         "restoration": 0
     },
@@ -149,10 +191,32 @@ FIXTURES = {
         "layout": "444",
         "restoration": 1
     },
+    "animated_mixed_lossless_superres_444_10bit_filmgrain_128x64": {
+        "coded_width": 64,
+        "depth": 10,
+        "denominator": 16,
+        "film_grain": True,
+        "height": 64,
+        "input_sha256": "14d1effed3e3c34e17ca86936ba332d28cbcd25376f2a642ff7fd1d4d1e673c6",
+        "layout": "444",
+        "width": 128,
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_444_12bit_neutral_80x48": {
         "depth": 12,
         "input_sha256": "97f8d605402baade83f5889470ab9ba1dc4dd149efbfe4178d155a9b9c77c46d",
         "layout": "444",
+        "restoration": 0
+    },
+    "animated_mixed_lossless_superres_444_12bit_filmgrain_128x64": {
+        "coded_width": 64,
+        "depth": 12,
+        "denominator": 16,
+        "film_grain": True,
+        "height": 64,
+        "input_sha256": "00c469a1475ddeffeefa69a9a314c3bf4f172596ebcf2b826bd457dbc70222da",
+        "layout": "444",
+        "width": 128,
         "restoration": 0
     },
     "animated_mixed_lossless_superres_444_8bit_neutral_80x48": {
@@ -176,10 +240,12 @@ def validate(path: Path, name: str) -> None:
     if hashlib.sha256(path.read_bytes()).hexdigest() != recipe["input_sha256"]:
         raise RuntimeError(f"{name}: complete input digest differs from pinned recipe")
     report = inspect(path)
+    width = recipe.get("width", 80)
+    height = recipe.get("height", 48)
     headers = [obu["sequence_header"] for sample in report["samples"]
                for obu in sample["obus"] if "sequence_header" in obu]
     layout = recipe["layout"]
-    expected = {"bit_depth": recipe["depth"], "max_width": 80, "max_height": 48,
+    expected = {"bit_depth": recipe["depth"], "max_width": width, "max_height": height,
                 "monochrome": layout == "400", "subsampling_x": int(layout != "444"),
                 "subsampling_y": int(layout in ("400", "420")), "enable_superres": True,
                 "enable_restoration": bool(recipe["restoration"]),
@@ -195,14 +261,15 @@ def validate(path: Path, name: str) -> None:
     if recipe.get("film_grain") and any(
             not frame.get("film_grain", {}).get("y_points") for frame in frames):
         raise RuntimeError(f"{name}: key and inter frames must carry active film grain")
-    if (key.get("frame_type") != "key" or key.get("frame_width") != 80
-            or key.get("frame_height") != 48 or key.get("superres_enabled") is not False
+    if (key.get("frame_type") != "key" or key.get("frame_width") != width
+            or key.get("frame_height") != height or key.get("superres_enabled") is not False
             or key.get("segmentation", {}).get("enabled") is not False):
         raise RuntimeError(f"{name}: key frame must remain ordinary lossy input")
     segmentation = inter.get("segmentation", {})
     expected_restoration = 2 if recipe["restoration"] and recipe["depth"] < 12 else 0
-    if (inter.get("frame_type") != "inter" or inter.get("frame_width") != 64
-            or inter.get("frame_height") != 48 or inter.get("upscaled_width") != 80
+    if (inter.get("frame_type") != "inter"
+            or inter.get("frame_width") != recipe.get("coded_width", 64)
+            or inter.get("frame_height") != height or inter.get("upscaled_width") != width
             or inter.get("superres_enabled") is not True or inter.get("all_lossless") is not False
             or segmentation.get("enabled") is not True
             or segmentation.get("update_map") is not True or segmentation.get("temporal") is not False
@@ -218,12 +285,15 @@ def validate(path: Path, name: str) -> None:
 
 def generate(encoder: Path, destination: Path, name: str) -> None:
     recipe = FIXTURES[name]
+    width = recipe.get("width", 80)
+    height = recipe.get("height", 48)
     with tempfile.TemporaryDirectory(prefix="avif-mixed-superres-") as temporary:
         outputs = []
         for attempt in range(2):
             path = Path(temporary) / f"{attempt}.avif"
-            command = [str(encoder), str(path), "80", "48", str(recipe["depth"]),
-                       recipe["layout"], "45", "3", "10", str(recipe["restoration"])]
+            command = [str(encoder), str(path), str(width), str(height), str(recipe["depth"]),
+                       recipe["layout"], "45", "3", str(recipe.get("denominator", 10)),
+                       str(recipe["restoration"])]
             if recipe.get("film_grain"):
                 command.append("film-grain")
             result = subprocess.run(command, capture_output=True, text=True, check=False)
