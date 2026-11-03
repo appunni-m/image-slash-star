@@ -10,8 +10,8 @@
 #ifndef FIXTURE_ROOT_SIZE
 #define FIXTURE_ROOT_SIZE 16
 #endif
-#if FIXTURE_ROOT_SIZE != 16 && FIXTURE_ROOT_SIZE != 32 && FIXTURE_ROOT_SIZE != 64
-#error "narrow inter fixtures require 16x16, 32x32, or 64x64 partition roots"
+#if FIXTURE_ROOT_SIZE != 8 && FIXTURE_ROOT_SIZE != 16 && FIXTURE_ROOT_SIZE != 32 && FIXTURE_ROOT_SIZE != 64
+#error "narrow inter fixtures require 8x8, 16x16, 32x32, or 64x64 partition roots"
 #endif
 #define FIXTURE_STRING_INNER(value) #value
 #define FIXTURE_STRING(value) FIXTURE_STRING_INNER(value)
