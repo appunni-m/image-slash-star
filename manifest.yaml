@@ -16925,6 +16925,11 @@ formats:
       test_assets:
       - animated_lossy_inter_422_qindex0_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit I422 AVIF sequence with horizontal B8x4 inter leaves at non-lossless qindex zero and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif
+      status: active
     - id: animated_lossy_inter_420_b8x16_mixed_topology_64x64
       description: Two-frame 64x64 lossy I420 AVIF sequence with mixed TX4x4 and TX8x8 children in inter B8x16 transforms
       test_assets:

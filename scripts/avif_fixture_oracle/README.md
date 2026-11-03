@@ -998,6 +998,38 @@ SHA-256: `062cec9bf86cfa7e5d2130baec72884dec70d96d9621578f91388612d21a1fab`.
 Run `make verify-fixture-integrity` to check the retained fixture and
 references without rebuilding the native encoder.
 
+### Horizontal B8x4 I422 at qindex zero
+
+`animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif` uses the same
+64x64 I422 source pattern and qindex-zero frame headers, with a pinned AOM
+partition patch that forces horizontal B8x4 leaves from inter B8x8 roots.
+The inter frame is non-lossless because its luma DC delta is two; chroma
+deltas remain zero. This adds a parity case for that distinct I422 B8x4
+partition pattern at base qindex zero under transform-mode-select. Pillow
+12.2.0 produces the same two RGB frame hashes as the general I422 qindex-zero
+sequence, while the encoded AVIF hash is
+`43e290fb890e116a01100796cdf0790c88ff05845a42142498414ba44760260d`.
+
+Build the fixture-only encoder from the same pinned AOM and libavif revisions
+as the preceding I422 section, using separate build directories. Apply
+`libaom-narrow-inter-b8x4.patch` to AOM instead of
+`libaom-qindex0-nonlossless-i422.patch`; this patch forces the horizontal
+B8x4 partition and the qindex-zero luma delta. Compile
+`encode_lossy_inter_i422_small_partitions.c` against those static libraries
+as `target/oracle-staging/encode-avif-inter-i422-b8x4-qzero`, then run:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_inter_422_qindex0_mode_select.py \
+  --variant b8x4 --encoder target/oracle-staging/encode-avif-inter-i422-b8x4-qzero
+.oracle-venv/bin/python scripts/generate_avif_inter_422_qindex0_mode_select.py \
+  --variant b8x4 --check
+```
+
+The generator requires repeated timestamp-normalized outputs to match, verifies
+the I422/qindex-zero frame headers, and compares both complete Pillow RGB
+frames. The standard `make verify` path checks the committed input and oracle
+references without rebuilding the encoder.
+
 ## Lossless 10-bit I420 B128 sequence
 
 `animated_lossless_inter_420_b128x128_10bit.avif` uses a 128x128 AV1

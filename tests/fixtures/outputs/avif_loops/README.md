@@ -1,4 +1,4 @@
-This bundle records 618 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 610 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2184 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 622 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 614 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2196 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
@@ -190,6 +190,8 @@ The two-frame 64x64 I422 qindex-zero companion keeps its key frame lossless
 and makes its `TX_MODE_SELECT` inter frame non-lossless with a luma DC delta.
 Its two exact Pillow RGB frames and pinned native one-play observation are
 retained.
+The horizontal B8x4 I422 qindex-zero companion keeps its key frame lossless and uses a non-lossless TX_MODE_SELECT inter frame with luma DC delta two. Pinned Pillow and native libavif decode both exact RGB frames and report one play; the native observation records two decoded frames and the exact input digest.
+
 The two-frame 64x64 lossy I420 mixed-topology companion forces B8x16 inter
 leaves with one TX8x8 child split into TX4x4 blocks and the other left unsplit.
 It retains both exact Pillow RGB frames and the pinned native loop observation.
