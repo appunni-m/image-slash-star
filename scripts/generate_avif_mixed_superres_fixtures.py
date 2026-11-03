@@ -43,6 +43,13 @@ FIXTURES = {
         "layout": "400",
         "restoration": 0
     },
+    "animated_mixed_lossless_superres_400_8bit_filmgrain_80x48": {
+        "depth": 8,
+        "film_grain": True,
+        "input_sha256": "903594a10cea1383ddde6930d31119a46b9ba7f756793e47e351c2d158256196",
+        "layout": "400",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_400_8bit_sgr_80x48": {
         "depth": 8,
         "input_sha256": "8886acec3f9b44eab0bb9dffe033b862f17f39117188eb8ec2425922b401e301",
@@ -52,6 +59,13 @@ FIXTURES = {
     "animated_mixed_lossless_superres_420_10bit_neutral_80x48": {
         "depth": 10,
         "input_sha256": "9cef3d1c8cc2c8a7484ce6a04ec4a706de060cc0212d68409cd3e3b6e34f0e2d",
+        "layout": "420",
+        "restoration": 0
+    },
+    "animated_mixed_lossless_superres_420_10bit_filmgrain_80x48": {
+        "depth": 10,
+        "film_grain": True,
+        "input_sha256": "aec952b0067e4b4a022ddb0427f7e87d9fed11ee235a454c60da6be92cb88f2f",
         "layout": "420",
         "restoration": 0
     },
@@ -73,9 +87,23 @@ FIXTURES = {
         "layout": "420",
         "restoration": 0
     },
+    "animated_mixed_lossless_superres_420_8bit_filmgrain_80x48": {
+        "depth": 8,
+        "film_grain": True,
+        "input_sha256": "4486713a624c8282f82f165aadacbf6a6dfda4244375dcae2878cb550cb4fea1",
+        "layout": "420",
+        "restoration": 0
+    },
     "animated_mixed_lossless_superres_420_8bit_sgr_80x48": {
         "depth": 8,
         "input_sha256": "706483e6149e8b8aeab31f85344aaad8f38b3fda125cad40db65134d0db43048",
+        "layout": "420",
+        "restoration": 1
+    },
+    "animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48": {
+        "depth": 8,
+        "film_grain": True,
+        "input_sha256": "c9bbded2b96c08a2a2e5792bee2f313858e7889727e7eb6c99eba059c3905563",
         "layout": "420",
         "restoration": 1
     },
@@ -154,7 +182,8 @@ def validate(path: Path, name: str) -> None:
     expected = {"bit_depth": recipe["depth"], "max_width": 80, "max_height": 48,
                 "monochrome": layout == "400", "subsampling_x": int(layout != "444"),
                 "subsampling_y": int(layout in ("400", "420")), "enable_superres": True,
-                "enable_restoration": bool(recipe["restoration"])}
+                "enable_restoration": bool(recipe["restoration"]),
+                "film_grain_present": bool(recipe.get("film_grain", False))}
     if not headers or any(any(h.get(k) != v for k, v in expected.items()) for h in headers):
         raise RuntimeError(f"{name}: sequence does not match its planar input recipe")
     frames = [obu["frame_header"] for sample in report["samples"]
@@ -163,6 +192,9 @@ def validate(path: Path, name: str) -> None:
     if len(frames) != 2:
         raise RuntimeError(f"{name}: expected one key and one inter sample")
     key, inter = frames
+    if recipe.get("film_grain") and any(
+            not frame.get("film_grain", {}).get("y_points") for frame in frames):
+        raise RuntimeError(f"{name}: key and inter frames must carry active film grain")
     if (key.get("frame_type") != "key" or key.get("frame_width") != 80
             or key.get("frame_height") != 48 or key.get("superres_enabled") is not False
             or key.get("segmentation", {}).get("enabled") is not False):
@@ -192,6 +224,8 @@ def generate(encoder: Path, destination: Path, name: str) -> None:
             path = Path(temporary) / f"{attempt}.avif"
             command = [str(encoder), str(path), "80", "48", str(recipe["depth"]),
                        recipe["layout"], "45", "3", "10", str(recipe["restoration"])]
+            if recipe.get("film_grain"):
+                command.append("film-grain")
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 raise RuntimeError(f"native producer failed ({result.returncode}): {result.stderr}")

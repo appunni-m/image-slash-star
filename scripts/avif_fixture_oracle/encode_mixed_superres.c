@@ -22,13 +22,17 @@ int main(int argc, char **argv)
         return 0;
     }
     unsigned width, height, depth, quality, speed, denominator, restoration;
+    const char *mode = argc == 11 ? argv[10] : NULL;
+    const int valid_mode = mode == NULL || !strcmp(mode, "ordinary") ||
+        !strcmp(mode, "mixed-key") || !strcmp(mode, "motion-key") ||
+        !strcmp(mode, "integer-key") || !strcmp(mode, "film-grain");
     if ((argc != 10 && argc != 11) ||
-        (argc == 11 && strcmp(argv[10], "ordinary") && strcmp(argv[10], "mixed-key") && strcmp(argv[10], "motion-key") && strcmp(argv[10], "integer-key")) ||
+        !valid_mode ||
         !number(argv[2],32,256,&width) || !number(argv[3],16,128,&height) ||
         !number(argv[4],8,12,&depth) || (depth != 8 && depth != 10 && depth != 12) ||
         !number(argv[6],1,99,&quality) || !number(argv[7],0,10,&speed) ||
         !number(argv[8],8,16,&denominator) || !number(argv[9],0,1,&restoration)) {
-        fprintf(stderr,"usage: %s OUTPUT WIDTH HEIGHT DEPTH {400|420|422|444} QUALITY SPEED DEN RESTORATION [ordinary|mixed-key|motion-key|integer-key]\n",argv[0]);
+        fprintf(stderr,"usage: %s OUTPUT WIDTH HEIGHT DEPTH {400|420|422|444} QUALITY SPEED DEN RESTORATION [ordinary|mixed-key|motion-key|integer-key|film-grain]\n",argv[0]);
         return 2;
     }
     avifPixelFormat layout;
@@ -65,21 +69,26 @@ int main(int argc, char **argv)
         {"enable-interinter-wedge","0"},{"enable-interintra-wedge","0"},{"enable-obmc","0"},
         {"enable-ref-frame-mvs","0"},{"enable-intrabc","0"},{"aq-mode","0"},
         {"deltaq-mode","0"},{"enable-chroma-deltaq","0"},{"enable-qm","0"},
-        {"fixture-roi-mixed-superres","1"}
+        {"fixture-roi-mixed-superres","1"},{"film-grain-test","1"}
     };
+    const int ordinary = mode != NULL && !strcmp(mode, "ordinary");
+    const int film_grain = mode != NULL && !strcmp(mode, "film-grain");
     for (size_t n=0;n<sizeof(controls)/sizeof(controls[0]);++n) {
-        if (argc == 11 && !strcmp(argv[10], "ordinary") &&
+        if (ordinary &&
             !strcmp(controls[n][0], "fixture-roi-mixed-superres")) { continue; }
+        if (!film_grain &&
+            !strcmp(controls[n][0], "film-grain-test")) { continue; }
         if (avifEncoderSetCodecSpecificOption(encoder,controls[n][0],controls[n][1])!=AVIF_RESULT_OK) { goto cleanup; }
     }
     if (avifEncoderSetCodecSpecificOption(encoder,"superres-denominator",den)!=AVIF_RESULT_OK ||
         avifEncoderSetCodecSpecificOption(encoder,"enable-restoration",restoration ? "1":"0")!=AVIF_RESULT_OK) { goto cleanup; }
-    const int integer_key = argc == 11 && !strcmp(argv[10], "integer-key");
+    const int integer_key = mode != NULL && !strcmp(mode, "integer-key");
     if (integer_key &&
         (avifEncoderSetCodecSpecificOption(encoder, "tune-content", "screen") != AVIF_RESULT_OK ||
          avifEncoderSetCodecSpecificOption(encoder, "enable-palette", "0") != AVIF_RESULT_OK)) { goto cleanup; }
-    const int motion_key = argc == 11 && !strcmp(argv[10], "motion-key");
-    const int varied_key = integer_key || motion_key || (argc == 11 && !strcmp(argv[10], "mixed-key"));
+    const int motion_key = mode != NULL && !strcmp(mode, "motion-key");
+    const int mixed_key = mode != NULL && !strcmp(mode, "mixed-key");
+    const int varied_key = integer_key || motion_key || mixed_key;
     for (unsigned frame=0;frame<2;++frame) {
         for (int plane=AVIF_CHAN_Y;plane<=AVIF_CHAN_V;++plane) {
             uint8_t *data=avifImagePlane(image,(avifChannelIndex)plane);
