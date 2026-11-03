@@ -1429,14 +1429,16 @@ target output or expected pixels.
 
 ## Mixed lossless/lossy super-resolution inter sequences
 
-`scripts/generate_avif_mixed_superres_fixtures.py` produces twenty distinct
+`scripts/generate_avif_mixed_superres_fixtures.py` produces twenty-four distinct
 80x48 two-frame inputs: monochrome, I420, I422 and I444 at 8/10/12 bits with
-neutral filters, plus active luma SGR restoration at 8/10 bits. An ordinary
-lossy key precedes an inter frame coded at width 64 and displayed at width 80.
-Segment 1 has qindex zero; the other segments retain qindex 140. Independent
-planar samples retain nonzero low bits at high depth. The input generator
-reads neither Rust outputs nor reference pixels; standard reference collectors
-own the exact Pillow frames and native sequence observations.
+neutral filters, plus active luma SGR restoration at 8/10 bits and active film
+grain for monochrome and I420 8/10-bit inputs. One I420 8-bit grain input also
+has active luma SGR restoration. An ordinary lossy key precedes
+an inter frame coded at width 64 and displayed at width 80. Segment 1 has qindex zero; the
+other segments retain qindex 140. Independent planar samples retain nonzero
+low bits at high depth. The input generator reads neither Rust outputs nor
+reference pixels; standard reference collectors own the exact Pillow frames
+and native sequence observations.
 
 The native fixture patches forward super-resolution configuration and a
 bounded ROI map, permit its use in the ordinary RD encoder path, retain an
@@ -1444,9 +1446,9 @@ explicit non-temporal map, and allow qindex zero. They apply the ROI to inter
 frames only. All arithmetic and AV1 encoding still run in pinned libaom.
 Pinned libavif disables 12-bit encoder restoration; the generator preserves
 that control and omits the four byte-identical restoration requests. It does
-not claim 12-bit restoration inputs. The final twenty inputs reproduce twice
-and independently parsed headers must confirm their actual segment, scaling
-and restoration features before they are written.
+not claim 12-bit restoration inputs. All twenty-four inputs reproduce twice
+and independently parsed headers must confirm their actual segment, scaling,
+restoration and film-grain features before they are written.
 
 Using the already available clean pinned sources, build without installation:
 
@@ -1481,18 +1483,18 @@ target/oracle-pillow312-venv/bin/python scripts/generate_avif_mixed_superres_fix
 
 Only the input producer uses these patches. No runtime dependency, native
 fallback, unsafe Rust, fault hook or private unit test is added. The ordinary
-fixture-verification target checks the twenty complete input digests and AV1
+fixture-verification target checks the twenty-four complete input digests and AV1
 features. The investigation also retains public inputs that originally exposed
 unsupported monochrome/mixed-key and ordinary nonsegmented super-resolution
 paths. Subsequent sections describe their separate parity cases; they do not
-change these twenty inputs.
+change these twenty-four inputs.
 
 ## Ordinary monochrome super-resolution inter sequences
 
 The same producer accepts an optional final `ordinary` argument. This skips
 only the fixture ROI option and emits ordinary lossy key/inter samples with
-no segmentation. Its default mixed-segment invocation and all twenty pinned
-mixed input digests remain unchanged. Build it with the pinned recipe above,
+no segmentation. Its default mixed-segment invocation and all twenty-four
+pinned mixed input digests remain unchanged. Build it with the pinned recipe above,
 then run:
 
 ```sh

@@ -18562,6 +18562,11 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_400_8bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_400_8bit_filmgrain_80x48
+      description: Two-frame 80x48 8-bit 400 AVIF with mixed lossless/lossy inter segments, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_400_8bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_400_8bit_sgr_80x48
       description: Two-frame 80x48 8-bit 400 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
       test_assets:
@@ -18571,6 +18576,11 @@ formats:
       description: Two-frame 80x48 10-bit 420 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
       test_assets:
       - animated_mixed_lossless_superres_420_10bit_neutral_80x48.avif
+      status: active
+    - id: animated_mixed_lossless_superres_420_10bit_filmgrain_80x48
+      description: Two-frame 80x48 10-bit 420 AVIF with mixed lossless/lossy inter segments, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_420_10bit_filmgrain_80x48.avif
       status: active
     - id: animated_mixed_lossless_superres_420_10bit_sgr_80x48
       description: Two-frame 80x48 10-bit 420 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
@@ -18587,10 +18597,20 @@ formats:
       test_assets:
       - animated_mixed_lossless_superres_420_8bit_neutral_80x48.avif
       status: active
+    - id: animated_mixed_lossless_superres_420_8bit_filmgrain_80x48
+      description: Two-frame 80x48 8-bit 420 AVIF with mixed lossless/lossy inter segments, horizontal super-resolution and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_420_8bit_filmgrain_80x48.avif
+      status: active
     - id: animated_mixed_lossless_superres_420_8bit_sgr_80x48
       description: Two-frame 80x48 8-bit 420 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and active luma SGR restoration; exact Pillow frame and sequence parity
       test_assets:
       - animated_mixed_lossless_superres_420_8bit_sgr_80x48.avif
+      status: active
+    - id: animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48
+      description: Two-frame 80x48 8-bit 420 AVIF with mixed lossless/lossy inter segments, horizontal super-resolution, active luma SGR restoration and active film grain on both frames; exact Pillow frame and sequence parity
+      test_assets:
+      - animated_mixed_lossless_superres_420_8bit_sgr_filmgrain_80x48.avif
       status: active
     - id: animated_mixed_lossless_superres_422_10bit_neutral_80x48
       description: Two-frame 80x48 10-bit 422 AVIF with an ordinary lossy key and mixed lossless/lossy inter segments, coded width 64, horizontal super-resolution and neutral postfilters; exact Pillow frame and sequence parity
