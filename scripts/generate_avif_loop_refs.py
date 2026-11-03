@@ -177,6 +177,10 @@ FIXTURES = {
         "animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif",
         "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
     ),
+    "lossless_inter_i422_fixed_b16x16_64x64": (
+        "animated_lossless_inter_i422_fixed_b16x16_64x64.avif",
+        "43866d1bf796b85eab547f3c7859e063599209bbec528d49e2fec74b681e4343",
+    ),
     "lossless_inter_i444_derived_skip_refs_b32x32_64x64": (
         "animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64.avif",
         "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",

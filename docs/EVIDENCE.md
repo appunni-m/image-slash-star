@@ -1,8 +1,35 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,837 total rows: 3,163 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,163 decode rows are
+The current public evidence matrix contains 3,838 total rows: 3,164 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,164 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## AVIF all-lossless I422 B16x16 parity and selected coverage — 2026-11-04
+
+Added `decode:avif:animated_lossless_inter_i422_fixed_b16x16_64x64`, a
+two-frame 64x64 8-bit I422 all-lossless sequence with fixed 16x16 inter
+partitions. The pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 generator
+reproduces the input hash `43866d1b…e4343` and both exact RGB frame hashes.
+Both decoded frames match the pinned Pillow output, and a separate pinned
+native loop observation confirms the two-frame sequence and infinite
+repetition. The manifest's older B4x8 I420 row now reflects its supported
+sequence parity instead of retaining a stale unsupported expectation.
+
+A selected `cargo llvm-cov` parity run passed all 1,391 AVIF rows: 1,386 decode
+rows and five encode rows. The source and fixture inventories did not change
+during that run. Its local report is
+`.coverage-mcp/local-evidence/selected/20261103T185507.555297Z-5a1d2c210a464100a0853b8e4de45f06/coverage.json`
+(SHA-256 `e109b0859b01039590b374f0aab1dccc985044fc935a54fb4644da639b856fc4`).
+For this selected profile, LLVM reports 53,253/142,370 lines, 12,541/31,998
+branches, 2,917/9,138 functions, and 76,721/220,595 regions covered. These
+are selected-run totals, not a full-project baseline or a 100% coverage claim.
+
+The `coverage-mcp gaps` query for `src/codecs/avif` surfaced missing branches
+in AV1 inter-translation paths in `src/codecs/avif/av1/block.rs`. The report
+is local-only: Coverage MCP marks its source as `unverified` and tests as
+`unknown`, because this CLI has no receipt-registration action. No unit tests
+were added; the next coverage work is to map the remaining gaps to public
+parity inputs and target-only fault contracts.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
 
@@ -16682,7 +16709,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3311c6866189338b9bc72b84c7d1255eb70bfdf61e2e92a9188632079d8398e6`; matrix `4d39b71efc5fe5f1b8298d2daab4baef655ad2219fb94be019c15c711d7aeb6d`.
+- Current fixture integrity only: manifest `54e9a46178c6b2a28d138a038639066428f052b9631645f8e90dfbec17b5ee6a`; matrix `87ada957f8e3fede164f281f4bd61a06bd9e8015066a010cc69fe1b51010ccde`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

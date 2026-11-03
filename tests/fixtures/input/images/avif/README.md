@@ -275,6 +275,7 @@ generation provenance follow.
 | `animated_lossless_inter_i422_clipped_b32x32_52x64.avif` | Deterministic two-frame 52x64 RGB 4:2:2 sequence selecting a clipped 20x32 lossless AV1 B32x32 edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_i444_clipped_b32x32_64x56.avif` | Deterministic two-frame 64x56 RGB 4:4:4 sequence selecting a clipped 32x24 lossless AV1 B32x32 bottom-edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_i422_clipped_b32x32_52x60.avif` | Deterministic two-frame 52x60 RGB 4:2:2 sequence selecting a simultaneously right-and-bottom-clipped 20x28 luma, 10x28 chroma lossless AV1 B32x32 grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i422_fixed_b16x16_64x64.avif` | Deterministic two-frame 64x64 8-bit I422 all-lossless sequence with fixed 16x16 inter partitions and a moving textured patch | `scripts/generate_avif_lossless_inter_i422_b16x16.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; one thread, timestamp-normalized | `43866d1bf796b85eab547f3c7859e063599209bbec528d49e2fec74b681e4343` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_i444_clipped_b32x32_52x60.avif` | Deterministic two-frame 52x60 RGB 4:4:4 sequence selecting a simultaneously right-and-bottom-clipped 20x28 lossless AV1 B32x32 grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_clipped_b32x32_60x64.avif` | Deterministic two-frame 60x64 RGB sequence with a translated patch selecting a partially visible lossless AV1 4:2:0 B32x32 inter grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, one thread | `a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc` | MIT/Apache-2.0 (repository-generated) |
 | `animated_lossless_inter_420_clipped_b32x32_64x60.avif` | Deterministic two-frame 64x60 RGB sequence with a translated lower-edge patch for bottom-edge frame cropping | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, one thread | `7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6` | MIT/Apache-2.0 (repository-generated) |
@@ -768,6 +769,14 @@ Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode it losslessly at quality 100
 and speed 0 as 4:2:2 with fixed 32x32 partitions. Its right-edge B32x32 block
 has a 20x32 visible luma extent; the generator encodes it twice, zeroes
 version-one movie timestamps, and checks the listed hash.
+
+`animated_lossless_inter_i422_fixed_b16x16_64x64.avif` uses two deterministic
+64x64 RGB frames with a moving textured 16x16 patch. The pinned Pillow
+12.2.0/libavif 1.4.1/libaom 3.13.2 generator encodes an 8-bit I422 all-lossless
+sequence with fixed 16x16 inter partitions, normalizes movie timestamps, and
+checks the input and both exact Pillow frame hashes. The public sequence
+decoder matches both frames byte-for-byte; independent pinned native loop
+evidence confirms the two-frame sequence.
 
 `animated_lossless_inter_i444_clipped_b32x32_64x56.avif` uses a deterministic
 64x56 RGB texture below a flat top half, with the second frame's lower texture
