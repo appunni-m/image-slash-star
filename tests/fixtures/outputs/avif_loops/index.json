@@ -2348,13 +2348,36 @@
       "case_names": [
         "lossy_inter_420_b8x4_mode_select_64x64"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "5632b5ca0754b346847bab528980ae91eb8007797a1bb5b06581e02a5ff3fb4a",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "lossy_inter_420_b4x8_mode_select_64x64"
+      ]
     }
   ],
   "artifacts": [
     {
-      "bytes": 44848,
+      "bytes": 45293,
       "path": "README.md",
-      "sha256": "27cd35766eed81982654830a70a8554dbe4e171bc6389449a19daf5f89d16509"
+      "sha256": "38ac1f196e924439ba17b38f71a9d4b3997f85756b7d5ee17d97f5c239363227"
     },
     {
       "bytes": 2267,
@@ -4790,6 +4813,11 @@
       "bytes": 2550,
       "path": "inputs/lossy_inter_420_b16x64_reduced_transform_set_64x64.avif",
       "sha256": "3a52bdb0573571d5b9d6c5f79cbf4f41816fa84e4ec052034a9e418b9797511e"
+    },
+    {
+      "bytes": 3258,
+      "path": "inputs/lossy_inter_420_b4x8_mode_select_64x64.avif",
+      "sha256": "d8627ee4f56870730f631b439c7c18f6ddcee432d270a073cbd31ab56196b8aa"
     },
     {
       "bytes": 2589,
@@ -11740,6 +11768,16 @@
       "bytes": 12288,
       "path": "pixels/lossy_inter_420_b16x64_reduced_transform_set_64x64/frame_1.bin",
       "sha256": "32863c207860b8ba57ecb2e8adefa3c6a50ccbc1c0139c85a775e7db4b7b5ff3"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b4x8_mode_select_64x64/frame_0.bin",
+      "sha256": "684c045e7517eda1995719b46e6c40696e36d12ce5893044febc3cfa154d8ca9"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b4x8_mode_select_64x64/frame_1.bin",
+      "sha256": "94a52466c6bca4c5139d95911c4eac19ac8507c53c5e77e37ed05c5dbc547981"
     },
     {
       "bytes": 12288,
@@ -48440,6 +48478,55 @@
       "repeat_equal": true,
       "source": "lossy_inter_i422_loopfilter_active_16x16",
       "source_sha256": "757c9fc631ecee8522b14e66fafc6aebcbe90aa2bd5a3cc2d27df472e7440481"
+    },
+    {
+      "input_bytes": 3258,
+      "input_path": "inputs/lossy_inter_420_b4x8_mode_select_64x64.avif",
+      "input_sha256": "d8627ee4f56870730f631b439c7c18f6ddcee432d270a073cbd31ab56196b8aa",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_420_b4x8_mode_select_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "5632b5ca0754b346847bab528980ae91eb8007797a1bb5b06581e02a5ff3fb4a",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "684c045e7517eda1995719b46e6c40696e36d12ce5893044febc3cfa154d8ca9",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "94a52466c6bca4c5139d95911c4eac19ac8507c53c5e77e37ed05c5dbc547981",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_420_b4x8_mode_select_64x64",
+      "source_sha256": "d8627ee4f56870730f631b439c7c18f6ddcee432d270a073cbd31ab56196b8aa"
     }
   ],
   "oracle": {
