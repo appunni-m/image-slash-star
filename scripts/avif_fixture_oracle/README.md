@@ -1468,6 +1468,75 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
   --encoder-dir target/oracle-staging/narrow-inter-b4x8-tools
 ```
 
+## Vertical B4x8 qindex-zero non-lossless I420 sequence
+
+`animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif` uses the same
+vertical B4x8 partition control with an 8-bit I420 inter frame at base qindex
+zero. Its key frame remains all-lossless; the inter frame has zero luma DC
+delta and chroma DC/AC deltas of two, so it exercises the non-lossless
+qindex-zero path. The fixture-only
+[`libaom-i420-qindex0-nonlossless-inter.patch`](libaom-i420-qindex0-nonlossless-inter.patch)
+permits this standards-valid chroma-delta configuration in the pinned AOM
+producer. `FIXTURE_ENABLE_CHROMA_DELTAQ=1` enables the corresponding libavif
+encoder option. The generator checks both normalized complete-file identity
+and the key/inter quantization headers.
+
+Start from the pinned AOM and libavif sources used by the narrow-inter profile,
+then apply both AOM patches before building. Keep this build separate from the
+positive-qindex producer so its fixture-only controls cannot affect other
+inputs:
+
+```sh
+mkdir -p target/oracle-staging/libaom-narrow-b4x8-qindex0-source
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 |
+  tar -x -C target/oracle-staging/libaom-narrow-b4x8-qindex0-source
+git apply --directory=target/oracle-staging/libaom-narrow-b4x8-qindex0-source \
+  scripts/avif_fixture_oracle/libaom-narrow-inter-b4x8.patch
+git apply --directory=target/oracle-staging/libaom-narrow-b4x8-qindex0-source \
+  scripts/avif_fixture_oracle/libaom-i420-qindex0-nonlossless-inter.patch
+cmake -S target/oracle-staging/libaom-narrow-b4x8-qindex0-source \
+  -B target/oracle-staging/libaom-narrow-b4x8-qindex0-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-narrow-b4x8-qindex0-build -j 4
+
+mkdir -p target/oracle-staging/libavif-narrow-b4x8-qindex0-source
+git -C target/oracle-staging/libavif-loop-clean-source \
+  archive 6543b22b5bc706c53f038a16fe515f921556d9b3 |
+  tar -x -C target/oracle-staging/libavif-narrow-b4x8-qindex0-source
+git apply --directory=target/oracle-staging/libavif-narrow-b4x8-qindex0-source \
+  scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch
+cmake -S target/oracle-staging/libavif-narrow-b4x8-qindex0-source \
+  -B target/oracle-staging/libavif-narrow-b4x8-qindex0-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-narrow-b4x8-qindex0-build/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-narrow-b4x8-qindex0-source"
+cmake --build target/oracle-staging/libavif-narrow-b4x8-qindex0-build \
+  --target avif_static -j 4
+
+mkdir -p target/oracle-staging/narrow-inter-b4x8-qindex0-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_NARROW_VERTICAL=1 -DFIXTURE_ENABLE_CHROMA_DELTAQ=1 \
+  -DFIXTURE_WIDTH=64 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV420 -DFIXTURE_QUALITY=100 \
+  -I target/oracle-staging/libavif-narrow-b4x8-qindex0-source/include \
+  -I target/oracle-staging/libavif-narrow-b4x8-qindex0-build/include \
+  -I target/oracle-staging/libaom-narrow-b4x8-qindex0-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-b4x8-qindex0-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b4x8-qindex0-build/libaom.a \
+  -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b4x8-qindex0-tools/encode-square-420-100
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-qindex0-tools
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64 --check
+```
+
 ## Vertical B4x8 4:4:4 TX_MODE_SELECT inter sequence
 
 `animated_lossy_inter_444_b4x8_mode_select_64x64.avif` reuses the vertical

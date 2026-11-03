@@ -1351,6 +1351,19 @@ VARIANTS = {
         "transform_mode": "select",
         "width": 64
     },
+    "animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64": {
+        "bit_depth": 8,
+        "height": 64,
+        "input_name": "square-420-q100",
+        "layout": "420",
+        "pattern": "coarse",
+        "quality": 100,
+        "qindex_zero_nonlossless": True,
+        "root_size": 8,
+        "sha256": "bfc6c0756fcf2bceda38f6830b89c2e72b55d067e5b3816bd2661007d2fa41ee",
+        "transform_mode": "select",
+        "width": 64
+    },
     "animated_lossy_inter_444_b4x8_mode_select_64x64": {
         "bit_depth": 8,
         "height": 64,
@@ -1417,6 +1430,20 @@ def validate(path: Path, spec: dict) -> None:
     if (expected_transform_mode is not None
         and headers[1].get("transform_mode") != expected_transform_mode):
         raise RuntimeError(f"unexpected AV1 transform mode: {path}")
+    if spec.get("qindex_zero_nonlossless"):
+        key_quantization = headers[0].get("quantization", {})
+        inter_quantization = headers[1].get("quantization", {})
+        key_deltas = ("y_dc_delta", "u_dc_delta", "u_ac_delta", "v_dc_delta", "v_ac_delta")
+        chroma_deltas = ("u_dc_delta", "u_ac_delta", "v_dc_delta", "v_ac_delta")
+        if (
+            headers[0].get("all_lossless") is not True
+            or key_quantization.get("base") != 0
+            or any(key_quantization.get(name) != 0 for name in key_deltas)
+            or inter_quantization.get("base") != 0
+            or inter_quantization.get("y_dc_delta") != 0
+            or any(inter_quantization.get(name) != 2 for name in chroma_deltas)
+        ):
+            raise RuntimeError(f"unexpected qindex-zero non-lossless header: {path}")
     if "cdf_mode" in spec:
         expected_frozen = {
             0: [True, True],

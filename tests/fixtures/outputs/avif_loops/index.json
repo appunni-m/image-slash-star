@@ -2417,13 +2417,36 @@
       "case_names": [
         "lossy_inter_444_b8x4_mode_select_64x64"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "529f432768320002d73ae8f0122e5747b495be7581df1e1a51e01f4fee515cf3",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "lossy_inter_420_b4x8_qindex0_mode_select_64x64"
+      ]
     }
   ],
   "artifacts": [
     {
-      "bytes": 46185,
+      "bytes": 46542,
       "path": "README.md",
-      "sha256": "b915df759252e92c51616524e9d1b5c24d159022a1a483f1a2915098febd7fa3"
+      "sha256": "d25de70203fa4f61a48968c80cb12b793d88052c74215134242e9e1c00b03c8f"
     },
     {
       "bytes": 2267,
@@ -4864,6 +4887,11 @@
       "bytes": 3258,
       "path": "inputs/lossy_inter_420_b4x8_mode_select_64x64.avif",
       "sha256": "d8627ee4f56870730f631b439c7c18f6ddcee432d270a073cbd31ab56196b8aa"
+    },
+    {
+      "bytes": 5234,
+      "path": "inputs/lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif",
+      "sha256": "bfc6c0756fcf2bceda38f6830b89c2e72b55d067e5b3816bd2661007d2fa41ee"
     },
     {
       "bytes": 2589,
@@ -11834,6 +11862,16 @@
       "bytes": 12288,
       "path": "pixels/lossy_inter_420_b4x8_mode_select_64x64/frame_1.bin",
       "sha256": "94a52466c6bca4c5139d95911c4eac19ac8507c53c5e77e37ed05c5dbc547981"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b4x8_qindex0_mode_select_64x64/frame_0.bin",
+      "sha256": "2279a056bd14eb2e81ea15baa98bef134aa0d0cfc5ae960ffb142c40b4960ea4"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossy_inter_420_b4x8_qindex0_mode_select_64x64/frame_1.bin",
+      "sha256": "ef83c285e5d4ddf2f3ad70cc98493568b6ecc5da664cffbc2b416ee2bfc0432f"
     },
     {
       "bytes": 12288,
@@ -48603,6 +48641,55 @@
       "repeat_equal": true,
       "source": "lossy_inter_420_b4x8_mode_select_64x64",
       "source_sha256": "d8627ee4f56870730f631b439c7c18f6ddcee432d270a073cbd31ab56196b8aa"
+    },
+    {
+      "input_bytes": 5234,
+      "input_path": "inputs/lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif",
+      "input_sha256": "bfc6c0756fcf2bceda38f6830b89c2e72b55d067e5b3816bd2661007d2fa41ee",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossy_inter_420_b4x8_qindex0_mode_select_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "529f432768320002d73ae8f0122e5747b495be7581df1e1a51e01f4fee515cf3",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "2279a056bd14eb2e81ea15baa98bef134aa0d0cfc5ae960ffb142c40b4960ea4",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "ef83c285e5d4ddf2f3ad70cc98493568b6ecc5da664cffbc2b416ee2bfc0432f",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossy_inter_420_b4x8_qindex0_mode_select_64x64",
+      "source_sha256": "bfc6c0756fcf2bceda38f6830b89c2e72b55d067e5b3816bd2661007d2fa41ee"
     },
     {
       "input_bytes": 4418,

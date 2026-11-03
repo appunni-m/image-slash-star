@@ -6623,6 +6623,26 @@ report from this managed worktree, so the local counters are selected-scope
 evidence only; no full-suite or marginal coverage gain is claimed. No Rust
 unit tests were added.
 
+## AVIF narrow qindex zero inter parity — 2026-11-03
+
+Added active row
+`decode:avif:animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64`. The
+deterministic 64×64 8-bit I420 sequence has a lossless key frame followed by a
+`TX_MODE_SELECT` inter frame with base qindex zero and chroma quantizer deltas
+of 2. Its narrow B4×8 transform geometry exposed an intra-coded block where
+generic intra transform selection checked `segment_lossless` but not the base
+qindex. Passing the segment qindex preserves the implicit DCT_DCT choice and
+keeps coefficient decoding aligned.
+
+The selected public parity run passed 1/1 with all 12,288 RGB bytes matching
+Pillow. The pinned fixture generator check also passed. Its selected report is
+`.coverage-mcp/local-evidence/selected/20261103T155915.218400Z-e016d2ff385040159ad7c0daa314d31e/coverage.json`.
+Its SHA-256 is
+`d9cf5279002d0d3da1f61b6f11278305b1c0732c40c27552db8e5f3e48befa67`. This is
+selected-scope evidence, not an aggregate coverage claim. No SIMD performance
+measurement was part of this correctness fix, and no Rust unit tests were
+added.
+
 ## I444 compound split parity — 2026-10-26
 
 Added active row `decode:avif:animated_lossy_inter_i444_compound_split_b16x32_mode2`.

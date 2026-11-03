@@ -19,6 +19,12 @@
 #if FIXTURE_NARROW_VERTICAL != 0 && FIXTURE_NARROW_VERTICAL != 1
 #error "FIXTURE_NARROW_VERTICAL must be 0 or 1"
 #endif
+#ifndef FIXTURE_ENABLE_CHROMA_DELTAQ
+#define FIXTURE_ENABLE_CHROMA_DELTAQ 0
+#endif
+#if FIXTURE_ENABLE_CHROMA_DELTAQ != 0 && FIXTURE_ENABLE_CHROMA_DELTAQ != 1
+#error "FIXTURE_ENABLE_CHROMA_DELTAQ must be 0 or 1"
+#endif
 #define FIXTURE_STRING_INNER(value) #value
 #define FIXTURE_STRING(value) FIXTURE_STRING_INNER(value)
 
@@ -176,6 +182,15 @@ int main(int argc, char **argv)
             goto cleanup;
         }
     }
+#if FIXTURE_ENABLE_CHROMA_DELTAQ
+    const avifResult chroma_delta_result =
+        avifEncoderSetCodecSpecificOption(encoder, "enable-chroma-deltaq", "1");
+    if (chroma_delta_result != AVIF_RESULT_OK) {
+        fprintf(stderr, "option enable-chroma-deltaq failed: %s\n",
+                avifResultToString(chroma_delta_result));
+        goto cleanup;
+    }
+#endif
     // This is a normal encoder control. Omitting it preserves every existing
     // input; mode 0 freezes all frames, while mode 2 selects updates per frame.
     if (argc == 6) {

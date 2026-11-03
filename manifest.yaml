@@ -17080,6 +17080,11 @@ formats:
       test_assets:
       - animated_lossy_inter_420_b4x8_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 AVIF sequence whose vertical B4x8 inter leaves signal TX_MODE_SELECT at base qindex zero with nonzero chroma deltas
+      test_assets:
+      - animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif
+      status: active
     - id: animated_lossy_inter_444_b4x8_mode_select_64x64
       description: Two-frame 64x64 8-bit 4:4:4 lossy AVIF sequence whose inter partition tree is forced into vertical B4x8 leaves and signals TX_MODE_SELECT at positive qindex
       test_assets:
