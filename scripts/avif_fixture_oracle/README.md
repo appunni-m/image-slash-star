@@ -1873,3 +1873,104 @@ cc -std=c99 -O2 -Wall -Wextra -Werror   -I "$sharpness_dir/avif-source/include" 
 
 The checker verifies repeatable bytes, the encoded frame's sharpness and
 deblocking levels, and Pillow's 128x128 RGB decode.
+
+## Valid nonuniform AV1 tile columns
+
+`portable_lossless_monochrome_nonuniform_tiles_256x256.avif` is an 8-bit,
+full-range, all-lossless monochrome still. Its frame has four 64x64
+superblocks in each direction, with nonuniform column widths `[1, 3]` and one
+full-height row. This valid bitstream executes the completed-column path in
+the Rust AV1 tile parser. A pinned Pillow decode and the independent AV1 OBU
+parser check the exact pixels and tile starts.
+
+Libaom 3.13.2 exposes explicit tile widths, but libavif 1.4.1 does not map
+those controls. The fixture-only patch
+[`libavif-av1-nonuniform-tile-fixture.patch`](libavif-av1-nonuniform-tile-fixture.patch)
+sets them only for this 256x256 monochrome producer profile. It does not
+change the Rust decoder or a runtime dependency. Build the pinned libaom and
+libavif sources in fresh staging directories; the base revisions are
+`ad44980d7f3c7a2605c25d51ea96946949000841` and
+`6543b22b5bc706c53f038a16fe515f921556d9b3`, respectively:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-nonuniform-source
+git -C target/oracle-staging/libaom-nonuniform-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+cmake -S target/oracle-staging/libaom-nonuniform-source \
+  -B target/oracle-staging/libaom-nonuniform-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-nonuniform-prefix"
+cmake --build target/oracle-staging/libaom-nonuniform-build -j 4
+cmake --install target/oracle-staging/libaom-nonuniform-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-nonuniform-source
+git -C target/oracle-staging/libavif-nonuniform-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-nonuniform-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-nonuniform-tile-fixture.patch"
+cmake -S target/oracle-staging/libavif-nonuniform-source \
+  -B target/oracle-staging/libavif-nonuniform-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_AOM_ENCODE=ON -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF \
+  -DAVIF_BUILD_APPS=OFF -DAVIF_BUILD_TESTS=OFF -DAVIF_BUILD_EXAMPLES=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-nonuniform-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-nonuniform-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-nonuniform-prefix/include"
+cmake --build target/oracle-staging/libavif-nonuniform-build --target avif_static -j 4
+
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-nonuniform-source/include \
+  -I target/oracle-staging/libavif-nonuniform-build/include \
+  -I target/oracle-staging/libaom-nonuniform-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_monochrome_nonuniform_tiles.c \
+  target/oracle-staging/libavif-nonuniform-build/libavif.a \
+  target/oracle-staging/libaom-nonuniform-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-nonuniform-tiles
+.oracle-venv/bin/python scripts/generate_avif_nonuniform_tile_fixture.py \
+  --encoder target/oracle-staging/encode-avif-nonuniform-tiles
+.oracle-venv/bin/python scripts/generate_avif_nonuniform_tile_fixture.py --check
+```
+
+The checked fixture has SHA-256
+`fa46345a828f46277562a5324c18066d6129b73b223e36a4214d492d5d6c344f`; its
+Pillow RGB output has SHA-256
+`b5cc944c73c13c1b613895869a0219be3449dfbe99be281984884be08cfc8293`. To run
+only its public parity row and retain branch-coverage evidence, use:
+
+```sh
+make coverage-selected \
+  COVERAGE_CASES='decode:avif:portable_lossless_monochrome_nonuniform_tiles_256x256'
+```
+
+## AV1 nonuniform tile-column cap parity
+
+`error_nonuniform_tile_column_cap_4097x1.avif` is a still 4097x1 monochrome
+AVIF with 65 superblocks and a declared 64-column nonuniform grid that leaves
+the last superblock uncovered. The generator flips the final tile-width bit,
+then changes one bit in the first tile payload. That payload corruption makes
+the pinned Pillow oracle reject the file; the Rust parser reaches the earlier
+tile-column cap check and returns the same malformed-input category. This
+keeps the cap boundary in a passing public parity row without relying on a
+target-only sequence expectation.
+
+Build the pinned libaom/libavif producer as described above. Reproduce and
+check the retained input with:
+
+```sh
+target/oracle-staging/encode-avif-nonuniform-tiles \
+  --tile-limit target/oracle-staging/nonuniform-tile-limit-seed.avif
+.oracle-venv/bin/python scripts/generate_avif_nonuniform_tile_limit_error.py \
+  --encoder target/oracle-staging/encode-avif-nonuniform-tiles
+.oracle-venv/bin/python scripts/generate_avif_nonuniform_tile_limit_error.py --check
+```
+
+The checked AVIF SHA-256 is
+`08da0817962bf18a5bdf2eba90c35c0ce82997649f393599ccf6ad2e4bb4c955`. Run the
+valid nonuniform-tile and cap-edge parity rows together with:
+
+```sh
+make coverage-selected \
+  COVERAGE_CASES='decode:avif:portable_lossless_monochrome_nonuniform_tiles_256x256 decode:avif:error_nonuniform_tile_column_cap_4097x1'
+```

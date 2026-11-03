@@ -12318,6 +12318,19 @@ formats:
       - portable_lossless_monochrome_superres_clamped_3x3.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_nonuniform_tiles_256x256
+      description: 256x256 lossless monochrome key frame with unequal AV1 tile columns of one and three superblocks
+      test_assets:
+      - portable_lossless_monochrome_nonuniform_tiles_256x256.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_nonuniform_tile_column_cap_4097x1
+      description: Still 4097x1 monochrome AVIF whose 64 nonuniform tile columns leave one superblock uncovered and whose first tile payload is independently rejected by Pillow
+      test_assets:
+      - error_nonuniform_tile_column_cap_4097x1.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_monochrome_multitile_superres_256x64
       description: 256x64 all-lossless monochrome key frame coded at 228x64 with two tile columns and denominator-9 super-resolution
       test_assets:

@@ -1,0 +1,28 @@
+diff --git a/src/codec_aom.c b/src/codec_aom.c
+--- a/src/codec_aom.c
++++ b/src/codec_aom.c
+@@ -856,6 +856,24 @@
+         cfg->g_input_bit_depth = image->depth;
+         cfg->g_w = image->width;
+         cfg->g_h = image->height;
++
++        // Fixture-only: exercise valid 2-column syntax and the 64-column cap.
++        if (image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400 && image->width == 256 &&
++            image->height == 256) {
++            cfg->tile_width_count = 2;
++            cfg->tile_widths[0] = 1;
++            cfg->tile_widths[1] = 3;
++            cfg->tile_height_count = 1;
++            cfg->tile_heights[0] = 4;
++        } else if (image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400 &&
++                   image->width == 4097 && image->height == 1) {
++            cfg->tile_width_count = 64;
++            for (int i = 0; i < cfg->tile_width_count; ++i) {
++                cfg->tile_widths[i] = 1;
++            }
++            cfg->tile_height_count = 1;
++            cfg->tile_heights[0] = 1;
++        }
+ 
+         // Detect the libaom v3.6.0 bug described in
+         // https://crbug.com/aomedia/2871#c12. See the changes to
