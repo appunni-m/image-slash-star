@@ -1268,19 +1268,12 @@ pub(super) fn ycck_to_cmyk_pixels(
             "Adobe YCCK JPEG must have four component planes".to_owned(),
         ));
     }
+    // The parser guarantees nonzero factors, and decode validates their ratios
+    // before either reconstruction path reaches this helper.
     let component_plane = |component_index: usize| -> CodecResult<UpsampleComponent<'_>> {
         let component = info.components.get(component_index).ok_or_else(|| {
             CodecError::Malformed("Adobe YCCK JPEG component is missing".to_owned())
         })?;
-        if component.h_samp == 0
-            || component.v_samp == 0
-            || !info.max_h_samp.is_multiple_of(component.h_samp)
-            || !info.max_v_samp.is_multiple_of(component.v_samp)
-        {
-            return Err(CodecError::Malformed(
-                "fractional JPEG sampling ratios are not supported by the decoder".to_owned(),
-            ));
-        }
         let horizontal_ratio = usize::from(
             info.max_h_samp
                 .checked_div(component.h_samp)
