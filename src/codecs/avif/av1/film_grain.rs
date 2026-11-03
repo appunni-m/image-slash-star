@@ -816,33 +816,31 @@ fn apply_chroma_ar_lut(
                             .checked_mul(scale_y)
                             .and_then(|value| value.checked_add(AR_PAD))
                             .ok_or_else(|| malformed("film-grain luma AR y overflows"))?;
-                        let luma = if params.y_points.is_empty() {
-                            0
-                        } else {
-                            let mut total = 0_i64;
-                            for row in 0..scale_y {
-                                for column in 0..scale_x {
-                                    total = total
-                                        .checked_add(i64::from(luma_lut.get(
-                                            luma_x.checked_add(column).ok_or_else(|| {
-                                                malformed("film-grain luma AR x overflows")
-                                            })?,
-                                            luma_y.checked_add(row).ok_or_else(|| {
-                                                malformed("film-grain luma AR y overflows")
-                                            })?,
-                                        )?))
-                                        .ok_or_else(|| {
-                                            malformed("film-grain luma AR average overflows")
-                                        })?;
-                                }
+                        let mut total = 0_i64;
+                        for row in 0..scale_y {
+                            for column in 0..scale_x {
+                                total = total
+                                    .checked_add(i64::from(luma_lut.get(
+                                        luma_x.checked_add(column).ok_or_else(|| {
+                                            malformed("film-grain luma AR x overflows")
+                                        })?,
+                                        luma_y.checked_add(row).ok_or_else(|| {
+                                            malformed("film-grain luma AR y overflows")
+                                        })?,
+                                    )?))
+                                    .ok_or_else(|| {
+                                        malformed("film-grain luma AR average overflows")
+                                    })?;
                             }
-                            let shift =
-                                u8::try_from(sampling.subx.checked_add(sampling.suby).ok_or_else(
-                                    || malformed("film-grain luma AR shift overflows"),
-                                )?)
-                                .map_err(|_| malformed("film-grain luma AR shift exceeds u8"))?;
-                            round_signed_i64(total, shift)?
-                        };
+                        }
+                        let shift = u8::try_from(
+                            sampling
+                                .subx
+                                .checked_add(sampling.suby)
+                                .ok_or_else(|| malformed("film-grain luma AR shift overflows"))?,
+                        )
+                        .map_err(|_| malformed("film-grain luma AR shift exceeds u8"))?;
+                        let luma = round_signed_i64(total, shift)?;
                         let coefficient = *coefficients
                             .get(coefficient_index)
                             .ok_or_else(|| malformed("film-grain chroma AR coefficient missing"))?;

@@ -4,6 +4,21 @@ The current public evidence matrix contains 3,826 total rows: 3,152 decode /
 inspect / verify rows and 674 encode rows. Of those, 3,152 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
+## AV1 chroma-only film-grain guard cleanup — 2026-11-03
+
+`apply_chroma_ar_lut` already exits the central coefficient loop when Y
+scaling points are empty. The later luma contribution therefore only runs
+with non-empty Y points. Removed its redundant empty-Y conditional, whose zero
+arm was unreachable and obscured that invariant. The existing public
+`decode:avif:filmgrain_422_8bit_u_only_64x64` parity row exercises the legal
+zero-Y/active-chroma path and passed 1/1 with exact Pillow RGB output. Its
+selected local LLVM report records 7,980 visits to the empty-Y guard:
+`.coverage-mcp/local-evidence/selected/20261103T050420.721871Z-1837669f8c8a41da8131bacb50624d65/coverage.json`
+(SHA-256 `4635095f6bb4713ce868e4bb86e40d1096e0becfb8a1b78cd5a7c5ad1f1dbf5e`).
+This is local selected evidence, not a Coverage MCP receipt or a full-suite
+coverage result. The full coverage baseline was not refreshed. `make lint`
+passed all configured format and strict Clippy lanes; no unit tests were run.
+
 ## AVIF mixed-segment super-resolution with CDEF and film grain — 2026-11-03
 
 Added `decode:avif:animated_mixed_lossless_superres_420_8bit_cdef_filmgrain_80x48`.
