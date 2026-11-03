@@ -687,3 +687,10 @@ to pinned libavif 1.4.1 decode both frames and report repetition count zero
 (one total play). Pinned Pillow 12.2.0 observes both exact RGB frames at 100 ms;
 the complete input and frame buffers are retained. Its separately compiled
 observer identity is recorded in `additional_collections`.
+
+`lossless_inter_i444_fixed_b64x64_64x64` is a two-frame 64x64 8-bit all-lossless
+I444 sequence with textured chroma residuals and fixed 64x64 partitions. Pinned
+Pillow 12.2.0 observes both exact RGB frames at 100 ms, and the independent
+libavif 1.4.1 observer confirms both decoded frames and infinite repetition.
+The complete input and frame buffers are retained; its separately compiled
+observer identity is recorded in `additional_collections`.
