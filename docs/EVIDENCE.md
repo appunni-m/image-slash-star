@@ -21856,3 +21856,57 @@ repository coverage; the retained fault report still has 29,943 of 31,998
 branches unobserved overall. No runtime implementation changed, no unit tests
 were added, and no performance gain is claimed. Strict Rust lint and x86-64
 SSE2/AVX2 lint both pass.
+
+## WebP metadata signature guards and public reachability — 2026-11-04
+
+The retained full LLVM report records both branches of the RIFF and WEBP
+signature guard in `src/codecs/webp/decode.rs` as unhit: lines 185 and 186
+each have counts `(0, 57)`. The report is
+`.coverage-mcp/local-evidence/full/20261104-head-9dc23e5c/coverage.json`
+(SHA-256 `7621e0ab3f69896188825ebce40eee78fc74ac524b5b02c2356d6be0d5fa6ad9`).
+The source file is byte-identical to the file at report revision `9dc23e5c`,
+but the report is stale relative to current `main`; it is local evidence, not a
+fresh whole-suite or Coverage MCP result.
+
+These guards are defensive: normal WebP detection requires `RIFF`, `WEBP`, and
+a recognized first image chunk before selecting the WebP decoder. The public
+decode path also validates an explicitly supplied format against detection.
+Malformed-signature parity rows therefore fail before `metadata_bytes` can
+reach these checks. No honest public parity input can exercise the rejected
+signature arms through the current API, and a private direct-call test would
+violate the parity-only test policy. Keep the defensive checks and count them
+in coverage totals; do not manufacture a public case or exclude the lines.
+
+This documents a coverage disposition, not completion: the full report needs
+a current-main refresh, and reachable gaps still need public parity cases.
+Coverage MCP is not connected in this run, so no MCP attribution is claimed.
+
+## JPEG singleton chroma upsampling parity — 2026-11-04
+
+The existing public YCCK parity rows for 1x1 and 2x2 H2V1 and H2V2 inputs
+already cover both one-pixel and two-pixel destination rows. The row dispatcher
+previously sent all one-sample source rows through its nearest-neighbor
+fallback, leaving the singleton branches in `upsample_h2v1_row` and
+`upsample_h2v2_row` unreachable. It now uses those helpers for a one-sample
+source, where they preserve the same replicated pixels; H2V2 copies the
+selected source row instead of blending an adjacent row. Width-two inputs
+keep the fallback. The common source-width-greater-than-two path retains its
+first guard comparison and short-circuit behavior.
+
+Selected coverage and Pillow parity passed six existing rows:
+`decode:jpeg:ycck_h2v1_single_sample_1x1`,
+`decode:jpeg:ycck_h2v1_single_sample_2x2`,
+`decode:jpeg:ycck_h2v2_single_sample_1x1`,
+`decode:jpeg:ycck_h2v2_single_sample_2x2`,
+`decode:jpeg:jpeg_chroma_1x9_420_progressive`, and
+`encode:jpeg:enc_cmyk_subsampling_420_single_sample_width`. The latter two
+guard against changing ordinary 4:2:0 decode or CMYK encode round-trip pixels.
+The local selected report is
+`.coverage-mcp/local-evidence/selected/20261104T041504.424190Z-5649901011014679b733063e84b2aad6/coverage.json`
+(SHA-256 `4cff67a5179bcb7d082b67302049daa1223a29a013d9ef8fe13fa6604eed4989`).
+It records the singleton arm in `upsample_h2v1_row` at line 465 (18 hits) and
+`upsample_h2v2_row` at line 495 (130 hits); each helper's nested output-length
+condition has both outcomes observed. The report and receipt are local-only;
+Coverage MCP was not queried and test attribution is unknown. This focused
+result does not refresh aggregate coverage. No unit tests or new parity rows
+were needed, and no performance gain is claimed.
