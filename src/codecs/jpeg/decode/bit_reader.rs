@@ -251,6 +251,15 @@ impl<'a> FastBitReader<'a> {
             return Some(byte);
         }
 
+        // Exercise the truncated marker-prefix boundary through the public
+        // fault-contract harness; production builds keep the parsed range.
+        #[cfg(coverage)]
+        if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegFastReaderMarkerPrefixEof,
+        ) {
+            self.end = self.pos;
+        }
+
         loop {
             if self.pos >= self.end {
                 return None;
