@@ -1,8 +1,26 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,842 total rows: 3,168 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,168 decode rows are
+The current public evidence matrix contains 3,845 total rows: 3,171 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,171 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+
+## TIFF tiled grayscale edge parity — 2026-11-04
+
+Integrated three public TIFF parity rows for big-endian 17x17 grayscale images
+stored in 16x16 Deflate-compressed tiles with clipped right and bottom edges:
+`decode:tiff:tiled_gray16_be_deflate_clipped_edges`,
+`decode:tiff:tiled_gray16_be_deflate_predictor_clipped_edges`, and
+`decode:tiff:tiled_gray32_signed_be_deflate_predictor_clipped_edges`. The cases
+cover unsigned Gray16 with and without horizontal Predictor=2, plus signed
+Gray32 with Predictor=2. The pinned Pillow 12.2.0 references contain 578 bytes
+for each Gray16 image and 1,156 bytes for Gray32; selected parity passed 3/3.
+
+The local selected coverage report is
+`.coverage-mcp/local-evidence/selected/20261104T115324.874376Z-d3b6c49b337b45549ed281d7443afd1a/coverage.json`.
+It records the three selected rows only; no full-suite coverage or marginal
+global coverage claim is made. No production codec code, unit tests, or SIMD
+changes were added.
 
 ## JPEG oversized trailing COM parity — 2026-11-04
 
@@ -16815,7 +16833,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `21106e4d494811911130737b7a0aaefbece8a450f72d487589a6cdf2412d5b59`; matrix `e2973cd3aa1fea9768139d777e7c484dad8c577ba59e539b03a5dbe06d15eb87`.
+- Current fixture integrity only: manifest `d208e1f701273b2ecaf1567d37ec7cbe7b3695939b549afce0054994e6e03943`; matrix `25fb334905851261d5d1a5cf797385dfab2824f889e1305f1d3ee876a006578c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
