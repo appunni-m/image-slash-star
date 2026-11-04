@@ -703,6 +703,15 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 let payload_len = length.saturating_sub(2);
                 if payload_len > data.len().saturating_sub(pos) {
+                    if marker == M_COM && saw_sos && !progressive && scans.len() == 1 {
+                        // Pillow decodes a complete single-scan baseline image
+                        // before considering a malformed trailing COM payload.
+                        if let Ok(scan_end) = usize::try_from(marker_offset)
+                            && let Ok(eoi_pos) = find_eoi(data, scan_end)
+                        {
+                            break eoi_pos;
+                        }
+                    }
                     return Err(CodecError::NeedMore {
                         minimum: pos.saturating_add(payload_len),
                         message: "truncated JPEG metadata marker payload".to_owned(),

@@ -1,8 +1,45 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,841 total rows: 3,167 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,167 decode rows are
+The current public evidence matrix contains 3,842 total rows: 3,168 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,168 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG oversized trailing COM parity — 2026-11-04
+
+Added `decode:jpeg:baseline_444_single_scan_com_oversized_length`. The fixture
+is an 8x8 baseline 4:4:4 JPEG with one scan and a trailing COM length that
+extends beyond EOI. Before the decoder change, it failed with a truncated
+metadata payload error; Pillow 12.2.0 decodes it as RGB. The parser now stops
+at EOI for this completed single-scan case, and entropy reconstruction ends at
+the completed scan. The decoded 192-byte output matches Pillow exactly.
+
+Input SHA-256:
+`b554f0b32009da0282d524952288a3dd561c85f7d50591af6a3a997ba13c15f0`;
+raw RGB SHA-256:
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+The pinned fixture generator passes `--check`. The fresh one-row parity run
+passed 1/1; its local report is
+`.coverage-mcp/local-evidence/selected/20261104T054723.457215Z-b5ffbd42328743bb8fd6ae04e8397890/coverage.json`
+(SHA-256 `fd00cca8e5c1aecc21a08b24c1778ada33aa5252b900700ce9cc9f37155bdf60`)
+and its execution receipt is
+`.coverage-mcp/local-evidence/selected/20261104T054723.457215Z-b5ffbd42328743bb8fd6ae04e8397890/coverage.local-evidence.json`
+(SHA-256 `37b26ab729274e762d7400c1038e5b563457038db4c549eb74f846bab96bba4e`).
+Coverage MCP records the true side of the decoder condition at line 3051 and
+reports the false side as the remaining selected-report gap. The receipt says
+the selected row passed, but MCP source identity is unverified and test
+attribution is unknown; treat this as local measurement evidence, not a
+managed attribution receipt.
+
+The final full coverage report is
+`.coverage-mcp/local-evidence/full/20261104-jpeg-com-oversize/coverage.json`
+(SHA-256 `4bad12103c6f554a4e2f0399cfaf4b12b72798db7b7da036e09b8d0b7a0a9b69`).
+The coverage matrix passed 57/57 rows. The report records 102,857/142,351 lines
+(72.2559%), 21,109/32,010 branches (65.9450%), 5,680/9,137 functions
+(62.1648%), and 156,551/220,549 regions (70.9824%). Coverage MCP's full-scope
+comparison is `limited`: source identity is unverified and tests are unknown,
+so its coordinate deltas are not a verified gain or regression. `make lint`,
+`make lint-x86-simd`, and fixture-integrity refresh passed. No unit tests or
+SIMD changes were added, and no performance gain is claimed.
 
 ## AV1 partition walker even-grid invariant — 2026-11-04
 
@@ -16738,7 +16775,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `f0a3fe4c2cf85c5513dca70c1f2f107ffdb1f5f474a669d51e7ede001f0e68af`; matrix `14d577a23ae98d89d6c8eb3df0ca68958ce4e071cc78d777429b7a341b9565d3`.
+- Current fixture integrity only: manifest `f0a3fe4c2cf85c5513dca70c1f2f107ffdb1f5f474a669d51e7ede001f0e68af`; matrix `9eab4e32f969ba6d33f50994fdcd9f2d3f1cc964ade852bfd5af7a4672ee7cd2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
