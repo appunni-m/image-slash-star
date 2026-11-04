@@ -2229,6 +2229,21 @@ independently decoded tile profiles retain their previous admission limits.
 Live Pillow supplies exact public frames; separate native observations supply
 loop counts. `--check` reads retained inputs without encoding or rewriting.
 
+## Horizontal B8x4 qindex-zero non-lossless 4:2:2 sequence
+
+`animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif` is a 64x64
+8-bit I422 key/inter sequence. The pinned fixture-only AOM patches create a
+non-lossless qindex-zero inter frame and retain a horizontal B8x4 leaf at its
+top-left B8x8 root. The encoder uses frozen CDF updates. The generator repeats
+the encoder, normalizes timestamps,
+and validates the AV1 headers plus both Pillow 12.2.0 RGB frames. AVIF
+SHA-256: `5c2fd79d69b2fb1a96542c30ea4eb6d103993982f9f322b1e64d040730f946f9`.
+The 100 ms frame hashes are
+`246f2904b49d857c90295a1a379d1eadea4058a6e04c8df8639aac4392732d50` and
+`2daef02f6cde1d7914f04e930bf65f36a0bc74273f1a1029a5ec054434611b14`.
+The reproducible patch order and producer command are documented in
+`scripts/avif_fixture_oracle/README.md`.
+
 ## Vertical B4x8 qindex-zero non-lossless 4:2:0 sequence
 
 `animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif` is produced

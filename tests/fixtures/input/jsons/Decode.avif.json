@@ -53757,7 +53757,7 @@
     {
       "id": "animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64",
       "asset": "animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif",
-      "asset_sha256": "43e290fb890e116a01100796cdf0790c88ff05845a42142498414ba44760260d",
+      "asset_sha256": "5c2fd79d69b2fb1a96542c30ea4eb6d103993982f9f322b1e64d040730f946f9",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

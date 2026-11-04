@@ -12,7 +12,7 @@
     "manifest_path": "manifest.yaml",
     "manifest_sha256": "03f17ff361287b862dab60654673b6102beb2f49434aa7121b97e3dd494d36be",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "4d7def377b448106615d54b52b06a3794090cedb9de7df4a52afa34f5bdbee2c"
+    "matrix_sha256": "1d151f749b2fedca3a93610365ab52f1d5307fce7d7c11fb1d340776914bed21"
   },
   "malformed_witnesses": [
     {
