@@ -180,6 +180,7 @@ jobs:
           fi
           python3 scripts/benchmark_jpeg_patch_experiment.py \
             --plan "$decoder_plan" \
+            --baseline-revision "$BASE_REVISION" \
             --output target/benchmarks/jpeg/simd-x86_64/decoder-refill-experiment/summary.json
       - name: Verify committed JPEG decoder source matches the measured patch
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -188,11 +189,13 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REVISION"
-          if git diff --quiet "$BASE_REVISION" HEAD -- src/codecs/jpeg/decode/bit_reader.rs; then
+          decoder_plan=benchmarks/jpeg-production/experiments/decoder-refill.json
+          decoder_patch=benchmarks/jpeg-production/experiments/decoder-refill.patch
+          if git diff --quiet "$BASE_REVISION" HEAD -- "$decoder_plan" "$decoder_patch"; then
             exit 0
           fi
           python3 scripts/verify_jpeg_patch_source.py \
-            --plan benchmarks/jpeg-production/experiments/decoder-refill.json
+            --plan "$decoder_plan"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

@@ -903,6 +903,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.upsample.row_destination_height_overflow",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_fast_reader_marker_prefix_eof_fallback": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_fast_reader_marker_prefix_eof_fallback",
+        "source_case": "decode:jpeg:grayscale_sampling_420_512x512",
+        "point": "jpeg.fast_reader.marker_prefix_eof",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds",
+    },
     "bmp_palette_reservation_failure": {
         "format": "bmp",
         "category": "structured-diagnostics",

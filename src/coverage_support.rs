@@ -136,6 +136,8 @@ pub enum CoverageFaultPoint {
     Av1SuperResolutionChromaUPlaneReservation,
     /// Force AV1 super-resolution chroma V output-plane reservation to fail.
     Av1SuperResolutionChromaVPlaneReservation,
+    /// End a JPEG entropy segment immediately after an FF marker prefix.
+    JpegFastReaderMarkerPrefixEof,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.

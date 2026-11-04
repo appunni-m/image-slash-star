@@ -369418,6 +369418,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "jpeg_fast_reader_marker_prefix_eof_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:grayscale_sampling_420_512x512"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.marker_prefix_eof",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

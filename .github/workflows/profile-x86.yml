@@ -9,6 +9,7 @@ on:
       - 'Cargo.lock'
       - '.cargo/config.toml'
       - 'rust-toolchain.toml'
+      - 'tests/fixtures/input/images/jpeg/grayscale_sampling_420_512x512.jpg'
       - 'src/lib.rs'
       - 'src/types/**'
       - 'src/codecs/mod.rs'
@@ -67,7 +68,8 @@ jobs:
           git rev-parse HEAD > "$output/source-revision.txt"
           source_paths=(Cargo.toml Cargo.lock rust-toolchain.toml README.md
             src benchmarks/jpeg-production/rust .github/workflows/profile-x86.yml
-            scripts/perf_sample_count.py)
+            scripts/perf_sample_count.py
+            tests/fixtures/input/images/jpeg/grayscale_sampling_420_512x512.jpg)
           if git cat-file -e HEAD:.cargo/config.toml 2>/dev/null; then
             source_paths+=(.cargo/config.toml)
           fi
@@ -156,7 +158,7 @@ jobs:
             printf 'Native sampling with DWARF call graphs is available: %s\n' "$perf_event"
             printf 'profile_event=%s frequency_hz=997 call_graph=dwarf,8192\n' "$perf_event" >> "$output/perf-mode.txt"
           fi
-      - name: Build and profile exact public RGB 4:2:0 encodes
+      - name: Build and profile public JPEG encodes and decode
         run: |
           set -euo pipefail
           output=target/benchmarks/jpeg/simd-x86_64/profile
@@ -305,6 +307,39 @@ jobs:
               done
             done
           fi
+          decode_fixture=tests/fixtures/input/images/jpeg/grayscale_sampling_420_512x512.jpg
+          sha256sum "$decode_fixture" > "$output/decode-fixture-sha256.txt"
+          profile_decode_variant() {
+            local variant=$1
+            local binary="$output/${variant}.profiled-binary"
+            local profile="$output/${variant}-decode-512.perf.data"
+            local report="$output/${variant}-decode-512.report.txt"
+            local iterations=1000
+            local samples
+            printf 'variant=%s operation=decode size=512 iterations=%s input=%s\n' "$variant" "$iterations" "$decode_fixture" >> "$output/run-metadata.txt"
+            if [[ "$perf_mode" != "timed-benchmark" ]]; then
+              if perf record --freq=997 -e "$perf_event" --call-graph=dwarf,8192 -o "$profile" -- "$binary" decode "$decode_fixture" "$iterations" > "$output/${variant}-decode-512.stdout.txt" 2> "$output/${variant}-decode-512.stderr.txt" && test -s "$profile" && perf report --stdio --header --inline -i "$profile" > "$report"; then
+                if samples=$(python3 scripts/perf_sample_count.py "$profile") && (( samples >= minimum_samples )); then
+                  printf 'measurement_mode=%s event=%s frequency_hz=997 call_graph=dwarf,8192 sample_count=%s variant=%s operation=decode size=512\n' "$perf_mode" "$perf_event" "$samples" "$variant" >> "$output/run-metadata.txt"
+                  if perf annotate --stdio --show-nr-samples --asm-raw -i "$profile" > "$output/${variant}-decode-512.annotate.txt"; then
+                    return 0
+                  fi
+                  printf 'perf_fallback=annotation_failed variant=%s operation=decode size=512\n' "$variant" >> "$output/run-metadata.txt"
+                else
+                  printf 'perf_fallback=insufficient_samples variant=%s operation=decode size=512\n' "$variant" >> "$output/run-metadata.txt"
+                fi
+              else
+                printf 'perf_fallback=record_or_report_failed variant=%s operation=decode size=512\n' "$variant" >> "$output/run-metadata.txt"
+              fi
+              perf_mode=timed-benchmark
+              timed_fallback_required=1
+              printf 'PERF_MODE=timed-benchmark\n' >> "$GITHUB_ENV"
+            fi
+            printf 'measurement_mode=timed-benchmark variant=%s operation=decode size=512\n' "$variant" >> "$output/run-metadata.txt"
+            "$binary" decode "$decode_fixture" "$iterations" > "$output/${variant}-decode-512.stdout.txt" 2> "$output/${variant}-decode-512.stderr.txt"
+          }
+          profile_decode_variant sse2
+          profile_decode_variant avx2
       - name: Confirm profiled SSE2 and AVX2 outputs match
         run: |
           python3 - <<'PY'
@@ -324,12 +359,28 @@ jobs:
                   values.append(match.group(1))
               return tuple(values)
 
+          def decode_signature(variant: str) -> tuple[str, ...]:
+              text = (root / f"{variant}-decode-512.stdout.txt").read_text(encoding="utf-8")
+              fields = ("input_fnv1a", "output_bytes", "output_fnv1a")
+              values = []
+              for field in fields:
+                  match = re.search(rf"^{field}=(.+)$", text, re.MULTILINE)
+                  if match is None:
+                      raise SystemExit(f"missing {field} for {variant} decoder profile")
+                  values.append(match.group(1))
+              return tuple(values)
+
           for size in (512, 1024):
               sse2 = signature("sse2", size)
               avx2 = signature("avx2", size)
               if sse2 != avx2:
                   raise SystemExit(f"profiled SSE2/AVX2 output mismatch for {size}: {sse2} != {avx2}")
               print(f"{size}x{size} RGB 4:2:0 profile outputs match: {sse2[2]}")
+          sse2 = decode_signature("sse2")
+          avx2 = decode_signature("avx2")
+          if sse2 != avx2:
+              raise SystemExit(f"profiled SSE2/AVX2 decode output mismatch: {sse2} != {avx2}")
+          print(f"512x512 JPEG decode profile outputs match: {sse2[2]}")
           PY
       - name: Restore the runner sampling policy
         if: always()

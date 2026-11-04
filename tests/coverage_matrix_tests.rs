@@ -3028,6 +3028,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "jpeg.fast_reader.marker_prefix_eof",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderMarkerPrefixEof,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.multiscan.coefficient_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegCoefficientBufferReservation,
                 false,
