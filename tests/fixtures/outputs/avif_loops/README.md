@@ -1,8 +1,14 @@
-This bundle records 613 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 605 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2169 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 623 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 615 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2199 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
 `index.json` records each source digest.
+
+The qindex-zero B4x8 I420 companion has a base-qindex-zero inter frame with
+nonzero chroma deltas. Pillow and pinned libavif decode two exact 64x64 RGB
+frames at 100 ms and report one total play. The frame hashes are
+`2279a056bd14eb2e81ea15baa98bef134aa0d0cfc5ae960ffb142c40b4960ea4` and
+`ef83c285e5d4ddf2f3ad70cc98493568b6ecc5da664cffbc2b416ee2bfc0432f`.
 
 The 10-bit 4:4:4 mixed-super-resolution deblocking sequence uses active Y/U/V
 filters on both frames. Pillow and the pinned native observer decode its two
@@ -11,6 +17,10 @@ exact 80×48 RGB frames and report infinite repetition.
 The reduced-transform-set B16x64 I420 sequence retains two complete 64x64 RGB
 frames of 100 ms and one total play. Its independent native collection records
 successful parsing, two decoded frames, and repetition count zero.
+
+The odd-width 31x32 10-bit I420 lossless sequence moves a one-pixel texture
+patch from (28, 8) to (29, 9) at the clipped right edge. Pillow and the pinned
+native observer decode both 100 ms RGB frames; libavif reports infinite repetition.
 
 `animated_sequence_header_cicp_mismatch_nclx` changes only the AV1 sequence
 header's primaries and matrix to 9/13/0 while preserving valid item and track
@@ -184,6 +194,8 @@ The two-frame 64x64 I422 qindex-zero companion keeps its key frame lossless
 and makes its `TX_MODE_SELECT` inter frame non-lossless with a luma DC delta.
 Its two exact Pillow RGB frames and pinned native one-play observation are
 retained.
+The horizontal B8x4 I422 qindex-zero companion keeps its key frame lossless and uses a non-lossless TX_MODE_SELECT inter frame with luma DC delta two. Pinned Pillow and native libavif decode both exact RGB frames and report one play; the native observation records two decoded frames and the exact input digest.
+
 The two-frame 64x64 lossy I420 mixed-topology companion forces B8x16 inter
 leaves with one TX8x8 child split into TX4x4 blocks and the other left unsplit.
 It retains both exact Pillow RGB frames and the pinned native loop observation.
@@ -680,4 +692,11 @@ with an inter frame forced into horizontal B8x4 leaves. Two independent calls
 to pinned libavif 1.4.1 decode both frames and report repetition count zero
 (one total play). Pinned Pillow 12.2.0 observes both exact RGB frames at 100 ms;
 the complete input and frame buffers are retained. Its separately compiled
+observer identity is recorded in `additional_collections`.
+
+`lossless_inter_i444_fixed_b64x64_64x64` is a two-frame 64x64 8-bit all-lossless
+I444 sequence with textured chroma residuals and fixed 64x64 partitions. Pinned
+Pillow 12.2.0 observes both exact RGB frames at 100 ms, and the independent
+libavif 1.4.1 observer confirms both decoded frames and infinite repetition.
+The complete input and frame buffers are retained; its separately compiled
 observer identity is recorded in `additional_collections`.

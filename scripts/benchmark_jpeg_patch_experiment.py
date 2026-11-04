@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure an explicit JPEG candidate patch without changing shipping Rust code."""
+"""Measure a digest-guarded JPEG candidate against native x86 controls."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,10 +27,79 @@ def repository_path(path: Path) -> Path:
     return resolved
 
 
+def verify_committed_candidate_patch(
+    baseline_revision: str,
+    candidate_revision: str,
+    source_guards: dict[str, str],
+    candidate_guards: dict[str, str],
+    patch: Path,
+) -> None:
+    """Verify a retained patch reconstructs the committed candidate source."""
+    source_paths = sorted(source_guards)
+    if set(candidate_guards) != set(source_paths):
+        raise RuntimeError("candidate and baseline guards must cover the same source files")
+    if any(Path(name).is_absolute() or ".." in Path(name).parts for name in source_paths):
+        raise RuntimeError("guarded source paths must stay inside the repository")
+
+    baseline_sources = {}
+    for name, expected in source_guards.items():
+        source = subprocess.check_output(
+            ["git", "show", f"{baseline_revision}:{name}"], cwd=ROOT,
+        )
+        if hashlib.sha256(source).hexdigest() != expected:
+            raise RuntimeError(f"baseline source guard changed: {name}")
+        baseline_sources[name] = source
+
+        candidate = subprocess.check_output(
+            ["git", "show", f"{candidate_revision}:{name}"], cwd=ROOT,
+        )
+        if hashlib.sha256(candidate).hexdigest() != candidate_guards[name]:
+            raise RuntimeError(f"committed candidate source changed: {name}")
+
+    patch_bytes = patch.read_bytes()
+    numstat = subprocess.check_output(
+        ["git", "apply", "--numstat"], cwd=ROOT, input=patch_bytes,
+    ).decode("utf-8")
+    patch_paths = {line.split("\t", 2)[2] for line in numstat.splitlines()}
+    if patch_paths != set(source_paths):
+        raise RuntimeError("experiment patch touches a different source set than its guards")
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="jpeg-candidate-source-") as directory:
+            candidate_root = Path(directory)
+            for name, source in baseline_sources.items():
+                destination = candidate_root / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(source)
+            subprocess.run(
+                ["git", "apply", "--unidiff-zero", "--check"],
+                cwd=candidate_root,
+                input=patch_bytes,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "apply", "--unidiff-zero"],
+                cwd=candidate_root,
+                input=patch_bytes,
+                check=True,
+            )
+            for name, expected in candidate_guards.items():
+                if digest(candidate_root / name) != expected:
+                    raise RuntimeError(
+                        f"experiment patch does not reconstruct the candidate source: {name}"
+                    )
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError("experiment patch does not apply to the guarded baseline") from error
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--baseline-revision",
+        help="immutable control revision for candidate source committed in HEAD",
+    )
     args = parser.parse_args()
     plan_path = repository_path(args.plan)
     output = repository_path(args.output)
@@ -46,12 +116,32 @@ def main() -> int:
     patch = repository_path(Path(plan["patch"]))
     if digest(patch) != plan["patch_sha256"]:
         raise RuntimeError("experiment patch differs from the predeclared plan")
-    for name, expected in plan["source_guards"].items():
-        if digest(repository_path(Path(name))) != expected:
-            raise RuntimeError(f"experiment source guard changed: {name}")
+    candidate_source_mode = (
+        "committed_revision" if args.baseline_revision is not None else "explicit_patch"
+    )
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True,
     ).strip()
+    baseline_revision = revision
+    if candidate_source_mode == "committed_revision":
+        baseline_revision = subprocess.check_output(
+            ["git", "rev-parse", "--verify", f"{args.baseline_revision}^{{commit}}"],
+            cwd=ROOT,
+            text=True,
+        ).strip()
+        if baseline_revision != args.baseline_revision:
+            raise RuntimeError("baseline revision must be an immutable commit ID")
+        verify_committed_candidate_patch(
+            baseline_revision,
+            revision,
+            plan["source_guards"],
+            plan["candidate_guards"],
+            patch,
+        )
+    else:
+        for name, expected in plan["source_guards"].items():
+            if digest(repository_path(Path(name))) != expected:
+                raise RuntimeError(f"experiment source guard changed: {name}")
     committed_plan = subprocess.check_output(
         ["git", "show", f"{revision}:{plan_path.relative_to(ROOT)}"], cwd=ROOT,
     )
@@ -62,31 +152,45 @@ def main() -> int:
         raise RuntimeError("experiment needs distinct primary/guard cases and at least six cohorts")
     argv = [
         sys.executable, str(ROOT / "scripts/benchmark_jpeg_revision_abba.py"),
-        "--baseline-revision", revision,
-        "--candidate-patch", str(patch),
+        "--baseline-revision", baseline_revision,
+    ]
+    if candidate_source_mode == "explicit_patch":
+        argv.extend(("--candidate-patch", str(patch)))
+    argv.extend((
         "--variants", *plan["variants"],
         "--operation", operation,
         "--cohorts", str(plan["cohorts"]),
         "--cases", *cases,
         "--output", str(output),
-    ]
+    ))
     try:
         subprocess.run(argv, cwd=ROOT, check=True)
     finally:
         # The runner requires an empty destination. Attach the predeclared
         # producer inputs afterwards, including when a build or byte check fails.
         if output.parent.is_dir():
-            for path in (plan_path, Path(__file__)):
+            for path in (plan_path, patch, Path(__file__)):
                 retained = output.parent / "producer" / path.relative_to(ROOT)
                 retained.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, retained)
     report = json.loads(output.read_text(encoding="utf-8"))
-    if report["schema"] != "image-slash-star/jpeg-revision-abba@4":
-        raise RuntimeError("experiment did not produce an explicit patched-source report")
-    if report["baseline_revision"] != revision or report["candidate_revision"] != revision:
-        raise RuntimeError("experiment baseline and candidate must share one committed source")
-    if report["candidate_patch"]["sha256"] != plan["patch_sha256"]:
-        raise RuntimeError("measured patch differs from the predeclared plan")
+    expected_report_schema = (
+        "image-slash-star/jpeg-revision-abba@3"
+        if candidate_source_mode == "committed_revision"
+        else "image-slash-star/jpeg-revision-abba@4"
+    )
+    if report["schema"] != expected_report_schema:
+        raise RuntimeError("experiment report does not match the candidate source mode")
+    if (
+        report["baseline_revision"] != baseline_revision
+        or report["candidate_revision"] != revision
+    ):
+        raise RuntimeError("measured revisions differ from the predeclared experiment")
+    if candidate_source_mode == "explicit_patch":
+        if report["candidate_patch"]["sha256"] != plan["patch_sha256"]:
+            raise RuntimeError("measured patch differs from the predeclared plan")
+    elif report["candidate_patch"] is not None:
+        raise RuntimeError("committed candidate was unexpectedly patched a second time")
     if report.get("operation", "encode") != operation:
         raise RuntimeError("measured operation differs from the predeclared plan")
     if report["host"]["machine"].lower() not in {"x86_64", "amd64"}:
@@ -110,13 +214,19 @@ def main() -> int:
     gates = []
     for variant in plan["variants"]:
         pair = report["revision_builds"][variant]
-        if set(pair["candidate"]["source"]["patched_files"]) != set(plan["source_guards"]):
-            raise RuntimeError("patched implementation differs from the guarded source set")
+        candidate_source = pair["candidate"]["source"]
+        if candidate_source_mode == "explicit_patch":
+            if set(candidate_source["patched_files"]) != set(plan["source_guards"]):
+                raise RuntimeError("patched implementation differs from the guarded source set")
+            candidate_files = candidate_source["compiled_files"]
+        else:
+            candidate_files = candidate_source["files"]
+        for name, expected_digest in plan["candidate_guards"].items():
+            if candidate_files.get(name) != expected_digest:
+                raise RuntimeError("candidate source differs from its guarded implementation")
         for name, expected_digest in plan["source_guards"].items():
             if pair["control"]["source"]["files"][name] != expected_digest:
                 raise RuntimeError("baseline archive differs from the guarded source")
-            if pair["candidate"]["source"]["compiled_files"][name] != plan["candidate_guards"][name]:
-                raise RuntimeError("compiled candidate differs from the predeclared implementation")
         primary = summaries[(variant, plan["primary"])]
         cohorts = [row for row in report["cohort_summaries"] if row["variant"] == variant and row["case"] == plan["primary"]]
         if len(cohorts) != plan["cohorts"]:
@@ -138,10 +248,12 @@ def main() -> int:
         })
     passed = all(row["performance_gate_passed"] for row in gates)
     result = {
-        "schema": "image-slash-star/jpeg-patch-experiment-result@1",
-        "scope": f"Native x86 diagnostic {operation} patch experiment; shipping implementation unchanged",
+        "schema": "image-slash-star/jpeg-patch-experiment-result@2",
+        "scope": f"Native x86 diagnostic {operation} patch experiment",
         "operation": operation,
         "producer_revision": revision,
+        "baseline_revision": baseline_revision,
+        "candidate_source_mode": candidate_source_mode,
         "plan_sha256": digest(plan_path),
         "producer_sha256": digest(Path(__file__)),
         "patch_sha256": plan["patch_sha256"],
@@ -154,8 +266,10 @@ def main() -> int:
     result_path = output.parent / "experiment-result.json"
     result_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
-    # A rejected diagnostic candidate is a valid completed experiment. Only
-    # build, provenance or correctness failures fail the workflow.
+    # An explicit patch is diagnostic only; committed source is the shipping
+    # candidate and must meet its declared performance gates before merging.
+    if candidate_source_mode == "committed_revision" and not passed:
+        return 1
     return 0
 
 

@@ -136,6 +136,8 @@ pub enum CoverageFaultPoint {
     Av1SuperResolutionChromaUPlaneReservation,
     /// Force AV1 super-resolution chroma V output-plane reservation to fail.
     Av1SuperResolutionChromaVPlaneReservation,
+    /// End a JPEG entropy segment immediately after an FF marker prefix.
+    JpegFastReaderMarkerPrefixEof,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.
@@ -160,6 +162,12 @@ pub enum CoverageFaultPoint {
     JpegFancyUpsampleRowShortStride,
     /// Force the row-wise JPEG upsampler to reject a component sample buffer that is too short.
     JpegFancyUpsampleRowSourceLengthMismatch,
+    /// Force checked multiplication of JPEG row stride and row index to overflow.
+    JpegFancyUpsampleRowLastRowStartOverflow,
+    /// Force checked addition of JPEG row start and width to overflow.
+    JpegFancyUpsampleRowRequiredSourceLengthOverflow,
+    /// Force checked multiplication of JPEG height and vertical ratio to overflow.
+    JpegFancyUpsampleRowDestinationHeightOverflow,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
     /// Force reservation of a BMP palette to fail before reading its entries.

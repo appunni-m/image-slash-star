@@ -16567,6 +16567,7 @@ fn select_generic_intra_transform(
     skipped: bool,
     reduced_transform_set: bool,
     segment_lossless: bool,
+    segment_qindex: u32,
     transform_luma_mode: usize,
     chroma_predictor: ChromaPredictor,
 ) -> PortableResult<Av1TransformType> {
@@ -16584,7 +16585,7 @@ fn select_generic_intra_transform(
             chroma_predictor,
         )));
     }
-    if segment_lossless {
+    if segment_lossless || segment_qindex == 0 {
         return Ok(Av1TransformType::DctDct);
     }
     let minimum_context = tx_size.minimum_context();
@@ -16709,6 +16710,7 @@ fn decode_generic_lossy_terminal(
         skipped,
         quantization.reduced_transform_set,
         quantization.segment_lossless,
+        quantization.segment_qindex,
         transform_luma_mode,
         chroma_predictor,
     )?;
@@ -48130,25 +48132,36 @@ impl Lossy420Decoder {
         visible_width: u32,
         visible_height: u32,
     ) -> bool {
-        matches!(
-            transform_plan,
+        let supported_partial_extent = match transform_plan {
             InterTransformPlan::LosslessGrid {
                 luma_width: 32,
                 luma_height: 32,
-                sampling: ChromaSampling::Subsampled420
-                    | ChromaSampling::Subsampled422
-                    | ChromaSampling::Full,
+                sampling:
+                    ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 | ChromaSampling::Full,
+            } => {
+                visible_width <= 32
+                    && visible_height <= 32
+                    && visible_width.is_multiple_of(4)
+                    && visible_height.is_multiple_of(4)
+                    && (visible_width < 32 || visible_height < 32)
             }
-        ) && matches!(sample_depth.bits(), 8 | 10 | 12)
+            InterTransformPlan::LosslessGrid {
+                luma_width: 4,
+                luma_height: 8,
+                sampling: ChromaSampling::Subsampled420,
+            } => {
+                matches!(sample_depth.bits(), 10 | 12)
+                    && (1..=3).contains(&visible_width)
+                    && visible_height == 8
+            }
+            _ => false,
+        };
+        supported_partial_extent
+            && matches!(sample_depth.bits(), 8 | 10 | 12)
             && transform_mode == 0
             && segment_lossless
             && visible_width != 0
             && visible_height != 0
-            && visible_width <= 32
-            && visible_height <= 32
-            && visible_width.is_multiple_of(4)
-            && visible_height.is_multiple_of(4)
-            && (visible_width < 32 || visible_height < 32)
     }
 
     // Keep this admission check in one coverage body because the reconstruction
@@ -56760,10 +56773,11 @@ impl Lossy420Decoder {
             && raster.active_height <= coded_height
             && raster.active_width != 0
             && raster.active_height != 0
-            && raster.active_width.is_multiple_of(4)
-            && raster.active_height.is_multiple_of(4)
             && (allow_clipped
-                || (raster.active_width == coded_width && raster.active_height == coded_height))
+                || (raster.active_width == coded_width
+                    && raster.active_height == coded_height
+                    && raster.active_width.is_multiple_of(4)
+                    && raster.active_height.is_multiple_of(4)))
             && matches!(plane, 0..=2)
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && (tools.transform_mode == 0
@@ -56782,8 +56796,18 @@ impl Lossy420Decoder {
             && quantization.v_ac_delta == 0)
             .then_some(())
             .portable()?;
-        let grid_width = raster.active_width / 4;
-        let grid_height = raster.active_height / 4;
+        // A clipped edge still decodes each complete TX4x4 that overlaps the
+        // visible extent. Keep complete grids on the original division path.
+        let grid_width = if allow_clipped && !raster.active_width.is_multiple_of(4) {
+            raster.active_width.div_ceil(4)
+        } else {
+            raster.active_width / 4
+        };
+        let grid_height = if allow_clipped && !raster.active_height.is_multiple_of(4) {
+            raster.active_height.div_ceil(4)
+        } else {
+            raster.active_height / 4
+        };
         let mut residual_contexts =
             [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
         for row in 0..grid_height {

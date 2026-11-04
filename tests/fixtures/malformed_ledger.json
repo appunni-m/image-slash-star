@@ -29,7 +29,7 @@
         "sequence_error_message": null,
         "sequence_error_type": null,
         "sequence_status": null,
-        "spec_status": "spec_violation",
+        "spec_status": "ambiguous",
         "verify_status": "ok"
       },
       {
@@ -39944,9 +39944,9 @@
       "specification_reference": 237
     },
     "by_spec_status": {
-      "ambiguous": 35,
+      "ambiguous": 36,
       "not_the_format": 41,
-      "spec_violation": 544,
+      "spec_violation": 543,
       "tolerated": 1,
       "truncated": 280
     },

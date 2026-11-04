@@ -199,6 +199,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_then_com_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_com_oversized_length_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_eoi_marker_fill_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_444_multiscan_marker_fill_stuffed_byte_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_restart_only_scan_fixture.py --check
@@ -355,8 +356,10 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_422_vertical_split_fixture.py --check
 	$(PYTHON) scripts/generate_avif_skip_mode_enabled_fixture.py --check
 	$(PYTHON) scripts/generate_avif_inter_422_small_partitions_fixture.py --check
+	$(PYTHON) scripts/generate_avif_lossless_inter_i422_b16x16.py --check
 	$(PYTHON) scripts/generate_avif_inter_i422_loopfilter_16x16.py --check
 	$(PYTHON) scripts/generate_avif_inter_422_qindex0_mode_select.py --check
+	$(PYTHON) scripts/generate_avif_inter_422_qindex0_mode_select.py --variant b8x4 --check
 	$(PYTHON) scripts/generate_avif_inter_422_compound_direct_grid_fixture.py --check
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py

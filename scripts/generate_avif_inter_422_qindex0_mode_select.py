@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the pinned qindex-zero non-lossless I422 sequence."""
+"""Generate pinned qindex-zero non-lossless I422 sequence fixtures."""
 
 from __future__ import annotations
 
@@ -21,11 +21,16 @@ from inspect_av1_obus import inspect as inspect_obus
 
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSET = (
-    ROOT
-    / "tests/fixtures/input/images/avif/animated_lossy_inter_422_qindex0_mode_select_64x64.avif"
-)
-EXPECTED_ASSET_SHA256 = "062cec9bf86cfa7e5d2130baec72884dec70d96d9621578f91388612d21a1fab"
+VARIANTS = {
+    "general": {
+        "asset": "animated_lossy_inter_422_qindex0_mode_select_64x64.avif",
+        "sha256": "062cec9bf86cfa7e5d2130baec72884dec70d96d9621578f91388612d21a1fab",
+    },
+    "b8x4": {
+        "asset": "animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif",
+        "sha256": "43e290fb890e116a01100796cdf0790c88ff05845a42142498414ba44760260d",
+    },
+}
 EXPECTED_FRAME_SHA256 = (
     "09cd9be5690daa187a8f18453bc2bf203f416c10aa60e599e5590a3a6cb0e7a7",
     "efe6384013c5ba216282f444602c7ea6643f52ebf036649281b1257a56bd0616",
@@ -137,6 +142,12 @@ def validate_frame_headers(encoded: bytes) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--variant",
+        choices=sorted(VARIANTS),
+        default="general",
+        help="fixture geometry; b8x4 requires the matching pinned AOM partition patch",
+    )
     parser.add_argument("--encoder", type=Path, help="fixture-only pinned AVIF encoder")
     parser.add_argument("--output", type=Path, help="override the default output path")
     parser.add_argument(
@@ -147,7 +158,9 @@ def main() -> None:
     args = parser.parse_args()
 
     check_pinned_oracle()
-    output = (args.output or ASSET).resolve()
+    variant = VARIANTS[args.variant]
+    asset = ROOT / "tests/fixtures/input/images/avif" / variant["asset"]
+    output = (args.output or asset).resolve()
     if args.check:
         if not output.is_file():
             raise RuntimeError(f"fixture does not exist: {output}")
@@ -165,7 +178,7 @@ def main() -> None:
         output.write_bytes(encoded)
 
     file_hash = sha256(encoded)
-    if file_hash != EXPECTED_ASSET_SHA256:
+    if file_hash != variant["sha256"]:
         raise RuntimeError(f"fixture hash changed: {file_hash}")
     validate_pixels(encoded)
     validate_frame_headers(encoded)

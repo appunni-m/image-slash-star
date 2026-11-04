@@ -298,9 +298,9 @@ pub(super) struct UpsampleComponent<'a> {
 /// Upsample one destination row without materializing the full component plane.
 ///
 /// The h1v2, h2v1, and h2v2 branches preserve the IJG triangle filter and edge
-/// rounding. Like libjpeg's dispatcher, h2v1/h2v2 use replication when the
-/// source width is at most two samples. Other integer ratios also use
-/// replication. CMYK/YCCK callers derive
+/// rounding. h2v1/h2v2 still replicate source widths at most two: singleton
+/// widths use the corresponding edge helper, and width two uses the direct
+/// fallback. Other integer ratios also use replication. CMYK/YCCK callers derive
 /// source dimensions with ceiling division and size each output row to the
 /// image width, so only the final sampling group can be clipped.
 pub(super) fn fancy_upsample_row(
@@ -356,6 +356,30 @@ pub(super) fn fancy_upsample_row(
     } else {
         src_stride
     };
+    #[cfg(coverage)]
+    let (src_stride, src_h) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowLastRowStartOverflow,
+    ) {
+        (usize::MAX, 3)
+    } else {
+        (src_stride, src_h)
+    };
+    #[cfg(coverage)]
+    let (src_stride, src_h) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowRequiredSourceLengthOverflow,
+    ) {
+        (usize::MAX, 2)
+    } else {
+        (src_stride, src_h)
+    };
+    #[cfg(coverage)]
+    let (src_stride, src_w, src_h, v_ratio) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowDestinationHeightOverflow,
+    ) {
+        (1, 1, usize::MAX.div_ceil(2), 2)
+    } else {
+        (src_stride, src_w, src_h, v_ratio)
+    };
     if src_w == 0 || src_h == 0 || src_stride < src_w || h_ratio == 0 || v_ratio == 0 {
         return Err(invalid_geometry());
     }
@@ -410,8 +434,10 @@ pub(super) fn fancy_upsample_row(
             let bias = if dst_y.is_multiple_of(2) { 1 } else { 2 };
             upsample_h1v2_row(source_row, adjacent_row, output, bias);
         }
-        (2, 1) if src_w > 2 => upsample_h2v1_row(source_row, output),
-        (2, 2) if src_w > 2 => {
+        // Preserve nearest-neighbor behavior for width two while exercising
+        // the singleton-safe helper for a one-sample source row.
+        (2, 1) if src_w > 2 || src_w == 1 => upsample_h2v1_row(source_row, output),
+        (2, 2) if src_w > 2 || src_w == 1 => {
             let adjacent_y = if dst_y.is_multiple_of(2) {
                 source_y.saturating_sub(1)
             } else {
@@ -491,10 +517,10 @@ fn upsample_h2v1_row(src: &[u8], output: &mut [u8]) {
 )]
 fn upsample_h2v2_row(top: &[u8], adjacent: &[u8], output: &mut [u8]) {
     if top.len() == 1 {
-        let this_col_sum = vertical_sum(top[0], adjacent[0]);
-        output[0] = interpolate(this_col_sum, 0, 4, 8, 4);
+        let sample = top[0];
+        output[0] = sample;
         if output.len() > 1 {
-            output[1] = interpolate(this_col_sum, 0, 4, 7, 4);
+            output[1] = sample;
         }
         return;
     }

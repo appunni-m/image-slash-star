@@ -1,8 +1,124 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,835 total rows: 3,161 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,161 decode rows are
+The current public evidence matrix contains 3,842 total rows: 3,168 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,168 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG oversized trailing COM parity — 2026-11-04
+
+Added `decode:jpeg:baseline_444_single_scan_com_oversized_length`. The fixture
+is an 8x8 baseline 4:4:4 JPEG with one scan and a trailing COM length that
+extends beyond EOI. Before the decoder change, it failed with a truncated
+metadata payload error; Pillow 12.2.0 decodes it as RGB. The parser now stops
+at EOI for this completed single-scan case, and entropy reconstruction ends at
+the completed scan. The decoded 192-byte output matches Pillow exactly.
+
+Input SHA-256:
+`b554f0b32009da0282d524952288a3dd561c85f7d50591af6a3a997ba13c15f0`;
+raw RGB SHA-256:
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+The pinned fixture generator passes `--check`. The fresh one-row parity run
+passed 1/1; its local report is
+`.coverage-mcp/local-evidence/selected/20261104T054723.457215Z-b5ffbd42328743bb8fd6ae04e8397890/coverage.json`
+(SHA-256 `fd00cca8e5c1aecc21a08b24c1778ada33aa5252b900700ce9cc9f37155bdf60`)
+and its execution receipt is
+`.coverage-mcp/local-evidence/selected/20261104T054723.457215Z-b5ffbd42328743bb8fd6ae04e8397890/coverage.local-evidence.json`
+(SHA-256 `37b26ab729274e762d7400c1038e5b563457038db4c549eb74f846bab96bba4e`).
+Coverage MCP records the true side of the decoder condition at line 3051 and
+reports the false side as the remaining selected-report gap. The receipt says
+the selected row passed, but MCP source identity is unverified and test
+attribution is unknown; treat this as local measurement evidence, not a
+managed attribution receipt.
+
+The final full coverage report is
+`.coverage-mcp/local-evidence/full/20261104-jpeg-com-oversize/coverage.json`
+(SHA-256 `4bad12103c6f554a4e2f0399cfaf4b12b72798db7b7da036e09b8d0b7a0a9b69`).
+The coverage matrix passed 57/57 rows. The report records 102,857/142,351 lines
+(72.2559%), 21,109/32,010 branches (65.9450%), 5,680/9,137 functions
+(62.1648%), and 156,551/220,549 regions (70.9824%). Coverage MCP's full-scope
+comparison is `limited`: source identity is unverified and tests are unknown,
+so its coordinate deltas are not a verified gain or regression. `make lint`,
+`make lint-x86-simd`, and fixture-integrity refresh passed. No unit tests or
+SIMD changes were added, and no performance gain is claimed.
+
+## JPEG row upsampling overflow fault contracts — 2026-11-04
+
+The prior full Coverage MCP report identified uncovered checked-overflow exits
+in `fancy_upsample_row`: row-start multiplication, required-source-length addition,
+and destination-height multiplication. Valid JPEG dimensions and sampling
+ratios cannot reach these `usize` overflow states in the 64-bit coverage
+build. Added three target-only fault-contract rows that inject those states
+through the existing public YCCK decode case and require an error followed by
+a successful uninjected retry. The hooks are `cfg(coverage)` only; production
+decoding has no added checks.
+
+The selected fault-contract run passed 3/3. Its local report is
+`.coverage-mcp/local-evidence/selected/20261104-jpeg-row-overflow-fault-contracts/coverage.json`
+(SHA-256 `a511e62430c8c2f350e0c13cc9bc8501e2d104a0d46d91b36ca5844f039c0519`)
+and its execution receipt is
+`.coverage-mcp/local-evidence/selected/20261104-jpeg-row-overflow-fault-contracts/coverage.local-evidence.json`
+(SHA-256 `689b07131d293030cd09740630070b346d012e5258bfa22d0f6fac587016baf3`).
+Coverage MCP finds no remaining branch gaps at `upsample.rs` lines 386, 389,
+and 400 in the selected report. Source identity remains unverified and test
+attribution unknown; this is local selected evidence, not a managed receipt.
+No unit tests were added, and the full-project report was not refreshed for
+these three coverage-only hooks.
+
+## AV1 partition walker even-grid invariant — 2026-11-04
+
+The AV1 partition walker derives frame extents as twice the number of 8-pixel
+blocks, so frame bounds are even in its four-pixel grid. Tile origins and
+superblock roots are aligned to at least 16 grid units, and recursive offsets
+before level 4 are even. A level-4 node inside its root therefore has at least
+two grid units remaining and cannot enter the old no-split boundary-leaf path.
+That path and its redundant frame-bound checks were removed; valid partition
+and block parsing is unchanged, with fewer checks in the recursive walk.
+
+Four existing Pillow-backed AVIF parity rows passed: 10-bit I420 CDEF at
+15x16, a 73x64 lossless monochrome grid, 10-bit lossless I444, and lossless
+I444 film grain. The selected report is
+`.coverage-mcp/local-evidence/selected/av1-partition-even-grid-20261104/coverage.json`
+(SHA-256 `561e37ac…2f81d6`). Its local execution receipt records 4/4 passed
+and no source changes during the run; Coverage MCP identity and test
+attribution remain unverified. `make lint` passed formatting and all configured
+strict Clippy lanes, including coverage and AVIF-only builds. No parity rows or
+unit tests were added.
+
+An ARM64 A-B-B-A release probe of the 2048x128 AVIF sequence used two runs of
+42 and 120 timed decodes per revision. Their directions differed (+3.4% and
+-2.2%); pooled medians were 9.887 ms before and 9.857 ms after. This is no
+measurable speed change, not a speedup claim. Raw samples and host/build details
+are retained under
+`.coverage-mcp/local-evidence/perf/av1-partition-even-grid-20261104/`.
+The measurement is ARM64-only and says nothing about SSE2 or AVX2 runtime
+performance.
+
+## AVIF all-lossless I422 B16x16 parity and selected coverage — 2026-11-04
+
+Added `decode:avif:animated_lossless_inter_i422_fixed_b16x16_64x64`, a
+two-frame 64x64 8-bit I422 all-lossless sequence with fixed 16x16 inter
+partitions. The pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 generator
+reproduces the input hash `43866d1b…e4343` and both exact RGB frame hashes.
+Both decoded frames match the pinned Pillow output, and a separate pinned
+native loop observation confirms the two-frame sequence and infinite
+repetition. The manifest's older B4x8 I420 row now reflects its supported
+sequence parity instead of retaining a stale unsupported expectation.
+
+A selected `cargo llvm-cov` parity run passed all 1,391 AVIF rows: 1,386 decode
+rows and five encode rows. The source and fixture inventories did not change
+during that run. Its local report is
+`.coverage-mcp/local-evidence/selected/20261103T185507.555297Z-5a1d2c210a464100a0853b8e4de45f06/coverage.json`
+(SHA-256 `e109b0859b01039590b374f0aab1dccc985044fc935a54fb4644da639b856fc4`).
+For this selected profile, LLVM reports 53,253/142,370 lines, 12,541/31,998
+branches, 2,917/9,138 functions, and 76,721/220,595 regions covered. These
+are selected-run totals, not a full-project baseline or a 100% coverage claim.
+
+The `coverage-mcp gaps` query for `src/codecs/avif` surfaced missing branches
+in AV1 inter-translation paths in `src/codecs/avif/av1/block.rs`. The report
+is local-only: Coverage MCP marks its source as `unverified` and tests as
+`unknown`, because this CLI has no receipt-registration action. No unit tests
+were added; the next coverage work is to map the remaining gaps to public
+parity inputs and target-only fault contracts.
 
 ## AV1 CDEF aligned chroma edge parity — 2026-11-03
 
@@ -6623,6 +6739,26 @@ report from this managed worktree, so the local counters are selected-scope
 evidence only; no full-suite or marginal coverage gain is claimed. No Rust
 unit tests were added.
 
+## AVIF narrow qindex zero inter parity — 2026-11-03
+
+Added active row
+`decode:avif:animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64`. The
+deterministic 64×64 8-bit I420 sequence has a lossless key frame followed by a
+`TX_MODE_SELECT` inter frame with base qindex zero and chroma quantizer deltas
+of 2. Its narrow B4×8 transform geometry exposed an intra-coded block where
+generic intra transform selection checked `segment_lossless` but not the base
+qindex. Passing the segment qindex preserves the implicit DCT_DCT choice and
+keeps coefficient decoding aligned.
+
+The selected public parity run passed 1/1 with all 12,288 RGB bytes matching
+Pillow. The pinned fixture generator check also passed. Its selected report is
+`.coverage-mcp/local-evidence/selected/20261103T155915.218400Z-e016d2ff385040159ad7c0daa314d31e/coverage.json`.
+Its SHA-256 is
+`d9cf5279002d0d3da1f61b6f11278305b1c0732c40c27552db8e5f3e48befa67`. This is
+selected-scope evidence, not an aggregate coverage claim. No SIMD performance
+measurement was part of this correctness fix, and no Rust unit tests were
+added.
+
 ## I444 compound split parity — 2026-10-26
 
 Added active row `decode:avif:animated_lossy_inter_i444_compound_split_b16x32_mode2`.
@@ -12564,6 +12700,23 @@ the clean Pillow-parity decode. This target-only contract is recorded with
 `oracle_status: not_applicable`; the source image remains the input-driven
 Pillow parity case.
 
+### JPEG bulk entropy refill experiment rejected — 2026-11-04
+
+Native x86 A-B-B-A run 41812150890 compared baseline `3607da286639c16a0cf76c32f09fffcdf8b675be` with the committed candidate from PR head `11a4fdf4c3479416ab2f38c86709d36abc4c0ed9`. Six primary cohorts completed on both SSE2 and AVX2, and the benchmark's output-identity checks passed. The candidate failed the performance gate: SSE2 primary paired gain was -2.0854% with a -2.6305% minimum guard gain; AVX2 primary paired gain was -4.9570% with a -4.9859% minimum guard gain. Zero of six primary cohorts were faster on either variant.
+
+The largest cases regressed on both variants. SSE2 grayscale 512x512 4:2:0 moved from 2.560 ms to 2.612 ms and 4:2:2 from 2.560 ms to 2.631 ms. AVX2 moved from 2.209 ms to 2.320 ms and from 2.203 ms to 2.317 ms, respectively. Reject the bulk refill implementation and retain the byte-at-a-time reader. Keep the separately validated marker-prefix EOF fault contract; its `cfg(coverage)` hook is absent from production builds.
+
+### JPEG fast bit-reader marker-prefix EOF fault contract — 2026-11-04
+
+`fault-contract:jpeg:jpeg_fast_reader_marker_prefix_eof_fallback` reuses the
+public grayscale 4:2:0 input `decode:jpeg:grayscale_sampling_420_512x512`.
+The coverage-only one-shot fault ends the logical entropy range immediately
+after `0xFF`, exercising the fast reader's marker-prefix EOF fallback. The
+public decode must recover to the same bytes as the clean Pillow-parity decode,
+and a retry must also succeed. The target-only fault is recorded with
+`oracle_status: not_applicable`; the source image remains the input-driven
+Pillow parity case.
+
 ### JPEG h1v2 upsampler edge and allocation contracts — 2026-10-19
 
 The public parity row `decode:jpeg:baseline_420_chroma_component_sampling_fallback`
@@ -16662,7 +16815,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `569eec0c1b14ecf5f3a5ea85b52d6c27a00d49f627f47921a2f39f0366d5f35d`; matrix `c1e4aa29ecf3383e50dc93ae9f5e0cba3d2c1be4e22b4e423be5ea9932a274d6`.
+- Current fixture integrity only: manifest `21106e4d494811911130737b7a0aaefbece8a450f72d487589a6cdf2412d5b59`; matrix `e2973cd3aa1fea9768139d777e7c484dad8c577ba59e539b03a5dbe06d15eb87`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -17043,7 +17196,7 @@ Pillow-backed input.
 | `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
-| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_zero_width`, `fault-contract:avif:avif_12bit_i420_alpha_nondivisible_luma_length`, `fault-contract:avif:avif_12bit_i420_alpha_zero_height`, `fault-contract:avif:avif_12bit_i420_alpha_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_portable_u_plane_length_mismatch`, `fault-contract:avif:avif_portable_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_subsampled_identity_conversion_rejected`, `fault-contract:avif:av1_inter_translation_sample_depth_mismatch`, `fault-contract:avif:av1_motion_predictor_zero_width_rejected`, `fault-contract:avif:av1_motion_reference_mv_geometry_guard_sweep_rejected`, `fault-contract:avif:av1_difference_mask_first_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_second_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_output_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_scratch_length_mismatch`, `fault-contract:avif:av1_wedge_mask_fill_empty_width`, `fault-contract:avif:av1_wedge_mask_fill_empty_height`, `fault-contract:avif:av1_wedge_mask_fill_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_invalid_mode`, `fault-contract:avif:av1_inter_intra_mask_empty_width`, `fault-contract:avif:av1_inter_intra_mask_empty_height`, `fault-contract:avif:av1_inter_intra_mask_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_non_normative_width`, `fault-contract:avif:av1_inter_intra_mask_non_normative_height`, `fault-contract:avif:av1_wedge_mask_reduce_empty_width`, `fault-contract:avif:av1_wedge_mask_reduce_empty_height`, `fault-contract:avif:av1_wedge_mask_reduce_scratch_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_direction_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_input_guard_sweep_rejected`, `fault-contract:avif:avif_color_cdef_active_map_extent_mismatch_rejected`, `fault-contract:avif:avif_color_cdef_active_strength_index_out_of_range_rejected`, `fault-contract:avif:avif_color_cdef_invalid_y_strength_count_rejected`, `fault-contract:avif:avif_color_cdef_invalid_uv_strength_count_rejected`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_item_extent_span_inspection_reservation_failure`, `fault-contract:avif:avif_container_inspection_invariant_guards`, `fault-contract:avif:avif_container_meta_full_box_version_rejected`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_chunk_iterator_failure_stops_iteration`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:png:png_inspect_invalid_signature_rejected`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_rational_index_out_of_range`, `fault-contract:tiff:tiff_ycbcr_floating_index_out_of_range`, `fault-contract:tiff:tiff_directory_numeric_value_width_invalid`, `fault-contract:tiff:tiff_directory_numeric_value_width_remainder`, `fault-contract:tiff:tiff_directory_numeric_value_remainder_nonempty`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch`, `fault-contract:webp:webp_hash_chain_index_overflow_rejected`, `fault-contract:webp:webp_riff_header_too_short_rejected`, `fault-contract:webp:webp_riff_signature_mismatch_rejected`, `fault-contract:webp:webp_form_type_mismatch_rejected`, `fault-contract:webp:webp_riff_declared_size_mismatch_rejected`, `fault-contract:avif:av1_unfiltered_copy_source_x_end_overflow_falls_back`, `fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`, `fault-contract:bmp:bmp_encode_height_over_signed_limit_rejected` | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_segment_map_reservation_failure`, `fault-contract:avif:avif_10bit_i444_alpha_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_alpha_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_alpha_invalid_sample`, `fault-contract:avif:avif_10bit_i444_alpha_output_reservation_failure`, `fault-contract:avif:avif_12bit_i444_generic_rgb_output_reservation_failure`, `fault-contract:avif:avif_subsampled_rgb_output_reservation_failure`, `fault-contract:avif:avif_12bit_i420_alpha_sample_count_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_zero_width`, `fault-contract:avif:avif_12bit_i420_alpha_nondivisible_luma_length`, `fault-contract:avif:avif_12bit_i420_alpha_zero_height`, `fault-contract:avif:avif_12bit_i420_alpha_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i420_alpha_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_portable_u_plane_length_mismatch`, `fault-contract:avif:avif_portable_v_plane_length_mismatch`, `fault-contract:avif:avif_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_subsampled_identity_conversion_rejected`, `fault-contract:avif:av1_inter_translation_sample_depth_mismatch`, `fault-contract:avif:av1_motion_predictor_zero_width_rejected`, `fault-contract:avif:av1_motion_reference_mv_geometry_guard_sweep_rejected`, `fault-contract:avif:av1_difference_mask_first_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_second_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_output_plane_length_mismatch`, `fault-contract:avif:av1_difference_mask_scratch_length_mismatch`, `fault-contract:avif:av1_wedge_mask_fill_empty_width`, `fault-contract:avif:av1_wedge_mask_fill_empty_height`, `fault-contract:avif:av1_wedge_mask_fill_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_invalid_mode`, `fault-contract:avif:av1_inter_intra_mask_empty_width`, `fault-contract:avif:av1_inter_intra_mask_empty_height`, `fault-contract:avif:av1_inter_intra_mask_scratch_length_mismatch`, `fault-contract:avif:av1_inter_intra_mask_non_normative_width`, `fault-contract:avif:av1_inter_intra_mask_non_normative_height`, `fault-contract:avif:av1_wedge_mask_reduce_empty_width`, `fault-contract:avif:av1_wedge_mask_reduce_empty_height`, `fault-contract:avif:av1_wedge_mask_reduce_scratch_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_u_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_v_plane_length_mismatch`, `fault-contract:avif:avif_12bit_i444_generic_invalid_sample`, `fault-contract:avif:avif_10bit_i444_u_plane_length_mismatch`, `fault-contract:avif:avif_10bit_i444_v_plane_length_mismatch`, `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_display_plane_copy_sequence_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_film_grain_points_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_header_geometry_mismatch`, `fault-contract:avif:avif_superresolution_chroma_u_plane_reservation_failure`, `fault-contract:avif:avif_superresolution_chroma_v_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_output_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure`, `fault-contract:jpeg:jpeg_ycck_output_reservation_failure`, `fault-contract:jpeg:jpeg_fast_reader_marker_prefix_eof_fallback`, `fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure`, `fault-contract:jpeg:jpeg_h1v2_upsample_empty_geometry_rejection`, `fault-contract:jpeg:jpeg_h1v2_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_h1v2_upsample_zero_width_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_invalid_geometry`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_height_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_horizontal_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_zero_vertical_ratio_rejection`, `fault-contract:jpeg:jpeg_fancy_upsample_row_short_stride`, `fault-contract:jpeg:jpeg_row_upsample_source_length_mismatch`, `fault-contract:jpeg:jpeg_fancy_upsample_row_last_row_start_overflow`, `fault-contract:jpeg:jpeg_fancy_upsample_row_required_source_length_overflow`, `fault-contract:jpeg:jpeg_fancy_upsample_row_destination_height_overflow`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_monochrome_group_buffer_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_partition_context_above_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_direction_invalid_sample_depth_rejected`, `fault-contract:avif:avif_monochrome_cdef_input_guard_sweep_rejected`, `fault-contract:avif:avif_color_cdef_active_map_extent_mismatch_rejected`, `fault-contract:avif:avif_color_cdef_active_strength_index_out_of_range_rejected`, `fault-contract:avif:avif_color_cdef_invalid_y_strength_count_rejected`, `fault-contract:avif:avif_color_cdef_invalid_uv_strength_count_rejected`, `fault-contract:avif:avif_retained_temporal_sample_reservation_failure`, `fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_tile_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure`, `fault-contract:avif:avif_item_table_reservation_failure`, `fault-contract:avif:avif_item_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_location_table_reservation_failure`, `fault-contract:avif:avif_item_location_table_inspection_reservation_failure`, `fault-contract:avif:avif_item_extent_span_reservation_failure`, `fault-contract:avif:avif_item_extent_span_inspection_reservation_failure`, `fault-contract:avif:avif_container_inspection_invariant_guards`, `fault-contract:avif:avif_container_meta_full_box_version_rejected`, `fault-contract:avif:avif_sgr_source_reservation_failure`, `fault-contract:avif:avif_monochrome_alpha_plane_length_mismatch`, `fault-contract:bmp:bmp_palette_reservation_failure`, `fault-contract:bmp:bmp_decoded_pixels_reservation_failure`, `fault-contract:bmp:bmp_rle_entry_work_budget_exceeded`, `fault-contract:bmp:bmp_rle_command_work_budget_exceeded`, `fault-contract:png:png_decoded_sample_buffer_reservation_failure`, `fault-contract:png:png_chunk_iterator_failure_stops_iteration`, `fault-contract:png:png_apng_sequence_counter_exhaustion`, `fault-contract:png:png_apng_inspection_sequence_counter_exhaustion`, `fault-contract:png:png_inspect_invalid_signature_rejected`, `fault-contract:tiff:tiff_lzw_zero_expected_output_rejection`, `fault-contract:tiff:tiff_lzw_zero_expected_output_token_rejection`, `fault-contract:tiff:tiff_header_registered_magic_rejection`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_unaligned_strip_assembly_reservation_failure`, `fault-contract:tiff:tiff_rgb16_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_full_resolution_length_mismatch_custom_tags`, `fault-contract:tiff:tiff_ycbcr_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_table_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_table_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_rational_index_out_of_range`, `fault-contract:tiff:tiff_ycbcr_floating_index_out_of_range`, `fault-contract:tiff:tiff_directory_numeric_value_width_invalid`, `fault-contract:tiff:tiff_directory_numeric_value_width_remainder`, `fault-contract:tiff:tiff_directory_numeric_value_remainder_nonempty`, `fault-contract:tiff:tiff_ycbcr_custom_general_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_general_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_custom_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_1x2_clump_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_1x2_rgb_output_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_assembly_reservation_failure`, `fault-contract:tiff:tiff_ycbcr_tile_prefix_limit_failure`, `fault-contract:tiff:tiff_ignored_sample_row_bytes_zero`, `fault-contract:tiff:tiff_ignored_sample_assembly_length_mismatch`, `fault-contract:tiff:tiff_ycbcr_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_vertical_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_horizontal_subsampling_zero`, `fault-contract:tiff:tiff_ycbcr_custom_vertical_subsampling_zero`, `fault-contract:avif:avif_monochrome_portable_subsampling_x_rejected`, `fault-contract:avif:avif_monochrome_portable_subsampling_y_rejected`, `fault-contract:avif:avif_monochrome_portable_u_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_v_plane_nonempty_rejected`, `fault-contract:avif:avif_monochrome_portable_y_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_alpha_plane_length_mismatch`, `fault-contract:avif:avif_monochrome_portable_y_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_alpha_sample_out_of_depth`, `fault-contract:avif:avif_monochrome_portable_output_length_mismatch`, `fault-contract:webp:webp_hash_chain_index_overflow_rejected`, `fault-contract:webp:webp_riff_header_too_short_rejected`, `fault-contract:webp:webp_riff_signature_mismatch_rejected`, `fault-contract:webp:webp_form_type_mismatch_rejected`, `fault-contract:webp:webp_riff_declared_size_mismatch_rejected`, `fault-contract:avif:av1_unfiltered_copy_source_x_end_overflow_falls_back`, `fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`, `fault-contract:bmp:bmp_encode_height_over_signed_limit_rejected` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, bounded native concurrent verification, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |
@@ -21717,3 +21870,122 @@ MCP labels the report source unverified and test attribution unknown, so this
 records a selected branch observation rather than a whole-suite coverage
 gain. No Rust runtime code or unit tests changed, and this parity case makes
 no performance claim.
+
+## AV1 odd-width high-depth lossless inter edge — 2026-11-03
+
+The public parity row
+`decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_65x64`. The two-frame
+65x64 full-range 10-bit I420 AVIF has lossless B4x8 inter leaves, with one
+visible luma column at the odd right edge. Pillow 12.2.0 decodes both frames;
+the public still-image API matches frame zero exactly (12,480 RGB bytes,
+SHA-256 `006469f39295cec2dc6e36ecf1900ee939ca3bd060a4bdc88f22c5b2d47beef0`).
+The independent pinned libavif 1.4.1 observer decodes two frames, reports
+repetition count zero, and produces stable output. Rust now admits this
+bounded high-depth I420 sequence profile. The inter decoder processes the
+complete TX4x4 residual cells that overlap the clipped B4x8 right edge, then
+publishes only the visible luma column. The selected public parity row passes
+1/1 with exact parity for both sequence frames.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261103T175749.790567Z-3e4966b9177943f1bae45a9d706b4a92/coverage.json`
+(SHA-256
+`ea9a639d31369ae48b04c02cafa75194d405bd3520df4a3c68d00a0bd0c8abeb`). This
+receipt is local evidence with source identity unverified and test attribution
+unknown. A Coverage MCP query of this selected report identifies the
+unexecuted high-depth fallback in `decode_inter_transform_size`; this valid
+fixture follows the admitted lossless-grid path instead. The query is useful
+for locating the remaining edge, but the local report does not prove a
+suite-wide coverage change. The successful parity run independently proves
+the public pixel behavior. No unit tests or SIMD changes were added, and the
+full coverage baseline was not refreshed.
+
+## Lossless I444 Square64 sequence parity and fallback contract — 2026-11-04
+
+The new public row
+`decode:avif:animated_lossless_inter_i444_fixed_b64x64_64x64` adds an exact
+two-frame 64x64 8-bit lossless I444 sequence with textured chroma residuals.
+The pinned Pillow 12.2.0 references cover both RGB frames byte-for-byte, and
+the pinned native libavif observer confirms two frames with infinite
+repetition. The sequence parity harness and the selected matrix parity row
+both pass. The generator checks repeat encoding, frame hashes, all-lossless
+I444 headers, fixed 64x64 partitions, and the canonical input digest.
+
+The selected sequence parity measurement did not cover the first-partition
+fallback: its ordinary complete-frame path stays in the supported decoder.
+The existing target-only fault contract
+`fault-contract:avif:av1_lossless_i444_first_partition_fallback_matches_parity`
+injects `Av1LosslessI444FirstPartitionFallback` while decoding a separate
+10-bit lossless I444 still. It compares the public decode result with Pillow,
+then requires a clean retry to match. The contract passed 1/1 with
+`oracle_status: not_applicable`. Coverage MCP reports zero remaining branch
+gaps at `src/codecs/avif/av1/block.rs:20993` for this retained fault-contract
+measurement.
+
+The selected matrix report is
+`.coverage-mcp/local-evidence/selected/20261103T205918.907601Z-c58830d120c44384ab44e06cd5f61e5a/coverage.json`
+(SHA-256 `2f75094b2a5d38edc22c417fb89d773250d07c652dba04cb3147ed95249d5d4b`).
+The target-only fault-contract report is
+`.coverage-mcp/local-evidence/selected/20261103T211820.742902Z-aaced1ef9ff84eaa89744cc32ca628b4/coverage.json`
+(SHA-256 `a00a24d285dc3d07e27d69b4b69f7cfc99f818254c2551613452c9a798438edd`).
+Both are local selected measurements with source identity unverified and test
+attribution unknown. The targeted zero-gap result does not claim complete
+repository coverage; the retained fault report still has 29,943 of 31,998
+branches unobserved overall. No runtime implementation changed, no unit tests
+were added, and no performance gain is claimed. Strict Rust lint and x86-64
+SSE2/AVX2 lint both pass.
+
+## WebP metadata signature guards and public reachability — 2026-11-04
+
+The retained full LLVM report records both branches of the RIFF and WEBP
+signature guard in `src/codecs/webp/decode.rs` as unhit: lines 185 and 186
+each have counts `(0, 57)`. The refreshed full local report is
+`.coverage-mcp/local-evidence/full/20261104-main-561a1de/coverage.json`
+(SHA-256 `c55551d8702868c9fc8fc5e7b0311d9ced40e1c77fb569b5d2fe6f3e3639d705`),
+generated by `make coverage` at `main` commit `561a1de87`. Its aggregates are
+lines 72.254851%, branches 65.942618%, functions 62.164824%, and regions
+70.980892%. It is a local full-suite report, not a Coverage MCP source/build
+receipt; MCP source and case attribution remain unverified.
+
+These guards are defensive: normal WebP detection requires `RIFF`, `WEBP`, and
+a recognized first image chunk before selecting the WebP decoder. The public
+decode path also validates an explicitly supplied format against detection.
+Malformed-signature parity rows therefore fail before `metadata_bytes` can
+reach these checks. No honest public parity input can exercise the rejected
+signature arms through the current API, and a private direct-call test would
+violate the parity-only test policy. Keep the defensive checks and count them
+in coverage totals; do not manufacture a public case or exclude the lines.
+
+This documents a coverage disposition, not completion: the fresh report still
+has 10,897 of 31,996 branches unobserved, and reachable gaps still need public
+parity cases. Coverage MCP is not connected in this run, so no MCP attribution
+is claimed.
+
+## JPEG singleton chroma upsampling parity — 2026-11-04
+
+The existing public YCCK parity rows for 1x1 and 2x2 H2V1 and H2V2 inputs
+already cover both one-pixel and two-pixel destination rows. The row dispatcher
+previously sent all one-sample source rows through its nearest-neighbor
+fallback, leaving the singleton branches in `upsample_h2v1_row` and
+`upsample_h2v2_row` unreachable. It now uses those helpers for a one-sample
+source, where they preserve the same replicated pixels; H2V2 copies the
+selected source row instead of blending an adjacent row. Width-two inputs
+keep the fallback. The common source-width-greater-than-two path retains its
+first guard comparison and short-circuit behavior.
+
+Selected coverage and Pillow parity passed six existing rows:
+`decode:jpeg:ycck_h2v1_single_sample_1x1`,
+`decode:jpeg:ycck_h2v1_single_sample_2x2`,
+`decode:jpeg:ycck_h2v2_single_sample_1x1`,
+`decode:jpeg:ycck_h2v2_single_sample_2x2`,
+`decode:jpeg:jpeg_chroma_1x9_420_progressive`, and
+`encode:jpeg:enc_cmyk_subsampling_420_single_sample_width`. The latter two
+guard against changing ordinary 4:2:0 decode or CMYK encode round-trip pixels.
+The local selected report is
+`.coverage-mcp/local-evidence/selected/20261104T041504.424190Z-5649901011014679b733063e84b2aad6/coverage.json`
+(SHA-256 `4cff67a5179bcb7d082b67302049daa1223a29a013d9ef8fe13fa6604eed4989`).
+It records the singleton arm in `upsample_h2v1_row` at line 465 (18 hits) and
+`upsample_h2v2_row` at line 495 (130 hits); each helper's nested output-length
+condition has both outcomes observed. The report and receipt are local-only;
+Coverage MCP was not queried and test attribution is unknown. This focused
+result is complemented by the refreshed full local baseline above. No unit
+tests or new parity rows were needed, and no performance gain is claimed.

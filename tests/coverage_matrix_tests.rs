@@ -3028,6 +3028,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "jpeg.fast_reader.marker_prefix_eof",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderMarkerPrefixEof,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.multiscan.coefficient_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegCoefficientBufferReservation,
                 false,
@@ -3093,6 +3102,30 @@ fn execute_fault_contract(
             ),
             ("jpeg.upsample.row_source_length_mismatch", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegFancyUpsampleRowSourceLengthMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.upsample.row_last_row_start_overflow", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowLastRowStartOverflow,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.upsample.row_required_source_length_overflow",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowRequiredSourceLengthOverflow,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.upsample.row_destination_height_overflow",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowDestinationHeightOverflow,
                 false,
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
@@ -3477,7 +3510,10 @@ fn execute_fault_contract(
         | "jpeg.upsample.row_zero_horizontal_ratio"
         | "jpeg.upsample.row_zero_vertical_ratio"
         | "jpeg.upsample.row_short_stride"
-        | "jpeg.upsample.row_source_length_mismatch" => {
+        | "jpeg.upsample.row_source_length_mismatch"
+        | "jpeg.upsample.row_last_row_start_overflow"
+        | "jpeg.upsample.row_required_source_length_overflow"
+        | "jpeg.upsample.row_destination_height_overflow" => {
             Some("decode: invalid JPEG component upsampling geometry")
         }
         "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
@@ -3693,6 +3729,9 @@ fn execute_fault_contract(
                 | "jpeg.upsample.row_zero_vertical_ratio"
                 | "jpeg.upsample.row_short_stride"
                 | "jpeg.upsample.row_source_length_mismatch"
+                | "jpeg.upsample.row_last_row_start_overflow"
+                | "jpeg.upsample.row_required_source_length_overflow"
+                | "jpeg.upsample.row_destination_height_overflow"
         ) && actual_format == expected_format
             && stage == expected_stage
             && expected_message.is_none_or(|expected| message == expected) => {}

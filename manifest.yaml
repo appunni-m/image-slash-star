@@ -1986,6 +1986,62 @@ fault_contracts:
       point: jpeg.upsample.row_source_length_mismatch
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_last_row_start_overflow
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_last_row_start_overflow
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_required_source_length_overflow
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_required_source_length_overflow
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fancy_upsample_row_destination_height_overflow
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.upsample.row_destination_height_overflow
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fast_reader_marker_prefix_eof_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:grayscale_sampling_420_512x512
+    fault:
+      point: jpeg.fast_reader.marker_prefix_eof
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -16271,6 +16327,16 @@ formats:
       test_assets:
       - animated_lossless_inter_420_b4x4_leaves_64x64.avif
       status: active
+    - id: animated_lossless_inter_i422_fixed_b16x16_64x64
+      description: Two-frame 64x64 8-bit 4:2:2 all-lossless AVIF sequence with fixed 16x16 inter partitions
+      test_assets:
+      - animated_lossless_inter_i422_fixed_b16x16_64x64.avif
+      status: active
+    - id: animated_lossless_inter_i444_fixed_b64x64_64x64
+      description: Two-frame 64x64 8-bit 4:4:4 all-lossless AVIF sequence with textured chroma residuals and fixed 64x64 partitions
+      test_assets:
+      - animated_lossless_inter_i444_fixed_b64x64_64x64.avif
+      status: active
     - id: animated_lossless_inter_420_b8x16
       description: Two-frame 8x16 4:2:0 all-lossless AVIF sequence with a translated patch and a rectangular B8x16 inter transform
       test_assets:
@@ -16915,6 +16981,11 @@ formats:
       test_assets:
       - animated_lossy_inter_422_qindex0_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit I422 AVIF sequence with horizontal B8x4 inter leaves at non-lossless qindex zero and TX_MODE_SELECT
+      test_assets:
+      - animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif
+      status: active
     - id: animated_lossy_inter_420_b8x16_mixed_topology_64x64
       description: Two-frame 64x64 lossy I420 AVIF sequence with mixed TX4x4 and TX8x8 children in inter B8x16 transforms
       test_assets:
@@ -17080,6 +17151,17 @@ formats:
       test_assets:
       - animated_lossy_inter_420_b4x8_mode_select_64x64.avif
       status: active
+    - id: animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64
+      description: Two-frame 64x64 8-bit 4:2:0 AVIF sequence whose vertical B4x8 inter leaves signal TX_MODE_SELECT at base qindex zero with nonzero chroma deltas
+      test_assets:
+      - animated_lossy_inter_420_b4x8_qindex0_mode_select_64x64.avif
+      status: active
+    - id: animated_lossless_inter_420_b4x8_10bit_odd_65x64
+      description: Two-frame 65x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with vertical B4x8 inter leaves clipped to one visible luma column at the right edge
+      test_assets:
+      - animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif
+      status: active
+      expect_sequence_error: false
     - id: animated_lossy_inter_444_b4x8_mode_select_64x64
       description: Two-frame 64x64 8-bit 4:4:4 lossy AVIF sequence whose inter partition tree is forced into vertical B4x8 leaves and signals TX_MODE_SELECT at positive qindex
       test_assets:

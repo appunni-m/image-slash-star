@@ -3049,6 +3049,11 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
         }
         let segment_end = length_start.checked_add(segment_length)?;
         if segment_end > info.eoi_pos {
+            if marker == M_COM {
+                // The completed baseline scan is still decodable when Pillow
+                // ignores an oversized trailing COM segment.
+                return Some(scan.entropy_end);
+            }
             return None;
         }
 
