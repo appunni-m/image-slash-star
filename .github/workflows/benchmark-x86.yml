@@ -175,11 +175,13 @@ jobs:
           git fetch --no-tags origin "$BASE_REVISION"
           decoder_plan=benchmarks/jpeg-production/experiments/decoder-refill.json
           decoder_patch=benchmarks/jpeg-production/experiments/decoder-refill.patch
-          if git diff --quiet "$BASE_REVISION" HEAD -- "$decoder_plan" "$decoder_patch"; then
+          if git diff --quiet "$BASE_REVISION" HEAD -- \
+            "$decoder_plan" "$decoder_patch" src/codecs/jpeg/decode/bit_reader.rs; then
             exit 0
           fi
           python3 scripts/benchmark_jpeg_patch_experiment.py \
             --plan "$decoder_plan" \
+            --baseline-revision "$BASE_REVISION" \
             --output target/benchmarks/jpeg/simd-x86_64/decoder-refill-experiment/summary.json
       - name: Verify committed JPEG decoder source matches the measured patch
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
