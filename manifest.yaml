@@ -2529,6 +2529,10 @@ formats:
       description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan APP1 length extends past EOI
       test_assets:
       - baseline_444_single_scan_app1_oversized_length.jpg
+    - id: baseline_444_single_scan_dht_oversized_length
+      description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan DHT length extends past EOI
+      test_assets:
+      - baseline_444_single_scan_dht_oversized_length.jpg
     - id: baseline_444_single_scan_trailing_app2
       description: Baseline 4:4:4 JPEG has a valid APP2 segment after its only entropy scan
       test_assets:
@@ -2634,6 +2638,10 @@ formats:
       description: Baseline 4:4:4 JPEG encodes Cb, Y, and Cr in separate non-interleaved sequential scans
       test_assets:
       - baseline_444_three_sequential_scans.jpg
+    - id: baseline_444_three_scans_dht_after_second_scan
+      description: Baseline 4:4:4 JPEG repeats its Huffman tables after the second component scan
+      test_assets:
+      - baseline_444_three_scans_dht_after_second_scan.jpg
     - id: baseline_444_three_scans_entropy_marker_fill_stuffed_byte
       description: Baseline 4:4:4 three-scan JPEG has a repeated 0xFF before a stuffed 0xFF00 byte in its second scan; Pillow decodes the complete image
       test_assets:
