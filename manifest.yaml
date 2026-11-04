@@ -2603,6 +2603,10 @@ formats:
       description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan DHT length extends past EOI
       test_assets:
       - baseline_444_single_scan_dht_oversized_length.jpg
+    - id: baseline_444_single_scan_dht_missing_length
+      description: Baseline 4:4:4 JPEG decodes a complete scan when a trailing DHT marker has no length or EOI
+      test_assets:
+      - baseline_444_single_scan_dht_missing_length.jpg
     - id: baseline_444_single_scan_trailing_app2
       description: Baseline 4:4:4 JPEG has a valid APP2 segment after its only entropy scan
       test_assets:
