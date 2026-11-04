@@ -2497,6 +2497,10 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid COM segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_com.jpg
+    - id: baseline_444_single_scan_com_oversized_length
+      description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan COM length extends past EOI
+      test_assets:
+      - baseline_444_single_scan_com_oversized_length.jpg
     - id: baseline_444_single_scan_com_tail_junk
       description: Baseline 4:4:4 JPEG has one trailing junk byte between its post-scan COM segment and EOI
       test_assets:
@@ -2521,6 +2525,10 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid APP1 segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_app1.jpg
+    - id: baseline_444_single_scan_app1_oversized_length
+      description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan APP1 length extends past EOI
+      test_assets:
+      - baseline_444_single_scan_app1_oversized_length.jpg
     - id: baseline_444_single_scan_trailing_app2
       description: Baseline 4:4:4 JPEG has a valid APP2 segment after its only entropy scan
       test_assets:
