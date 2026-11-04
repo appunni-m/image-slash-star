@@ -43,5 +43,5 @@
   "candidate_guards": {
     "src/codecs/jpeg/decode/bit_reader.rs": "dbe4106fc0493f6bad785996e4d4e795dd47ee6d2557495febb8a573a0de4adc"
   },
-  "patch_format": "Zero-context unified diff; exact baseline and compiled candidate file digests are both required."
+  "patch_format": "Zero-context unified diff; the candidate is verified by applying the patch and checking source digests."
 }

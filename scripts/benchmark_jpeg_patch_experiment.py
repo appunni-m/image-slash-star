@@ -10,6 +10,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,71 @@ def repository_path(path: Path) -> Path:
     if not resolved.is_relative_to(ROOT):
         raise RuntimeError("experiment inputs and output must stay inside the repository")
     return resolved
+
+
+def verify_committed_candidate_patch(
+    baseline_revision: str,
+    candidate_revision: str,
+    source_guards: dict[str, str],
+    candidate_guards: dict[str, str],
+    patch: Path,
+) -> None:
+    """Verify a retained patch reconstructs the committed candidate source."""
+    source_paths = sorted(source_guards)
+    if set(candidate_guards) != set(source_paths):
+        raise RuntimeError("candidate and baseline guards must cover the same source files")
+    if any(Path(name).is_absolute() or ".." in Path(name).parts for name in source_paths):
+        raise RuntimeError("guarded source paths must stay inside the repository")
+
+    baseline_sources = {}
+    for name, expected in source_guards.items():
+        source = subprocess.check_output(
+            ["git", "show", f"{baseline_revision}:{name}"], cwd=ROOT,
+        )
+        if hashlib.sha256(source).hexdigest() != expected:
+            raise RuntimeError(f"baseline source guard changed: {name}")
+        baseline_sources[name] = source
+
+        candidate = subprocess.check_output(
+            ["git", "show", f"{candidate_revision}:{name}"], cwd=ROOT,
+        )
+        if hashlib.sha256(candidate).hexdigest() != candidate_guards[name]:
+            raise RuntimeError(f"committed candidate source changed: {name}")
+
+    patch_bytes = patch.read_bytes()
+    numstat = subprocess.check_output(
+        ["git", "apply", "--numstat"], cwd=ROOT, input=patch_bytes,
+    ).decode("utf-8")
+    patch_paths = {line.split("\t", 2)[2] for line in numstat.splitlines()}
+    if patch_paths != set(source_paths):
+        raise RuntimeError("experiment patch touches a different source set than its guards")
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="jpeg-candidate-source-") as directory:
+            candidate_root = Path(directory)
+            for name, source in baseline_sources.items():
+                destination = candidate_root / name
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(source)
+            subprocess.run(
+                ["git", "apply", "--unidiff-zero", "--check"],
+                cwd=candidate_root,
+                input=patch_bytes,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "apply", "--unidiff-zero"],
+                cwd=candidate_root,
+                input=patch_bytes,
+                check=True,
+            )
+            for name, expected in candidate_guards.items():
+                if digest(candidate_root / name) != expected:
+                    raise RuntimeError(
+                        f"experiment patch does not reconstruct the candidate source: {name}"
+                    )
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError("experiment patch does not apply to the guarded baseline") from error
 
 
 def main() -> int:
@@ -53,8 +119,6 @@ def main() -> int:
     candidate_source_mode = (
         "committed_revision" if args.baseline_revision is not None else "explicit_patch"
     )
-    if set(plan["candidate_guards"]) != set(plan["source_guards"]):
-        raise RuntimeError("candidate and baseline guards must cover the same source files")
     revision = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True,
     ).strip()
@@ -67,28 +131,13 @@ def main() -> int:
         ).strip()
         if baseline_revision != args.baseline_revision:
             raise RuntimeError("baseline revision must be an immutable commit ID")
-        source_paths = sorted(plan["source_guards"])
-        for name, expected in plan["source_guards"].items():
-            baseline_source = subprocess.check_output(
-                ["git", "show", f"{baseline_revision}:{name}"], cwd=ROOT,
-            )
-            if hashlib.sha256(baseline_source).hexdigest() != expected:
-                raise RuntimeError(f"baseline source guard changed: {name}")
-            candidate_source = subprocess.check_output(
-                ["git", "show", f"{revision}:{name}"], cwd=ROOT,
-            )
-            candidate_expected = plan["candidate_guards"].get(name)
-            if hashlib.sha256(candidate_source).hexdigest() != candidate_expected:
-                raise RuntimeError(f"committed candidate source changed: {name}")
-        expected_patch = subprocess.check_output(
-            [
-                "git", "diff", "--no-ext-diff", "--unified=0",
-                baseline_revision, revision, "--", *source_paths,
-            ],
-            cwd=ROOT,
+        verify_committed_candidate_patch(
+            baseline_revision,
+            revision,
+            plan["source_guards"],
+            plan["candidate_guards"],
+            patch,
         )
-        if patch.read_bytes() != expected_patch:
-            raise RuntimeError("experiment patch differs from the committed source diff")
     else:
         for name, expected in plan["source_guards"].items():
             if digest(repository_path(Path(name))) != expected:
