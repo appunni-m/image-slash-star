@@ -2993,10 +2993,53 @@ fn known_single_baseline_entropy_segment(
 
 fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usize> {
     let scan = info.scans.first()?;
+    #[cfg(coverage)]
+    let scan_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFastReaderScanCountMismatch,
+    ) {
+        usize::MAX
+    } else {
+        info.scans.len()
+    };
+    #[cfg(not(coverage))]
+    let scan_count = info.scans.len();
+
+    #[cfg(coverage)]
+    let scan_entropy_start = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFastReaderEntropyStartMismatch,
+    ) {
+        scan.entropy_start ^ 1
+    } else {
+        scan.entropy_start
+    };
+    #[cfg(not(coverage))]
+    let scan_entropy_start = scan.entropy_start;
+
+    #[cfg(coverage)]
+    let scan_entropy_end = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFastReaderEntropyEndAfterEoi,
+    ) {
+        usize::MAX
+    } else {
+        scan.entropy_end
+    };
+    #[cfg(not(coverage))]
+    let scan_entropy_end = scan.entropy_end;
+
+    #[cfg(coverage)]
+    let eoi_marker = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFastReaderEoiMarkerMismatch,
+    ) {
+        [0, 0]
+    } else {
+        M_EOI.to_be_bytes()
+    };
+    #[cfg(not(coverage))]
     let eoi_marker = M_EOI.to_be_bytes();
-    if info.scans.len() != 1
-        || scan.entropy_start != info.entropy_start
-        || scan.entropy_end > info.eoi_pos
+
+    if scan_count != 1
+        || scan_entropy_start != info.entropy_start
+        || scan_entropy_end > info.eoi_pos
         || data.get(info.eoi_pos..info.eoi_pos.checked_add(2)?) != Some(eoi_marker.as_slice())
     {
         return None;
@@ -3079,6 +3122,13 @@ fn single_baseline_scan_entropy_end(info: &JpegInfo, data: &[u8]) -> Option<usiz
 
         saw_trailing_segment = true;
         marker_start = segment_end;
+    }
+
+    #[cfg(coverage)]
+    if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFastReaderTrailingMarkerPositionMismatch,
+    ) {
+        marker_start = info.eoi_pos.saturating_add(1);
     }
 
     if marker_start != info.eoi_pos {

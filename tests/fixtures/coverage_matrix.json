@@ -369908,6 +369908,101 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "jpeg_fast_reader_scan_count_mismatch_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:subsampling_444"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.scan_count_mismatch",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fast_reader_entropy_start_mismatch_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:subsampling_444"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.entropy_start_mismatch",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fast_reader_entropy_end_after_eoi_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:subsampling_444"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.entropy_end_after_eoi",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fast_reader_eoi_marker_mismatch_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:subsampling_444"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.eoi_marker_mismatch",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_fast_reader_trailing_marker_position_mismatch_fallback",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:subsampling_444"
+      },
+      "fault": {
+        "point": "jpeg.fast_reader.trailing_marker_position_mismatch",
+        "contract": "decode_fallback_matches_parity_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",
