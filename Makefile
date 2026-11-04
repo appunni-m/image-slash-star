@@ -202,6 +202,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_oversized_length_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_app1_oversized_length_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_dht_oversized_length_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_dht_missing_length_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_multiscan_dht_after_second_scan_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_eoi_marker_fill_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_444_multiscan_marker_fill_stuffed_byte_fixture.py --check

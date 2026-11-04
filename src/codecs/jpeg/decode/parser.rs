@@ -537,6 +537,14 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
             }
             M_DHT => {
                 if saw_sos && !progressive && scans.len() == 1 {
+                    if pos == data.len()
+                        && let Ok(marker_start) = usize::try_from(marker_offset)
+                    {
+                        // Pillow accepts a completed baseline scan followed
+                        // by a bare DHT marker at EOF, without EOI or length.
+                        break marker_start;
+                    }
+
                     let mut length_pos = pos;
                     if let Ok(length) = read_u16(data, &mut length_pos)
                         && length >= 2

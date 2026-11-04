@@ -1,8 +1,32 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,849 total rows: 3,175 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,175 decode rows are
+The current public evidence matrix contains 3,850 total rows: 3,176 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,176 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG bare trailing DHT parity — 2026-11-05
+
+Added `decode:jpeg:baseline_444_single_scan_dht_missing_length`. The fixture
+replaces a trailing comment and EOI in a baseline 4:4:4 JPEG with a bare DHT
+marker at EOF. Pillow 12.2.0 accepts the completed scan and returns the pinned
+192-byte RGB reference. Before the parser change, the Rust decoder rejected
+the missing DHT length; it now stops at that marker only after a completed
+single baseline scan. The seven neighboring trailing-DHT rows also passed,
+including malformed length and truncated table cases.
+
+The fixture SHA-256 is
+`7c8f8b67f671325d938bb236da0d4d702b89f636128ae3328dfa494b669b345d`; the
+Pillow RGB SHA-256 is
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`. The
+selected eight-row parity run passed 8/8. Its local LLVM report is
+`.coverage-mcp/local-evidence/selected/20261104T222908.928036Z-e30160c11127480c9d407eaf528cf437/coverage.json`
+(SHA-256 `1a26547544e9ea51be81301d867a94e750efabe6cb7ec5e4ae00377803db71c7`)
+and its execution receipt is
+`.coverage-mcp/local-evidence/selected/20261104T222908.928036Z-e30160c11127480c9d407eaf528cf437/coverage.local-evidence.json`
+(SHA-256 `2e3590a0f92e7789ba8df8f82a81d7f7708ec326a3761592b09b0aebd06aca85`).
+The receipt marks source identity unverified and test attribution unknown, so
+this selected result makes no aggregate coverage-gain claim. No unit tests or
+SIMD/performance changes were added.
 
 
 ## AVIF I422 B8x4 qindex-zero parity — 2026-11-05
@@ -16947,7 +16971,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `03f17ff361287b862dab60654673b6102beb2f49434aa7121b97e3dd494d36be`; matrix `1d151f749b2fedca3a93610365ab52f1d5307fce7d7c11fb1d340776914bed21`.
+- Current fixture integrity only: manifest `0b7339b57d2321e3e83f3d2533571e13235b03d4ab4fd37b7c95a009d3087024`; matrix `50ebb3b4a7fead5458d2799e385d6e9c75265b79f9ee40720e974901d4732afb`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
