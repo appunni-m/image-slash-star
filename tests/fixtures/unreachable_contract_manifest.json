@@ -644,6 +644,24 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_fancy_upsample_row_last_row_start_overflow",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_last_row_start_overflow",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fancy_upsample_row_required_source_length_overflow",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_required_source_length_overflow",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fancy_upsample_row_destination_height_overflow",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_destination_height_overflow",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_tile_reservation_failure",

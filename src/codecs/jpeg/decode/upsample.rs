@@ -356,6 +356,30 @@ pub(super) fn fancy_upsample_row(
     } else {
         src_stride
     };
+    #[cfg(coverage)]
+    let (src_stride, src_h) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowLastRowStartOverflow,
+    ) {
+        (usize::MAX, 3)
+    } else {
+        (src_stride, src_h)
+    };
+    #[cfg(coverage)]
+    let (src_stride, src_h) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowRequiredSourceLengthOverflow,
+    ) {
+        (usize::MAX, 2)
+    } else {
+        (src_stride, src_h)
+    };
+    #[cfg(coverage)]
+    let (src_stride, src_w, src_h, v_ratio) = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowDestinationHeightOverflow,
+    ) {
+        (1, 1, usize::MAX.div_ceil(2), 2)
+    } else {
+        (src_stride, src_w, src_h, v_ratio)
+    };
     if src_w == 0 || src_h == 0 || src_stride < src_w || h_ratio == 0 || v_ratio == 0 {
         return Err(invalid_geometry());
     }
