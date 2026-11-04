@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,848 total rows: 3,174 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,174 decode rows are
+The current public evidence matrix contains 3,849 total rows: 3,175 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,175 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 
@@ -16921,7 +16921,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `116d537ac1547efde03a3483835bc6fb3cd35947de7cf20b02dc96c43190576c`; matrix `8030913168fe6103cd200d6f3f5c6ba0b2545f678f515163ddea2e86b98912d9`.
+- Current fixture integrity only: manifest `03f17ff361287b862dab60654673b6102beb2f49434aa7121b97e3dd494d36be`; matrix `4d7def377b448106615d54b52b06a3794090cedb9de7df4a52afa34f5bdbee2c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -22004,6 +22004,32 @@ for locating the remaining edge, but the local report does not prove a
 suite-wide coverage change. The successful parity run independently proves
 the public pixel behavior. No unit tests or SIMD changes were added, and the
 full coverage baseline was not refreshed.
+
+## AV1 69-pixel odd-width high-depth lossless inter edge — 2026-11-04
+
+The public parity row
+`decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_69x64` covers a valid
+two-frame, 69x64 full-range 10-bit I420 all-lossless sequence. Its pinned AOM
+generator produces the fixture reproducibly, and Pillow 12.2.0 plus the pinned
+libavif 1.4.1 observer decode both frames. Public `decode_sequence` output
+matches the independent RGB frame references byte-for-byte (13,248 bytes per
+frame; frame SHA-256 values
+`5b47ce4079e56271e7163f1795422c04d05e70f96340b3c510085e68a22fd9f0` and
+`a2fa968856ff74c57daf8f7100d088bad57d0c8a06f77e0fc2b4e57622c48aa5`).
+
+The frame admission bound in
+`complete_high_depth_lossless_inter_reconstruction_context` now accepts widths
+65 through 71 for this fixed 64-row profile. Coverage MCP records the width
+gate's true arm in the selected 69x64 run; the false arm remains unobserved.
+Coverage MCP also showed that the separate clipped-B4x8 geometry helper was
+not entered by either the 65x64 or 69x64 parity fixtures, so its bound was left
+unchanged. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261104T164158.691688Z-69d30c625c284406b9286d32c10fe47a/coverage.json`
+(SHA-256
+`28be03b545bd58addf1b1b49db72b6382dad65d651984a59292ca9d0cf8c0626`). This
+local report has `source=unverified` and `tests=unknown`; it is selected-case
+evidence, not an aggregate coverage claim. No unit tests, SIMD code, or hot
+pixel loops changed, and this admission-only change makes no performance claim.
 
 ## Lossless I444 Square64 sequence parity and fallback contract — 2026-11-04
 

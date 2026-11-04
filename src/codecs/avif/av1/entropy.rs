@@ -19929,7 +19929,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
     let clipped_high_depth_lossless_b4x8_edge = context.all_lossless
         && layout == PixelLayout::I420
         && !context.superres_enabled
-        && (65..=67).contains(&context.frame_width)
+        && (65..=71).contains(&context.frame_width)
         && context.frame_height == 64;
     let single_tile_dimensions_supported = context.frame_width != 0
         && context.frame_height != 0

@@ -1616,6 +1616,44 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
   --variant animated_lossless_inter_420_b4x8_10bit_odd_65x64 --check
 ```
 
+## Odd-width 10-bit lossless B4x8 inter edge after a full block
+
+`animated_lossless_inter_420_b4x8_10bit_odd_69x64.avif` is a two-frame,
+full-range 10-bit I420 sequence. The pinned AOM producer forces vertical
+B4x8 leaves. A complete leaf starts at x=64, then the final leaf at x=68 has
+one visible luma column. Pinned Pillow and libavif decode both frames, and the
+Rust public sequence decoder matches both frames byte-for-byte. The clipped
+TX4x4 reconstruction handles this block-aligned edge without adding work to
+the transform loops.
+
+Build the matching producer and generate the deterministic input:
+
+```sh
+mkdir -p target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_NARROW_VERTICAL=1 -DFIXTURE_WIDTH=69 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV420 -DFIXTURE_QUALITY=100 \
+  -I target/oracle-staging/libavif-narrow-source/include \
+  -I target/oracle-staging/libavif-narrow-build/include \
+  -I target/oracle-staging/libaom-narrow-b4x8-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b4x8-build/libaom.a -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b4x8-odd-edge-tools/encode-odd69x64-420-100
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_69x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_69x64 --check
+```
+
+The public parity case is:
+
+```sh
+make coverage-selected \
+  COVERAGE_CASES='decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_69x64'
+```
+
 ## Vertical B4x8 4:4:4 TX_MODE_SELECT inter sequence
 
 `animated_lossy_inter_444_b4x8_mode_select_64x64.avif` reuses the vertical
