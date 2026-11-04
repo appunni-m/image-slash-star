@@ -1,6 +1,6 @@
 {
   "schema": "image-slash-star/jpeg-patch-experiment@1",
-  "status": "diagnostic_only_shipping_rust_unchanged",
+  "status": "diagnostic_only_native_x86_evaluation_requested",
   "operation": "decode",
   "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
   "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
@@ -38,7 +38,7 @@
       "decode-rgb-baseline-128": -0.58041435449436,
       "decode-progressive-long-scan-128": 0.11512155625986
     },
-    "note": "Local Apple ARM64 A-B-B-A diagnostics only. They do not establish x86 SSE2/AVX2 performance or full-suite parity."
+    "note": "ARM64 results are diagnostic only; native x86 SSE2 and AVX2 measurements must satisfy the admission gates before adoption."
   },
   "candidate_guards": {
     "src/codecs/jpeg/decode/bit_reader.rs": "c3618ba201329cb31899bea47fad845d832a6202a1ef93be317737b1830e2096"
