@@ -179,6 +179,7 @@ pub(super) struct FastBitReader<'a> {
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const BULK_REFILL_MIN_BYTES: usize = 64 * 1024;
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 impl<'a> FastBitReader<'a> {
     pub(super) fn new(data: &'a [u8], start: usize, end: usize) -> Self {
         Self {
@@ -271,15 +272,13 @@ impl<'a> FastBitReader<'a> {
             7 => (1, 56),
             _ => return false,
         };
-        let Some(end) = self.pos.checked_add(byte_count) else {
-            return false;
-        };
-        if end > self.end {
+        // The reader range is bounded by the input; compare remaining bytes
+        // before adding so the end offset cannot overflow.
+        if byte_count > self.end.saturating_sub(self.pos) {
             return false;
         }
-        let Some(bytes) = self.data.get(self.pos..end) else {
-            return false;
-        };
+        let end = self.pos.saturating_add(byte_count);
+        let bytes = &self.data[self.pos..end];
         if bytes.contains(&0xFF) {
             return false;
         }

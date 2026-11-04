@@ -4,7 +4,7 @@
   "operation": "decode",
   "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
   "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
-  "patch_sha256": "c367dc1ff3ab545257dfcac168f58371bcfc8f6d5be4094e0de1458db21d4f7f",
+  "patch_sha256": "dd712187e2a7f43382f5793053980adc96682e883cc4734b27456052b9095075",
   "source_guards": {
     "src/codecs/jpeg/decode/bit_reader.rs": "41c82b4e21cc1a75230b3ea8e82b2ef71662c7f0cd6ae99264bff2644a96ec87"
   },
@@ -41,7 +41,7 @@
     "note": "ARM64 results are diagnostic only; native x86 SSE2 and AVX2 measurements must satisfy the admission gates before adoption."
   },
   "candidate_guards": {
-    "src/codecs/jpeg/decode/bit_reader.rs": "c3618ba201329cb31899bea47fad845d832a6202a1ef93be317737b1830e2096"
+    "src/codecs/jpeg/decode/bit_reader.rs": "dbe4106fc0493f6bad785996e4d4e795dd47ee6d2557495febb8a573a0de4adc"
   },
   "patch_format": "Zero-context unified diff; exact baseline and compiled candidate file digests are both required."
 }
