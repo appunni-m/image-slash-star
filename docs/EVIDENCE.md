@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,846 total rows: 3,172 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,172 decode rows are
+The current public evidence matrix contains 3,848 total rows: 3,174 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,174 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 
@@ -82,6 +82,52 @@ Coverage MCP still reports 27 branch observations missing across
 `single_baseline_scan_entropy_end` in this selected report. Source identity is
 unverified and test attribution unknown; this is local evidence, not a
 managed attribution receipt. No performance gain is claimed.
+
+## JPEG oversized trailing DHT parity — 2026-11-04
+
+Added `decode:jpeg:baseline_444_single_scan_dht_oversized_length` for an
+8x8 baseline 4:4:4 JPEG whose post-scan DHT length extends past EOI. The
+complete file verifies and decodes through Pillow 12.2.0 as RGB. The parser
+stops at EOI for this oversized DHT after the completed single baseline scan;
+the decoded 192-byte output matches Pillow.
+
+Input SHA-256:
+`3a948d8d4900f6b30d6cfef147dbe7a1a84b02ff8e628fb728e79b74d9576211`;
+raw RGB SHA-256:
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+The focused COM, APP1, and DHT parity run passed 3/3. Its local selected report
+is `.coverage-mcp/local-evidence/selected/20261104T133654.454668Z-1addb5ea4768434d92ffdc5d4dee3a85/coverage.json`
+(SHA-256 `18b4aef9b87f84b469400b7740dff791787d5dc39e8f6ec27a1423e2649f9c3c`)
+with execution receipt
+`.coverage-mcp/local-evidence/selected/20261104T133654.454668Z-1addb5ea4768434d92ffdc5d4dee3a85/coverage.local-evidence.json`
+(SHA-256 `0459ec12a3423d6e2c9327a274df7c0d864d42716ea054836ed35708db631258`).
+Coverage MCP reports no missing branch observations at decoder line 3052 in
+this selected report; it still lists two false edges in the parser guard at
+line 539. Source identity is unverified and test attribution unknown, so this
+is local evidence only.
+
+Added `decode:jpeg:baseline_444_three_scans_dht_after_second_scan` to cover the
+second false edge with a valid three-scan baseline JPEG. It repeats the four
+header Huffman tables between the second and third scans; Pillow 12.2.0 verifies
+and decodes it to the same 192 RGB bytes as the source. The input SHA-256 is
+`8fa86b39601dc652d6a6a7f65c3e15d48568d7498071b1f1fd390f87787fc353`, and the
+pixel SHA-256 is
+`0d4dccc69dc0ee4ae956be8c624186ddb2b5f3d411671361056c51a7ea7f9e66`.
+
+A five-case selected run also included `decode:jpeg:progressive_spectral` to
+cover the progressive false edge, plus the COM, APP1, and oversized-DHT rows.
+All 5/5 parity rows passed. The selected report is
+`.coverage-mcp/local-evidence/selected/20261104T134938.253878Z-c88b364b31b4436eaf2b1b02421c82b0/coverage.json`
+(SHA-256 `1037fae1434d560027da3bd6ecffb31113445576fe68a998aed3d5e9a17e4a7d`),
+and its local receipt is
+`.coverage-mcp/local-evidence/selected/20261104T134938.253878Z-c88b364b31b4436eaf2b1b02421c82b0/coverage.local-evidence.json`
+(SHA-256 `700acca8621e54de29943481a8c70e1ef4b5460c29a9ae209ba6f3a62850398c`).
+The selected aggregate is 3,779/142,382 lines (2.6541%), 546/32,032 branches
+(1.7045%), 258/9,137 functions (2.8237%), and 5,959/220,601 regions (2.7013%).
+Coverage MCP reports zero missing branch observations at parser line 539 and
+decoder line 3052 for this report. Source identity remains unverified and test
+attribution unknown; these selected totals are not a full-project coverage
+claim.
 
 ## JPEG row upsampling overflow fault contracts — 2026-11-04
 
@@ -16857,7 +16903,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fd803f82dd6c1a91cec117fe0756fea49dfc555a991a427fef46c769f5f82822`; matrix `d4b99cb21560f529fddd29c61502d1705b5b9533844b7647de7b3243cb84bd0c`.
+- Current fixture integrity only: manifest `a7656068ee732b5c8ae83c94f9ca91ddffe52a19d3563303577ed514a31b9246`; matrix `ca99cdba0260b2991ea2a32019bde1b3b01d8a199dcf4a2ad11575bd3dd4bb61`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

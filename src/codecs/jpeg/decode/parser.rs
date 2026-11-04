@@ -536,6 +536,20 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     .map_err(|error| error.at(marker_offset, "jpeg_dqt"))?;
             }
             M_DHT => {
+                if saw_sos && !progressive && scans.len() == 1 {
+                    let mut length_pos = pos;
+                    if let Ok(length) = read_u16(data, &mut length_pos)
+                        && length >= 2
+                        && let Some(segment_end) = pos.checked_add(usize::from(length))
+                        && let Ok(scan_end) = usize::try_from(marker_offset)
+                        && let Ok(eoi_pos) = find_eoi(data, scan_end)
+                        && segment_end > eoi_pos
+                    {
+                        // Pillow finishes the single baseline scan and ignores
+                        // a trailing DHT whose declared extent crosses EOI.
+                        break eoi_pos;
+                    }
+                }
                 if !progressive && scans.len() == 1 && !scans[0].huff_tables_snapshotted {
                     scans[0].dc_huff_tables = dc_huff_tables.clone();
                     scans[0].ac_huff_tables = ac_huff_tables.clone();
