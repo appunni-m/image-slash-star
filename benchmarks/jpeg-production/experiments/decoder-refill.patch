@@ -1,5 +1,5 @@
 diff --git a/src/codecs/jpeg/decode/bit_reader.rs b/src/codecs/jpeg/decode/bit_reader.rs
-index e56ef4e1f..1ee84c45e 100644
+index e56ef4e1f..e4df3b341 100644
 --- a/src/codecs/jpeg/decode/bit_reader.rs
 +++ b/src/codecs/jpeg/decode/bit_reader.rs
 @@ -172,0 +173 @@ pub(super) struct FastBitReader<'a> {
@@ -10,7 +10,17 @@ index e56ef4e1f..1ee84c45e 100644
 +
 @@ -184,0 +189 @@ impl<'a> FastBitReader<'a> {
 +            bulk_refill_enabled: end.saturating_sub(start) >= BULK_REFILL_MIN_BYTES,
-@@ -262,0 +268,26 @@ impl<'a> FastBitReader<'a> {
+@@ -248,0 +254,9 @@ impl<'a> FastBitReader<'a> {
++        // Exercise the truncated marker-prefix boundary through the public
++        // fault-contract harness; production builds keep the parsed range.
++        #[cfg(coverage)]
++        if crate::coverage_support::take_fault_point(
++            crate::coverage_support::CoverageFaultPoint::JpegFastReaderMarkerPrefixEof,
++        ) {
++            self.end = self.pos;
++        }
++
+@@ -262,0 +277,26 @@ impl<'a> FastBitReader<'a> {
 +    #[inline(always)]
 +    fn append_unstuffed_bytes(&mut self, byte_count: usize) -> bool {
 +        let (padding, bit_count) = match byte_count {
@@ -37,7 +47,7 @@ index e56ef4e1f..1ee84c45e 100644
 +        true
 +    }
 +
-@@ -265,0 +297,9 @@ impl<'a> FastBitReader<'a> {
+@@ -265,0 +306,9 @@ impl<'a> FastBitReader<'a> {
 +            // Small entropy segments do not amortize the byte-scan probe.
 +            if self.bulk_refill_enabled {
 +                if self.bits <= 8 && self.append_unstuffed_bytes(7) {
