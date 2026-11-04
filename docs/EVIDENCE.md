@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,840 total rows: 3,166 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,166 decode rows are
+The current public evidence matrix contains 3,841 total rows: 3,167 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,167 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 ## AV1 partition walker even-grid invariant — 2026-11-04
