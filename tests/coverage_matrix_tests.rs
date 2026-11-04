@@ -3038,6 +3038,51 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "jpeg.fast_reader.scan_count_mismatch",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderScanCountMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.fast_reader.entropy_start_mismatch",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderEntropyStartMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.fast_reader.entropy_end_after_eoi",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderEntropyEndAfterEoi,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.fast_reader.eoi_marker_mismatch",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderEoiMarkerMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "jpeg.fast_reader.trailing_marker_position_mismatch",
+                "decode_fallback_matches_parity_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFastReaderTrailingMarkerPositionMismatch,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.multiscan.coefficient_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegCoefficientBufferReservation,
                 false,

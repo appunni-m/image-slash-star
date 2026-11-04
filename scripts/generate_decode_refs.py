@@ -3455,6 +3455,21 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.fast_reader.marker_prefix_eof": {
             "decode_fallback_matches_parity_then_retry_succeeds"
         },
+        "jpeg.fast_reader.scan_count_mismatch": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "jpeg.fast_reader.entropy_start_mismatch": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "jpeg.fast_reader.entropy_end_after_eoi": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "jpeg.fast_reader.eoi_marker_mismatch": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
+        "jpeg.fast_reader.trailing_marker_position_mismatch": {
+            "decode_fallback_matches_parity_then_retry_succeeds"
+        },
         "jpeg.ycck.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

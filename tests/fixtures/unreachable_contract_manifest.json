@@ -668,6 +668,36 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_fast_reader_scan_count_mismatch_fallback",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fast_reader_scan_count_mismatch_fallback",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fast_reader_entropy_start_mismatch_fallback",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fast_reader_entropy_start_mismatch_fallback",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fast_reader_entropy_end_after_eoi_fallback",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fast_reader_entropy_end_after_eoi_fallback",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fast_reader_eoi_marker_mismatch_fallback",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fast_reader_eoi_marker_mismatch_fallback",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_fast_reader_trailing_marker_position_mismatch_fallback",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_fast_reader_trailing_marker_position_mismatch_fallback",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_monochrome_tile_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_tile_reservation_failure",

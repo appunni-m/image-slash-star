@@ -1000,35 +1000,64 @@ references without rebuilding the native encoder.
 
 ### Horizontal B8x4 I422 at qindex zero
 
-`animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif` uses the same
-64x64 I422 source pattern and qindex-zero frame headers, with a pinned AOM
-partition patch that forces horizontal B8x4 leaves from inter B8x8 roots.
-The inter frame is non-lossless because its luma DC delta is two; chroma
-deltas remain zero. This adds a parity case for that distinct I422 B8x4
-partition pattern at base qindex zero under transform-mode-select. Pillow
-12.2.0 produces the same two RGB frame hashes as the general I422 qindex-zero
-sequence, while the encoded AVIF hash is
-`43e290fb890e116a01100796cdf0790c88ff05845a42142498414ba44760260d`.
+`animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64.avif` is a two-frame
+64x64 8-bit I422 sequence. Its inter frame has base qindex zero, luma DC delta
+two, zero chroma deltas, and `TX_MODE_SELECT`. The fixture-only AOM patch
+[`libaom-i422-b8x4-qindex0-witness.patch`](libaom-i422-b8x4-qindex0-witness.patch)
+sets the first inter B16x16 root to four B8x8 blocks, then retains a valid
+horizontal B8x4 partition at the top-left B8x8 root. These controls are limited
+to that root in the second inter frame. Apply it after
+`libaom-qindex0-nonlossless-i422.patch`. This input reaches the I422 B8x4
+qindex-zero decoder path while leaving the Rust decoder unchanged.
 
-Build the fixture-only encoder from the same pinned AOM and libavif revisions
-as the preceding I422 section, using separate build directories. Apply
-`libaom-narrow-inter-b8x4.patch` to AOM instead of
-`libaom-qindex0-nonlossless-i422.patch`; this patch forces the horizontal
-B8x4 partition and the qindex-zero luma delta. Compile
-`encode_lossy_inter_i422_small_partitions.c` against those static libraries
-as `target/oracle-staging/encode-avif-inter-i422-b8x4-qzero`, then run:
+The complete AVIF hash is
+`5c2fd79d69b2fb1a96542c30ea4eb6d103993982f9f322b1e64d040730f946f9`.
+Pillow 12.2.0 produces two 64x64 RGB frames, both with 100 ms duration; their
+hashes are `246f2904b49d857c90295a1a379d1eadea4058a6e04c8df8639aac4392732d50`
+and `2daef02f6cde1d7914f04e930bf65f36a0bc74273f1a1029a5ec054434611b14`.
+
+Start with the pinned AOM source, apply the I422 qindex-zero quantizer patch
+and then the partition-witness patch. Build that source as a separate generic
+AOM library. Reuse the pinned static libavif build from the preceding I422
+qindex-zero section, configured against this AOM library. Then compile the
+narrow-inter producer for 64x64 I422 at root size 8 and quality 100:
 
 ```sh
+mkdir -p target/oracle-staging/libaom-i422-b8x4-qindex0-source
+git -C target/oracle-staging/libaom archive ad44980d7f3c7a2605c25d51ea96946949000841 |
+  tar -x -C target/oracle-staging/libaom-i422-b8x4-qindex0-source
+git apply --directory=target/oracle-staging/libaom-i422-b8x4-qindex0-source \
+  scripts/avif_fixture_oracle/libaom-qindex0-nonlossless-i422.patch
+git apply --directory=target/oracle-staging/libaom-i422-b8x4-qindex0-source \
+  scripts/avif_fixture_oracle/libaom-i422-b8x4-qindex0-witness.patch
+cmake -S target/oracle-staging/libaom-i422-b8x4-qindex0-source \
+  -B target/oracle-staging/libaom-i422-b8x4-qindex0-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0
+cmake --build target/oracle-staging/libaom-i422-b8x4-qindex0-build -j 4
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_WIDTH=64 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV422 -DFIXTURE_QUALITY=100 \
+  -I target/oracle-staging/libavif-narrow-b4x8-qindex0-source/include \
+  -I target/oracle-staging/libavif-narrow-b4x8-qindex0-build/include \
+  -I target/oracle-staging/libaom-i422-b8x4-qindex0-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-b4x8-qindex0-build/libavif.a \
+  target/oracle-staging/libaom-i422-b8x4-qindex0-build/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-i422-b8x4-qzero
 .oracle-venv/bin/python scripts/generate_avif_inter_422_qindex0_mode_select.py \
-  --variant b8x4 --encoder target/oracle-staging/encode-avif-inter-i422-b8x4-qzero
+  --variant b8x4 --encoder target/oracle-staging/encode-avif-i422-b8x4-qzero
 .oracle-venv/bin/python scripts/generate_avif_inter_422_qindex0_mode_select.py \
   --variant b8x4 --check
 ```
 
-The generator requires repeated timestamp-normalized outputs to match, verifies
-the I422/qindex-zero frame headers, and compares both complete Pillow RGB
-frames. The standard `make verify` path checks the committed input and oracle
-references without rebuilding the encoder.
+For this variant the generator repeats `encode_narrow_inter.c` with `select 8
+coarse 0` (selective transform mode, coarse input, frozen CDF updates),
+normalizes timestamps, verifies identical encodes and checks the
+qindex-zero I422 AV1 headers plus both Pillow RGB frames. `--check` validates
+the retained file without rebuilding the fixture encoder; `make verify` checks
+the committed input and references as part of the normal fixture workflow.
 
 ## Lossless 10-bit I420 B128 sequence
 
@@ -1614,6 +1643,44 @@ cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
   --encoder-dir target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
 .oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
   --variant animated_lossless_inter_420_b4x8_10bit_odd_65x64 --check
+```
+
+## Odd-width 10-bit lossless B4x8 inter edge after a full block
+
+`animated_lossless_inter_420_b4x8_10bit_odd_69x64.avif` is a two-frame,
+full-range 10-bit I420 sequence. The pinned AOM producer forces vertical
+B4x8 leaves. A complete leaf starts at x=64, then the final leaf at x=68 has
+one visible luma column. Pinned Pillow and libavif decode both frames, and the
+Rust public sequence decoder matches both frames byte-for-byte. The clipped
+TX4x4 reconstruction handles this block-aligned edge without adding work to
+the transform loops.
+
+Build the matching producer and generate the deterministic input:
+
+```sh
+mkdir -p target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+cc -std=c99 -O2 -Wall -Wextra -Werror -DFIXTURE_ROOT_SIZE=8 \
+  -DFIXTURE_NARROW_VERTICAL=1 -DFIXTURE_WIDTH=69 -DFIXTURE_HEIGHT=64 \
+  -DFIXTURE_FORMAT=AVIF_PIXEL_FORMAT_YUV420 -DFIXTURE_QUALITY=100 \
+  -I target/oracle-staging/libavif-narrow-source/include \
+  -I target/oracle-staging/libavif-narrow-build/include \
+  -I target/oracle-staging/libaom-narrow-b4x8-source \
+  scripts/avif_fixture_oracle/encode_narrow_inter.c \
+  target/oracle-staging/libavif-narrow-build/libavif.a \
+  target/oracle-staging/libaom-narrow-b4x8-build/libaom.a -lz -lm -lpthread \
+  -o target/oracle-staging/narrow-inter-b4x8-odd-edge-tools/encode-odd69x64-420-100
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_69x64 \
+  --encoder-dir target/oracle-staging/narrow-inter-b4x8-odd-edge-tools
+.oracle-venv/bin/python scripts/generate_avif_narrow_inter_fixtures.py \
+  --variant animated_lossless_inter_420_b4x8_10bit_odd_69x64 --check
+```
+
+The public parity case is:
+
+```sh
+make coverage-selected \
+  COVERAGE_CASES='decode:avif:animated_lossless_inter_420_b4x8_10bit_odd_69x64'
 ```
 
 ## Vertical B4x8 4:4:4 TX_MODE_SELECT inter sequence

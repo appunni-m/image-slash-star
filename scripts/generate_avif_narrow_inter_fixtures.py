@@ -1377,6 +1377,19 @@ VARIANTS = {
         "transform_mode": "only_4x4",
         "width": 65
     },
+    "animated_lossless_inter_420_b4x8_10bit_odd_69x64": {
+        "all_lossless": True,
+        "bit_depth": 10,
+        "height": 64,
+        "input_name": "odd69x64-420-q100",
+        "layout": "420",
+        "producer_mode": "largest",
+        "quality": 100,
+        "root_size": 8,
+        "sha256": "25159d2757faec202cb89a4f1252ccd84c78ddea4ae72948c5c881d3ae04806b",
+        "transform_mode": "only_4x4",
+        "width": 69
+    },
     "animated_lossy_inter_444_b4x8_mode_select_64x64": {
         "bit_depth": 8,
         "height": 64,

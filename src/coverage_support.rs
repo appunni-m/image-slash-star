@@ -138,6 +138,16 @@ pub enum CoverageFaultPoint {
     Av1SuperResolutionChromaVPlaneReservation,
     /// End a JPEG entropy segment immediately after an FF marker prefix.
     JpegFastReaderMarkerPrefixEof,
+    /// Reject the JPEG baseline fast path when scan metadata reports multiple scans.
+    JpegFastReaderScanCountMismatch,
+    /// Reject the JPEG baseline fast path when scan entropy starts disagree.
+    JpegFastReaderEntropyStartMismatch,
+    /// Reject the JPEG baseline fast path when scan entropy extends past EOI.
+    JpegFastReaderEntropyEndAfterEoi,
+    /// Reject the JPEG baseline fast path when the indexed EOI marker differs.
+    JpegFastReaderEoiMarkerMismatch,
+    /// Reject the JPEG baseline fast path when trailing marker parsing misses EOI.
+    JpegFastReaderTrailingMarkerPositionMismatch,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.

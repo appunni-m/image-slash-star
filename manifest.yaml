@@ -2042,6 +2042,76 @@ fault_contracts:
       point: jpeg.fast_reader.marker_prefix_eof
       contract: decode_fallback_matches_parity_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_fast_reader_scan_count_mismatch_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:subsampling_444
+    fault:
+      point: jpeg.fast_reader.scan_count_mismatch
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fast_reader_entropy_start_mismatch_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:subsampling_444
+    fault:
+      point: jpeg.fast_reader.entropy_start_mismatch
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fast_reader_entropy_end_after_eoi_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:subsampling_444
+    fault:
+      point: jpeg.fast_reader.entropy_end_after_eoi
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fast_reader_eoi_marker_mismatch_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:subsampling_444
+    fault:
+      point: jpeg.fast_reader.eoi_marker_mismatch
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_fast_reader_trailing_marker_position_mismatch_fallback
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:subsampling_444
+    fault:
+      point: jpeg.fast_reader.trailing_marker_position_mismatch
+      contract: decode_fallback_matches_parity_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_tile_reservation_failure
     type: fault-contract
     operation: decode
@@ -16705,6 +16775,14 @@ formats:
       pure_rust_work_item: AVF-SAMPLE-001
       expect_sequence_error: false
       rust_expect_sequence_error: false
+    - id: animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch
+      description: Two-frame odd-width 31x32 full-range 10-bit 4:2:0 all-lossless AVIF sequence with a moving one-pixel texture patch at a clipped B32 edge
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: false
+      rust_expect_sequence_error: false
     - id: animated_lossless_inter_420_clipped_b32x32_10bit_partition32_63x64
       description: Two-frame odd-width 63x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with a forced B32x32 inter grid and a 31-pixel right-edge leaf
       test_assets:
@@ -17191,6 +17269,12 @@ formats:
       description: Two-frame 65x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with vertical B4x8 inter leaves clipped to one visible luma column at the right edge
       test_assets:
       - animated_lossless_inter_420_b4x8_10bit_odd_65x64.avif
+      status: active
+      expect_sequence_error: false
+    - id: animated_lossless_inter_420_b4x8_10bit_odd_69x64
+      description: Two-frame 69x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with vertical B4x8 inter leaves ending in a one-column right-edge clip
+      test_assets:
+      - animated_lossless_inter_420_b4x8_10bit_odd_69x64.avif
       status: active
       expect_sequence_error: false
     - id: animated_lossy_inter_444_b4x8_mode_select_64x64
