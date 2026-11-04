@@ -1,4 +1,4 @@
-This bundle records 622 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 614 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2196 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 623 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 615 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2199 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
@@ -17,6 +17,10 @@ exact 80×48 RGB frames and report infinite repetition.
 The reduced-transform-set B16x64 I420 sequence retains two complete 64x64 RGB
 frames of 100 ms and one total play. Its independent native collection records
 successful parsing, two decoded frames, and repetition count zero.
+
+The odd-width 31x32 10-bit I420 lossless sequence moves a one-pixel texture
+patch from (28, 8) to (29, 9) at the clipped right edge. Pillow and the pinned
+native observer decode both 100 ms RGB frames; libavif reports infinite repetition.
 
 `animated_sequence_header_cicp_mismatch_nclx` changes only the AV1 sequence
 header's primaries and matrix to 9/13/0 while preserving valid item and track

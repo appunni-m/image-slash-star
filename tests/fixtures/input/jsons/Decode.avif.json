@@ -50459,6 +50459,67 @@
       ]
     },
     {
+      "id": "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch",
+      "asset": "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch.avif",
+      "asset_sha256": "a755bb3e7d9e6209a5c5760099bff623a0f3be0c19ce008569da75522503fe4c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ],
+      "ref_sha256": "43bd6195fe30acdd0d3c1f8454d02be3e9af547725ef0caa69b627c6cd6a7f8b",
+      "ref_bytes": 2976,
+      "ref_size": [
+        31,
+        32
+      ]
+    },
+    {
       "id": "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_63x64",
       "asset": "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_63x64.avif",
       "asset_sha256": "248ea28edff232b792c3f9e71b05ae6762f0f807b9981cd91ba9ea7ff19da42f",

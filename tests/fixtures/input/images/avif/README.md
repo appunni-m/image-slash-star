@@ -2241,3 +2241,14 @@ normalized complete-file digest. SHA-256:
 Pillow 12.2.0 decodes two 64x64 RGB frames with 100 ms durations; their hashes
 are `2279a056bd14eb2e81ea15baa98bef134aa0d0cfc5ae960ffb142c40b4960ea4` and
 `ef83c285e5d4ddf2f3ad70cc98493568b6ecc5da664cffbc2b416ee2bfc0432f`.
+
+## Odd-width 10-bit lossless inter stimulus
+
+`animated_lossless_inter_420_clipped_b32x32_10bit_partition32_31x32_moving_1x1_patch.avif`
+is a 31x32 full-range 10-bit I420 key/inter sequence whose one-pixel texture
+patch moves diagonally from (28, 8) to (29, 9) at the clipped right edge. The
+pinned fixture generator repeats the encode, normalizes timestamps, and checks
+both exact Pillow frames and the all-lossless AV1 headers. The AVIF SHA-256 is
+`a755bb3e7d9e6209a5c5760099bff623a0f3be0c19ce008569da75522503fe4c`; the
+frame hashes are `43bd6195fe30acdd0d3c1f8454d02be3e9af547725ef0caa69b627c6cd6a7f8b`
+and `58307f1a4682252aae8245b38d0128f0f4d804102078534daf75aea595241481`.
