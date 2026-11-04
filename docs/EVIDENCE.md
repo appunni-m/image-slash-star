@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,845 total rows: 3,171 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,171 decode rows are
+The current public evidence matrix contains 3,846 total rows: 3,172 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,172 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
 
@@ -58,6 +58,30 @@ comparison is `limited`: source identity is unverified and tests are unknown,
 so its coordinate deltas are not a verified gain or regression. `make lint`,
 `make lint-x86-simd`, and fixture-integrity refresh passed. No unit tests or
 SIMD changes were added, and no performance gain is claimed.
+
+## JPEG oversized trailing APP1 parity — 2026-11-04
+
+Added `decode:jpeg:baseline_444_single_scan_app1_oversized_length` for an
+8x8 baseline 4:4:4 JPEG whose post-scan APP1 length extends past EOI. The
+pinned Pillow 12.2.0 oracle verifies and decodes the file as RGB. The JPEG
+parser now applies its completed single-scan tolerance to oversized APP and
+COM segments; both cases produce the same 192-byte pixels as Pillow.
+
+Input SHA-256:
+`53a5354d026c35b5a1f105af5192e1213fb873bae48b253728a85fcbc07add4f`;
+raw RGB SHA-256:
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+The pinned generator passes `--check`. The focused COM and APP1 parity run
+passed 2/2. Its local selected report is
+`.coverage-mcp/local-evidence/selected/20261104T125849.464658Z-6ab952a8b202434bbc4f770b94197d6f/coverage.json`
+(SHA-256 `cbd227a50f6343693931269991a4e2bfac8f19ce48bec298b3029aa14f931141`)
+and its execution receipt is
+`.coverage-mcp/local-evidence/selected/20261104T125849.464658Z-6ab952a8b202434bbc4f770b94197d6f/coverage.local-evidence.json`
+(SHA-256 `18b7c93551cbd3b7b783729a96fd7cfd2dcd8563a9c7a9f980ebd32a91847362`).
+Coverage MCP still reports 27 branch observations missing across
+`single_baseline_scan_entropy_end` in this selected report. Source identity is
+unverified and test attribution unknown; this is local evidence, not a
+managed attribution receipt. No performance gain is claimed.
 
 ## JPEG row upsampling overflow fault contracts — 2026-11-04
 
@@ -16833,7 +16857,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d208e1f701273b2ecaf1567d37ec7cbe7b3695939b549afce0054994e6e03943`; matrix `25fb334905851261d5d1a5cf797385dfab2824f889e1305f1d3ee876a006578c`.
+- Current fixture integrity only: manifest `fd803f82dd6c1a91cec117fe0756fea49dfc555a991a427fef46c769f5f82822`; matrix `d4b99cb21560f529fddd29c61502d1705b5b9533844b7647de7b3243cb84bd0c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

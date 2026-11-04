@@ -10,9 +10,9 @@
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
     "inspector_sha256": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
     "manifest_path": "manifest.yaml",
-    "manifest_sha256": "d208e1f701273b2ecaf1567d37ec7cbe7b3695939b549afce0054994e6e03943",
+    "manifest_sha256": "fd803f82dd6c1a91cec117fe0756fea49dfc555a991a427fef46c769f5f82822",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "25fb334905851261d5d1a5cf797385dfab2824f889e1305f1d3ee876a006578c"
+    "matrix_sha256": "d4b99cb21560f529fddd29c61502d1705b5b9533844b7647de7b3243cb84bd0c"
   },
   "malformed_witnesses": [
     {

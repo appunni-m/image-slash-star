@@ -209500,6 +209500,84 @@
           "error_contracts": {}
         },
         {
+          "id": "baseline_444_single_scan_app1_oversized_length",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan APP1 length extends past EOI",
+          "asset": "baseline_444_single_scan_app1_oversized_length.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "53a5354d026c35b5a1f105af5192e1213fb873bae48b253728a85fcbc07add4f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_baseline_444_single_scan_app1_oversized_length_jpg.bin",
+          "ref_sha256": "7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "baseline_444_single_scan_trailing_app2",
           "type": "decode",
           "format": "jpeg",
@@ -263058,6 +263136,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q1.bin",
           "encoded_ref_bytes": 705,
           "encoded_ref_sha256": "77535c28045d6f8946df11c5f777ab79bc7a72379793ee5cf8d5d47853573fb7",
@@ -263070,17 +263158,7 @@
             16
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_luma_extremes_420_q85",
@@ -263114,6 +263192,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q85.bin",
           "encoded_ref_bytes": 853,
           "encoded_ref_sha256": "b31cfe9eee6b8943d2b76f14501ed0942b63be17ff4e8ff9cbd5ddd1d90bdc0c",
@@ -263126,17 +263214,7 @@
             16
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_luma_extremes_420_q100",
@@ -263170,6 +263248,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_420_q100.bin",
           "encoded_ref_bytes": 977,
           "encoded_ref_sha256": "0fe1bcde107202f0b4c7da64aa349cb0618ea12d01d024922d2753ecd0523058",
@@ -263182,17 +263270,7 @@
             16
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_luma_extremes_tail_420_q1",
@@ -263226,6 +263304,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q1.bin",
           "encoded_ref_bytes": 852,
           "encoded_ref_sha256": "179285242cb26d341ca301a0e6282e1add2405939ea2ea09556cb94cb3f7903f",
@@ -263238,17 +263326,7 @@
             17
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_luma_extremes_tail_420_q85",
@@ -263282,6 +263360,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q85.bin",
           "encoded_ref_bytes": 1187,
           "encoded_ref_sha256": "38dcb8465151fc9284eba56215a7f5e11e7d9618b20685a0cdf4a60e73798c03",
@@ -263294,17 +263382,7 @@
             17
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_fdct_rgb_luma_extremes_tail_420_q100",
@@ -263338,6 +263416,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_fdct_rgb_luma_extremes_tail_420_q100.bin",
           "encoded_ref_bytes": 1444,
           "encoded_ref_sha256": "e9b752f38ab281dab7030727fcdb426bf2c5e1b06fc96f6e5b21e6c15b5f1a0e",
@@ -263350,17 +263438,7 @@
             17
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         }
       ]
     },
@@ -366965,12 +367043,12 @@
     }
   },
   "summary": {
-    "total_rows": 3845,
-    "decode_rows": 3171,
+    "total_rows": 3846,
+    "decode_rows": 3172,
     "encode_rows": 674,
     "formats": 8,
-    "assets_available": 3167,
-    "decode_active": 3171,
+    "assets_available": 3168,
+    "decode_active": 3172,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
