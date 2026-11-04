@@ -4,6 +4,35 @@ The current public evidence matrix contains 3,840 total rows: 3,166 decode /
 inspect / verify rows and 674 encode rows. Of those, 3,166 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
+## AV1 partition walker even-grid invariant — 2026-11-04
+
+The AV1 partition walker derives frame extents as twice the number of 8-pixel
+blocks, so frame bounds are even in its four-pixel grid. Tile origins and
+superblock roots are aligned to at least 16 grid units, and recursive offsets
+before level 4 are even. A level-4 node inside its root therefore has at least
+two grid units remaining and cannot enter the old no-split boundary-leaf path.
+That path and its redundant frame-bound checks were removed; valid partition
+and block parsing is unchanged, with fewer checks in the recursive walk.
+
+Four existing Pillow-backed AVIF parity rows passed: 10-bit I420 CDEF at
+15x16, a 73x64 lossless monochrome grid, 10-bit lossless I444, and lossless
+I444 film grain. The selected report is
+`.coverage-mcp/local-evidence/selected/av1-partition-even-grid-20261104/coverage.json`
+(SHA-256 `561e37ac…2f81d6`). Its local execution receipt records 4/4 passed
+and no source changes during the run; Coverage MCP identity and test
+attribution remain unverified. `make lint` passed formatting and all configured
+strict Clippy lanes, including coverage and AVIF-only builds. No parity rows or
+unit tests were added.
+
+An ARM64 A-B-B-A release probe of the 2048x128 AVIF sequence used two runs of
+42 and 120 timed decodes per revision. Their directions differed (+3.4% and
+-2.2%); pooled medians were 9.887 ms before and 9.857 ms after. This is no
+measurable speed change, not a speedup claim. Raw samples and host/build details
+are retained under
+`.coverage-mcp/local-evidence/perf/av1-partition-even-grid-20261104/`.
+The measurement is ARM64-only and says nothing about SSE2 or AVX2 runtime
+performance.
+
 ## AVIF all-lossless I422 B16x16 parity and selected coverage — 2026-11-04
 
 Added `decode:avif:animated_lossless_inter_i422_fixed_b16x16_64x64`, a

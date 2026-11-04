@@ -2415,37 +2415,14 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         let horizontal_split = self.root_end_x > x.saturating_add(half_size);
         let vertical_split = self.root_end_y > y.saturating_add(half_size);
         if !horizontal_split && !vertical_split {
-            if x >= self.frame_width || y >= self.frame_height {
-                return Ok(PartitionVisitControl::Continue);
-            }
-            if level < 4 {
-                let child_edges = intra_edges
-                    .child(0)
-                    .ok_or_else(|| malformed("partition edge child index exceeds four"))?;
-                return self.walk_with_edges(level.saturating_add(1), x, y, child_edges, visit);
-            }
-            let width = self.frame_width.saturating_sub(x).min(half_size);
-            let height = self.frame_height.saturating_sub(y).min(half_size);
-            let context = self.contexts.context(level, x, y)?;
-            let block_size = BlockSize::from_mi_dimensions(half_size, half_size)
-                .ok_or_else(|| malformed("boundary leaf has a non-normative block size"))?;
-            let node = PartitionNode {
-                level,
-                x,
-                y,
-                coded_width: half_size,
-                coded_height: half_size,
-                block_size,
-                width,
-                height,
-                context,
-                kind: PartitionKind::None,
-                intra_edges: intra_edges.flags(),
-            };
-            self.contexts
-                .record(level, PartitionKind::None, x, y, width, height)?;
-            self.push(node)?;
-            return visit(self.decoder, node);
+            // AV1 frame and tile bounds are even in this four-pixel grid.
+            // Recursive offsets before level 4 are even too, so a level-4
+            // node inside the root always has at least two grid units left.
+            // It therefore cannot reach this no-split path at level 4.
+            let child_edges = intra_edges
+                .child(0)
+                .ok_or_else(|| malformed("partition edge child index exceeds four"))?;
+            return self.walk_with_edges(level.saturating_add(1), x, y, child_edges, visit);
         }
 
         let (kind, context) = self.decode_kind(level, x, y, horizontal_split, vertical_split)?;
