@@ -3482,6 +3482,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.decoded_pixels.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "bmp.decode.invalid_signature": {
+            "direct_decoder_rejects_unrecognized_signature"
+        },
         "bmp.rle.entry_work_budget": {
             "decode_work_budget_exceeded_then_retry_succeeds"
         },

@@ -138,6 +138,14 @@ pub fn __coverage_inspect_png(data: &[u8]) -> ImageResult<ImageInfo> {
     codecs::inspect_png_for_coverage(data)
 }
 
+/// Decode BMP bytes below public format detection for a target-only
+/// malformed-input contract. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "bmp"))]
+#[doc(hidden)]
+pub fn __coverage_decode_bmp(data: &[u8]) -> ImageResult<DecodedImage> {
+    codecs::decode_bmp_for_coverage(data)
+}
+
 /// Inspect AVIF bytes below public format detection for a target-only
 /// malformed-input contract. This hook is absent from normal builds.
 #[cfg(coverage)]

@@ -387,6 +387,13 @@ pub(crate) fn inspect_png_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     into_image_result(inspected, ImageFormat::Png, ImageErrorStage::Inspection)
 }
 
+/// Invoke BMP decoding below public format detection for a target-only
+/// malformed-input contract.
+#[cfg(all(coverage, feature = "bmp"))]
+pub(crate) fn decode_bmp_for_coverage(data: &[u8]) -> ImageResult<DecodedImage> {
+    decode_format(data, ImageFormat::Bmp).map(|(image, _, _)| image)
+}
+
 #[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     let inspected =

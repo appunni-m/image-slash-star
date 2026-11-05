@@ -1164,6 +1164,126 @@ fn execute_bmp_rle_work_budget_contract(
     Ok(())
 }
 
+#[cfg(all(coverage, feature = "bmp"))]
+fn execute_bmp_direct_decoder_signature_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "decode"
+        || row.format != "bmp"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "bmp.decode.invalid_signature"
+        || row.fault.contract != "direct_decoder_rejects_unrecognized_signature"
+    {
+        return Err(format!(
+            "{}: invalid BMP direct-decoder signature contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "bmp"
+        || source_key.id != "error_not_bmp"
+    {
+        return Err(format!(
+            "{}: source_case must identify decode:bmp:error_not_bmp",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("bmp")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: parity source row is missing", row.id))?;
+    if source.status != "active"
+        || source.expect_error != Some(true)
+        || source.oracle_status.as_deref() != Some("error")
+        || source.operations.get("decode").map(String::as_str) != Some("error")
+        || source.assertion_origins.get("decode").map(String::as_str) != Some("pillow_fixture")
+    {
+        return Err(format!(
+            "{}: source_case must retain active Pillow decode-error parity",
+            row.id
+        ));
+    }
+    assert_error_contracts(&source.operations, &source.error_contracts, "bmp")?;
+    let decode_contract = source
+        .error_contracts
+        .get("decode")
+        .ok_or_else(|| format!("{}: source decode error contract is missing", row.id))?;
+    if decode_contract.rust_kind != "unknown_format"
+        || decode_contract.rust_format.is_some()
+        || decode_contract.rust_message != "none"
+        || decode_contract.origin != "pillow_fixture"
+        || decode_contract.pillow_type.is_none()
+        || decode_contract.pillow_message.is_none()
+    {
+        return Err(format!(
+            "{}: source row no longer records Pillow unknown-format parity",
+            row.id
+        ));
+    }
+
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/bmp")
+        .join(asset);
+    let source_bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
+    assert_sha256(
+        &source_bytes,
+        source.asset_sha256.as_deref(),
+        "BMP invalid-signature parity source asset",
+    )?;
+
+    match img::decode(&source_bytes) {
+        Err(img::ImageError::UnknownFormat) => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: public Pillow-parity decode returned the wrong error: {error:?}",
+                row.id
+            ));
+        }
+        Ok(_) => {
+            return Err(format!(
+                "{}: public Pillow-parity decode unexpectedly succeeded",
+                row.id
+            ));
+        }
+    }
+
+    match img::__coverage_decode_bmp(&source_bytes) {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Bmp,
+            message,
+            stage: Some(img::ImageErrorStage::StillDecode),
+            ..
+        }) if message.contains("invalid BMP file signature") => Ok(()),
+        Err(error) => Err(format!(
+            "{}: explicit BMP dispatch returned the wrong signature result: {error:?}",
+            row.id
+        )),
+        Ok(_) => Err(format!(
+            "{}: explicit BMP dispatch unexpectedly decoded malformed bytes",
+            row.id
+        )),
+    }
+}
+
 #[cfg(coverage)]
 fn execute_bmp_encode_dimension_limit_contract(
     manifest_dir: &Path,
@@ -2344,6 +2464,10 @@ fn execute_fault_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    #[cfg(feature = "bmp")]
+    if row.fault.point == "bmp.decode.invalid_signature" {
+        return execute_bmp_direct_decoder_signature_contract(manifest_dir, matrix, row);
+    }
     if row.fault.point == "bmp.encode.height_over_signed_limit" {
         return execute_bmp_encode_dimension_limit_contract(manifest_dir, matrix, row);
     }
