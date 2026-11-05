@@ -401,6 +401,28 @@ pub(crate) fn measure_bmp_metadata_for_coverage(data: &[u8]) -> ImageResult<u64>
     metadata_bytes_format(data, ImageFormat::Bmp)
 }
 
+/// Invoke GIF sequence decoding below public format detection for a
+/// target-only malformed-input contract.
+#[cfg(all(coverage, feature = "gif"))]
+pub(crate) fn decode_gif_sequence_for_coverage(data: &[u8]) -> ImageResult<DecodedSequence> {
+    let mut budget = SequenceDecodeBudget::default_for(ImageFormat::Gif);
+    decode_sequence_format(data, ImageFormat::Gif, &mut budget).map(|(sequence, _, _)| sequence)
+}
+
+/// Measure GIF metadata below public format detection for a target-only
+/// malformed-input contract.
+#[cfg(all(coverage, feature = "gif"))]
+pub(crate) fn measure_gif_metadata_for_coverage(data: &[u8]) -> ImageResult<u64> {
+    metadata_bytes_format(data, ImageFormat::Gif)
+}
+
+/// Measure WebP metadata below public format detection for target-only
+/// malformed-input contracts.
+#[cfg(all(coverage, feature = "webp"))]
+pub(crate) fn measure_webp_metadata_for_coverage(data: &[u8]) -> ImageResult<u64> {
+    metadata_bytes_format(data, ImageFormat::WebP)
+}
+
 #[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     let inspected =

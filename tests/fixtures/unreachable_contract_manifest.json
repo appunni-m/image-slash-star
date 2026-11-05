@@ -68,6 +68,30 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "gif_sequence_decoder_invalid_signature_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:gif:gif_sequence_decoder_invalid_signature_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "gif_metadata_extent_invalid_signature_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:gif:gif_metadata_extent_invalid_signature_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_metadata_riff_signature_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_metadata_riff_signature_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "webp_metadata_webp_signature_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_metadata_webp_signature_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "bmp_encode_height_over_signed_limit_rejected",
       "category": "structured-diagnostics",
       "selector": "fault-contract:bmp:bmp_encode_height_over_signed_limit_rejected",

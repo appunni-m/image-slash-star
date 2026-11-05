@@ -3488,6 +3488,18 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.metadata.invalid_signature": {
             "metadata_measure_rejects_unrecognized_signature"
         },
+        "gif.sequence.invalid_signature": {
+            "direct_sequence_decoder_rejects_unrecognized_signature"
+        },
+        "gif.metadata.invalid_signature": {
+            "metadata_measure_rejects_unrecognized_signature"
+        },
+        "webp.metadata.invalid_riff_signature": {
+            "metadata_measure_rejects_invalid_riff_signature"
+        },
+        "webp.metadata.invalid_webp_signature": {
+            "metadata_measure_rejects_invalid_webp_signature"
+        },
         "bmp.rle.entry_work_budget": {
             "decode_work_budget_exceeded_then_retry_succeeds"
         },
@@ -3707,7 +3719,15 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(
                 f"{case_id}: fault contract must be active decode, inspect, or encode with a not_applicable oracle"
             )
-        if row.get("format") not in {"avif", "bmp", "jpeg", "png", "tiff", "webp"}:
+        if row.get("format") not in {
+            "avif",
+            "bmp",
+            "gif",
+            "jpeg",
+            "png",
+            "tiff",
+            "webp",
+        }:
             raise RuntimeError(f"{case_id}: unsupported fault-contract format")
         requirements = row.get("requirements")
         if (
