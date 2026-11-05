@@ -488,6 +488,30 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "avif_missing_minf_inspection_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_missing_minf_inspection_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_missing_stbl_inspection_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_missing_stbl_inspection_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_missing_stsd_inspection_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_missing_stsd_inspection_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_missing_stsz_inspection_contract",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_missing_stsz_inspection_contract",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_container_meta_full_box_version_rejected",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_container_meta_full_box_version_rejected",

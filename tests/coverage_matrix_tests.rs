@@ -2087,7 +2087,7 @@ fn execute_avif_inspect_container_invariant_contract(
 }
 
 #[cfg(all(coverage, feature = "avif"))]
-fn execute_avif_duplicate_inspection_parity_contract(
+fn execute_avif_malformed_inspection_parity_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
@@ -2111,6 +2111,10 @@ fn execute_avif_duplicate_inspection_parity_contract(
     let expected_source_id = match row.id.as_str() {
         "avif_duplicate_minf_inspection_contract" => "error_animated_duplicate_minf",
         "avif_duplicate_stbl_inspection_contract" => "error_animated_duplicate_stbl",
+        "avif_missing_minf_inspection_contract" => "error_animated_missing_minf",
+        "avif_missing_stbl_inspection_contract" => "error_animated_missing_sample_table",
+        "avif_missing_stsz_inspection_contract" => "error_animated_missing_sample_size",
+        "avif_missing_stsd_inspection_contract" => "error_animated_missing_sample_description",
         _ => {
             return Err(format!(
                 "{}: unknown AVIF malformed-parity inspection contract",
@@ -2347,7 +2351,7 @@ fn execute_fault_contract(
     if row.fault.point == "avif.container.inspect_unvalidated_input"
         && row.fault.contract == "inspection_error_matches_parity_case"
     {
-        return execute_avif_duplicate_inspection_parity_contract(manifest_dir, matrix, row);
+        return execute_avif_malformed_inspection_parity_contract(manifest_dir, matrix, row);
     }
     #[cfg(feature = "avif")]
     if row.fault.point == "avif.container.inspect_unvalidated_input" {

@@ -1412,6 +1412,62 @@ fault_contracts:
       point: avif.container.inspect_unvalidated_input
       contract: inspection_error_matches_parity_case
     oracle_status: not_applicable
+  - id: avif_missing_minf_inspection_contract
+    type: fault-contract
+    operation: inspect
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:error_animated_missing_minf
+    fault:
+      point: avif.container.inspect_unvalidated_input
+      contract: inspection_error_matches_parity_case
+    oracle_status: not_applicable
+  - id: avif_missing_stbl_inspection_contract
+    type: fault-contract
+    operation: inspect
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:error_animated_missing_sample_table
+    fault:
+      point: avif.container.inspect_unvalidated_input
+      contract: inspection_error_matches_parity_case
+    oracle_status: not_applicable
+  - id: avif_missing_stsz_inspection_contract
+    type: fault-contract
+    operation: inspect
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:error_animated_missing_sample_size
+    fault:
+      point: avif.container.inspect_unvalidated_input
+      contract: inspection_error_matches_parity_case
+    oracle_status: not_applicable
+  - id: avif_missing_stsd_inspection_contract
+    type: fault-contract
+    operation: inspect
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:error_animated_missing_sample_description
+    fault:
+      point: avif.container.inspect_unvalidated_input
+      contract: inspection_error_matches_parity_case
+    oracle_status: not_applicable
   - id: avif_container_meta_full_box_version_rejected
     type: fault-contract
     operation: inspect
