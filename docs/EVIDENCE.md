@@ -22073,7 +22073,24 @@ The frame admission bound in
 gate's true arm in the selected 69x64 run; the false arm remains unobserved.
 Coverage MCP also showed that the separate clipped-B4x8 geometry helper was
 not entered by either the 65x64 or 69x64 parity fixtures, so its bound was left
-unchanged. The selected LLVM report is
+unchanged at the time of the original change.
+
+Follow-up on 2026-11-05: tracing the public call path showed that the
+partition walker passes `node.width * 4` to `decode_inter_leaf`. A B4x8 leaf
+therefore supplies a width of four, and the ordinary exact-size geometry check
+already admits it. The extra helper required a width from one through three,
+which no caller could supply, so it was dead code rather than a missing public
+parity case. The helper and its redundant admission arm were removed without
+changing behavior for inputs reaching the decoder. The existing 65x64 and
+69x64 public parity rows passed 2/2 after removal. Coverage MCP reports no
+remaining locations for the removed helper in that selected report; its
+source identity is unverified and test attribution is unknown, so this is not
+an aggregate coverage claim. The report is
+`.coverage-mcp/local-evidence/selected/20261105T015034.504493Z-34f0865735724e49bc2c09b92f567aa2/coverage.json`
+(SHA-256
+`d787425465edf109c808b92d8509afc32a43b99e6dc23e82e818e66227bc1c58`).
+
+The original selected LLVM report is
 `.coverage-mcp/local-evidence/selected/20261104T164158.691688Z-69d30c625c284406b9286d32c10fe47a/coverage.json`
 (SHA-256
 `28be03b545bd58addf1b1b49db72b6382dad65d651984a59292ca9d0cf8c0626`). This

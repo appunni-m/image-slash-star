@@ -5516,30 +5516,6 @@ fn inter_lossless_grid_clipped_b32_geometry_supported(geometry: InterLosslessGri
         && (visible_width < 32 || visible_height < 32)
 }
 
-/// Admit the final 4x8 I420 leaf when an odd frame edge exposes only 1–3 luma columns.
-fn inter_lossless_grid_clipped_b4x8_i420_geometry_supported(
-    geometry: InterLosslessGridGeometry,
-) -> bool {
-    let InterLosslessGridGeometry {
-        block_size,
-        layout,
-        visible_width,
-        visible_height,
-        frame_width,
-        bit_depth,
-    } = geometry;
-    block_size == BlockSize::B4x8
-        && layout == PixelLayout::I420
-        && matches!(bit_depth, 10 | 12)
-        && frame_width > visible_width
-        && frame_width <= 67
-        && (1..=3).contains(&visible_width)
-        && visible_height == 8
-        && frame_width
-            .checked_sub(visible_width)
-            .is_some_and(|block_origin| block_origin.is_multiple_of(4))
-}
-
 fn inter_lossless_grid_geometry_supported(
     geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
@@ -5603,8 +5579,7 @@ fn inter_lossless_grid_geometry_supported(
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && ((visible_width, visible_height) == block_size.pixel_dimensions()
-            || inter_lossless_grid_clipped_b32_geometry_supported(geometry)
-            || inter_lossless_grid_clipped_b4x8_i420_geometry_supported(geometry))
+            || inter_lossless_grid_clipped_b32_geometry_supported(geometry))
 }
 
 /// Segment-lossless residuals in a mixed frame still follow the fixed WHT
