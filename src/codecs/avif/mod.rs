@@ -17,6 +17,13 @@ pub(super) fn inspect_container_for_coverage(
 }
 
 #[cfg(coverage)]
+pub(super) fn inspect_unvalidated_container_for_coverage(
+    data: &[u8],
+) -> super::CodecResult<crate::types::ImageInfo> {
+    container::inspect_unvalidated_for_coverage(data)
+}
+
+#[cfg(coverage)]
 pub(super) fn parse_meta_for_coverage(payload: &[u8]) -> super::CodecResult<()> {
     container::parse_meta_for_coverage(payload)
 }

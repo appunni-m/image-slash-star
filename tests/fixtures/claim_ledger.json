@@ -7,7 +7,7 @@
   },
   "fixture_manifests": {
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
-    "coverage_origins": "fcc8c3705ef66b95bf53ac735c7a18ec9c00bdb8efb1ad2a1b414fa833e71a58",
+    "coverage_origins": "261bcbbf7e045554246ae7f851b72e9363c9ad6d55b68d349127a2d31bb75ed3",
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
@@ -15,7 +15,7 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "0bc260f45bbbaa6bb631f5ba653e651f49f6f6832352d63a0d4e748ca35190d9",
+    "roadmap": "95596fdb8687e5ed670209ee892fd710214ca979d59effa5891a146015a1066a",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "dde21abcacfa24f11e5960f1c8667064fd4e4580e8e69fbe1dcb273be6d55e58",

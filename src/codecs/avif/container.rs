@@ -301,6 +301,22 @@ pub(super) fn inspect(extracted: super::samples::InspectedAvif<'_>) -> CodecResu
     inspect_inner_with_grid(data, grid_properties, brands)
 }
 
+/// Reach the second-pass container parser below sample validation in coverage builds.
+#[cfg(coverage)]
+pub(super) fn inspect_unvalidated_for_coverage(data: &[u8]) -> ParseResult<ImageInfo> {
+    inspect_inner_with_grid(
+        data,
+        None,
+        super::samples::Brands {
+            major: *b"avis",
+            minor_version: 0,
+            compatible_brands: Vec::new(),
+            has_avif: false,
+            has_avis: true,
+        },
+    )
+}
+
 fn inspect_inner_with_grid(
     data: &[u8],
     grid_properties: Option<AvifGridProperties>,

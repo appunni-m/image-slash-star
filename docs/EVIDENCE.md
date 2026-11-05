@@ -4,6 +4,41 @@ The current public evidence matrix contains 3,851 total rows: 3,177 decode /
 inspect / verify rows and 674 encode rows. Of those, 3,177 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
 
+## AVIF empty-movie container guard contract — 2026-11-05
+
+The existing `error_avis_moov_without_trak` parity row is rejected during
+sample validation, before the separate container-inspection pass can evaluate
+`container::parse_movie`'s empty-track guard. Extended the existing
+`avif_container_inspection_invariant_guards` target-only integration contract
+with a minimal AVIS `ftyp` plus empty `moov`, routed through a `cfg(coverage)`
+inspection seam. The runner checks the externally returned AVIF malformed
+inspection error; the normal decode and inspection paths are unchanged. No
+private unit tests were added.
+
+The selected fault contract passed 1/1 with the oracle marked not applicable.
+Its local LLVM report records one true-arm execution at
+`src/codecs/avif/container.rs:1518`:
+`.coverage-mcp/local-evidence/selected/20261105-avif-container-empty-movie-contract/coverage.json`
+(SHA-256
+`dc5e039e084476aa0fe89deb3d8f879d51fc8f66468fe824a0030699ab146c87`), with
+local receipt
+`.coverage-mcp/local-evidence/selected/20261105-avif-container-empty-movie-contract/coverage.local-evidence.json`
+(SHA-256
+`a26a9488f575e0959c53c53a0573fcf2dff9c36f63cb735047eeb8e8be45a824`). The
+Coverage MCP interface is unavailable in this session, so the report remains
+local-only with unverified source identity and unknown MCP test attribution;
+this selected result does not update aggregate coverage totals.
+
+A fresh full `make coverage` run on the same source tree passed, including all
+57 coverage-matrix tests and 70 feature-gate tests. It measured 102,939/142,402
+lines (72.287608%), 21,156/32,020 branches (66.071205%), 5,686/9,141
+functions (62.203260%), and 156,664/220,621 regions (71.010466%). The report
+is `.coverage-mcp/local-evidence/full/20261105-develop-avif-empty-movie-contract/coverage.json`
+(SHA-256
+`27763b8ff91d159663cad7dfae9a706a67209d9033d665b15b438319be7782f3`). These
+are local LLVM totals, not Coverage MCP-verified totals, and remain below the
+100% goal.
+
 ## JPEG partial trailing DHT length parity — 2026-11-05
 
 Added `decode:jpeg:baseline_444_single_scan_dht_partial_length`. The fixture

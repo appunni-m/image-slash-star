@@ -471,7 +471,7 @@
       "path": "src/codecs/avif/av1/tile_state.rs"
     },
     {
-      "guard_count": 1,
+      "guard_count": 2,
       "origin": "defensive_model",
       "path": "src/codecs/avif/container.rs"
     },
@@ -495,7 +495,7 @@
       "path": "src/codecs/avif/encode.rs"
     },
     {
-      "guard_count": 6,
+      "guard_count": 7,
       "origin": "defensive_model",
       "path": "src/codecs/avif/mod.rs"
     },
@@ -704,7 +704,7 @@
       "path": "src/encode_options.rs"
     },
     {
-      "guard_count": 6,
+      "guard_count": 7,
       "guards": [
         {
           "index": 1,
@@ -728,6 +728,10 @@
         },
         {
           "index": 6,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 7,
           "origin": "defensive_model"
         }
       ],

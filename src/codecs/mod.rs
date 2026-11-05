@@ -395,6 +395,15 @@ pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<Im
 }
 
 #[cfg(all(coverage, feature = "avif"))]
+pub(crate) fn inspect_avif_container_without_sample_validation_for_coverage(
+    data: &[u8],
+) -> ImageResult<ImageInfo> {
+    let inspected = avif::inspect_unvalidated_container_for_coverage(data)
+        .map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Avif, ImageErrorStage::Inspection)
+}
+
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn parse_avif_meta_for_coverage(payload: &[u8]) -> ImageResult<()> {
     let parsed = avif::parse_meta_for_coverage(payload).map_err(|error| error.context("inspect"));
     into_image_result(parsed, ImageFormat::Avif, ImageErrorStage::Inspection)

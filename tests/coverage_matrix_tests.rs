@@ -1796,6 +1796,26 @@ fn expect_coverage_avif_inspection_error(label: &str, bytes: &[u8]) -> Result<()
 }
 
 #[cfg(all(coverage, feature = "avif"))]
+fn expect_coverage_avif_unvalidated_inspection_error(
+    label: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    match img::__coverage_inspect_avif_container_without_sample_validation(bytes) {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Avif,
+            stage: Some(img::ImageErrorStage::Inspection),
+            ..
+        }) => Ok(()),
+        Err(error) => Err(format!(
+            "{label}: unvalidated container inspection returned the wrong error: {error:?}"
+        )),
+        Ok(info) => Err(format!(
+            "{label}: malformed unvalidated container unexpectedly inspected as {info:?}"
+        )),
+    }
+}
+
+#[cfg(all(coverage, feature = "avif"))]
 fn execute_avif_meta_version_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
@@ -2008,6 +2028,14 @@ fn execute_avif_inspect_container_invariant_contract(
     expect_coverage_avif_inspection_error(
         "AVIS track without image details",
         &avis_without_details,
+    )?;
+
+    let mut avis_without_tracks = Vec::new();
+    append_coverage_avif_ftyp(&mut avis_without_tracks, b"avis")?;
+    append_coverage_avif_box(&mut avis_without_tracks, b"moov", &[])?;
+    expect_coverage_avif_unvalidated_inspection_error(
+        "AVIS movie without tracks after sample validation",
+        &avis_without_tracks,
     )?;
 
     let retry = img::inspect(&source_bytes)
