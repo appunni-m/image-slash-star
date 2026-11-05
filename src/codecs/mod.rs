@@ -394,6 +394,13 @@ pub(crate) fn decode_bmp_for_coverage(data: &[u8]) -> ImageResult<DecodedImage> 
     decode_format(data, ImageFormat::Bmp).map(|(image, _, _)| image)
 }
 
+/// Measure BMP metadata below public format detection for a target-only
+/// malformed-input contract.
+#[cfg(all(coverage, feature = "bmp"))]
+pub(crate) fn measure_bmp_metadata_for_coverage(data: &[u8]) -> ImageResult<u64> {
+    metadata_bytes_format(data, ImageFormat::Bmp)
+}
+
 #[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     let inspected =
