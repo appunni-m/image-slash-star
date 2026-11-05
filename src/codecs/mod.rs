@@ -387,6 +387,14 @@ pub(crate) fn inspect_png_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     into_image_result(inspected, ImageFormat::Png, ImageErrorStage::Inspection)
 }
 
+/// Invoke BMP inspection directly for coverage-only contracts that cannot
+/// reach the codec after public signature detection.
+#[cfg(all(coverage, feature = "bmp"))]
+pub(crate) fn inspect_bmp_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected = bmp::inspect::inspect(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Bmp, ImageErrorStage::Inspection)
+}
+
 /// Invoke BMP decoding below public format detection for a target-only
 /// malformed-input contract.
 #[cfg(all(coverage, feature = "bmp"))]

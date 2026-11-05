@@ -1047,6 +1047,15 @@ FAULT_CONTRACTS = {
         "contract": "metadata_measure_rejects_unrecognized_signature",
         "operation": "decode",
     },
+    "bmp_inspect_invalid_signature_rejected": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_inspect_invalid_signature_rejected",
+        "source_case": "decode:bmp:depth_24",
+        "point": "bmp.inspect.signature_mismatch",
+        "contract": "inspection_invalid_signature_rejected",
+        "operation": "inspect",
+    },
     "gif_sequence_decoder_invalid_signature_contract": {
         "format": "gif",
         "category": "structured-diagnostics",

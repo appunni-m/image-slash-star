@@ -474,6 +474,20 @@ fault_contracts:
       point: bmp.metadata.invalid_signature
       contract: metadata_measure_rejects_unrecognized_signature
     oracle_status: not_applicable
+  - id: bmp_inspect_invalid_signature_rejected
+    type: fault-contract
+    operation: inspect
+    format: bmp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:bmp:depth_24
+    fault:
+      point: bmp.inspect.signature_mismatch
+      contract: inspection_invalid_signature_rejected
+    oracle_status: not_applicable
   - id: gif_sequence_decoder_invalid_signature_contract
     type: fault-contract
     operation: decode

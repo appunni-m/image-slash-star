@@ -3488,6 +3488,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.metadata.invalid_signature": {
             "metadata_measure_rejects_unrecognized_signature"
         },
+        "bmp.inspect.signature_mismatch": {
+            "inspection_invalid_signature_rejected"
+        },
         "gif.sequence.invalid_signature": {
             "direct_sequence_decoder_rejects_unrecognized_signature"
         },
@@ -3806,6 +3809,11 @@ def sync_fault_contract_rows(manifest, matrix):
                 or point == "png.inspect.signature_mismatch"
                 and contract == "inspection_invalid_signature_rejected"
             )
+            supported_bmp_inspection = (
+                row["format"] == "bmp"
+                and point == "bmp.inspect.signature_mismatch"
+                and contract == "inspection_invalid_signature_rejected"
+            )
             supported_avif_inspection = row["format"] == "avif" and (
                 (
                     point
@@ -3843,6 +3851,7 @@ def sync_fault_contract_rows(manifest, matrix):
             )
             if not (
                 supported_png_inspection
+                or supported_bmp_inspection
                 or supported_avif_inspection
                 or supported_tiff_inspection
             ):
