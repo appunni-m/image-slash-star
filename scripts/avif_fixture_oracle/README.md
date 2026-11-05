@@ -198,6 +198,59 @@ cmake --build target/oracle-staging/libavif-force-i420-cdef-restoration-build --
   --variant i420_cdef_restoration --check
 ```
 
+## Combined 10-bit I420 loop filtering, CDEF, and SGR restoration
+
+The 16x16 fixture `coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif`
+exercises nonzero luma and chroma loop-filter levels together with the same
+single-entry CDEF and SGR profile. Libaom's normal tiny-frame search does not
+retain active deblocking for this profile, so the fixture-only companion patch
+[`libaom-force-i420-loopfilter.patch`](libaom-force-i420-loopfilter.patch)
+sets all four levels to 1 for a 10-bit 16x16 I420 key frame. Apply it together
+with `libaom-force-i420-cdef-restoration.patch` to a clean pinned libaom 3.13.2
+source tree. Build it in a separate directory so the existing zero-loop-filter
+fixture remains reproducible.
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i420-loop-cdef-restoration
+git -C target/oracle-staging/libaom-i420-loop-cdef-restoration checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i420-loop-cdef-restoration apply --check \
+  "$PWD/scripts/avif_fixture_oracle/libaom-force-i420-cdef-restoration.patch"
+git -C target/oracle-staging/libaom-i420-loop-cdef-restoration apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-force-i420-cdef-restoration.patch"
+git -C target/oracle-staging/libaom-i420-loop-cdef-restoration apply --check \
+  "$PWD/scripts/avif_fixture_oracle/libaom-force-i420-loopfilter.patch"
+git -C target/oracle-staging/libaom-i420-loop-cdef-restoration apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-force-i420-loopfilter.patch"
+cmake -S target/oracle-staging/libaom-i420-loop-cdef-restoration -B target/oracle-staging/libaom-i420-loop-cdef-restoration-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i420-loop-cdef-restoration-prefix"
+cmake --build target/oracle-staging/libaom-i420-loop-cdef-restoration-build -j 4
+cmake --install target/oracle-staging/libaom-i420-loop-cdef-restoration-build
+cmake -S target/oracle-staging/cdef-chroma-avif-source -B target/oracle-staging/libavif-i420-loop-cdef-restoration-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=ON \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i420-loop-cdef-restoration-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i420-loop-cdef-restoration-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i420-loop-cdef-restoration-prefix/include"
+cmake --build target/oracle-staging/libavif-i420-loop-cdef-restoration-build --target avifenc -j 4
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i420_cdef_restoration_loopfilter \
+  --avifenc target/oracle-staging/libavif-i420-loop-cdef-restoration-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i420_cdef_restoration_loopfilter --check
+```
+
+The deterministic source is the same 16x16 Y4M input as the zero-loop-filter
+profile. The generator requires the exact 10-bit I420 key-frame syntax, nonzero
+loop-filter levels, active CDEF and SGR restoration, repeat-encode identity,
+and Pillow 12.2.0/libavif 1.4.1 pixel output. The AVIF SHA-256 is
+`8901fba07e2d68e35baa03bd521d22048e7d2ff2bd969a02b195541f5958df54`; the
+768-byte RGB reference SHA-256 is
+`4d3f43960d12c77079790677f805b6deec2470a7c4deee5b498948d2f434dd30`.
+
 Generate the equal-width no-op edge case with the same pinned encoder:
 
 ```sh

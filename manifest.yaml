@@ -17816,6 +17816,11 @@ formats:
       test_assets:
       - coverage_i420_intra_cdef_restoration_10bit_16x16.avif
       status: active
+    - id: coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16
+      description: Single-frame full-range 10-bit I420 AVIF with nonzero deblocking, intra CDEF, and SGR luma restoration
+      test_assets:
+      - coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif
+      status: active
     - id: coverage_i420_intra_cdef_restoration_10bit_16x64
       description: Single-frame full-range 10-bit I420 AVIF with active luma CDEF and Wiener restoration across the 56-row stripe boundary
       test_assets:

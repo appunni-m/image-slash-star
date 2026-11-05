@@ -60053,6 +60053,58 @@
       ]
     },
     {
+      "id": "coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16",
+      "asset": "coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif",
+      "asset_sha256": "8901fba07e2d68e35baa03bd521d22048e7d2ff2bd969a02b195541f5958df54",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "coverage_i420_intra_cdef_restoration_10bit_16x64",
       "asset": "coverage_i420_intra_cdef_restoration_10bit_16x64.avif",
       "asset_sha256": "ccf7cb2dc6c81749955e09853587f7b1047e3c89b17f2832a4196303d8302727",
