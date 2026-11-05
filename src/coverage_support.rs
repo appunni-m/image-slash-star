@@ -172,6 +172,8 @@ pub enum CoverageFaultPoint {
     JpegFancyUpsampleRowShortStride,
     /// Force the row-wise JPEG upsampler to reject a component sample buffer that is too short.
     JpegFancyUpsampleRowSourceLengthMismatch,
+    /// Force the row-wise JPEG upsampler to reject a destination row beyond its height.
+    JpegFancyUpsampleRowDestinationYOutOfBounds,
     /// Force checked multiplication of JPEG row stride and row index to overflow.
     JpegFancyUpsampleRowLastRowStartOverflow,
     /// Force checked addition of JPEG row start and width to overflow.

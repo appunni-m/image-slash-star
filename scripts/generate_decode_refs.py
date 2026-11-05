@@ -3443,6 +3443,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.upsample.row_source_length_mismatch": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.upsample.row_destination_y_out_of_bounds": {
+            "decode_error_then_retry_succeeds"
+        },
         "jpeg.upsample.row_last_row_start_overflow": {
             "decode_error_then_retry_succeeds"
         },

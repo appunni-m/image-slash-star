@@ -3152,6 +3152,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "jpeg.upsample.row_destination_y_out_of_bounds",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegFancyUpsampleRowDestinationYOutOfBounds,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.upsample.row_last_row_start_overflow", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegFancyUpsampleRowLastRowStartOverflow,
                 false,
@@ -3557,6 +3566,7 @@ fn execute_fault_contract(
         | "jpeg.upsample.row_zero_vertical_ratio"
         | "jpeg.upsample.row_short_stride"
         | "jpeg.upsample.row_source_length_mismatch"
+        | "jpeg.upsample.row_destination_y_out_of_bounds"
         | "jpeg.upsample.row_last_row_start_overflow"
         | "jpeg.upsample.row_required_source_length_overflow"
         | "jpeg.upsample.row_destination_height_overflow" => {
@@ -3775,6 +3785,7 @@ fn execute_fault_contract(
                 | "jpeg.upsample.row_zero_vertical_ratio"
                 | "jpeg.upsample.row_short_stride"
                 | "jpeg.upsample.row_source_length_mismatch"
+                | "jpeg.upsample.row_destination_y_out_of_bounds"
                 | "jpeg.upsample.row_last_row_start_overflow"
                 | "jpeg.upsample.row_required_source_length_overflow"
                 | "jpeg.upsample.row_destination_height_overflow"

@@ -389,6 +389,14 @@ pub(super) fn fancy_upsample_row(
     let Some(destination_height) = src_h.checked_mul(v_ratio) else {
         return Err(invalid_geometry());
     };
+    #[cfg(coverage)]
+    let dst_y = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegFancyUpsampleRowDestinationYOutOfBounds,
+    ) {
+        usize::MAX
+    } else {
+        dst_y
+    };
     if src.len() < required_source_len || dst_y >= destination_height {
         return Err(invalid_geometry());
     }
