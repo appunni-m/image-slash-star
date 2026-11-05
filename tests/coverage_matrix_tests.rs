@@ -1816,6 +1816,27 @@ fn expect_coverage_avif_unvalidated_inspection_error(
 }
 
 #[cfg(all(coverage, feature = "avif"))]
+fn expect_coverage_avif_malformed_inspection_error(
+    label: &str,
+    result: Result<img::ImageInfo, img::ImageError>,
+) -> Result<(), String> {
+    match result {
+        Err(img::ImageError::Malformed {
+            format: img::ImageFormat::Avif,
+            message,
+            stage: Some(img::ImageErrorStage::Inspection),
+            ..
+        }) if !message.is_empty() => Ok(()),
+        Err(error) => Err(format!(
+            "{label}: inspection returned the wrong structured error: {error:?}"
+        )),
+        Ok(info) => Err(format!(
+            "{label}: malformed AVIF unexpectedly inspected as {info:?}"
+        )),
+    }
+}
+
+#[cfg(all(coverage, feature = "avif"))]
 fn execute_avif_meta_version_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
@@ -2065,6 +2086,119 @@ fn execute_avif_inspect_container_invariant_contract(
     Ok(())
 }
 
+#[cfg(all(coverage, feature = "avif"))]
+fn execute_avif_duplicate_inspection_parity_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "inspect"
+        || row.format != "avif"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "avif.container.inspect_unvalidated_input"
+        || row.fault.contract != "inspection_error_matches_parity_case"
+    {
+        return Err(format!(
+            "{}: invalid AVIF malformed-parity inspection contract",
+            row.id
+        ));
+    }
+
+    let expected_source_id = match row.id.as_str() {
+        "avif_duplicate_minf_inspection_contract" => "error_animated_duplicate_minf",
+        "avif_duplicate_stbl_inspection_contract" => "error_animated_duplicate_stbl",
+        _ => {
+            return Err(format!(
+                "{}: unknown AVIF malformed-parity inspection contract",
+                row.id
+            ));
+        }
+    };
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "avif"
+        || source_key.id != expected_source_id
+    {
+        return Err(format!(
+            "{}: source_case must identify decode:avif:{expected_source_id}",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("avif")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active"
+        || source.expect_error != Some(true)
+        || source.oracle_status.as_deref() != Some("error")
+        || source.oracle_error_kind.as_deref() != Some("malformed")
+        || source.inspect_status != "error"
+        || source.inspect_error_kind.as_deref() != Some("malformed")
+        || source.operations.get("inspect").map(String::as_str) != Some("error")
+        || source
+            .assertion_origins
+            .get("inspection")
+            .map(String::as_str)
+            != Some("pillow_fixture")
+    {
+        return Err(format!(
+            "{}: source_case must retain active Pillow malformed-inspection parity",
+            row.id
+        ));
+    }
+    assert_error_contracts(&source.operations, &source.error_contracts, "avif")?;
+    let inspect_contract = source
+        .error_contracts
+        .get("inspect")
+        .ok_or_else(|| format!("{}: source inspection error contract is missing", row.id))?;
+    if inspect_contract.rust_kind != "malformed"
+        || inspect_contract.rust_format.as_deref() != Some("AVIF")
+        || inspect_contract.rust_message != "non_empty"
+        || inspect_contract.origin != "pillow_fixture"
+        || inspect_contract.pillow_type.is_none()
+        || inspect_contract.pillow_message.is_none()
+    {
+        return Err(format!(
+            "{}: source inspection contract does not declare Pillow malformed AVIF parity",
+            row.id
+        ));
+    }
+
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/avif")
+        .join(asset);
+    let source_bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
+    assert_sha256(
+        &source_bytes,
+        source.asset_sha256.as_deref(),
+        "AVIF malformed inspection parity source asset",
+    )?;
+
+    expect_coverage_avif_malformed_inspection_error(
+        "public AVIF parity inspection",
+        img::inspect(&source_bytes),
+    )?;
+    expect_coverage_avif_malformed_inspection_error(
+        "unvalidated AVIF container inspection",
+        img::__coverage_inspect_avif_container_without_sample_validation(&source_bytes),
+    )
+}
+
 #[cfg(coverage)]
 fn execute_tiff_inspection_incomplete_chain_contract(
     manifest_dir: &Path,
@@ -2208,6 +2342,12 @@ fn execute_fault_contract(
 ) -> Result<(), String> {
     if row.fault.point == "bmp.encode.height_over_signed_limit" {
         return execute_bmp_encode_dimension_limit_contract(manifest_dir, matrix, row);
+    }
+    #[cfg(feature = "avif")]
+    if row.fault.point == "avif.container.inspect_unvalidated_input"
+        && row.fault.contract == "inspection_error_matches_parity_case"
+    {
+        return execute_avif_duplicate_inspection_parity_contract(manifest_dir, matrix, row);
     }
     #[cfg(feature = "avif")]
     if row.fault.point == "avif.container.inspect_unvalidated_input" {
@@ -3374,7 +3514,10 @@ fn execute_fault_contract(
         };
     let token_decode = row.fault.contract == "decode_with_token_error_then_retry_succeeds";
     if (row.operation == "inspect")
-        != (row.fault.contract == "inspection_error_then_retry_succeeds")
+        != matches!(
+            row.fault.contract.as_str(),
+            "inspection_error_then_retry_succeeds" | "inspection_error_matches_parity_case"
+        )
     {
         return Err(format!(
             "{}: fault operation does not match its public contract",

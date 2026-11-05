@@ -3600,7 +3600,8 @@ def sync_fault_contract_rows(manifest, matrix):
             "inspection_error_then_retry_succeeds",
         },
         "avif.container.inspect_unvalidated_input": {
-            "inspection_error_then_retry_succeeds"
+            "inspection_error_then_retry_succeeds",
+            "inspection_error_matches_parity_case",
         },
         "avif.container.meta_full_box_version": {
             "inspection_error_then_retry_succeeds"
@@ -3739,7 +3740,20 @@ def sync_fault_contract_rows(manifest, matrix):
         )
         source_is_parity = source_row is not None and source_row.get("status") == "active"
         if source_operation == "decode":
-            source_is_parity = source_is_parity and source_row.get("oracle_status") == "ok"
+            source_is_error_parity = source_row is not None and (
+                source_row.get("oracle_status") == "error"
+                and source_row.get("expect_error") is True
+                and source_row.get("operations", {}).get("inspect") == "error"
+                and source_row.get("assertion_origins", {}).get("inspection")
+                == "pillow_fixture"
+                and source_row.get("error_contracts", {})
+                .get("inspect", {})
+                .get("origin")
+                == "pillow_fixture"
+            )
+            source_is_parity = source_is_parity and (
+                source_row.get("oracle_status") == "ok" or source_is_error_parity
+            )
         else:
             source_is_parity = (
                 source_is_parity
@@ -3767,15 +3781,24 @@ def sync_fault_contract_rows(manifest, matrix):
                 and contract == "inspection_invalid_signature_rejected"
             )
             supported_avif_inspection = row["format"] == "avif" and (
-                point
-                in {
-                    "avif.container.inspect_unvalidated_input",
-                    "avif.container.meta_full_box_version",
-                    "avif.metadata.item_table_reservation",
-                    "avif.metadata.item_location_table_reservation",
-                    "avif.metadata.item_extent_span_reservation",
-                }
-                and contract == "inspection_error_then_retry_succeeds"
+                (
+                    point
+                    in {
+                        "avif.container.meta_full_box_version",
+                        "avif.metadata.item_table_reservation",
+                        "avif.metadata.item_location_table_reservation",
+                        "avif.metadata.item_extent_span_reservation",
+                    }
+                    and contract == "inspection_error_then_retry_succeeds"
+                )
+                or (
+                    point == "avif.container.inspect_unvalidated_input"
+                    and contract
+                    in {
+                        "inspection_error_then_retry_succeeds",
+                        "inspection_error_matches_parity_case",
+                    }
+                )
             )
             supported_tiff_inspection = row["format"] == "tiff" and (
                 point
@@ -3829,6 +3852,13 @@ def sync_fault_contract_rows(manifest, matrix):
         if contract == "inspection_error_then_retry_succeeds" and row["operation"] != "inspect":
             raise RuntimeError(
                 f"{case_id}: inspection retry contract requires operation: inspect"
+            )
+        if (
+            contract == "inspection_error_matches_parity_case"
+            and row["operation"] != "inspect"
+        ):
+            raise RuntimeError(
+                f"{case_id}: parity inspection error contract requires operation: inspect"
             )
         if (
             contract == "inspection_incomplete_chain_then_retry_restores_parity"
