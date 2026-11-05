@@ -3161,7 +3161,7 @@ pub fn decode(
 
     debug_assert!(!info.scan_components.is_empty());
 
-    let consumed = info.eoi_pos.saturating_add(2);
+    let consumed = info.consumed_len;
     crate::codecs::error::check_cancelled(token)?;
     let mut image = if info.progressive {
         progressive_reconstruct(&info, data, token)
@@ -3181,8 +3181,7 @@ pub fn decode(
     Ok((image, consumed))
 }
 
-/// Measure the encoded metadata extent: the consumed stream (through EOI)
-/// minus the entropy-coded scan payload bytes.
+/// Measure metadata extent: consumed input bytes minus entropy-coded payload.
 pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     let info = parse_jpeg(data)?;
     let mut pixel = 0u64;
@@ -3195,7 +3194,7 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         let span = scan.entropy_end - scan.entropy_start;
         pixel = pixel.saturating_add(span as u64);
     }
-    let consumed = info.eoi_pos.saturating_add(2) as u64;
+    let consumed = info.consumed_len as u64;
     // `pixel` is the sum of entropy spans inside the consumed stream.
     #[allow(
         clippy::arithmetic_side_effects,

@@ -68,7 +68,11 @@ pub(super) struct JpegInfo {
     pub(super) first_scan_restart_interval: u16,
     pub(super) entropy_has_restart_markers: bool,
     pub(super) entropy_start: usize,
+    /// EOI marker offset, or the post-scan marker boundary when a tolerated
+    /// complete baseline scan has no EOI marker.
     pub(super) eoi_pos: usize,
+    /// Number of input bytes consumed by parsing this JPEG.
+    pub(super) consumed_len: usize,
     pub(super) max_h_samp: u8,
     pub(super) max_v_samp: u8,
     pub(super) progressive: bool,
@@ -500,6 +504,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut rgb_components = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
     let mut metadata = Vec::new();
+    let mut consumed_len = data.len();
 
     let eoi_pos = loop {
         let marker_start = pos;
@@ -551,6 +556,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     {
                         // Pillow finishes the single baseline scan and ignores
                         // a trailing DHT whose declared extent crosses EOI.
+                        consumed_len = eoi_pos.saturating_add(2);
                         break eoi_pos;
                     }
                 }
@@ -561,6 +567,11 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 }
                 parse_dht(data, &mut pos, &mut dc_huff_tables, &mut ac_huff_tables)
                     .map_err(|error| error.at(marker_offset, "jpeg_dht"))?;
+                if saw_sos && !progressive && scans.len() == 1 && pos == data.len() {
+                    // Pillow returns the completed baseline scan when a valid
+                    // trailing DHT reaches EOF without a terminal EOI marker.
+                    break marker_start;
+                }
             }
             M_SOS => {
                 if !saw_sof {
@@ -648,10 +659,13 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     }
 
                     if scan_end >= data.len() {
-                        break find_eoi(data, pos)
+                        let eoi_pos = find_eoi(data, pos)
                             .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
+                        consumed_len = eoi_pos.saturating_add(2);
+                        break eoi_pos;
                     }
                     if data.get(scan_end..scan_end.saturating_add(2)) == Some(&[0xFF, 0xD9]) {
+                        consumed_len = scan_end.saturating_add(2);
                         break scan_end;
                     }
                     pos = scan_end;
@@ -732,6 +746,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         if let Ok(scan_end) = usize::try_from(marker_offset)
                             && let Ok(eoi_pos) = find_eoi(data, scan_end)
                         {
+                            consumed_len = eoi_pos.saturating_add(2);
                             break eoi_pos;
                         }
                     }
@@ -753,6 +768,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 pos = payload_end;
             }
             M_EOI => {
+                consumed_len = pos;
                 break pos.saturating_sub(2);
             }
             0xFFD0..=0xFFD7 => {}
@@ -795,6 +811,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         entropy_has_restart_markers,
         entropy_start,
         eoi_pos,
+        consumed_len,
         max_h_samp,
         max_v_samp,
         progressive,

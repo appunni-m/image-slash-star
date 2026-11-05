@@ -197,6 +197,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_avx2_420_edge_batch_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_grayscale_duplicate_scan_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_dht_no_eoi_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_trailing_app1_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_single_scan_com_tail_junk_then_com_fixture.py --check
