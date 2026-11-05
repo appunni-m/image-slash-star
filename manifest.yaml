@@ -2828,6 +2828,10 @@ formats:
       description: Baseline 4:4:4 JPEG has a valid DHT segment after its only entropy scan
       test_assets:
       - baseline_444_single_scan_trailing_dht.jpg
+    - id: baseline_444_single_scan_trailing_dht_no_eoi
+      description: Baseline 4:4:4 JPEG decodes its complete scan and trailing DHT without an EOI marker
+      test_assets:
+      - baseline_444_single_scan_trailing_dht_no_eoi.jpg
     - id: baseline_444_single_scan_reserved_jpg0
       description: Baseline 4:4:4 JPEG has a reserved JPG0 segment after a trailing DQT; Pillow verifies the structure but rejects pixel decoding
       test_assets:

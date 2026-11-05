@@ -1,8 +1,40 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,853 total rows: 3,178 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,178 decode rows are
+The current public evidence matrix contains 3,854 total rows: 3,179 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,179 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
+
+## JPEG trailing DHT without EOI parity — 2026-11-05
+
+Added `decode:jpeg:baseline_444_single_scan_trailing_dht_no_eoi`. Its 768-byte
+fixture removes only the terminal EOI marker from the valid trailing-DHT JPEG;
+the input SHA-256 is
+`d011b9970ca7e690525a2db582647406828ede4d02c1c97a61224642668cfcd7`. Pillow
+12.2.0 verifies the structure and decodes the completed 8×8 RGB scan to 192
+bytes with SHA-256
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+
+Before the parser change, Rust reached EOF after parsing the valid trailing
+DHT and returned a marker-stream error. It now preserves the entropy boundary
+at that DHT, accepts EOF after the completed baseline scan, and reports the
+entire input as consumed. The selected parity row passed 1/1, and the ten-row
+trailing-DHT parity selection passed 10/10, including malformed-DHT rejection
+cases. `make lint` passed across standard, all-feature, release,
+coverage-hook, AVIF-only, and JPEG benchmark configurations.
+
+Coverage MCP `gaps` for `parse_jpeg` at line 554 returned `status=measured` and
+no missing branch outcome in the ten-row report. The MCP result labels source
+identity `unverified` and test attribution `unknown`; the local receipt records
+the exact selected parity pass. Report:
+`.coverage-mcp/local-evidence/selected/20261105T201133.725391Z-c1a95409f7f64ae991ee5430333fe2f3/coverage.json`
+(SHA-256
+`28080dc29ffda8ca8a18e34733cbbd9d24d7159a52bf01ac91655a9f7489472f`), with
+receipt
+`.coverage-mcp/local-evidence/selected/20261105T201133.725391Z-c1a95409f7f64ae991ee5430333fe2f3/coverage.local-evidence.json`
+(SHA-256
+`ce4b4998e71a2a9ac3b099815073e7be225f0352c1889b6bce92ead503f19551`). This
+selected result does not establish an aggregate coverage increase; the 100%
+coverage goal remains open. No unit tests or SIMD changes were added.
 
 ## AVIF empty-movie container guard contract — 2026-11-05
 
@@ -17124,7 +17156,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4de686a6ab09747a235ed72c6856709ef4e7548b31adae920b5d169c3cc4056f`; matrix `a4ca640b396b4388df57d054e963a330d632eca57eb6f652927aa4da21cf1356`.
+- Current fixture integrity only: manifest `2a9da7e72c19a6feab241ad7d5aad9fe215df380c2d4526ff34336b5e9e78437`; matrix `d9804a884f0927cda35fa491aa19e33192dfe2f593e3d032b944793014e9cdba`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
