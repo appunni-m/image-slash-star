@@ -1164,25 +1164,26 @@ fn execute_bmp_rle_work_budget_contract(
     Ok(())
 }
 
-#[cfg(all(coverage, feature = "bmp"))]
-fn bmp_invalid_signature_parity_source(
+#[cfg(coverage)]
+fn invalid_signature_parity_source(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
+    format_name: &str,
 ) -> Result<Vec<u8>, String> {
     let source_key = parse_matrix_row_key(&row.input.source_case)?;
     if source_key.operation != MatrixOperation::Decode
-        || source_key.format != "bmp"
-        || source_key.id != "error_not_bmp"
+        || source_key.format != format_name
+        || source_key.id.is_empty()
     {
         return Err(format!(
-            "{}: source_case must identify decode:bmp:error_not_bmp",
+            "{}: source_case must identify an active {format_name} decode row",
             row.id
         ));
     }
     let source = matrix
         .formats
-        .get("bmp")
+        .get(format_name)
         .and_then(|format| {
             format
                 .decode
@@ -1201,7 +1202,7 @@ fn bmp_invalid_signature_parity_source(
             row.id
         ));
     }
-    assert_error_contracts(&source.operations, &source.error_contracts, "bmp")?;
+    assert_error_contracts(&source.operations, &source.error_contracts, format_name)?;
     let decode_contract = source
         .error_contracts
         .get("decode")
@@ -1224,14 +1225,15 @@ fn bmp_invalid_signature_parity_source(
         .as_deref()
         .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
     let asset_path = manifest_dir
-        .join("tests/fixtures/input/images/bmp")
+        .join("tests/fixtures/input/images")
+        .join(format_name)
         .join(asset);
     let source_bytes = fs::read(&asset_path)
         .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
     assert_sha256(
         &source_bytes,
         source.asset_sha256.as_deref(),
-        "BMP invalid-signature parity source asset",
+        &format!("{format_name} invalid-signature parity source asset"),
     )?;
 
     match img::decode(&source_bytes) {
@@ -1253,72 +1255,143 @@ fn bmp_invalid_signature_parity_source(
     Ok(source_bytes)
 }
 
-#[cfg(all(coverage, feature = "bmp"))]
-fn execute_bmp_invalid_signature_contract(
+#[cfg(coverage)]
+fn assert_malformed_signature_result<T>(
+    result: img::ImageResult<T>,
+    row_id: &str,
+    format: img::ImageFormat,
+    stage: img::ImageErrorStage,
+    message_fragment: &str,
+) -> Result<(), String> {
+    match result {
+        Err(img::ImageError::Malformed {
+            format: actual_format,
+            message,
+            stage: actual_stage,
+            ..
+        }) if actual_format == format
+            && actual_stage == Some(stage)
+            && message.contains(message_fragment) =>
+        {
+            Ok(())
+        }
+        Err(error) => Err(format!(
+            "{row_id}: direct format path returned the wrong signature result: {error:?}"
+        )),
+        Ok(_) => Err(format!(
+            "{row_id}: direct format path accepted malformed signature bytes"
+        )),
+    }
+}
+
+#[cfg(coverage)]
+fn execute_invalid_signature_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    let expected_contract = match row.fault.point.as_str() {
-        "bmp.decode.invalid_signature" => "direct_decoder_rejects_unrecognized_signature",
-        "bmp.metadata.invalid_signature" => "metadata_measure_rejects_unrecognized_signature",
+    let (format_name, expected_contract, stage, message_fragment) = match row.fault.point.as_str() {
+        "bmp.decode.invalid_signature" => (
+            "bmp",
+            "direct_decoder_rejects_unrecognized_signature",
+            img::ImageErrorStage::StillDecode,
+            "invalid BMP file signature",
+        ),
+        "bmp.metadata.invalid_signature" => (
+            "bmp",
+            "metadata_measure_rejects_unrecognized_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid BMP file signature",
+        ),
+        "gif.sequence.invalid_signature" => (
+            "gif",
+            "direct_sequence_decoder_rejects_unrecognized_signature",
+            img::ImageErrorStage::SequenceDecode,
+            "invalid GIF signature",
+        ),
+        "gif.metadata.invalid_signature" => (
+            "gif",
+            "metadata_measure_rejects_unrecognized_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid GIF signature",
+        ),
+        "webp.metadata.invalid_riff_signature" => (
+            "webp",
+            "metadata_measure_rejects_invalid_riff_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid WebP RIFF signature",
+        ),
+        "webp.metadata.invalid_webp_signature" => (
+            "webp",
+            "metadata_measure_rejects_invalid_webp_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid WebP RIFF signature",
+        ),
         _ => {
             return Err(format!(
-                "{}: unsupported BMP invalid-signature fault point",
+                "{}: unsupported invalid-signature fault point",
                 row.id
             ));
         }
     };
     if row.row_type != "fault-contract"
         || row.operation != "decode"
-        || row.format != "bmp"
+        || row.format != format_name
         || row.status != "active"
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
         || row.requirements.as_slice() != ["structured-diagnostics"]
         || row.fault.contract != expected_contract
     {
-        return Err(format!("{}: invalid BMP signature fault contract", row.id));
+        return Err(format!("{}: invalid signature fault contract", row.id));
     }
 
-    let source_bytes = bmp_invalid_signature_parity_source(manifest_dir, matrix, row)?;
+    let source_bytes = invalid_signature_parity_source(manifest_dir, matrix, row, format_name)?;
     match row.fault.point.as_str() {
-        "bmp.decode.invalid_signature" => match img::__coverage_decode_bmp(&source_bytes) {
-            Err(img::ImageError::Malformed {
-                format: img::ImageFormat::Bmp,
-                message,
-                stage: Some(img::ImageErrorStage::StillDecode),
-                ..
-            }) if message.contains("invalid BMP file signature") => Ok(()),
-            Err(error) => Err(format!(
-                "{}: explicit BMP dispatch returned the wrong signature result: {error:?}",
-                row.id
-            )),
-            Ok(_) => Err(format!(
-                "{}: explicit BMP dispatch unexpectedly decoded malformed bytes",
-                row.id
-            )),
-        },
-        "bmp.metadata.invalid_signature" => {
-            match img::__coverage_measure_bmp_metadata(&source_bytes) {
-                Err(img::ImageError::Malformed {
-                    format: img::ImageFormat::Bmp,
-                    message,
-                    stage: Some(img::ImageErrorStage::Inspection),
-                    ..
-                }) if message.contains("invalid BMP file signature") => Ok(()),
-                Err(error) => Err(format!(
-                    "{}: BMP metadata measurement returned the wrong signature result: {error:?}",
-                    row.id
-                )),
-                Ok(_) => Err(format!(
-                    "{}: BMP metadata measurement accepted malformed signature bytes",
-                    row.id
-                )),
-            }
+        #[cfg(feature = "bmp")]
+        "bmp.decode.invalid_signature" => assert_malformed_signature_result(
+            img::__coverage_decode_bmp(&source_bytes),
+            &row.id,
+            img::ImageFormat::Bmp,
+            stage,
+            message_fragment,
+        ),
+        #[cfg(feature = "bmp")]
+        "bmp.metadata.invalid_signature" => assert_malformed_signature_result(
+            img::__coverage_measure_bmp_metadata(&source_bytes),
+            &row.id,
+            img::ImageFormat::Bmp,
+            stage,
+            message_fragment,
+        ),
+        #[cfg(feature = "gif")]
+        "gif.sequence.invalid_signature" => assert_malformed_signature_result(
+            img::__coverage_decode_gif_sequence(&source_bytes),
+            &row.id,
+            img::ImageFormat::Gif,
+            stage,
+            message_fragment,
+        ),
+        #[cfg(feature = "gif")]
+        "gif.metadata.invalid_signature" => assert_malformed_signature_result(
+            img::__coverage_measure_gif_metadata(&source_bytes),
+            &row.id,
+            img::ImageFormat::Gif,
+            stage,
+            message_fragment,
+        ),
+        #[cfg(feature = "webp")]
+        "webp.metadata.invalid_riff_signature" | "webp.metadata.invalid_webp_signature" => {
+            assert_malformed_signature_result(
+                img::__coverage_measure_webp_metadata(&source_bytes),
+                &row.id,
+                img::ImageFormat::WebP,
+                stage,
+                message_fragment,
+            )
         }
         _ => Err(format!(
-            "{}: unsupported BMP invalid-signature fault point",
+            "{}: no coverage hook is enabled for this signature fault point",
             row.id
         )),
     }
@@ -2504,12 +2577,16 @@ fn execute_fault_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    #[cfg(feature = "bmp")]
     if matches!(
         row.fault.point.as_str(),
-        "bmp.decode.invalid_signature" | "bmp.metadata.invalid_signature"
+        "bmp.decode.invalid_signature"
+            | "bmp.metadata.invalid_signature"
+            | "gif.sequence.invalid_signature"
+            | "gif.metadata.invalid_signature"
+            | "webp.metadata.invalid_riff_signature"
+            | "webp.metadata.invalid_webp_signature"
     ) {
-        return execute_bmp_invalid_signature_contract(manifest_dir, matrix, row);
+        return execute_invalid_signature_contract(manifest_dir, matrix, row);
     }
     if row.fault.point == "bmp.encode.height_over_signed_limit" {
         return execute_bmp_encode_dimension_limit_contract(manifest_dir, matrix, row);
@@ -2544,7 +2621,7 @@ fn execute_fault_contract(
         || !matches!(row.operation.as_str(), "decode" | "inspect")
         || !matches!(
             row.format.as_str(),
-            "avif" | "bmp" | "jpeg" | "png" | "tiff"
+            "avif" | "bmp" | "gif" | "jpeg" | "png" | "tiff" | "webp"
         )
         || row.status != "active"
         || row.verification != "fault-contract"

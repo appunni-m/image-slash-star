@@ -154,6 +154,30 @@ pub fn __coverage_measure_bmp_metadata(data: &[u8]) -> ImageResult<u64> {
     codecs::measure_bmp_metadata_for_coverage(data)
 }
 
+/// Decode GIF bytes below public format detection for a target-only
+/// malformed-input contract. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "gif"))]
+#[doc(hidden)]
+pub fn __coverage_decode_gif_sequence(data: &[u8]) -> ImageResult<DecodedSequence> {
+    codecs::decode_gif_sequence_for_coverage(data)
+}
+
+/// Measure GIF metadata below public format detection for a target-only
+/// malformed-input contract. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "gif"))]
+#[doc(hidden)]
+pub fn __coverage_measure_gif_metadata(data: &[u8]) -> ImageResult<u64> {
+    codecs::measure_gif_metadata_for_coverage(data)
+}
+
+/// Measure WebP metadata below public format detection for target-only
+/// malformed-input contracts. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "webp"))]
+#[doc(hidden)]
+pub fn __coverage_measure_webp_metadata(data: &[u8]) -> ImageResult<u64> {
+    codecs::measure_webp_metadata_for_coverage(data)
+}
+
 /// Inspect AVIF bytes below public format detection for a target-only
 /// malformed-input contract. This hook is absent from normal builds.
 #[cfg(coverage)]

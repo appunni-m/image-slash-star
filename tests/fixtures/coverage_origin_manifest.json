@@ -738,7 +738,7 @@
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 52,
+      "guard_count": 55,
       "guards": [
         {
           "index": 1,
@@ -774,15 +774,15 @@
         },
         {
           "index": 9,
-          "origin": "independent_implementation"
+          "origin": "defensive_model"
         },
         {
           "index": 10,
-          "origin": "independent_implementation"
+          "origin": "defensive_model"
         },
         {
           "index": 11,
-          "origin": "independent_implementation"
+          "origin": "defensive_model"
         },
         {
           "index": 12,
@@ -926,15 +926,15 @@
         },
         {
           "index": 47,
-          "origin": "defensive_model"
+          "origin": "independent_implementation"
         },
         {
           "index": 48,
-          "origin": "defensive_model"
+          "origin": "independent_implementation"
         },
         {
           "index": 49,
-          "origin": "defensive_model"
+          "origin": "independent_implementation"
         },
         {
           "index": 50,
@@ -946,6 +946,18 @@
         },
         {
           "index": 52,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 53,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 54,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 55,
           "origin": "independent_implementation"
         }
       ],
