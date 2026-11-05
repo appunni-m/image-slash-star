@@ -1883,31 +1883,55 @@ fn execute_webp_hash_chain_index_overflow_contract(
 }
 
 #[cfg(coverage)]
-fn execute_png_inspect_signature_contract(
+fn execute_inspect_signature_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    let (
+        minimum_signature_len,
+        expected_format,
+        expected_fault_point,
+        expected_message,
+        require_missing_location,
+    ) = match row.format.as_str() {
+        "bmp" => (
+            2,
+            img::ImageFormat::Bmp,
+            "bmp.inspect.signature_mismatch",
+            "inspect: invalid BMP file signature",
+            false,
+        ),
+        "png" => (
+            8,
+            img::ImageFormat::Png,
+            "png.inspect.signature_mismatch",
+            "inspect: invalid PNG signature",
+            true,
+        ),
+        _ => {
+            return Err(format!(
+                "{}: unsupported signature-inspection format",
+                row.id
+            ));
+        }
+    };
     if row.row_type != "fault-contract"
         || row.operation != "inspect"
-        || row.format != "png"
         || row.status != "active"
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
         || row.requirements.as_slice() != ["structured-diagnostics"]
-        || row.fault.point != "png.inspect.signature_mismatch"
+        || row.fault.point != expected_fault_point
         || row.fault.contract != "inspection_invalid_signature_rejected"
     {
-        return Err(format!(
-            "{}: invalid PNG signature-inspection contract",
-            row.id
-        ));
+        return Err(format!("{}: invalid signature-inspection contract", row.id));
     }
 
     let source_key = parse_matrix_row_key(&row.input.source_case)?;
-    if source_key.operation != MatrixOperation::Decode || source_key.format != "png" {
+    if source_key.operation != MatrixOperation::Decode || source_key.format != row.format {
         return Err(format!(
-            "{}: source_case must identify a PNG decode parity row",
+            "{}: source_case must identify a same-format decode parity row",
             row.id
         ));
     }
@@ -1940,7 +1964,7 @@ fn execute_png_inspect_signature_contract(
     assert_sha256(
         &bytes,
         source.asset_sha256.as_deref(),
-        "PNG inspection source asset",
+        "signature inspection source asset",
     )?;
     let expected = load_pixel_reference(
         manifest_dir,
@@ -1955,31 +1979,43 @@ fn execute_png_inspect_signature_contract(
     assert_sha256(
         &expected.bytes,
         source.ref_sha256.as_deref(),
-        "PNG inspection source Pillow reference",
+        "signature inspection source Pillow reference",
     )?;
     let decoded = img::decode(&bytes)
         .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
     assert_pixel_parity(&expected, &decoded.content)
         .map_err(|error| format!("{}: source differs from Pillow: {error}", row.id))?;
 
-    if bytes.len() < 8 {
-        return Err(format!(
-            "{}: PNG source is shorter than its signature",
-            row.id
-        ));
+    if bytes.len() < minimum_signature_len {
+        return Err(format!("{}: source is shorter than its signature", row.id));
     }
     let mut invalid_signature = bytes;
     invalid_signature[0] ^= 1;
-    match img::__coverage_inspect_png(&invalid_signature) {
+    let inspected = match row.format.as_str() {
+        "bmp" => img::__coverage_inspect_bmp(&invalid_signature),
+        "png" => img::__coverage_inspect_png(&invalid_signature),
+        _ => {
+            return Err(format!(
+                "{}: unsupported signature-inspection format",
+                row.id
+            ));
+        }
+    };
+    match inspected {
         Err(img::ImageError::Malformed {
-            format: img::ImageFormat::Png,
+            format,
             message,
             stage: Some(img::ImageErrorStage::Inspection),
-            offset: None,
-            identity: None,
-        }) if message == "inspect: invalid PNG signature" => Ok(()),
+            offset,
+            identity,
+        }) if format == expected_format
+            && message == expected_message
+            && (!require_missing_location || (offset.is_none() && identity.is_none())) =>
+        {
+            Ok(())
+        }
         result => Err(format!(
-            "{}: direct PNG inspection returned the wrong signature result: {result:?}",
+            "{}: direct inspection returned the wrong signature result: {result:?}",
             row.id
         )),
     }
@@ -2605,8 +2641,11 @@ fn execute_fault_contract(
     if row.fault.point == "avif.container.meta_full_box_version" {
         return execute_avif_meta_version_fault_contract(manifest_dir, matrix, row);
     }
-    if row.fault.point == "png.inspect.signature_mismatch" {
-        return execute_png_inspect_signature_contract(manifest_dir, matrix, row);
+    if matches!(
+        row.fault.point.as_str(),
+        "bmp.inspect.signature_mismatch" | "png.inspect.signature_mismatch"
+    ) {
+        return execute_inspect_signature_contract(manifest_dir, matrix, row);
     }
     if row.fault.point.starts_with("webp.riff_sink.") {
         return execute_webp_riff_header_contract(manifest_dir, matrix, row);
