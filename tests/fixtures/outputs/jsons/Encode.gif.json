@@ -2145,6 +2145,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_rgba_transparent_black_token",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_transparent_black_token.bin",
+      "ref_bytes": 1,
+      "ref_mode": "P",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_transparent_black_token.bin",
+      "encoded_ref_bytes": 51,
+      "encoded_ref_sha256": "23e128c324044677ee71b5374aa6bb44ac6f38da4ac0e85c65d1562a503d82ca",
+      "source_mode": "Rgba8",
+      "source_sha256": "eacb1a012fc0820bb358ea06380857fd97d62a420932142014ac89bcc4afbbc3",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_rgba_mixed",
       "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_mixed.bin",
       "ref_bytes": 8,
