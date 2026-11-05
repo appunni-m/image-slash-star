@@ -1029,6 +1029,15 @@ FAULT_CONTRACTS = {
         "point": "bmp.decoded_pixels.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "bmp_direct_decoder_invalid_signature_contract": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_direct_decoder_invalid_signature_contract",
+        "source_case": "decode:bmp:error_not_bmp",
+        "point": "bmp.decode.invalid_signature",
+        "contract": "direct_decoder_rejects_unrecognized_signature",
+        "operation": "decode",
+    },
     "bmp_encode_height_over_signed_limit_rejected": {
         "format": "bmp",
         "category": "structured-diagnostics",

@@ -446,6 +446,20 @@ fault_contracts:
       point: bmp.rle.command_work_budget
       contract: decode_work_budget_exceeded_then_retry_succeeds
     oracle_status: not_applicable
+  - id: bmp_direct_decoder_invalid_signature_contract
+    type: fault-contract
+    operation: decode
+    format: bmp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:bmp:error_not_bmp
+    fault:
+      point: bmp.decode.invalid_signature
+      contract: direct_decoder_rejects_unrecognized_signature
+    oracle_status: not_applicable
   - id: tiff_lzw_zero_expected_output_rejection
     type: fault-contract
     operation: decode
