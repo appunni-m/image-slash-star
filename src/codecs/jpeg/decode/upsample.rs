@@ -6,7 +6,9 @@ use crate::codecs::{CodecError, CodecResult};
 // ── Chroma Upsampling (libjpeg-exact triangle filter) ─────────────────────
 
 /// 2x1 fancy upsampling — exact match of IJG libjpeg h2v1_fancy_upsample.
-pub(super) fn h2v1_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec<u8> {
+///
+/// The dispatcher keeps planes with `src_w <= 2` on the nearest-neighbor path.
+fn h2v1_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec<u8> {
     let dst_w = src_w.saturating_mul(2);
     let mut out = vec![0u8; dst_w.saturating_mul(src_h)];
     for y in 0..src_h {
@@ -15,14 +17,11 @@ pub(super) fn h2v1_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
 
         let mut invalue = i32::from(src[in_row]);
         out[out_row] = low_u8(invalue);
-        if src_w > 1 {
-            out[out_row.saturating_add(1)] =
-                interpolate(invalue, i32::from(src[in_row.saturating_add(1)]), 3, 2, 2);
-        } else {
-            out[out_row.saturating_add(1)] = low_u8(invalue);
-        }
+        out[out_row.saturating_add(1)] =
+            interpolate(invalue, i32::from(src[in_row.saturating_add(1)]), 3, 2, 2);
 
-        for col in 1..src_w.saturating_sub(1) {
+        let last = src_w.saturating_sub(1);
+        for col in 1..last {
             invalue = i32::from(src[in_row.saturating_add(col)]).saturating_mul(3);
             let destination = out_row.saturating_add(col.saturating_mul(2));
             out[destination] = weighted_sum(
@@ -39,19 +38,16 @@ pub(super) fn h2v1_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
             );
         }
 
-        if src_w > 1 {
-            let last = src_w.saturating_sub(1);
-            invalue = i32::from(src[in_row.saturating_add(last)]);
-            let destination = out_row.saturating_add(last.saturating_mul(2));
-            out[destination] = interpolate(
-                invalue,
-                i32::from(src[in_row.saturating_add(src_w.saturating_sub(2))]),
-                3,
-                1,
-                2,
-            );
-            out[destination.saturating_add(1)] = low_u8(invalue);
-        }
+        invalue = i32::from(src[in_row.saturating_add(last)]);
+        let destination = out_row.saturating_add(last.saturating_mul(2));
+        out[destination] = interpolate(
+            invalue,
+            i32::from(src[in_row.saturating_add(last.saturating_sub(1))]),
+            3,
+            1,
+            2,
+        );
+        out[destination.saturating_add(1)] = low_u8(invalue);
     }
     out
 }
@@ -158,7 +154,9 @@ pub(super) fn h1v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Cod
 }
 
 /// 2x2 fancy upsampling — exact match of IJG libjpeg h2v2_fancy_upsample.
-pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec<u8> {
+///
+/// The dispatcher keeps planes with `src_w <= 2` on the nearest-neighbor path.
+fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec<u8> {
     let dst_w = src_w.saturating_mul(2);
     let dst_h = src_h.saturating_mul(2);
     let mut out = vec![0u8; dst_w.saturating_mul(dst_h)];
@@ -185,11 +183,7 @@ pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
             let out_row = outrow.saturating_mul(dst_w);
 
             let mut thiscolsum = vertical_sum(inptr0[0], inptr1[0]);
-            let mut nextcolsum = if src_w > 1 {
-                vertical_sum(inptr0[1], inptr1[1])
-            } else {
-                thiscolsum
-            };
+            let mut nextcolsum = vertical_sum(inptr0[1], inptr1[1]);
             out[out_row] = interpolate(thiscolsum, 0, 4, 8, 4);
             out[out_row.saturating_add(1)] = interpolate(thiscolsum, nextcolsum, 3, 7, 4);
             let mut lastcolsum = thiscolsum;
@@ -205,14 +199,9 @@ pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
                 thiscolsum = nextcolsum;
             }
 
-            if src_w > 1 {
-                let destination = out_row.saturating_add(src_w.saturating_sub(1).saturating_mul(2));
-                out[destination] = interpolate(thiscolsum, lastcolsum, 3, 8, 4);
-                out[destination.saturating_add(1)] = interpolate(thiscolsum, 0, 4, 7, 4);
-            } else {
-                out[out_row] = interpolate(thiscolsum, 0, 4, 8, 4);
-                out[out_row.saturating_add(1)] = interpolate(thiscolsum, 0, 4, 7, 4);
-            }
+            let destination = out_row.saturating_add(src_w.saturating_sub(1).saturating_mul(2));
+            out[destination] = interpolate(thiscolsum, lastcolsum, 3, 8, 4);
+            out[destination.saturating_add(1)] = interpolate(thiscolsum, 0, 4, 7, 4);
 
             outrow = outrow.saturating_add(1);
         }
