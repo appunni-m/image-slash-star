@@ -553,7 +553,7 @@
       "path": "src/codecs/jpeg/decode/parser.rs"
     },
     {
-      "guard_count": 13,
+      "guard_count": 14,
       "origin": "defensive_model",
       "path": "src/codecs/jpeg/decode/upsample.rs"
     },

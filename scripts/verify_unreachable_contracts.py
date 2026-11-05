@@ -879,6 +879,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.upsample.row_source_length_mismatch",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_fancy_upsample_row_destination_y_out_of_bounds": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_fancy_upsample_row_destination_y_out_of_bounds",
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2",
+        "point": "jpeg.upsample.row_destination_y_out_of_bounds",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "jpeg_fancy_upsample_row_last_row_start_overflow": {
         "format": "jpeg",
         "category": "structured-diagnostics",
