@@ -368077,6 +368077,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "bmp_metadata_extent_invalid_signature_contract",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "bmp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:bmp:error_not_bmp"
+      },
+      "fault": {
+        "point": "bmp.metadata.invalid_signature",
+        "contract": "metadata_measure_rejects_unrecognized_signature"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "tiff_lzw_zero_expected_output_rejection",
       "type": "fault-contract",
       "operation": "decode",

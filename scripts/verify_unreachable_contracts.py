@@ -1038,6 +1038,15 @@ FAULT_CONTRACTS = {
         "contract": "direct_decoder_rejects_unrecognized_signature",
         "operation": "decode",
     },
+    "bmp_metadata_extent_invalid_signature_contract": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_metadata_extent_invalid_signature_contract",
+        "source_case": "decode:bmp:error_not_bmp",
+        "point": "bmp.metadata.invalid_signature",
+        "contract": "metadata_measure_rejects_unrecognized_signature",
+        "operation": "decode",
+    },
     "bmp_encode_height_over_signed_limit_rejected": {
         "format": "bmp",
         "category": "structured-diagnostics",
