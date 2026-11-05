@@ -53,6 +53,8 @@ class FixtureVariant:
     width: int = WIDTH
     height: int = HEIGHT
     quality: int = 40
+    loop_filter_control: int = 0
+    loop_filter_levels: tuple[int, int, int, int] = (0, 0, 0, 0)
     luma_amplitude: int = 160
     luma_step: int = 1
     flat_chroma: bool = False
@@ -213,6 +215,26 @@ VARIANTS = {
         asset_sha256="faff193dc1d3c62835490e949ed83314578abea8eb14357dffe361044914bb92",
         rgb_sha256="4d3f43960d12c77079790677f805b6deec2470a7c4deee5b498948d2f434dd30",
     ),
+    "i420_cdef_restoration_loopfilter": FixtureVariant(
+        fixture_stem="coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16",
+        chroma_tag="420p10",
+        subsampling_x=1,
+        subsampling_y=1,
+        seed=0x12A420,
+        enable_cdef=True,
+        enable_restoration=True,
+        restoration_types=(3, 0, 0),
+        restoration_unit_size_log2=(8, 8),
+        cdef_bits=0,
+        cdef_damping=5,
+        cdef_y_strengths=(63,),
+        cdef_uv_strengths=(61,),
+        source_sha256="ace43f33a1d3c68bfdc27e34e3c9d32530bde72d9718a5fb761b775db6585d0e",
+        asset_sha256="8901fba07e2d68e35baa03bd521d22048e7d2ff2bd969a02b195541f5958df54",
+        rgb_sha256="4d3f43960d12c77079790677f805b6deec2470a7c4deee5b498948d2f434dd30",
+        loop_filter_control=1,
+        loop_filter_levels=(1, 1, 1, 1),
+    ),
     "i420_cdef_restoration_striped": FixtureVariant(
         fixture_stem="coverage_i420_intra_cdef_restoration_10bit_16x64",
         chroma_tag="420p10",
@@ -353,7 +375,7 @@ def encode_command(
         ("enable-qm", "0"),
         ("enable-restoration", str(int(variant.enable_restoration))),
         ("enable-cdef", str(int(variant.enable_cdef))),
-        ("loopfilter-control", "0"),
+        ("loopfilter-control", str(variant.loop_filter_control)),
         ("aq-mode", "0"),
         ("deltaq-mode", "0"),
     )
@@ -427,9 +449,9 @@ def validate_bitstream(path: Path, variant: FixtureVariant) -> dict[str, object]
         or frame.get("transform_mode") != "largest"
         or quantization.get("base", 0) == 0
         or quantization.get("using_matrix") is not False
-        or loop_filter.get("level_y") != [0, 0]
-        or loop_filter.get("level_u") != 0
-        or loop_filter.get("level_v") != 0
+        or loop_filter.get("level_y") != list(variant.loop_filter_levels[:2])
+        or loop_filter.get("level_u") != variant.loop_filter_levels[2]
+        or loop_filter.get("level_v") != variant.loop_filter_levels[3]
         or frame.get("delta_q", {}).get("present") is not False
         or frame.get("delta_loop_filter", {}).get("present") is not False
         or frame.get("segmentation", {}).get("enabled") is not False
@@ -452,6 +474,7 @@ def validate_bitstream(path: Path, variant: FixtureVariant) -> dict[str, object]
         "frame_type": frame["frame_type"],
         "restoration_types": restoration["types"],
         "restoration_unit_size_log2": restoration["unit_size_log2"],
+        "loop_filter": loop_filter,
         "cdef": cdef,
         "base_qindex": quantization["base"],
     }

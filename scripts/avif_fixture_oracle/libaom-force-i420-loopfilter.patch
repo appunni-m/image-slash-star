@@ -1,0 +1,19 @@
+diff --git a/av1/encoder/picklpf.c b/av1/encoder/picklpf.c
+--- a/av1/encoder/picklpf.c
++++ b/av1/encoder/picklpf.c
+@@ -451,5 +451,15 @@ void av1_pick_filter_level(const YV12_BUFFER_CONFIG *sd, AV1_COMP *cpi,
+     }
+
++    // Fixture-only override for the 10-bit 16x16 I420 key-frame profile.
++    if (seq_params->bit_depth == AOM_BITS_10 && seq_params->subsampling_x &&
++        seq_params->subsampling_y && cm->width == 16 && cm->height == 16 &&
++        cm->current_frame.frame_type == KEY_FRAME) {
++      lf->filter_level[0] = 1;
++      lf->filter_level[1] = 1;
++      lf->filter_level_u = 1;
++      lf->filter_level_v = 1;
++    }
++
+     // Store the current frame's filter levels to be referenced
+     // while determining the minimum filter level from reference frames.
+     cm->cur_frame->filter_level[0] = lf->filter_level[0];

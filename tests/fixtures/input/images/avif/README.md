@@ -2168,6 +2168,19 @@ pinned Pillow 12.2.0/libavif 1.4.1. The AVIF SHA-256 is
 RGB reference SHA-256 is
 `4d3f43960d12c77079790677f805b6deec2470a7c4deee5b498948d2f434dd30`.
 
+## 10-bit I420 loop filtering with CDEF and restoration
+
+`coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif` uses
+nonzero luma and chroma deblocking levels together with a single-entry CDEF
+strength set and luma SGR restoration. It is a 16x16 full-range 10-bit I420
+key frame; the loop-filter levels are 1 for both luma directions and for U/V.
+The fixture-only libaom override and reproducible encoder build are documented
+in `scripts/avif_fixture_oracle/README.md`. The generator checks the exact AV1
+profile and repeat-encode identity. Its AVIF SHA-256 is
+`8901fba07e2d68e35baa03bd521d22048e7d2ff2bd969a02b195541f5958df54`; the
+768-byte Pillow 12.2.0 RGB reference SHA-256 is
+`4d3f43960d12c77079790677f805b6deec2470a7c4deee5b498948d2f434dd30`.
+
 ## Short reference signaling and wrapped order hints
 
 `short_refs_q{100,99}_*.avif` contains 24 complete 64x64 I444 sequences,

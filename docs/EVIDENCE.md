@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,852 total rows: 3,177 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,177 decode rows are
+The current public evidence matrix contains 3,853 total rows: 3,178 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,178 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF empty-movie container guard contract — 2026-11-05
@@ -17124,7 +17124,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3b6b883d9d4f8178cebc9ba57e82085bd08c2cdb118db558ebf880d0a02a269a`; matrix `6ba7e5ee14dfaea8fc674986d4770180f4e4cf98342148dbdb66a61aee235894`.
+- Current fixture integrity only: manifest `4de686a6ab09747a235ed72c6856709ef4e7548b31adae920b5d169c3cc4056f`; matrix `a4ca640b396b4388df57d054e963a330d632eca57eb6f652927aa4da21cf1356`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
