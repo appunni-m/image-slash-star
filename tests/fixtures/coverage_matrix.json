@@ -201312,6 +201312,59 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_rgba_transparent_black_token",
+          "type": "encode",
+          "format": "gif",
+          "category": "rgba",
+          "description": "One-pixel transparent-black RGBA source verifies exact GIF transparency parity with zeroed color channels",
+          "params": {
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "gif_rgba_transparent_black.png",
+          "source_sha256": "eacb1a012fc0820bb358ea06380857fd97d62a420932142014ac89bcc4afbbc3",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgba8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.gif_enc_rgba_transparent_black_token.bin",
+          "encoded_ref_bytes": 51,
+          "encoded_ref_sha256": "23e128c324044677ee71b5374aa6bb44ac6f38da4ac0e85c65d1562a503d82ca",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.gif_enc_rgba_transparent_black_token.bin",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_rgba_mixed",
           "type": "encode",
           "format": "gif",
@@ -367515,9 +367568,9 @@
     }
   },
   "summary": {
-    "total_rows": 3851,
+    "total_rows": 3852,
     "decode_rows": 3177,
-    "encode_rows": 674,
+    "encode_rows": 675,
     "formats": 8,
     "assets_available": 3173,
     "decode_active": 3177,

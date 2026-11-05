@@ -7717,6 +7717,11 @@ formats:
       source_format: png
       source_asset: gif_rgba.png
       params: {}
+    - id: enc_rgba_transparent_black_token
+      description: One-pixel transparent-black RGBA source verifies exact GIF transparency parity with zeroed color channels
+      source_format: png
+      source_asset: gif_rgba_transparent_black.png
+      params: {rust_encode_with_token: true}
     - id: enc_rgba_mixed
       description: Mixed transparent and opaque RGBA colors exercise Pillow's transparent palette offset and token-aware palette compaction
       source_format: png

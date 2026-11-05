@@ -64,6 +64,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/verify_claim_ledger.py
 	$(PYTHON) scripts/generate_gif_rgb_token_checkpoint_fixture.py --check
 	$(PYTHON) scripts/generate_gif_rgba_single_color_token_fixture.py --check
+	$(PYTHON) scripts/generate_gif_rgba_transparent_black_fixture.py --check
 	$(PYTHON) scripts/generate_webp_alpha_filter_no_win_fixture.py --check
 	$(PYTHON) scripts/generate_webp_box_chain_max_match_fixture.py --check
 	$(PYTHON) scripts/generate_webp_cost_manager_shifted_rows_fixture.py --check

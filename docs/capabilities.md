@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `fc49d6a30bb61195c363c4fe4ca1d05a0e41930f891d987496480d9f768ac880`.
+- Active fixture source SHA-256: `6ba7e5ee14dfaea8fc674986d4770180f4e4cf98342148dbdb66a61aee235894`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,824 (3,177 decode; 647 encode).
+- Active fixture rows: 3,825 (3,177 decode; 648 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 140.
 
@@ -393,7 +393,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | GIF | sequence_encode | accepted | P8 | 3 frames | P8 | TimedAnimation | — | 1: `gif:enc_animated_loop` |
 | GIF | sequence_encode | accepted | Rgb8 | 1 frame | P8 | SingleFrame | — | 10: `gif:enc_rgb`, `gif:enc_rgb_257_color_low_green_dominant`, `gif:enc_rgb_balanced_checkerboard_token_split`, `gif:enc_rgb_exactly_256_colors`, `gif:enc_rgb_high_color`, `gif:enc_rgb_high_color_token_checkpoint`, `gif:enc_rgb_low_color_token_checkpoint`, `gif:enc_rgb_median_cut_tie_boundary`, `gif:enc_rgb_single_color_token_palette`, `gif:enc_rgb_skewed_high_color_split` |
 | GIF | sequence_encode | accepted | Rgb8 | 2 frames | P8 | TimedAnimation | — | 4: `gif:enc_animated_rgb`, `gif:enc_animated_rgb_background_existing`, `gif:enc_animated_rgb_background_full_palette`, `gif:enc_animated_rgb_full_palette_token` |
-| GIF | sequence_encode | accepted | Rgba8 | 1 frame | P8 | SingleFrame | — | 9: `gif:enc_rgba`, `gif:enc_rgba_high_color`, `gif:enc_rgba_high_color_token_checkpoint`, `gif:enc_rgba_mixed`, `gif:enc_rgba_mixed_token_compact_checkpoint`, `gif:enc_rgba_octree`, `gif:enc_rgba_octree_sorted`, `gif:enc_rgba_opaque`, `gif:enc_rgba_single_color_token_partition_base` |
+| GIF | sequence_encode | accepted | Rgba8 | 1 frame | P8 | SingleFrame | — | 10: `gif:enc_rgba`, `gif:enc_rgba_high_color`, `gif:enc_rgba_high_color_token_checkpoint`, `gif:enc_rgba_mixed`, `gif:enc_rgba_mixed_token_compact_checkpoint`, `gif:enc_rgba_octree`, `gif:enc_rgba_octree_sorted`, `gif:enc_rgba_opaque`, `gif:enc_rgba_single_color_token_partition_base`, `gif:enc_rgba_transparent_black_token` |
 | GIF | sequence_encode | accepted | Rgba8 | 2 frames | P8 | TimedAnimation | — | 8: `gif:enc_animated_large_fraction_delay`, `gif:enc_animated_non_centisecond_delays`, `gif:enc_animated_rgb_full_delta`, `gif:enc_animated_rgba`, `gif:enc_animated_rgba_background_opaque`, `gif:enc_animated_rgba_background_partial`, `gif:enc_animated_rgba_opaque`, `gif:enc_animated_rgba_transparency_composite` |
 | GIF | sequence_encode | rejected | Cmyk8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `gif:enc_error_cmyk` |
 | GIF | sequence_encode | rejected | P8 | 1 frame | — (no Rust output) | — (no result) | parameter | 2: `gif:enc_error_disposal`, `gif:enc_error_transparency` |
@@ -403,7 +403,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | GIF | still_encode | accepted | L8 | 1 frame | P8 | — (still result) | — | 1: `gif:enc_grayscale` |
 | GIF | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 12: `gif:enc_1x1`, `gif:enc_dispose_background`, `gif:enc_dispose_none`, `gif:enc_dispose_previous`, `gif:enc_global_ct`, `gif:enc_interlaced`, `gif:enc_local_ct`, `gif:enc_non_interlaced`, `gif:enc_opaque`, `gif:enc_static`, `gif:enc_static_finite_one_play`, `gif:enc_transparent` |
 | GIF | still_encode | accepted | Rgb8 | 1 frame | P8 | — (still result) | — | 10: `gif:enc_rgb`, `gif:enc_rgb_257_color_low_green_dominant`, `gif:enc_rgb_balanced_checkerboard_token_split`, `gif:enc_rgb_exactly_256_colors`, `gif:enc_rgb_high_color`, `gif:enc_rgb_high_color_token_checkpoint`, `gif:enc_rgb_low_color_token_checkpoint`, `gif:enc_rgb_median_cut_tie_boundary`, `gif:enc_rgb_single_color_token_palette`, `gif:enc_rgb_skewed_high_color_split` |
-| GIF | still_encode | accepted | Rgba8 | 1 frame | P8 | — (still result) | — | 9: `gif:enc_rgba`, `gif:enc_rgba_high_color`, `gif:enc_rgba_high_color_token_checkpoint`, `gif:enc_rgba_mixed`, `gif:enc_rgba_mixed_token_compact_checkpoint`, `gif:enc_rgba_octree`, `gif:enc_rgba_octree_sorted`, `gif:enc_rgba_opaque`, `gif:enc_rgba_single_color_token_partition_base` |
+| GIF | still_encode | accepted | Rgba8 | 1 frame | P8 | — (still result) | — | 10: `gif:enc_rgba`, `gif:enc_rgba_high_color`, `gif:enc_rgba_high_color_token_checkpoint`, `gif:enc_rgba_mixed`, `gif:enc_rgba_mixed_token_compact_checkpoint`, `gif:enc_rgba_octree`, `gif:enc_rgba_octree_sorted`, `gif:enc_rgba_opaque`, `gif:enc_rgba_single_color_token_partition_base`, `gif:enc_rgba_transparent_black_token` |
 | GIF | still_encode | rejected | P8 | 1 frame | — (no Rust output) | — (no result) | dimensions | 1: `gif:enc_error_zero_width` |
 | GIF | still_encode | rejected | Rgb8; invalid-mode witness: La8, Cmyk8, L16, La16, Rgb16, Rgba16, Rgb32F, Rgba32F, F32, I32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `gif:enc_error_public_mode_contract` |
 | ICO | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `ico:enc_png_bilevel` |
