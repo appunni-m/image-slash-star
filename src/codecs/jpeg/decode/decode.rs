@@ -2909,7 +2909,6 @@ pub(super) fn extract_entropy_segments(
     let mut segments = Vec::new();
     let mut seg_start = start;
     let mut pos = start;
-    let mut eoi_pos = 0;
 
     // ✅ FIX: Preserve an empty scan before EOI as a real entropy segment.
     //    C reference: libjpeg-turbo jdhuff.c `jpeg_fill_bit_buffer` consumes
@@ -2919,7 +2918,6 @@ pub(super) fn extract_entropy_segments(
     if start == end_hint && data.get(start..start.saturating_add(2)) == Some(&[0xFF, 0xD9]) {
         return EntropySegments {
             segments: vec![(start, start)],
-            eoi_pos: start,
         };
     }
 
@@ -2944,13 +2942,11 @@ pub(super) fn extract_entropy_segments(
                 }
                 0xD9 => {
                     segments.push((seg_start, marker_start));
-                    eoi_pos = marker_start;
-                    break;
+                    return EntropySegments { segments };
                 }
                 _ => {
                     return EntropySegments {
                         segments: Vec::new(),
-                        eoi_pos: 0,
                     };
                 }
             }
@@ -2959,21 +2955,16 @@ pub(super) fn extract_entropy_segments(
         }
     }
 
-    if seg_start < end_hint && eoi_pos == 0 {
+    if seg_start < end_hint {
         segments.push((seg_start, end_hint));
     }
 
-    EntropySegments { segments, eoi_pos }
+    EntropySegments { segments }
 }
 
 /// Entropy segment information (between RST/EOI markers).
 pub(super) struct EntropySegments {
     pub(super) segments: Vec<(usize, usize)>,
-    #[allow(
-        dead_code,
-        reason = "the extracted scan result preserves the EOI boundary beside restart ranges, although reconstruction currently consumes only those ranges"
-    )]
-    eoi_pos: usize,
 }
 
 #[inline(always)]
@@ -2987,7 +2978,6 @@ fn known_single_baseline_entropy_segment(
     let entropy_end = validated_entropy_end?;
     Some(EntropySegments {
         segments: vec![(info.entropy_start, entropy_end)],
-        eoi_pos: entropy_end,
     })
 }
 
