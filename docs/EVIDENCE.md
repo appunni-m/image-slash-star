@@ -64,6 +64,23 @@ Coverage MCP interface is unavailable in this session, so the evidence remains
 local-only with unverified source identity and unknown MCP test attribution;
 this selected result does not update aggregate coverage totals.
 
+## Full LLVM coverage refresh after duplicate-box contracts — 2026-11-05
+
+The full `make coverage PYTHON=.oracle-venv/bin/python` run passed after the
+duplicate `minf` and `stbl` inspection contracts were added. The 57 coverage-
+matrix tests and 70 feature-gate tests passed, along with the other full-run
+targets; all configured coverage floors passed. The report measures
+102,941/142,402 lines (72.289013%), 21,158/32,020 branches (66.077452%),
+5,686/9,141 functions (62.203260%), and 156,669/220,621 regions (71.012732%).
+
+The local LLVM report is
+`.coverage-mcp/local-evidence/full/20261105-develop-3e88e28/coverage.json`
+(SHA-256
+`fb5ea175c1d28ff2492c64dc065374a639c5c2c592a534510b93c6f41ddae472`),
+generated from source revision `3e88e28bca547c25a46ff2da7b661c16955dc53a`.
+Coverage MCP was unavailable, so this report has no MCP build or test
+attribution. The aggregate remains below the 100% goal.
+
 ## JPEG partial trailing DHT length parity — 2026-11-05
 
 Added `decode:jpeg:baseline_444_single_scan_dht_partial_length`. The fixture
