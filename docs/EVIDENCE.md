@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,854 total rows: 3,179 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,179 decode rows are
+The current public evidence matrix contains 3,855 total rows: 3,180 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,180 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
 ## JPEG trailing DHT without EOI parity — 2026-11-05
@@ -17156,7 +17156,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2a9da7e72c19a6feab241ad7d5aad9fe215df380c2d4526ff34336b5e9e78437`; matrix `d9804a884f0927cda35fa491aa19e33192dfe2f593e3d032b944793014e9cdba`.
+- Current fixture integrity only: manifest `a591c8a54fa33b6a997e8f2117cbaaadfbafedeefd755a66b5f4c1d2452ed43b`; matrix `1e8d2c55e20ca07854d4461ff4ae13716a68e9e5fd5a7c145897a799118cba70`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
