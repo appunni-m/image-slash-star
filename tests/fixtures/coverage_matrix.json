@@ -238313,6 +238313,83 @@
           }
         },
         {
+          "id": "progressive_trailing_com_oversized",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "progressive",
+          "description": "Progressive JPEG with a post-scan COM marker whose declared payload extends beyond the file",
+          "asset": "progressive_trailing_com_oversized.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "c18a2f350fa0905e4967b085d5ba74960dda23d684048c1a85ae81da819a759d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "image file is truncated (0 bytes not processed)",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "image file is truncated (0 bytes not processed)",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "progressive_com_tail_junk",
           "type": "decode",
           "format": "jpeg",
@@ -367724,12 +367801,12 @@
     }
   },
   "summary": {
-    "total_rows": 3854,
-    "decode_rows": 3179,
+    "total_rows": 3855,
+    "decode_rows": 3180,
     "encode_rows": 675,
     "formats": 8,
-    "assets_available": 3175,
-    "decode_active": 3179,
+    "assets_available": 3176,
+    "decode_active": 3180,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
