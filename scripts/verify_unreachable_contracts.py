@@ -766,6 +766,24 @@ FAULT_CONTRACTS = {
         "contract": "inspection_error_then_retry_succeeds",
         "operation": "inspect",
     },
+    "avif_duplicate_minf_inspection_contract": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_duplicate_minf_inspection_contract",
+        "source_case": "decode:avif:error_animated_duplicate_minf",
+        "point": "avif.container.inspect_unvalidated_input",
+        "contract": "inspection_error_matches_parity_case",
+        "operation": "inspect",
+    },
+    "avif_duplicate_stbl_inspection_contract": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_duplicate_stbl_inspection_contract",
+        "source_case": "decode:avif:error_animated_duplicate_stbl",
+        "point": "avif.container.inspect_unvalidated_input",
+        "contract": "inspection_error_matches_parity_case",
+        "operation": "inspect",
+    },
     "avif_container_meta_full_box_version_rejected": {
         "format": "avif",
         "category": "structured-diagnostics",
@@ -1703,7 +1721,20 @@ def verify_fault_contract_case_index(entries: object) -> None:
             source_is_parity = source_is_parity and any(
                 candidate.get("id") == source_id
                 and candidate.get("status") == "active"
-                and candidate.get("oracle_status") == "ok"
+                and (
+                    candidate.get("oracle_status") == "ok"
+                    or (
+                        candidate.get("oracle_status") == "error"
+                        and candidate.get("expect_error") is True
+                        and candidate.get("operations", {}).get("inspect") == "error"
+                        and candidate.get("assertion_origins", {}).get("inspection")
+                        == "pillow_fixture"
+                        and candidate.get("error_contracts", {})
+                        .get("inspect", {})
+                        .get("origin")
+                        == "pillow_fixture"
+                    )
+                )
                 for candidate in parity_rows
             )
         elif source_operation == "encode":

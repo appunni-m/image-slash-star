@@ -369331,6 +369331,44 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_duplicate_minf_inspection_contract",
+      "type": "fault-contract",
+      "operation": "inspect",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:error_animated_duplicate_minf"
+      },
+      "fault": {
+        "point": "avif.container.inspect_unvalidated_input",
+        "contract": "inspection_error_matches_parity_case"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_duplicate_stbl_inspection_contract",
+      "type": "fault-contract",
+      "operation": "inspect",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:error_animated_duplicate_stbl"
+      },
+      "fault": {
+        "point": "avif.container.inspect_unvalidated_input",
+        "contract": "inspection_error_matches_parity_case"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_container_meta_full_box_version_rejected",
       "type": "fault-contract",
       "operation": "inspect",
