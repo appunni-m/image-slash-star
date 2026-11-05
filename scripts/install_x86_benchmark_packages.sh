@@ -26,8 +26,23 @@ PY
 }
 
 show_snapshot_failure() {
-  echo "Ubuntu snapshot update failed (attempt $1/3); final apt output follows:" >&2
+  echo "Ubuntu snapshot $1 failed; final apt output follows:" >&2
   tail -n 40 "$snapshot_log" >&2
+}
+
+install_from_live_sources() {
+  echo "Refreshing the runner's signed Ubuntu Noble sources"
+  sudo apt-get \
+    -o Acquire::Retries=3 \
+    -o APT::Update::Error-Mode=any \
+    update
+  if ! sudo apt-get --simulate --yes install "${packages[@]}"; then
+    echo "Pinned CMake and NASM are unavailable from the runner's signed Ubuntu sources" >&2
+    sudo apt-cache policy cmake nasm || true
+    exit 1
+  fi
+  sudo apt-get -o Acquire::Retries=3 install --yes "${packages[@]}"
+  apt_source="ubuntu-noble-live-fallback"
 }
 
 snapshot_updated=false
@@ -43,7 +58,7 @@ for attempt in 1 2 3; do
     break
   fi
 
-  show_snapshot_failure "$attempt"
+  show_snapshot_failure "update (attempt $attempt/3)"
   if [[ "$attempt" -lt 3 ]]; then
     sleep "$((attempt * 10))"
   fi
@@ -56,27 +71,27 @@ if [[ "$snapshot_updated" == true ]]; then
     sudo apt-cache policy cmake nasm || true
     exit 1
   fi
-  sudo apt-get -o Acquire::Retries=3 install --yes --snapshot "$snapshot" \
-    "${packages[@]}"
-  apt_source="ubuntu-apt-snapshot:$snapshot"
+  if sudo apt-get -o Acquire::Retries=3 install --yes --snapshot "$snapshot" \
+    "${packages[@]}" >"$snapshot_log" 2>&1; then
+    tail -n 20 "$snapshot_log"
+    apt_source="ubuntu-apt-snapshot:$snapshot"
+  else
+    show_snapshot_failure "package installation"
+    if ! snapshot_failure_is_http_5xx; then
+      echo "Pinned CMake and NASM installation failed without a confirmed snapshot-service HTTP 5xx; refusing fallback" >&2
+      exit 1
+    fi
+    echo "Snapshot service returned HTTP 5xx while fetching pinned packages"
+    install_from_live_sources
+  fi
 else
   if ! snapshot_failure_is_http_5xx; then
     echo "Ubuntu snapshot update failed without a confirmed snapshot-service HTTP 5xx; refusing fallback" >&2
     exit 1
   fi
 
-  echo "Snapshot service returned HTTP 5xx; refreshing the runner's signed Ubuntu Noble sources"
-  sudo apt-get \
-    -o Acquire::Retries=3 \
-    -o APT::Update::Error-Mode=any \
-    update
-  if ! sudo apt-get --simulate --yes install "${packages[@]}"; then
-    echo "Pinned CMake and NASM are unavailable from the runner's signed Ubuntu sources" >&2
-    sudo apt-cache policy cmake nasm || true
-    exit 1
-  fi
-  sudo apt-get -o Acquire::Retries=3 install --yes "${packages[@]}"
-  apt_source="ubuntu-noble-live-fallback"
+  echo "Snapshot service returned HTTP 5xx during metadata refresh"
+  install_from_live_sources
 fi
 
 printf 'BENCHMARK_APT_SOURCE=%s\n' "$apt_source" >> "$github_env"
