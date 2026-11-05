@@ -1,8 +1,39 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,850 total rows: 3,176 decode /
-inspect / verify rows and 674 encode rows. Of those, 3,176 decode rows are
+The current public evidence matrix contains 3,851 total rows: 3,177 decode /
+inspect / verify rows and 674 encode rows. Of those, 3,177 decode rows are
 active and 647 encode rows are active; 27 encode rows remain planned.
+
+## JPEG partial trailing DHT length parity — 2026-11-05
+
+Added `decode:jpeg:baseline_444_single_scan_dht_partial_length`. The fixture
+appends one byte of a DHT length field after the trailing DHT marker in a
+completed baseline scan. Pillow 12.2.0 accepts the JPEG and returns the pinned
+192-byte RGB reference; the parser now treats the incomplete trailing length
+as the end of that completed scan. The fixture SHA-256 is
+`bee79bee58292421431950ef3ee8f0b3b09d93a8a3d0e990e1eab76abb6015be`; the
+RGB output SHA-256 is
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+
+The selected parity row passed 1/1, and the nine-case trailing-DHT bundle
+passed 9/9. Its report is
+`.coverage-mcp/local-evidence/selected/20261105T025920.650568Z-7bbdba25dcab4b6f9896271d50c86950/coverage.json`
+(SHA-256 `ce56d9a45b2a52f6337f1f2cffa0df53d9810960edb71ebd6da6142959e3bdce`)
+with local execution receipt
+`.coverage-mcp/local-evidence/selected/20261105T025920.650568Z-7bbdba25dcab4b6f9896271d50c86950/coverage.local-evidence.json`
+(SHA-256 `abf806063812e35dfea6809e5e1b5e42ea279e2b4b5445485a0bda1eee84d05e`).
+Coverage MCP identifies this receipt as local-only with source unverified and
+tests unknown, so the selected run makes no aggregate coverage claim. No unit
+tests or SIMD/performance changes were added.
+
+The fresh full `make coverage` run passed and measured 102,910/142,381 lines
+(72.2779%), 21,156/32,026 branches (66.0588%), 5,680/9,136 functions
+(62.1716%), and 156,632/220,604 regions (71.0014%), above the configured
+floors but below the 100% goal. Its local report is
+`.coverage-mcp/local-evidence/full/20261105-develop-jpeg-partial-dht/coverage.json`
+(SHA-256 `c53bba19c1f5f61a818b9c86f69aea424f69fda4ebf8a0e82e74f7c281822e9c`).
+The full-run report has no Coverage MCP source/build receipt, so these totals
+are local `make coverage` evidence only.
 
 ## JPEG bare trailing DHT parity — 2026-11-05
 
@@ -16971,7 +17002,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `0b7339b57d2321e3e83f3d2533571e13235b03d4ab4fd37b7c95a009d3087024`; matrix `50ebb3b4a7fead5458d2799e385d6e9c75265b79f9ee40720e974901d4732afb`.
+- Current fixture integrity only: manifest `6a501d24989798669f357aa16a5dbdef7387f359eb5549ca6aa13585f791052a`; matrix `6c06bd41dbe15a48b1d0020a233b2a81f24effa343ac0da31fdff419b9ee31d7`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

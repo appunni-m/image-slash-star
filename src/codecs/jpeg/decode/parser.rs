@@ -502,7 +502,8 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut metadata = Vec::new();
 
     let eoi_pos = loop {
-        let marker_offset = pos as u64;
+        let marker_start = pos;
+        let marker_offset = marker_start as u64;
         let marker = find_next_marker(data, &mut pos)
             .map_err(|error| error.at(marker_offset, "jpeg_marker"))?;
 
@@ -537,20 +538,15 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
             }
             M_DHT => {
                 if saw_sos && !progressive && scans.len() == 1 {
-                    if pos == data.len()
-                        && let Ok(marker_start) = usize::try_from(marker_offset)
-                    {
-                        // Pillow accepts a completed baseline scan followed
-                        // by a bare DHT marker at EOF, without EOI or length.
+                    let Some(length_bytes) = data.get(pos..).and_then(|tail| tail.get(..2)) else {
+                        // Pillow accepts a completed baseline scan followed by
+                        // a DHT marker whose length field has zero or one byte.
                         break marker_start;
-                    }
-
-                    let mut length_pos = pos;
-                    if let Ok(length) = read_u16(data, &mut length_pos)
-                        && length >= 2
+                    };
+                    let length = u16::from_be_bytes([length_bytes[0], length_bytes[1]]);
+                    if length >= 2
                         && let Some(segment_end) = pos.checked_add(usize::from(length))
-                        && let Ok(scan_end) = usize::try_from(marker_offset)
-                        && let Ok(eoi_pos) = find_eoi(data, scan_end)
+                        && let Ok(eoi_pos) = find_eoi(data, marker_start)
                         && segment_end > eoi_pos
                     {
                         // Pillow finishes the single baseline scan and ignores
