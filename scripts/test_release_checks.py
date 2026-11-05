@@ -1897,6 +1897,35 @@ raise SystemExit(int(response.get("status", 0)))
         )
         self.assertEqual(self.sleep_log.read_text(encoding="utf-8").splitlines(), ["10", "20"])
 
+    def test_snapshot_package_download_5xx_uses_signed_live_sources(self) -> None:
+        package_download_503 = (
+            "Err:1 https://snapshot.ubuntu.com/ubuntu/"
+            f"{self.SNAPSHOT}/pool/main/c/cmake/cmake_3.28.3-1build7_amd64.deb\n"
+            "  503 Service Unavailable\n"
+        )
+        result, state = self.run_installer({
+            "snapshot_install": [{"status": 100, "output": package_download_503}],
+        })
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("HTTP 5xx while fetching pinned packages", result.stdout)
+        calls = state["apt_get_calls"]
+        update_calls = [call for call in calls if "update" in call]
+        self.assertEqual(len(update_calls), 2, update_calls)
+        self.assertIn("--snapshot", update_calls[0])
+        self.assertNotIn("--snapshot", update_calls[1])
+        install_calls = [call for call in calls if "install" in call]
+        self.assertEqual(len(install_calls), 4, install_calls)
+        self.assertEqual(
+            ["--snapshot" in call for call in install_calls],
+            [True, True, False, False],
+        )
+        self.assertTrue(all(call[-2:] == self.PACKAGES for call in install_calls))
+        self.assertEqual(
+            self.github_env.read_text(encoding="utf-8"),
+            "BENCHMARK_APT_SOURCE=ubuntu-noble-live-fallback\n",
+        )
+
     def test_unclassified_snapshot_error_fails_closed_without_live_fallback(self) -> None:
         missing_snapshot = {
             "status": 100,

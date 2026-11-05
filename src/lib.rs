@@ -147,6 +147,17 @@ pub fn __coverage_inspect_avif_container(data: &[u8]) -> ImageResult<ImageInfo> 
     codecs::inspect_avif_container_for_coverage(data)
 }
 
+/// Inspect AVIF container bytes below sample validation for a target-only
+/// coverage contract. This hook is absent from normal builds.
+#[cfg(coverage)]
+#[cfg(feature = "avif")]
+#[doc(hidden)]
+pub fn __coverage_inspect_avif_container_without_sample_validation(
+    data: &[u8],
+) -> ImageResult<ImageInfo> {
+    codecs::inspect_avif_container_without_sample_validation_for_coverage(data)
+}
+
 /// Parse AVIF metadata below sample-parser validation for a target-only
 /// coverage contract. This hook is absent from normal builds.
 #[cfg(coverage)]
