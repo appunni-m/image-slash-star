@@ -173,13 +173,10 @@ impl<'a> Reader<'a> {
             .data
             .get(self.offset..)
             .ok_or_else(|| parse_failure!())?;
-        let length = match remaining.iter().position(|&byte| byte == 0) {
-            Some(length) => length,
-            None if self.truncation => {
-                return Err(parse_need_more!(self.data.len().saturating_add(1)));
-            }
-            None => return Err(parse_failure!()),
-        };
+        let length = super::c_string_len(
+            remaining,
+            concat!("invalid AVIF metadata structure at ", file!(), ":", line!()),
+        )?;
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)

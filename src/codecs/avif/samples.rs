@@ -269,16 +269,10 @@ impl<'input> Reader<'input> {
             .input
             .get(self.offset..self.end)
             .ok_or_else(|| parse_failure!())?;
-        let length = remaining
-            .iter()
-            .position(|&byte| byte == 0)
-            .ok_or_else(|| {
-                if self.truncation {
-                    parse_need_more!(self.end.saturating_add(1))
-                } else {
-                    parse_failure!()
-                }
-            })?;
+        let length = super::c_string_len(
+            remaining,
+            concat!("invalid AVIF sample structure at ", file!(), ":", line!()),
+        )?;
         let value = &remaining[..length];
         self.offset = self.offset.saturating_add(length).saturating_add(1);
         Ok(value)
