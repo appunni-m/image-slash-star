@@ -4,17 +4,25 @@ The current public evidence matrix contains 3,860 total rows: 3,185 decode /
 inspect / verify rows and 675 encode rows. Of those, 3,185 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
-## AVIF adaptive lossless monochrome partition parity — 2026-11-06
+## AVIF monochrome above-edge context parity — 2026-11-06
 
-Added `lossless_monochrome_adaptive_above_right_128x128`, a pinned 8-bit
-lossless monochrome still with adaptive 4-to-64-pixel partition search. Its
-selected public parity case passed with the exact 49,152-byte RGB8 reference.
-The selected LLVM report records the generic streamed monochrome decoder;
-it does not execute `aligned_above_edge_contexts`, so the above-right branch
-in `src/codecs/avif/av1/block.rs` remains open. The report is retained at
-`.coverage-mcp/local-evidence/selected/20261106T123055.474881Z-d47746e008844ce38a31b5928ea54002/coverage.json`.
-Coverage MCP was not available to this session, so the report has no MCP
-source/build attribution. No unit tests were added.
+A fresh selected coverage run passed 244 active grayscale and monochrome
+AVIF decode parity rows. Its receipt records revision `88df6322e4d2f3c365eda8604623c8420d9a8f6c`
+and no source or fixture changes during the run. The branch at
+`src/codecs/avif/av1/block.rs:43768` still has no execution of its right-starting
+leaf arm (`leaf.origin_x > origin_x`). Of six focused public cases, only the
+two narrow-edge super-resolution cases entered `aligned_above_edge_contexts`,
+and both used leaves at or left of the current origin. A temporary alternate
+145x128 lossless input also passed pixel parity but did not reach the
+right-starting arm, so it was not retained as a fixture.
+
+Report: `.coverage-mcp/local-evidence/selected/20261106T175100.780213Z-30b3cd152e0e4f34b5854c54faf11680/coverage.json`
+(SHA-256 `e7254a52f0100eba90389999c372f38d59eefee56f51d43e085b42b63270479d`);
+receipt: `.coverage-mcp/local-evidence/selected/20261106T175100.780213Z-30b3cd152e0e4f34b5854c54faf11680/coverage.local-evidence.json`
+(SHA-256 `8528e2a6a3484f2dcb9bd264e4c14ce3b1a51bf08de480861597d498f2541d83`).
+Coverage MCP is not connected, so the receipt marks source attribution
+unverified and test attribution unknown. This is selected local evidence, not
+an aggregate coverage update. No unit tests were added.
 
 ## BMP direct inspection rejects an invalid signature — 2026-11-06
 
