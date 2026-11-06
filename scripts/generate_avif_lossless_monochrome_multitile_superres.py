@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a lossless two-tile AVIF with clamped-width super-resolution."""
+"""Generate deterministic lossless monochrome AVIF edge-case fixtures."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ FRAME_USE_SUPERRES_OFFSET = 2
 
 @dataclass(frozen=True)
 class FixtureProfile:
-    """Pinned geometry and oracle evidence for one tiled super-resolution input."""
+    """Pinned geometry, encoder options, and oracle evidence for one AVIF fixture."""
 
     name: str
     asset_name: str
@@ -49,7 +49,11 @@ class FixtureProfile:
     seed_sha256: str
     asset_sha256: str
     pixel_sha256: str
+    superres_enabled: bool = True
     edge_tile_width: int | None = None
+    min_partition_size: int = 16
+    max_partition_size: int = 16
+    source_pattern: str = "gradient"
 
     @property
     def asset(self) -> Path:
@@ -105,6 +109,25 @@ PROFILES = {
         pixel_sha256="099e4cf9fcfa8ddc4269585a7effc6b3d7ea96c956bf50a104d79e971302cea9",
         edge_tile_width=17,
     ),
+    "adaptive-above-right-128x128": FixtureProfile(
+        name="adaptive-above-right-128x128",
+        asset_name="lossless_monochrome_adaptive_above_right_128x128.avif",
+        coded_width=128,
+        upscaled_width=128,
+        height=128,
+        tile_columns=1,
+        width_bits=7,
+        height_bits=7,
+        header_bits=16,
+        source_sha256="24acd1b7f08c711bb1e394f72673d14db9b4c8dde89648cb704b2bfd25c657b2",
+        seed_sha256="fb2a58549ade32caec13ddd8fa35adc8ddb57e0d87de5d73c620445b04ff1d67",
+        asset_sha256="fb2a58549ade32caec13ddd8fa35adc8ddb57e0d87de5d73c620445b04ff1d67",
+        pixel_sha256="eaaec8d21329a21ee563b5d9bd57052f1d6c3d5dbd9992cd2862f85b3b9f206c",
+        superres_enabled=False,
+        min_partition_size=4,
+        max_partition_size=64,
+        source_pattern="above-right-tjunction",
+    ),
 }
 
 ADVANCED_OPTIONS = (
@@ -146,11 +169,20 @@ def sha256(data: bytes) -> str:
 
 def source_y4m(profile: FixtureProfile) -> bytes:
     """Build the fixed full-range monochrome encoder input for one profile."""
-    pixels = bytes(
-        (x * 13 + y * 7 + ((x * y) & 31)) & 0xFF
-        for y in range(profile.height)
-        for x in range(profile.coded_width)
-    )
+    if profile.source_pattern == "above-right-tjunction":
+        def sample(x: int, y: int) -> int:
+            if y < 64:
+                return 72 if x < 64 else 184
+            if x < 64:
+                return (x * 73 + y * 29 + x * y * 17 + ((x ^ y) * 31)) & 0xFF
+            return 192
+    elif profile.source_pattern == "gradient":
+        def sample(x: int, y: int) -> int:
+            return (x * 13 + y * 7 + ((x * y) & 31)) & 0xFF
+    else:
+        raise ValueError(f"unsupported monochrome source pattern: {profile.source_pattern}")
+
+    pixels = bytes(sample(x, y) for y in range(profile.height) for x in range(profile.coded_width))
     header = (
         f"YUV4MPEG2 W{profile.coded_width} H{profile.height} F30:1 Ip A1:1 Cmono "
         "XCOLORRANGE=FULL\nFRAME\n"
@@ -169,8 +201,12 @@ def run(command: list[str]) -> str:
     return result.stdout
 
 
-def encode_command(avifenc: Path, source: Path, output: Path) -> list[str]:
-    """Build the deterministic two-column, lossless seed command."""
+def encode_command(
+    avifenc: Path, source: Path, output: Path, profile: FixtureProfile
+) -> list[str]:
+    """Build the deterministic lossless seed command for one profile."""
+    if profile.tile_columns <= 0 or profile.tile_columns & (profile.tile_columns - 1):
+        raise ValueError("tile column count must be a positive power of two")
     command = [
         str(avifenc),
         "-q",
@@ -180,11 +216,16 @@ def encode_command(avifenc: Path, source: Path, output: Path) -> list[str]:
         "-j",
         "1",
         "--tilecolslog2",
-        "1",
+        str(profile.tile_columns.bit_length() - 1),
         "--tilerowslog2",
         "0",
     ]
+    partition_sizes = {
+        "min-partition-size": str(profile.min_partition_size),
+        "max-partition-size": str(profile.max_partition_size),
+    }
     for key, value in LOSSLESS_OPTIONS:
+        value = partition_sizes.get(key, value)
         command.extend(("--advanced", f"{key}={value}"))
     command.extend((str(source), str(output)))
     return command
@@ -387,7 +428,7 @@ def validate(path: Path, profile: FixtureProfile) -> dict[str, object]:
         "width_bits": profile.width_bits,
         "height_bits": profile.height_bits,
         "monochrome": True,
-        "enable_superres": True,
+        "enable_superres": profile.superres_enabled,
         "enable_cdef": False,
         "enable_restoration": False,
     }
@@ -396,23 +437,24 @@ def validate(path: Path, profile: FixtureProfile) -> dict[str, object]:
         "frame_width": profile.coded_width,
         "frame_height": profile.height,
         "upscaled_width": profile.upscaled_width,
-        "superres_enabled": True,
-        "superres_denominator": SUPERRES_DENOMINATOR,
+        "superres_enabled": profile.superres_enabled,
         "all_lossless": True,
     }
+    if profile.superres_enabled:
+        expected_frame["superres_denominator"] = SUPERRES_DENOMINATOR
     if any(sequence.get(key) != value for key, value in expected_sequence.items()):
-        raise ValueError("sequence header differs from the pinned superres profile")
+        raise ValueError("sequence header differs from the pinned AV1 profile")
     if any(frame.get(key) != value for key, value in expected_frame.items()):
         raise ValueError("frame header differs from the pinned lossless profile")
     tiling = frame.get("tiling", {})
     if tiling.get("columns") != profile.tile_columns or tiling.get("rows") != 1:
-        raise ValueError("fixture must use its pinned two-column tile layout")
+        raise ValueError("fixture does not use its pinned tile layout")
     if profile.edge_tile_width is not None:
         if (
             tiling.get("column_starts") != [0, 1, 2]
             or profile.coded_width - SUPERBLOCK_WIDTH != profile.edge_tile_width
         ):
-            raise ValueError("fixture does not retain its one-pixel right-edge tile")
+            raise ValueError("fixture does not retain its pinned right-edge tile")
 
     with Image.open(path) as image:
         if (
@@ -438,7 +480,7 @@ def validate(path: Path, profile: FixtureProfile) -> dict[str, object]:
         "coded_size": [profile.coded_width, profile.height],
         "upscaled_size": [profile.upscaled_width, profile.height],
         "tile_columns": profile.tile_columns,
-        "superres_denominator": SUPERRES_DENOMINATOR,
+        "superres_denominator": SUPERRES_DENOMINATOR if profile.superres_enabled else None,
         "all_lossless": True,
         "edge_tile_width": profile.edge_tile_width,
         "pixels": {
@@ -472,7 +514,7 @@ def generate(avifenc: Path, output: Path, profile: FixtureProfile) -> None:
         seeds = []
         for index in range(2):
             seed_path = work / f"seed-{index}.avif"
-            run(encode_command(avifenc, source, seed_path))
+            run(encode_command(avifenc, source, seed_path, profile))
             seed = seed_path.read_bytes()
             if sha256(seed) != profile.seed_sha256:
                 raise ValueError("AVIF seed differs from its pinned encoder bytes")
@@ -482,7 +524,11 @@ def generate(avifenc: Path, output: Path, profile: FixtureProfile) -> None:
 
         seed_path = work / "seed-inspection.avif"
         seed_path.write_bytes(seeds[0])
-        patched = patch_superres(seeds[0], seed_path, profile)
+        patched = (
+            patch_superres(seeds[0], seed_path, profile)
+            if profile.superres_enabled
+            else seeds[0]
+        )
         candidate = work / "fixture.avif"
         candidate.write_bytes(patched)
         validate(candidate, profile)
