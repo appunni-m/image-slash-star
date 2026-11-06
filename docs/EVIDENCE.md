@@ -75,6 +75,33 @@ coverage result. Report: `.coverage-mcp/local-evidence/selected/20261106T060522.
 receipt SHA-256
 `80abf08ed054a1371aab458f224f0c733affe2c1cf9ffbe16629b06e86712f82`.
 
+## AVIF B16x8 16×7 reachability probe — 2026-11-06
+
+A 16×7 8-bit I420 sequence was produced from a fixture-only copy of libaom
+configured to force a horizontal split. Pillow 12.2, dav1d 1.5.3, and AOM
+3.13.2 decoded the sequence. The temporary selected-matrix run checked exact
+pixels for frame 0 and sequence decoding and structure; it did not assert
+exact pixels for frame 1. A temporary coverage-instrumented build did not call
+`exact_inter_block_geometry`, and the selected Coverage MCP query still
+reported the false `visible_height == 8` outcome at
+`src/codecs/avif/av1/block.rs:49555` as missing.
+
+This probe does not qualify as a parity fixture for that branch. It also does
+not prove the branch unreachable for all valid AV1 inputs. These reports are
+exploratory; Coverage MCP marks source identity `unverified` and test
+attribution `unknown`. The probe did not add a permanent fixture or matrix
+row. Reports:
+`.coverage-mcp/local-evidence/selected/20261106-b16x8-forced-height7-probe/coverage.json`
+(SHA-256
+`626110884caa6935ecf564969c0b5c85737069e63f4d67824b9f6a6e71bb9bd9`; receipt
+SHA-256
+`91acdbdd95198bf27c6cac7fc9c58c1e48e16f435aa3d52b8d1539950e4ad4ab`) and
+`.coverage-mcp/local-evidence/selected/20261106-b16x8-forced-height7-instrumented-probe/coverage.json`
+(SHA-256
+`c73712e56050bbf8dcd1461dece49d9fe717c261eec5b86647f3fedcc8465b9c`; receipt
+SHA-256
+`eb631124713e46455e827b3b2c16c87c06114d9b9592ab114ac9cfe47a943ef9`).
+
 ## AVIF bounded C-string parser consolidation — 2026-11-06
 
 The container and sample readers each had a missing-terminator path that
