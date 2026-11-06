@@ -22698,3 +22698,29 @@ local receipt is
 `236eb4cdff172e314855ac91c8b088a502225c434536701c59a184588e700187`). The
 receipt marks source identity unverified and test attribution unknown. This
 focused result does not claim aggregate coverage.
+
+## AVIF rectangular luma split selected coverage — 2026-11-07
+
+The existing Pillow parity rows
+`decode:avif:animated_lossy_inter_420_b4x16_q99_16x64` and
+`decode:avif:animated_lossy_inter_420_b16x4_q99_64x16` passed together (2/2).
+They exercise the horizontal and vertical rectangular luma split paths in
+`Lossy420Decoder::decode_inter_split_luma_b4_rect_pair`. The selected LLVM
+report records both outcomes for the orientation branch (2/2), both inner
+orientation outcomes (4/4), and both child-index outcomes (2/2).
+
+The local report is
+`.coverage-mcp/local-evidence/selected/20261106T203152.738919Z-cb5b109d34234193b8e1effceaf35ddf/coverage.json`
+(SHA-256
+`e45cce804239a6a4b13d095ebe9fa25f77f28278ea01eb2790ae5e86b603fefe`); its
+receipt is
+`.coverage-mcp/local-evidence/selected/20261106T203152.738919Z-cb5b109d34234193b8e1effceaf35ddf/coverage.local-evidence.json`
+(SHA-256
+`0da4a4f5bcdc945fafa46ba95b511eb9716ab7bb360097a4624d4719b047fdb9`). The
+receipt records source revision
+`2c35ff0a6e3249f58c56cf231b8398b5deba35ee`, source manifest SHA-256
+`36814d700017049945424d0aed1ed77a1f6275e1084503b25c1755117541a55b`, and no
+source or fixture changes during the run. It also explicitly marks the report
+local-only, Coverage MCP as not queried, source attribution as unverified, and
+test attribution as unknown. These counters are diagnostic evidence only;
+they do not establish aggregate coverage or a Coverage MCP result.
