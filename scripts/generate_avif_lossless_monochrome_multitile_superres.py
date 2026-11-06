@@ -89,6 +89,22 @@ PROFILES = {
         pixel_sha256="1a3a18cc362bf40b0001563429b6446baca238f80a7a23adb6fbb54a3d12fd55",
         edge_tile_width=1,
     ),
+    "above-right-context": FixtureProfile(
+        name="above-right-context",
+        asset_name="lossless_monochrome_above_right_superres_163x64.avif",
+        coded_width=145,
+        upscaled_width=163,
+        height=64,
+        tile_columns=2,
+        width_bits=8,
+        height_bits=6,
+        header_bits=20,
+        source_sha256="682eea88d3e2b3e90a8faf47cc0e31ed9aa69376853be937538a2a420b8ce282",
+        seed_sha256="623af9c9ba910356c1d2a18e4856eab44a2b9e4f7efcdd0cf34be9cb7cf5d316",
+        asset_sha256="b60d77de7232868f5c4796875641dd93c0ec00f0fc29ae911af06ca8a36c9f0a",
+        pixel_sha256="099e4cf9fcfa8ddc4269585a7effc6b3d7ea96c956bf50a104d79e971302cea9",
+        edge_tile_width=17,
+    ),
 }
 
 ADVANCED_OPTIONS = (
