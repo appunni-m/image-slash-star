@@ -4762,6 +4762,9 @@ fn inter_luma_mode_size_group(block_size: BlockSize) -> usize {
 /// leaf.  Keep blocks whose normative maximum transforms are smaller than the
 /// coded plane transactional until the transform-grid compositor is wired.
 fn inter_single_transform_geometry_supported(block_size: BlockSize, layout: PixelLayout) -> bool {
+    if !block_size.valid_for_layout(layout) {
+        return false;
+    }
     let (block_width, block_height) = block_size.pixel_dimensions();
     if block_size.maximum_luma_tx().pixel_dimensions() != (block_width, block_height) {
         return false;
@@ -4975,6 +4978,7 @@ fn inter_lossy_wide_chunk_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
+        && block_size.valid_for_layout(layout)
         && matches!(
             (layout, block_size),
             (
@@ -5014,6 +5018,7 @@ fn inter_lossy_wide_mode2_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
+        && block_size.valid_for_layout(layout)
         && matches!(
             (layout, block_size),
             (
@@ -5533,6 +5538,7 @@ fn inter_lossless_grid_geometry_supported(
     let luma_geometry_matches = inter_lossless_grid_wide_block_supported(block_size)
         || block_size.maximum_luma_tx().pixel_dimensions() == block_size.pixel_dimensions();
     quantization.segment_lossless
+        && block_size.valid_for_layout(layout)
         && luma_geometry_matches
         && transform_mode == 0
         && matches!(bit_depth, 8 | 10 | 12)
@@ -8550,6 +8556,9 @@ fn decode_inter_leaf(
         context.subsampling_y,
     )
     .ok_or_else(|| malformed("inter pixel layout is invalid"))?;
+    if !node.block_size.valid_for_layout(layout) {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
     let has_chroma = partition_node_has_chroma(context, node, false);
     let lossless_grid_geometry_inputs = InterLosslessGridGeometry {
         block_size: node.block_size,

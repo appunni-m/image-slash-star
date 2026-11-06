@@ -366,12 +366,27 @@ impl BlockSize {
         width <= 32 && height <= 32
     }
 
-    /// All normative coded block sizes are legal in every AV1 pixel layout.
-    /// Layout-specific transform limits are represented by
-    /// `MAX_TX_FOR_BLOCK`; the I422 1:4 rows intentionally select TX4X4
-    /// rather than making the containing block illegal.
-    pub(super) const fn valid_for_layout(self, _layout: PixelLayout) -> bool {
-        true
+    /// Whether AV1 defines a residual block for this layout.
+    ///
+    /// The subsampled-size table marks these I422 shapes invalid because
+    /// horizontal subsampling would produce a chroma residual outside the
+    /// supported block-size geometry. The maximum-transform table's TX4X4
+    /// entries are not a substitute for that validity check.
+    pub(super) const fn valid_for_layout(self, layout: PixelLayout) -> bool {
+        match layout {
+            PixelLayout::I422 => !matches!(
+                self,
+                Self::B4x8
+                    | Self::B8x16
+                    | Self::B16x32
+                    | Self::B32x64
+                    | Self::B64x128
+                    | Self::B4x16
+                    | Self::B8x32
+                    | Self::B16x64
+            ),
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I444 => true,
+        }
     }
 }
 
