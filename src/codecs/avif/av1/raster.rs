@@ -258,35 +258,40 @@ impl MonochromeFrameCanvas {
             .ok()
             .and_then(|value| value.checked_mul(4))
             .ok_or_else(|| malformed("alpha leaf height overflows pixels"))?;
-        let visible_width = self.width.saturating_sub(x).min(source_width);
-        let visible_height = self.height.saturating_sub(y).min(source_height);
+        let canvas_width = self.width.saturating_sub(x).min(source_width);
+        let canvas_height = self.height.saturating_sub(y).min(source_height);
         let source_length = source_width
             .checked_mul(source_height)
             .ok_or_else(|| malformed("alpha leaf size overflows usize"))?;
-        if source_length == 0
-            || visible_width == 0
-            || visible_height == 0
-            || plane.samples.len() != source_length
-        {
+        if source_length == 0 || plane.samples.len() != source_length {
+            return Err(malformed("alpha leaf has the wrong extent"));
+        }
+        // Partition syntax can include coded leaves beyond the visible frame
+        // edge. Decode them for entropy and neighbor context, but do not place
+        // their samples on a canvas sized only for the visible image.
+        if x >= self.width || y >= self.height {
+            return Ok(());
+        }
+        if canvas_width == 0 || canvas_height == 0 {
             return Err(malformed("alpha leaf has the wrong extent"));
         }
         let end_x = x
-            .checked_add(visible_width)
+            .checked_add(canvas_width)
             .ok_or_else(|| malformed("alpha leaf x extent overflows usize"))?;
         let end_y = y
-            .checked_add(visible_height)
+            .checked_add(canvas_height)
             .ok_or_else(|| malformed("alpha leaf y extent overflows usize"))?;
         if end_x > self.width || end_y > self.height {
             return Err(malformed("alpha leaf exceeds the frame canvas"));
         }
-        for row in 0..visible_height {
+        for row in 0..canvas_height {
             let start = y
                 .checked_add(row)
                 .and_then(|row| row.checked_mul(self.width))
                 .and_then(|row| row.checked_add(x))
                 .ok_or_else(|| malformed("alpha leaf row offset overflows usize"))?;
             let end = start
-                .checked_add(visible_width)
+                .checked_add(canvas_width)
                 .ok_or_else(|| malformed("alpha leaf row end overflows usize"))?;
             if self
                 .written
@@ -296,22 +301,22 @@ impl MonochromeFrameCanvas {
                 return Err(malformed("alpha leaves overlap"));
             }
         }
-        let written_count = visible_width
-            .checked_mul(visible_height)
+        let written_count = canvas_width
+            .checked_mul(canvas_height)
             .and_then(|count| self.written_count.checked_add(count))
             .ok_or_else(|| malformed("alpha coverage count overflows usize"))?;
-        let display_width = self.visible_width.saturating_sub(x).min(visible_width);
-        let display_height = self.visible_height.saturating_sub(y).min(visible_height);
+        let display_width = self.visible_width.saturating_sub(x).min(canvas_width);
+        let display_height = self.visible_height.saturating_sub(y).min(canvas_height);
         let visible_written_count = display_width
             .checked_mul(display_height)
             .and_then(|count| self.visible_written_count.checked_add(count))
             .ok_or_else(|| malformed("visible alpha coverage count overflows usize"))?;
-        for row in 0..visible_height {
+        for row in 0..canvas_height {
             let source_start = row
                 .checked_mul(source_width)
                 .ok_or_else(|| malformed("alpha source row offset overflows usize"))?;
             let source_end = source_start
-                .checked_add(visible_width)
+                .checked_add(canvas_width)
                 .ok_or_else(|| malformed("alpha source row end overflows usize"))?;
             let destination_start = y
                 .checked_add(row)
@@ -319,7 +324,7 @@ impl MonochromeFrameCanvas {
                 .and_then(|row| row.checked_add(x))
                 .ok_or_else(|| malformed("alpha destination row offset overflows usize"))?;
             let destination_end = destination_start
-                .checked_add(visible_width)
+                .checked_add(canvas_width)
                 .ok_or_else(|| malformed("alpha destination row end overflows usize"))?;
             self.written
                 .set_range(destination_start, destination_end)

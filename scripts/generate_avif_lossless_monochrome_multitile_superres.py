@@ -147,6 +147,25 @@ PROFILES = {
         max_partition_size=64,
         source_pattern="above-right-tjunction",
     ),
+    "padded-right-context-1x128": FixtureProfile(
+        name="padded-right-context-1x128",
+        asset_name="lossless_monochrome_padded_right_context_1x128.avif",
+        coded_width=1,
+        upscaled_width=1,
+        height=128,
+        tile_columns=1,
+        width_bits=1,
+        height_bits=7,
+        header_bits=16,
+        source_sha256="e7047bd0357ea25c1f7f8e8ad126cd2c6ef9ff8335d690deae08c4db57049fe7",
+        seed_sha256="df479165e32b051ca47509336ed3cd0e40f4948234cdfe528b352bfe7f029e5b",
+        asset_sha256="df479165e32b051ca47509336ed3cd0e40f4948234cdfe528b352bfe7f029e5b",
+        pixel_sha256="5167506bf86eee4b41543a81267f54bd5928e73320d896d5e3ddd5c62222796c",
+        superres_enabled=False,
+        min_partition_size=4,
+        max_partition_size=4,
+        source_pattern="padded-right-context",
+    ),
 }
 
 ADVANCED_OPTIONS = (
@@ -195,6 +214,12 @@ def source_y4m(profile: FixtureProfile) -> bytes:
             if x < 64:
                 return (x * 73 + y * 29 + x * y * 17 + ((x ^ y) * 31)) & 0xFF
             return 192
+    elif profile.source_pattern == "padded-right-context":
+        if profile.coded_width != 1:
+            raise ValueError("padded-right-context input must be one pixel wide")
+
+        def sample(_x: int, y: int) -> int:
+            return ((y * 73 + ((y ^ 0x5A) * 31)) & 0xFF) if y < 64 else 192
     elif profile.source_pattern == "gradient":
         def sample(x: int, y: int) -> int:
             return (x * 13 + y * 7 + ((x * y) & 31)) & 0xFF

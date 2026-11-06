@@ -1,28 +1,35 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,860 total rows: 3,185 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,185 decode rows are
+The current public evidence matrix contains 3,861 total rows: 3,186 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,186 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
-## AVIF monochrome above-edge context parity — 2026-11-06
+## AVIF monochrome padded-edge context parity — 2026-11-07
 
-A fresh selected coverage run passed 244 active grayscale and monochrome
-AVIF decode parity rows. Its receipt records revision `88df6322e4d2f3c365eda8604623c8420d9a8f6c`
-and no source or fixture changes during the run. The branch at
-`src/codecs/avif/av1/block.rs:43768` still has no execution of its right-starting
-leaf arm (`leaf.origin_x > origin_x`). Of six focused public cases, only the
-two narrow-edge super-resolution cases entered `aligned_above_edge_contexts`,
-and both used leaves at or left of the current origin. A temporary alternate
-145x128 lossless input also passed pixel parity but did not reach the
-right-starting arm, so it was not retained as a fixture.
+The 2026-11-06 sweep passed 244 active grayscale and monochrome AVIF decode
+parity rows but did not execute the right-starting arm at
+`src/codecs/avif/av1/block.rs:43768`. The new public parity row
+`decode:avif:lossless_monochrome_padded_right_context_1x128` uses a pinned
+1x128 all-lossless monochrome image. Its 4x4 coded leaves extend into AV1's
+padded right edge, so the complete streamed-lossless path declines the
+one-pixel width and the monochrome fallback must decode those leaves to build
+neighbor context.
 
-Report: `.coverage-mcp/local-evidence/selected/20261106T175100.780213Z-30b3cd152e0e4f34b5854c54faf11680/coverage.json`
-(SHA-256 `e7254a52f0100eba90389999c372f38d59eefee56f51d43e085b42b63270479d`);
-receipt: `.coverage-mcp/local-evidence/selected/20261106T175100.780213Z-30b3cd152e0e4f34b5854c54faf11680/coverage.local-evidence.json`
-(SHA-256 `8528e2a6a3484f2dcb9bd264e4c14ce3b1a51bf08de480861597d498f2541d83`).
+The case first exposed an extent error when a decoded leaf lay entirely beyond
+the visible canvas. The canvas now validates the decoded leaf extent, then
+skips copying leaves outside its storage boundary; the caller retains each
+decoded leaf for subsequent neighbor context. The selected public parity run
+passed 1/1 rows with exact Pillow RGB8 output. Branch counts at line 43768 were
+`[372, 93]`, covering both the left-starting and right-starting leaf arms. No
+unit tests were added.
+
+Report: `.coverage-mcp/local-evidence/selected/20261106T194911.355296Z-b547351b67784b919797bd8f766d4ba2/coverage.json`
+(SHA-256 `d93ee9e114bc60d7479f8d49a1ab7374ad252567e54875bb76773ced41876b85`);
+receipt: `.coverage-mcp/local-evidence/selected/20261106T194911.355296Z-b547351b67784b919797bd8f766d4ba2/coverage.local-evidence.json`
+(SHA-256 `a3413cb2fd6a292e0921691a22cd0da5051593b7472cab4b8ab588e7dea4384a`).
 Coverage MCP is not connected, so the receipt marks source attribution
 unverified and test attribution unknown. This is selected local evidence, not
-an aggregate coverage update. No unit tests were added.
+an aggregate coverage update.
 
 ## BMP direct inspection rejects an invalid signature — 2026-11-06
 
@@ -17312,7 +17319,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `56879b5532f48db073c477434b405113bf928dee38c8bc15e66401565263780e`; matrix `16223b6fdf584956bb3e474b36bf4a5e662d1753c44c3233c1e998d3a77b1e0f`.
+- Current fixture integrity only: manifest `56879b5532f48db073c477434b405113bf928dee38c8bc15e66401565263780e`; matrix `be2695b11e2c0ed88aaacf28129d2a062531ce765888d9c798583daf4d4a877c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
