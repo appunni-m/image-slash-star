@@ -113,6 +113,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_avif_nonuniform_tile_limit_error.py --check
 	$(PYTHON) scripts/generate_avif_lossless_monochrome_multitile_superres.py --check
 	$(PYTHON) scripts/generate_avif_lossless_monochrome_multitile_superres.py --profile narrow-edge-tile --check
+	$(PYTHON) scripts/generate_avif_lossless_monochrome_multitile_superres.py --profile above-right-context --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420 --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i422 --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420_cdef --check

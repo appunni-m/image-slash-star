@@ -1,8 +1,9 @@
-This bundle records 624 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 616 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2202 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
+This bundle records 626 complete-file observations made with Pillow 12.2.0 and libavif 1.4.1/dav1d 1.5.3; 618 inputs decode completely and 8 malformed inputs fail both Pillow opening and native parsing. The 2208 hashed artifacts cover this README, all input files, the observer source, and exact Pillow-decoded frame outputs.
 
 
 Fixture sources are declared in `scripts/generate_avif_loop_refs.py`;
 `index.json` records each source digest.
+
 
 The qindex-zero B4x8 I420 companion has a base-qindex-zero inter frame with
 nonzero chroma deltas. Pillow and pinned libavif decode two exact 64x64 RGB

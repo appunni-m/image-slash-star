@@ -12687,6 +12687,12 @@ formats:
       - portable_lossless_monochrome_1x1.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: lossless_monochrome_above_right_superres_163x64
+      description: 163x64 8-bit all-lossless monochrome super-resolution still with a 17-pixel cropped right tile and split above-edge neighbors
+      test_assets:
+      - lossless_monochrome_above_right_superres_163x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_monochrome_superres_clamped_3x3
       description: 3x3 lossless monochrome key frame with super-resolution enabled at the minimum-width clamp
       test_assets:

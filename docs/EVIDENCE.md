@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,857 total rows: 3,182 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,182 decode rows are
+The current public evidence matrix contains 3,858 total rows: 3,183 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,183 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
 ## BMP direct inspection rejects an invalid signature — 2026-11-06
@@ -17292,7 +17292,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ff6eccfcf7768279be41ede2224a332d27441307163dfda9a78e01f28bf4b964`; matrix `7d610dfece1f8d55902df62fd403f50c35f80cfc866d6d47fa8256a40c9b7e82`.
+- Current fixture integrity only: manifest `b58e082b94cd832264434360e3c541e24828116d5814b0c204d62d17c9acc9e6`; matrix `4fe33cab2d3c3571baabab652bd89a784436d1a59740fc2d667102e3055cadd9`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
