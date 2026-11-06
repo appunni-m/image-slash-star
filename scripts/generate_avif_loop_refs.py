@@ -480,6 +480,14 @@ FIXTURES = {
         "animated_lossless_inter_420_b4x8_10bit_odd_69x64.avif",
         "25159d2757faec202cb89a4f1252ccd84c78ddea4ae72948c5c881d3ae04806b",
     ),
+    "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99": (
+        "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99.avif",
+        "6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4",
+    ),
+    "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70": (
+        "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70.avif",
+        "58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94",
+    ),
     "lossless_inter_420_b32x32_10bit_partition32_full_texture": (
         "animated_lossless_inter_420_b32x32_10bit_partition32_full_texture.avif",
         "992e7bfe661bcdc1390127ae716059acb0f5ecdd79f12b5869eaa7bb89831257",

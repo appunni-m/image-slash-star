@@ -1414,6 +1414,34 @@ VARIANTS = {
         "transform_mode": "select",
         "width": 64
     },
+    "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99": {
+        "bit_depth": 8,
+        "cdf_mode": 2,
+        "height": 15,
+        "input_name": "clipped-height-420-q99",
+        "layout": "420",
+        "pattern": "clipped",
+        "producer_mode": "select",
+        "quality": 99,
+        "root_size": 16,
+        "sha256": "6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4",
+        "transform_mode": "select",
+        "width": 16
+    },
+    "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70": {
+        "bit_depth": 8,
+        "cdf_mode": 2,
+        "height": 15,
+        "input_name": "clipped-height-420-q70",
+        "layout": "420",
+        "pattern": "fine",
+        "producer_mode": "select",
+        "quality": 70,
+        "root_size": 16,
+        "sha256": "58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94",
+        "transform_mode": "select",
+        "width": 16
+    },
 }
 
 FIXTURE_SHA256 = {name: spec["sha256"] for name, spec in VARIANTS.items()}

@@ -18590,6 +18590,18 @@ formats:
       - animated_lossy_inter_420_8bit_b8x32_fine_q99_32x64.avif
       status: active
 
+    - id: animated_lossy_inter_420_b16x8_clipped_height_16x15_q99
+      description: Two-frame 16x15 8-bit 420 AVIF with a horizontal partition into B16x8 leaves; the bottom leaf is clipped to seven visible rows and both Pillow RGB frames are checked exactly
+      test_assets:
+      - animated_lossy_inter_420_b16x8_clipped_height_16x15_q99.avif
+      status: active
+
+    - id: animated_lossy_inter_420_b16x8_clipped_height_16x15_q70
+      description: Two-frame quality-70 16x15 8-bit 420 AVIF with a horizontal partition into B16x8 leaves; exact Pillow RGB frame parity checks clipped block output
+      test_assets:
+      - animated_lossy_inter_420_b16x8_clipped_height_16x15_q70.avif
+      status: active
+
     - id: animated_lossy_inter_420_10bit_b8x32_fine_q70_32x64
       description: Two-frame 32x64 10-bit 420 AVIF with narrow 8x32 inter leaves, fine residual detail and quality-70 transforms; exact Pillow RGB frames check mixed/deep transform trees and chroma reconstruction
       test_assets:

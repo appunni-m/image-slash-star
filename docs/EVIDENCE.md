@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,855 total rows: 3,180 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,180 decode rows are
+The current public evidence matrix contains 3,857 total rows: 3,182 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,182 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
 ## BMP direct inspection rejects an invalid signature — 2026-11-06
@@ -44,8 +44,7 @@ The selected 11-row AVIF parity run passed 11/11. Its LLVM report covers
 coverage result. Coverage MCP attributes the validation to one group and
 reports 243 branch outcomes unobserved in this selection. The exact geometry
 predicate still has 20 unobserved outcomes. A line-specific query identifies
-the missing false outcome for `visible_height == 8` on B16x8, so a clipped
-B16x8 parity input is still needed. No fixture or private unit test was added.
+the missing false outcome for `visible_height == 8` on B16x8.
 
 Report: `.coverage-mcp/local-evidence/selected/20261106T024555.293798Z-40ec0dcc56144ae1b4dc97a421c773b8/coverage.json`
 (SHA-256
@@ -62,6 +61,19 @@ ms (1.13% lower). The first cycle had high timing variance, so this is evidence
 against a material penalty on this workload, not a speedup claim. Raw samples,
 build logs, commands, and source hashes are retained at
 `.coverage-mcp/local-evidence/perf/avif-geometry-helper-abba-20261106/`.
+
+The follow-up adds quality-70 and quality-99 two-frame parity inputs with a
+16x15 clipped-height B16x8 partition. The fixture generator's pinned-oracle
+checks passed for both inputs, and the selected run passed all 1,393 active
+AVIF decode rows plus five encode rows. Coverage MCP still reports the false
+outcome for `visible_height == 8` as missing at
+`src/codecs/avif/av1/block.rs:49555`; these cases expand clipped-height pixel
+parity but do not close that transform-plan geometry branch. The selected
+report covers 12,563/32,020 branches and is local evidence, not an aggregate
+coverage result. Report: `.coverage-mcp/local-evidence/selected/20261106T060522.104147Z-73614bcc1f98460c905bb85edc0352f0/coverage.json`
+(SHA-256 `888d892e7216ca76f29c940e29b8c3bc86efbe5c949176cabb2d1b2a3adecd0a`);
+receipt SHA-256
+`80abf08ed054a1371aab458f224f0c733affe2c1cf9ffbe16629b06e86712f82`.
 
 ## AVIF bounded C-string parser consolidation — 2026-11-06
 
@@ -17242,7 +17254,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `377479a4eec81f3f34f3723b373bb569985b102d43c8c9f64c531c3bd1d2aab6`; matrix `85dc399de42b5bbf2d10c0e9be53dd1aac6fc40b200ec5f8935e044e47c282d8`.
+- Current fixture integrity only: manifest `ff6eccfcf7768279be41ede2224a332d27441307163dfda9a78e01f28bf4b964`; matrix `7d610dfece1f8d55902df62fd403f50c35f80cfc866d6d47fa8256a40c9b7e82`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

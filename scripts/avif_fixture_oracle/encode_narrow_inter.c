@@ -39,7 +39,8 @@ static uint32_t hash32(uint32_t value)
 }
 
 static uint8_t sample_value(unsigned frame, unsigned x, unsigned y, int plane,
-                            int mode_select_content, int fine_content)
+                            int mode_select_content, int fine_content,
+                            int clipped_height_content)
 {
     // The first forced narrow leaf has a low-frequency residual so libaom can
     // keep its maximum transform. The other three leaves retain textured
@@ -62,6 +63,16 @@ static uint8_t sample_value(unsigned frame, unsigned x, unsigned y, int plane,
     const unsigned cell_y = fine_content ? source_y : source_y / 4;
     const uint32_t code = hash32(cell_x * 991U + cell_y * 113U +
                                  (unsigned)plane * 503U);
+    const unsigned luma_y =
+        y * (plane != AVIF_CHAN_Y && FIXTURE_FORMAT == AVIF_PIXEL_FORMAT_YUV420
+                 ? 2U
+                 : 1U);
+    if (clipped_height_content && luma_y >= FIXTURE_ROOT_SIZE / 2U) {
+        if (frame == 0) {
+            return (uint8_t)(32U + (unsigned)plane * 16U);
+        }
+        return (x + y + (unsigned)plane) % 2U == 0 ? 0 : 255;
+    }
     if (fine_content) {
         // Per-pixel detail and a bounded second-frame perturbation encourage
         // small residual transforms while preserving temporal correlation.
@@ -73,7 +84,8 @@ static uint8_t sample_value(unsigned frame, unsigned x, unsigned y, int plane,
 }
 
 static void fill_frame(avifImage *image, unsigned frame, int mode_select_content,
-                      unsigned bit_depth, int fine_content)
+                      unsigned bit_depth, int fine_content,
+                      int clipped_height_content)
 {
     for (int plane = AVIF_CHAN_Y; plane <= AVIF_CHAN_V; ++plane) {
         uint8_t *const data = avifImagePlane(image, (avifChannelIndex)plane);
@@ -83,7 +95,8 @@ static void fill_frame(avifImage *image, unsigned frame, int mode_select_content
         for (unsigned y = 0; y < height; ++y) {
             for (unsigned x = 0; x < width; ++x) {
                 const uint16_t sample = (uint16_t)(
-                    sample_value(frame, x, y, plane, mode_select_content, fine_content)
+                    sample_value(frame, x, y, plane, mode_select_content, fine_content,
+                                 clipped_height_content)
                     << (bit_depth - 8));
                 uint8_t *const destination =
                     data + (size_t)y * row_bytes + (size_t)x * (bit_depth == 8 ? 1U : 2U);
@@ -101,7 +114,7 @@ int main(int argc, char **argv)
 {
     if (argc < 3 || argc > 6 ||
         (strcmp(argv[2], "largest") != 0 && strcmp(argv[2], "select") != 0)) {
-        fprintf(stderr, "usage: encode_narrow_inter OUTPUT.avif {largest|select} [8|10|12] [coarse|fine] [0|1|2]\n");
+        fprintf(stderr, "usage: encode_narrow_inter OUTPUT.avif {largest|select} [8|10|12] [coarse|fine|clipped] [0|1|2]\n");
         return 2;
     }
     unsigned bit_depth = 8;
@@ -115,8 +128,9 @@ int main(int argc, char **argv)
         }
         bit_depth = (unsigned)parsed;
     }
-    if (argc >= 5 && strcmp(argv[4], "coarse") != 0 && strcmp(argv[4], "fine") != 0) {
-        fprintf(stderr, "content pattern must be coarse or fine\n");
+    if (argc >= 5 && strcmp(argv[4], "coarse") != 0 &&
+        strcmp(argv[4], "fine") != 0 && strcmp(argv[4], "clipped") != 0) {
+        fprintf(stderr, "content pattern must be coarse, fine, or clipped\n");
         return 2;
     }
     if (argc == 6 && strcmp(argv[5], "0") != 0 && strcmp(argv[5], "1") != 0 &&
@@ -124,7 +138,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "CDF update mode must be 0 (frozen), 1 (adaptive), or 2 (selective)\n");
         return 2;
     }
-    const int fine_content = argc >= 5 && strcmp(argv[4], "fine") == 0;
+    const int clipped_height_content = argc >= 5 && strcmp(argv[4], "clipped") == 0;
+    const int fine_content = argc >= 5 &&
+                            (strcmp(argv[4], "fine") == 0 || clipped_height_content);
     // libaom's chroma-size table has no 4x16/8x32/16x64 vertical leaf in 4:2:2.
     // Reject this unsupported fixture geometry before forcing its partition.
     if (FIXTURE_WIDTH < FIXTURE_HEIGHT && FIXTURE_FORMAT == AVIF_PIXEL_FORMAT_YUV422) {
@@ -202,7 +218,8 @@ int main(int argc, char **argv)
         }
     }
     for (unsigned frame = 0; frame < 2; ++frame) {
-        fill_frame(image, frame, mode_select_content, bit_depth, fine_content);
+        fill_frame(image, frame, mode_select_content, bit_depth, fine_content,
+                   clipped_height_content);
         const avifResult result =
             avifEncoderAddImage(encoder, image, 100, AVIF_ADD_IMAGE_FLAG_NONE);
         if (result != AVIF_RESULT_OK) {

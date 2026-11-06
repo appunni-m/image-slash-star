@@ -2578,6 +2578,52 @@
       "case_names": [
         "lossless_inter_420_b4x8_10bit_odd_69x64"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "23a5e6972eedfdcae3118661837e6ce86591cae20e1ccbd2d533097d5e865c25",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99"
+      ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "cf6c50dcdb105922033d22b4439447fd90499aa6d68af39bec7b7d2e2d1dcd84",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70"
+      ]
     }
   ],
   "artifacts": [
@@ -3120,6 +3166,16 @@
       "bytes": 1944,
       "path": "inputs/animated_lossy_inter_420_b16x4_q99_64x16.avif",
       "sha256": "d1aee7bb97195edb3ec8ea0cbc4d3f0a998b4440d8d3e12880c5aae4fee2e3f0"
+    },
+    {
+      "bytes": 1415,
+      "path": "inputs/animated_lossy_inter_420_b16x8_clipped_height_16x15_q70.avif",
+      "sha256": "58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94"
+    },
+    {
+      "bytes": 1476,
+      "path": "inputs/animated_lossy_inter_420_b16x8_clipped_height_16x15_q99.avif",
+      "sha256": "6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4"
     },
     {
       "bytes": 1410,
@@ -7390,6 +7446,26 @@
       "bytes": 3072,
       "path": "pixels/animated_lossy_inter_420_b16x4_q99_64x16/frame_1.bin",
       "sha256": "e7cfcfbc85791f647e9b54865a88f8c1f78caa807ad97d666ae09ad32440a106"
+    },
+    {
+      "bytes": 720,
+      "path": "pixels/animated_lossy_inter_420_b16x8_clipped_height_16x15_q70/frame_0.bin",
+      "sha256": "65e1e811ae7e6f725a0b0f5cf344122ec312b5314584260d8dca19e40eeee1e1"
+    },
+    {
+      "bytes": 720,
+      "path": "pixels/animated_lossy_inter_420_b16x8_clipped_height_16x15_q70/frame_1.bin",
+      "sha256": "0adf0daf3c1b8389ded15f5ea8c4e5a5586b5d6b552f846238be436bc2e9727f"
+    },
+    {
+      "bytes": 720,
+      "path": "pixels/animated_lossy_inter_420_b16x8_clipped_height_16x15_q99/frame_0.bin",
+      "sha256": "e8da116bc8cef2ec21428242b17d42b133751047040d1b937e953d69965032a1"
+    },
+    {
+      "bytes": 720,
+      "path": "pixels/animated_lossy_inter_420_b16x8_clipped_height_16x15_q99/frame_1.bin",
+      "sha256": "5a2df0a8dd5460d572056952713e10c15db63565afadd68ae10fc97f62c67b9f"
     },
     {
       "bytes": 3072,
@@ -49310,6 +49386,104 @@
       "repeat_equal": true,
       "source": "lossless_inter_420_b4x8_10bit_odd_69x64",
       "source_sha256": "25159d2757faec202cb89a4f1252ccd84c78ddea4ae72948c5c881d3ae04806b"
+    },
+    {
+      "input_bytes": 1415,
+      "input_path": "inputs/animated_lossy_inter_420_b16x8_clipped_height_16x15_q70.avif",
+      "input_sha256": "58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "cf6c50dcdb105922033d22b4439447fd90499aa6d68af39bec7b7d2e2d1dcd84",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 720,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "65e1e811ae7e6f725a0b0f5cf344122ec312b5314584260d8dca19e40eeee1e1",
+            "size": [
+              16,
+              15
+            ]
+          },
+          {
+            "bytes": 720,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "0adf0daf3c1b8389ded15f5ea8c4e5a5586b5d6b552f846238be436bc2e9727f",
+            "size": [
+              16,
+              15
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70",
+      "source_sha256": "58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94"
+    },
+    {
+      "input_bytes": 1476,
+      "input_path": "inputs/animated_lossy_inter_420_b16x8_clipped_height_16x15_q99.avif",
+      "input_sha256": "6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "23a5e6972eedfdcae3118661837e6ce86591cae20e1ccbd2d533097d5e865c25",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 720,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "e8da116bc8cef2ec21428242b17d42b133751047040d1b937e953d69965032a1",
+            "size": [
+              16,
+              15
+            ]
+          },
+          {
+            "bytes": 720,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "5a2df0a8dd5460d572056952713e10c15db63565afadd68ae10fc97f62c67b9f",
+            "size": [
+              16,
+              15
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_lossy_inter_420_b16x8_clipped_height_16x15_q99",
+      "source_sha256": "6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4"
     }
   ],
   "oracle": {
