@@ -102,6 +102,17 @@ SHA-256
 SHA-256
 `eb631124713e46455e827b3b2c16c87c06114d9b9592ab114ac9cfe47a943ef9`).
 
+The current source path explains why this input did not reach the predicate.
+`decode_inter_transform_size` admits a lossy `B16x8` split plan only for a full
+16×8 visible extent. Its lossless-grid admission allows clipped extents only
+for the separately bounded B32 profile. `validate_inter_transform_plan_geometry`
+calls `exact_inter_block_geometry` only for non-single plans. Thus the current
+admitted plan paths cannot call the B16x8 predicate with width 16 and a clipped
+height. This is a source-path finding for the current implementation, not a
+claim that every valid AV1 stream has this restriction. No public parity case
+has yet shown a supported way to reach the false height comparison; revisit it
+if the admitted B16x8 plan grammar changes.
+
 ## AVIF bounded C-string parser consolidation — 2026-11-06
 
 The container and sample readers each had a missing-terminator path that
