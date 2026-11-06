@@ -822,7 +822,7 @@ pub fn decode(
         BmpBitDepth::Sixteen | BmpBitDepth::TwentyFour | BmpBitDepth::ThirtyTwo => color.into(),
     };
     let mut image = DecodedImage::with_mode(w, h, pixels, mode);
-    if mode == ImageMode::P8 && !palette.is_empty() {
+    if mode == ImageMode::P8 {
         let mut rgb = Vec::with_capacity(palette.len().saturating_mul(3));
         for entry in palette {
             rgb.extend_from_slice(&[entry[2], entry[1], entry[0]]);
