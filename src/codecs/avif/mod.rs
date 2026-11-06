@@ -8,6 +8,21 @@ mod av1;
 mod container;
 mod samples;
 
+/// Returns the byte offset of a NUL terminator in an already bounded payload.
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn c_string_len(
+    remaining: &[u8],
+    error_context: &'static str,
+) -> crate::codecs::CodecResult<usize> {
+    match remaining.iter().position(|&byte| byte == 0) {
+        Some(length) => Ok(length),
+        None => Err(crate::codecs::CodecError::Malformed(
+            error_context.to_owned(),
+        )),
+    }
+}
+
 #[cfg(coverage)]
 pub(super) fn inspect_container_for_coverage(
     data: &[u8],

@@ -30,6 +30,33 @@ receipt
 `358521f4b580b463496d131139e09946d083539d4663ccece8a70ab5f21ac82e`).
 No unit tests or normal-build dispatch changes were added.
 
+## AVIF bounded C-string parser consolidation — 2026-11-06
+
+The container and sample readers each had a missing-terminator path that
+reported `NeedMore` when their bounded payload lacked a NUL byte. Both readers
+are reached only after the enclosing box or sample extent has been validated;
+an incomplete outer box is rejected by the whole-input parser first. The
+incremental branches were therefore unreachable through the public API. A
+shared `c_string_len` helper now returns the existing malformed-input contract
+for an unterminated bounded payload and keeps the common search inline in
+production builds. No fixture or private unit test was added.
+
+Selected parity coverage passed 3/3:
+`decode:avif:error_infe_missing_item_name_terminator`,
+`decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9`, and
+`decode:avif:animated_equal_picture_interval_two_ticks`. `make lint` and
+`cargo fmt --all -- --check` passed. Coverage MCP queried `c_string_len` on
+the selected report and returned no missing branch groups; its source identity
+is `unverified` and test attribution is `unknown`.
+
+A full all-feature `make coverage` run passed 57 parity/fault-matrix cases,
+7 decode-policy cases, 1 determinism case, and 70 feature-contract cases. It
+measured 103,007/142,447 lines (72.312509%), 21,181/32,020 branches
+(66.149282%), 5,699/9,153 functions (62.263739%), and 156,758/220,692 regions
+(71.030214%). These are local LLVM totals; the report's SHA-256 is
+`dd4691342a89bda868f96847043ebe5a7b009b274aee34e6e9c6e4b6feab8753`. The
+100% coverage goal remains open.
+
 ## JPEG trailing DHT without EOI parity — 2026-11-05
 
 Added `decode:jpeg:baseline_444_single_scan_trailing_dht_no_eoi`. Its 768-byte
