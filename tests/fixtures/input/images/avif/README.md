@@ -2280,3 +2280,24 @@ both exact Pillow frames and the all-lossless AV1 headers. The AVIF SHA-256 is
 `a755bb3e7d9e6209a5c5760099bff623a0f3be0c19ce008569da75522503fe4c`; the
 frame hashes are `43bd6195fe30acdd0d3c1f8454d02be3e9af547725ef0caa69b627c6cd6a7f8b`
 and `58307f1a4682252aae8245b38d0128f0f4d804102078534daf75aea595241481`.
+
+## Clipped-height lossy B16x8 partitions
+
+`animated_lossy_inter_420_b16x8_clipped_height_16x15_q99.avif` is a two-frame
+16x15 8-bit 4:2:0 sequence. Its fixture-only pinned libaom patch selects a
+horizontal partition into two B16x8 leaves in a 16x16 root; the lower leaf has
+seven visible rows after clipping to the coded image height. The `clipped`
+producer pattern adds deterministic second-frame detail below that edge. The
+AVIF SHA-256 is
+`6aa8245b99fa1c8a8eafe0d9ee5f7c400d68a3fa49413cfb01f3d650fde287e4`. Pillow
+12.2.0 decodes two 16x15 RGB frames at 100 ms; their hashes are
+`e8da116bc8cef2ec21428242b17d42b133751047040d1b937e953d69965032a1` and
+`5a2df0a8dd5460d572056952713e10c15db63565afadd68ae10fc97f62c67b9f`.
+
+The quality-70 companion,
+`animated_lossy_inter_420_b16x8_clipped_height_16x15_q70.avif`, uses the same
+geometry with stronger quantization. Its AVIF SHA-256 is
+`58a8248ca1e753cda32b55646e9121a2245907b5e495726596122582bcbaea94`; its
+100 ms RGB frame hashes are
+`65e1e811ae7e6f725a0b0f5cf344122ec312b5314584260d8dca19e40eeee1e1` and
+`0adf0daf3c1b8389ded15f5ea8c4e5a5586b5d6b552f846238be436bc2e9727f`.

@@ -1439,13 +1439,15 @@ The generator normalizes BMFF creation timestamps, requires two independent
 encodes to agree, and pins every complete source digest. `--check` needs only
 the committed inputs and pinned Pillow; `make verify-fixture-integrity` includes
 that check. Pixel expectations remain in the ordinary oracle reference files.
-Each producer accepts `OUTPUT.avif select BIT_DEPTH [coarse|fine] [CDF_MODE]`, where
+Each producer accepts `OUTPUT.avif select BIT_DEPTH [coarse|fine|clipped] [CDF_MODE]`, where
 `BIT_DEPTH` is 8, 10 or 12. The default `coarse` pattern preserves the original
 inputs. The `fine` pattern uses per-pixel texture and a bounded second-frame
-perturbation while retaining temporal correlation. These are source pixel
-controls; libaom chooses the residual transforms. The generator selects the
-registered depth and pattern while reusing the same orientation, layout and
-quality binary.
+perturbation while retaining temporal correlation. The `clipped` pattern uses
+the fine base and adds stronger second-frame detail below the halfway row of
+the 16x16 clipped-height fixture, adding detail in its lower leaf. These are
+source pixel controls; libaom chooses the residual transforms. The
+generator selects the registered depth and pattern while reusing the same
+orientation, layout and quality binary.
 
 Omitting `CDF_MODE` preserves the original inputs. Mode `0` disables updates
 on every frame, mode `1` requests adaptive updates, and mode `2` selects updates

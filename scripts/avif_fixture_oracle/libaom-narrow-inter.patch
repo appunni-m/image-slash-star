@@ -1,47 +1,78 @@
 --- a/av1/encoder/partition_search.c
 +++ b/av1/encoder/partition_search.c
-@@ -3950,7 +3950,13 @@
+@@ -3950,7 +3950,23 @@
  
    // Calculate the total cost and update the best partition.
    av1_rd_cost_update(x->rdmult, &part_search_state->sum_rdc);
 -  if (part_search_state->sum_rdc.rdcost < best_rdc->rdcost) {
++  const bool clipped_b16x8_fixture =
++      cm->width == 16 && cm->height == 15 &&
++      blk_params.bsize == BLOCK_16X16;
++  const bool force_fixture_horz2 =
++      clipped_b16x8_fixture &&
++      cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1 &&
++      partition_type == PARTITION_HORZ;
 +  const bool force_fixture_horz4 =
 +      cm->current_frame.frame_type == INTER_FRAME &&
 +      cm->current_frame.frame_number == 1 &&
++      !clipped_b16x8_fixture &&
 +      partition_type == (cm->width >= cm->height ? PARTITION_HORZ_4 : PARTITION_VERT_4) &&
 +      blk_params.bsize == BLOCK_16X16;
 +  if (part_search_state->sum_rdc.rdcost < best_rdc->rdcost ||
-+      (force_fixture_horz4 && part_search_state->sum_rdc.rdcost < INT64_MAX)) {
++      ((force_fixture_horz2 || force_fixture_horz4) &&
++       part_search_state->sum_rdc.rdcost < INT64_MAX)) {
      *best_rdc = part_search_state->sum_rdc;
      part_search_state->found_best_partition = true;
      pc_tree->partitioning = partition_type;
-@@ -5642,6 +5648,18 @@
+@@ -5642,6 +5658,21 @@
        part_search_state.intra_part_info->cnn_output_valid = 0;
      }
    }
 +  // Fixture-only: reach valid narrow inter leaves in 16x16 roots.
 +  if (cm->current_frame.frame_type == INTER_FRAME &&
 +      cm->current_frame.frame_number == 1 && bsize == BLOCK_16X16) {
++    const int clipped_b16x8_fixture = cm->width == 16 && cm->height == 15;
 +    part_search_state.partition_none_allowed = 0;
 +    part_search_state.do_square_split = 0;
 +    part_search_state.do_rectangular_split = 1;
-+    part_search_state.partition_rect_allowed[HORZ] = cm->width >= cm->height;
-+    part_search_state.partition_rect_allowed[VERT] = cm->width < cm->height;
-+    part_search_state.prune_rect_part[HORZ] = 1;
++    part_search_state.partition_rect_allowed[HORZ] =
++        clipped_b16x8_fixture || cm->width >= cm->height;
++    part_search_state.partition_rect_allowed[VERT] =
++        !clipped_b16x8_fixture && cm->width < cm->height;
++    part_search_state.prune_rect_part[HORZ] = !clipped_b16x8_fixture;
 +    part_search_state.prune_rect_part[VERT] = 1;
 +    part_search_state.terminate_partition_search = 0;
 +  }
    // Partition block source pixel variance.
    unsigned int pb_source_variance = UINT_MAX;
  
-@@ -5776,6 +5794,11 @@
+@@ -5729,6 +5760,14 @@
+   // Prune partitions based on PARTITION_NONE and PARTITION_SPLIT.
+   prune_partitions_after_split(cpi, x, sms_tree, &part_search_state, &best_rdc,
+                                part_none_rd, part_split_rd);
++  if (cm->current_frame.frame_type == INTER_FRAME &&
++      cm->current_frame.frame_number == 1 && bsize == BLOCK_16X16 &&
++      cm->width == 16 && cm->height == 15) {
++    part_search_state.do_rectangular_split = 1;
++    part_search_state.partition_rect_allowed[HORZ] = 1;
++    part_search_state.prune_rect_part[HORZ] = 0;
++    part_search_state.terminate_partition_search = 0;
++  }
+ #if CONFIG_COLLECT_COMPONENT_TIMING
+   start_timing(cpi, rectangular_partition_search_time);
+ #endif
+@@ -5776,6 +5815,14 @@
                                 pb_source_variance, prune_ext_part_state,
                                 part4_search_allowed);
  
 +  if (cm->current_frame.frame_type == INTER_FRAME &&
 +      cm->current_frame.frame_number == 1 && bsize == BLOCK_16X16) {
-+    part4_search_allowed[HORZ4] = cm->width >= cm->height;
-+    part4_search_allowed[VERT4] = cm->width < cm->height;
++    const int clipped_b16x8_fixture = cm->width == 16 && cm->height == 15;
++    part4_search_allowed[HORZ4] =
++        !clipped_b16x8_fixture && cm->width >= cm->height;
++    part4_search_allowed[VERT4] =
++        !clipped_b16x8_fixture && cm->width < cm->height;
 +  }
  #if CONFIG_COLLECT_COMPONENT_TIMING
    start_timing(cpi, rd_pick_4partition_time);

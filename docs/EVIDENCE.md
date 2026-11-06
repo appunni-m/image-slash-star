@@ -44,8 +44,7 @@ The selected 11-row AVIF parity run passed 11/11. Its LLVM report covers
 coverage result. Coverage MCP attributes the validation to one group and
 reports 243 branch outcomes unobserved in this selection. The exact geometry
 predicate still has 20 unobserved outcomes. A line-specific query identifies
-the missing false outcome for `visible_height == 8` on B16x8, so a clipped
-B16x8 parity input is still needed. No fixture or private unit test was added.
+the missing false outcome for `visible_height == 8` on B16x8.
 
 Report: `.coverage-mcp/local-evidence/selected/20261106T024555.293798Z-40ec0dcc56144ae1b4dc97a421c773b8/coverage.json`
 (SHA-256
@@ -62,6 +61,19 @@ ms (1.13% lower). The first cycle had high timing variance, so this is evidence
 against a material penalty on this workload, not a speedup claim. Raw samples,
 build logs, commands, and source hashes are retained at
 `.coverage-mcp/local-evidence/perf/avif-geometry-helper-abba-20261106/`.
+
+The follow-up adds quality-70 and quality-99 two-frame parity inputs with a
+16x15 clipped-height B16x8 partition. The fixture generator's pinned-oracle
+checks passed for both inputs, and the selected run passed all 1,393 active
+AVIF decode rows plus five encode rows. Coverage MCP still reports the false
+outcome for `visible_height == 8` as missing at
+`src/codecs/avif/av1/block.rs:49555`; these cases expand clipped-height pixel
+parity but do not close that transform-plan geometry branch. The selected
+report covers 12,563/32,020 branches and is local evidence, not an aggregate
+coverage result. Report: `.coverage-mcp/local-evidence/selected/20261106T060522.104147Z-73614bcc1f98460c905bb85edc0352f0/coverage.json`
+(SHA-256 `888d892e7216ca76f29c940e29b8c3bc86efbe5c949176cabb2d1b2a3adecd0a`);
+receipt SHA-256
+`80abf08ed054a1371aab458f224f0c733affe2c1cf9ffbe16629b06e86712f82`.
 
 ## AVIF bounded C-string parser consolidation — 2026-11-06
 
