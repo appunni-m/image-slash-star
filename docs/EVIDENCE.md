@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,857 total rows: 3,182 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,182 decode rows are
+The current public evidence matrix contains 3,858 total rows: 3,183 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,183 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
 
 ## BMP direct inspection rejects an invalid signature — 2026-11-06
