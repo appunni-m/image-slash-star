@@ -12693,6 +12693,12 @@ formats:
       - lossless_monochrome_above_right_superres_163x64.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: lossless_monochrome_above_right_narrow_edge_superres_145x128
+      description: 145x128 8-bit all-lossless monochrome super-resolution still coded at 129x128 with a one-pixel right tile and adaptive 4-to-64-pixel T-junction partitions below the flat top row
+      test_assets:
+      - lossless_monochrome_above_right_narrow_edge_superres_145x128.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: lossless_monochrome_adaptive_above_right_128x128
       description: 128x128 8-bit all-lossless monochrome still with adaptive 4-to-64-pixel partitions and a detailed lower-left quadrant
       test_assets:
