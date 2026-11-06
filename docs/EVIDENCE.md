@@ -30,6 +30,39 @@ receipt
 `358521f4b580b463496d131139e09946d083539d4663ccece8a70ab5f21ac82e`).
 No unit tests or normal-build dispatch changes were added.
 
+## AVIF exact inter-block geometry coverage attribution — 2026-11-06
+
+Coverage MCP showed the exact-plan geometry gate once per callback
+monomorphization in `decode_inter_translation_impl`. The validation now lives
+in the non-generic `validate_inter_transform_plan_geometry` helper so branch
+observations aggregate across callbacks. Its original plan gate remains
+conditional; release builds inline the helper, while coverage builds keep one
+attributed body.
+
+The selected 11-row AVIF parity run passed 11/11. Its LLVM report covers
+5,581/32,020 selected branches; that selected total is not an aggregate
+coverage result. Coverage MCP attributes the validation to one group and
+reports 243 branch outcomes unobserved in this selection. The exact geometry
+predicate still has 20 unobserved outcomes. A line-specific query identifies
+the missing false outcome for `visible_height == 8` on B16x8, so a clipped
+B16x8 parity input is still needed. No fixture or private unit test was added.
+
+Report: `.coverage-mcp/local-evidence/selected/20261106T024555.293798Z-40ec0dcc56144ae1b4dc97a421c773b8/coverage.json`
+(SHA-256
+`667c24f081b595ab2968429954d4f19b24f608a48b0d7b32d6bd56fc71b504b1`), with
+receipt SHA-256
+`76cf804050d52b347d72b61d42cb13a9a048b294702249e4bba0910be50abcfa`.
+Coverage MCP labels source identity `unverified` and test attribution
+`unknown`; the retained runner log records the 11 active parity rows.
+
+A release A–B–B–A probe used the 2048×128 animated AVIF on an Apple M3 Pro
+with Rust 1.96.1, three cycles, 25 timed decodes per block, and 75 samples per
+version. The baseline median was 9.414 ms and the helper candidate was 9.308
+ms (1.13% lower). The first cycle had high timing variance, so this is evidence
+against a material penalty on this workload, not a speedup claim. Raw samples,
+build logs, commands, and source hashes are retained at
+`.coverage-mcp/local-evidence/perf/avif-geometry-helper-abba-20261106/`.
+
 ## AVIF bounded C-string parser consolidation — 2026-11-06
 
 The container and sample readers each had a missing-terminator path that

@@ -46007,6 +46007,57 @@ struct InterPrediction<'a> {
     obmc: Option<ObmcContext<'a>>,
 }
 
+#[derive(Clone, Copy)]
+struct ExactInterBlockGeometry {
+    b4x8: bool,
+    b8x4: bool,
+    b4x16: bool,
+    b16x4: bool,
+    b8x16: bool,
+    b16x8: bool,
+    b8x32: bool,
+    b32x8: bool,
+    b16x64: bool,
+    b64x16: bool,
+    b32x64: bool,
+    b64x32: bool,
+}
+
+struct InterPlanGeometryValidation {
+    transform_plan: InterTransformPlan,
+    block_size: BlockSize,
+    visible_width: u32,
+    visible_height: u32,
+    chroma_sampling: ChromaSampling,
+    tools: BlockTools,
+    quantization: LossyQuantization,
+    lossless_partial_grid: bool,
+    lossless_grid: bool,
+    lossless_monochrome: bool,
+    lossless_i422: bool,
+    lossless_i444: bool,
+    predecoded_skip: bool,
+    inter_intra_is_none: bool,
+    obmc_is_none: bool,
+    split_b4x8: bool,
+    split_b8x4: bool,
+    split_b4x16: bool,
+    split_b16x4: bool,
+    split_b8x16_deep: bool,
+    split_b16x8_deep: bool,
+    split_b4x16_deep: bool,
+    split_b16x4_deep: bool,
+    split_b4x16_topology: bool,
+    split_b16x4_topology: bool,
+    split_b8x32_deep: bool,
+    split_b32x8_deep: bool,
+    split_b8x32_topology: bool,
+    split_b32x8_topology: bool,
+    split_b16x64_topology: bool,
+    split_b64x16_topology: bool,
+    split_b32x64_topology: bool,
+    split_b64x32_topology: bool,
+}
 /// One causal luma block's portion of a shared sub-eight chroma predictor.
 #[derive(Clone, Copy)]
 pub(super) struct Sub8ChromaPart<'a> {
@@ -49486,6 +49537,388 @@ impl Lossy420Decoder {
         )
     }
 
+    // Keep narrow block-shape checks in one coverage body across transform
+    // callback monomorphizations. Release decoding inlines this small predicate.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn exact_inter_block_geometry(
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+    ) -> ExactInterBlockGeometry {
+        ExactInterBlockGeometry {
+            b4x8: block_size == BlockSize::B4x8 && visible_width == 4 && visible_height == 8,
+            b8x4: block_size == BlockSize::B8x4 && visible_width == 8 && visible_height == 4,
+            b4x16: block_size == BlockSize::B4x16 && visible_width == 4 && visible_height == 16,
+            b16x4: block_size == BlockSize::B16x4 && visible_width == 16 && visible_height == 4,
+            b8x16: block_size == BlockSize::B8x16 && visible_width == 8 && visible_height == 16,
+            b16x8: block_size == BlockSize::B16x8 && visible_width == 16 && visible_height == 8,
+            b8x32: block_size == BlockSize::B8x32 && visible_width == 8 && visible_height == 32,
+            b32x8: block_size == BlockSize::B32x8 && visible_width == 32 && visible_height == 8,
+            b16x64: block_size == BlockSize::B16x64 && visible_width == 16 && visible_height == 64,
+            b64x16: block_size == BlockSize::B64x16 && visible_width == 64 && visible_height == 16,
+            b32x64: block_size == BlockSize::B32x64 && visible_width == 32 && visible_height == 64,
+            b64x32: block_size == BlockSize::B64x32 && visible_width == 64 && visible_height == 32,
+        }
+    }
+
+    // Keep the exact-plan gate in one coverage body across callback monomorphizations.
+    #[cfg_attr(coverage, inline(never))]
+    #[cfg_attr(not(coverage), inline(always))]
+    fn validate_inter_transform_plan_geometry(
+        context: InterPlanGeometryValidation,
+    ) -> PortableResult<()> {
+        let InterPlanGeometryValidation {
+            transform_plan,
+            block_size,
+            visible_width,
+            visible_height,
+            chroma_sampling,
+            tools,
+            quantization,
+            lossless_partial_grid,
+            lossless_grid,
+            lossless_monochrome,
+            lossless_i422,
+            lossless_i444,
+            predecoded_skip,
+            inter_intra_is_none,
+            obmc_is_none,
+            split_b4x8,
+            split_b8x4,
+            split_b4x16,
+            split_b16x4,
+            split_b8x16_deep,
+            split_b16x8_deep,
+            split_b4x16_deep,
+            split_b16x4_deep,
+            split_b4x16_topology,
+            split_b16x4_topology,
+            split_b8x32_deep,
+            split_b32x8_deep,
+            split_b8x32_topology,
+            split_b32x8_topology,
+            split_b16x64_topology,
+            split_b64x16_topology,
+            split_b32x64_topology,
+            split_b64x32_topology,
+        } = context;
+        if Self::inter_transform_plan_requires_exact_geometry(transform_plan) {
+            let ExactInterBlockGeometry {
+                b4x8: exact_b4x8,
+                b8x4: exact_b8x4,
+                b4x16: exact_b4x16,
+                b16x4: exact_b16x4,
+                b8x16: exact_b8x16,
+                b16x8: exact_b16x8,
+                b8x32: exact_b8x32,
+                b32x8: exact_b32x8,
+                b16x64: exact_b16x64,
+                b64x16: exact_b64x16,
+                b32x64: exact_b32x64,
+                b64x32: exact_b64x32,
+            } = Self::exact_inter_block_geometry(block_size, visible_width, visible_height);
+            let i422_b4_axis_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && (exact_b4x8 || exact_b8x4)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
+            let i422_b4_long_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && (exact_b4x16 || exact_b16x4)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
+            let mono_i444_b4_rect_mode2_q0 = matches!(
+                chroma_sampling,
+                ChromaSampling::Monochrome | ChromaSampling::Full
+            ) && matches!(
+                block_size,
+                BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
+            ) && (visible_width, visible_height)
+                == block_size.pixel_dimensions()
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
+            let i420_narrow_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled420
+                && matches!(
+                    block_size,
+                    BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
+                )
+                && (exact_b4x8 || exact_b8x4 || exact_b4x16 || exact_b16x4)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
+            let exact_geometry = Self::inter_transform_plan_geometry_matches(
+                transform_plan,
+                block_size,
+                visible_width,
+                visible_height,
+                chroma_sampling,
+                lossless_partial_grid,
+            );
+            let is_split_plan = Self::inter_transform_plan_is_split(transform_plan);
+            (exact_geometry
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Full
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                )
+                && (!is_split_plan
+                    || (matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                        && tools.sample_depth == quantization.sample_depth))
+                && (!lossless_grid
+                    || lossless_monochrome
+                    || (lossless_i422
+                        && matches!(chroma_sampling, ChromaSampling::Subsampled422))
+                    || (lossless_i444 && matches!(chroma_sampling, ChromaSampling::Full))
+                    || (!lossless_i422
+                        && !lossless_i444
+                        && matches!(chroma_sampling, ChromaSampling::Subsampled420)))
+                && (!is_split_plan || !predecoded_skip))
+                .then_some(())
+                .portable()?;
+            if split_b4x8 || split_b8x4 {
+                let layout_supported = matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) || (split_b4x8
+                    && chroma_sampling == ChromaSampling::Subsampled422)
+                    || (split_b8x4 && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x8 || split_b8x4)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
+                (layout_supported
+                    && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && (quantization.segment_qindex > 0
+                        || i422_b4_axis_mode2_q0
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
+                    && !quantization.segment_lossless
+                    && inter_intra_is_none
+                    && obmc_is_none)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b4x16 || split_b16x4 {
+                let layout_supported = matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) || (split_b4x16
+                    && chroma_sampling == ChromaSampling::Subsampled422)
+                    || (split_b16x4 && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16 || split_b16x4)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
+                (layout_supported
+                    && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && (quantization.segment_qindex > 0
+                        || i422_b4_long_mode2_q0
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
+                    && !quantization.segment_lossless
+                    && inter_intra_is_none
+                    && obmc_is_none)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b8x16_deep || split_b16x8_deep {
+                let layout_supported = if split_b8x16_deep {
+                    matches!(
+                        chroma_sampling,
+                        ChromaSampling::Monochrome
+                            | ChromaSampling::Subsampled420
+                            | ChromaSampling::Full
+                    )
+                } else {
+                    matches!(
+                        chroma_sampling,
+                        ChromaSampling::Monochrome
+                            | ChromaSampling::Subsampled420
+                            | ChromaSampling::Subsampled422
+                            | ChromaSampling::Full
+                    )
+                };
+                (layout_supported
+                    && ((split_b8x16_deep && exact_b8x16) || (split_b16x8_deep && exact_b16x8))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && !quantization.segment_lossless)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b4x16_deep || split_b16x4_deep {
+                let layout_supported = matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) || (split_b4x16_deep
+                    && chroma_sampling == ChromaSampling::Subsampled422)
+                    || (split_b16x4_deep && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16_deep || split_b16x4_deep)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
+                (layout_supported
+                    && ((split_b4x16_deep && exact_b4x16) || (split_b16x4_deep && exact_b16x4))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && (quantization.segment_qindex > 0
+                        || i422_b4_long_mode2_q0
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
+                    && !quantization.segment_lossless
+                    && inter_intra_is_none
+                    && obmc_is_none)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b4x16_topology || split_b16x4_topology {
+                let child_splits = match transform_plan {
+                    InterTransformPlan::SplitB4x16Topology { child_splits }
+                    | InterTransformPlan::SplitB16x4Topology { child_splits } => child_splits,
+                    _ => return Err(PortableUnavailable),
+                };
+                let any_child_split = child_splits.into_iter().any(|split| split);
+                let all_children_split = child_splits.into_iter().all(|split| split);
+                let layout_supported = matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) || (split_b4x16_topology
+                    && chroma_sampling == ChromaSampling::Subsampled422)
+                    || (split_b16x4_topology && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16_topology || split_b16x4_topology)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
+                (layout_supported
+                    && ((split_b4x16_topology && exact_b4x16)
+                        || (split_b16x4_topology && exact_b16x4))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && (quantization.segment_qindex > 0
+                        || i422_b4_long_mode2_q0
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
+                    && !quantization.segment_lossless
+                    && any_child_split
+                    && !all_children_split
+                    && inter_intra_is_none
+                    && obmc_is_none)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b8x32_deep || split_b32x8_deep {
+                let layout_supported = if split_b8x32_deep {
+                    matches!(
+                        chroma_sampling,
+                        ChromaSampling::Monochrome
+                            | ChromaSampling::Subsampled420
+                            | ChromaSampling::Full
+                    )
+                } else {
+                    matches!(
+                        chroma_sampling,
+                        ChromaSampling::Monochrome
+                            | ChromaSampling::Subsampled420
+                            | ChromaSampling::Subsampled422
+                            | ChromaSampling::Full
+                    )
+                };
+                (layout_supported
+                    && ((split_b8x32_deep && exact_b8x32) || (split_b32x8_deep && exact_b32x8))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && (quantization.segment_qindex > 0
+                        || (split_b8x32_deep && exact_b8x32)
+                        || (split_b32x8_deep && exact_b32x8))
+                    && !quantization.segment_lossless)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b8x32_topology || split_b32x8_topology {
+                let child_splits = match transform_plan {
+                    InterTransformPlan::SplitB8x32Topology { child_splits }
+                    | InterTransformPlan::SplitB32x8Topology { child_splits } => child_splits,
+                    _ => return Err(PortableUnavailable),
+                };
+                let any_child_split = child_splits.into_iter().any(|split| split);
+                let all_children_split = child_splits.into_iter().all(|split| split);
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                ) && ((split_b8x32_topology && exact_b8x32)
+                    || (split_b32x8_topology && exact_b32x8))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && !quantization.segment_lossless
+                    && any_child_split
+                    && !all_children_split)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b16x64_topology || split_b64x16_topology {
+                let child_splits = match transform_plan {
+                    InterTransformPlan::SplitB16x64Topology { child_splits }
+                    | InterTransformPlan::SplitB64x16Topology { child_splits } => child_splits,
+                    _ => return Err(PortableUnavailable),
+                };
+                let any_child_split = child_splits.into_iter().any(|split| split);
+                let all_children_split = child_splits.into_iter().all(|split| split);
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                ) && ((split_b16x64_topology && exact_b16x64)
+                    || (split_b64x16_topology && exact_b64x16))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && !quantization.segment_lossless
+                    && any_child_split
+                    && !all_children_split)
+                    .then_some(())
+                    .portable()?;
+            }
+            if split_b32x64_topology || split_b64x32_topology {
+                let child_splits = match transform_plan {
+                    InterTransformPlan::SplitB32x64Topology { child_splits }
+                    | InterTransformPlan::SplitB64x32Topology { child_splits } => child_splits,
+                    _ => return Err(PortableUnavailable),
+                };
+                let any_child_split = child_splits.into_iter().any(|split| split);
+                let all_children_split = child_splits.into_iter().all(|split| split);
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                ) && ((split_b32x64_topology && exact_b32x64)
+                    || (split_b64x32_topology && exact_b64x32))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && !quantization.segment_lossless
+                    && any_child_split
+                    && !all_children_split)
+                    .then_some(())
+                    .portable()?;
+            }
+        }
+        Ok(())
+    }
+
     #[expect(
         clippy::too_many_arguments,
         reason = "shared inter reconstruction carries block, frame, transform, and prediction state together"
@@ -49895,329 +50328,41 @@ impl Lossy420Decoder {
             [y_geometry, u_geometry, v_geometry],
             lossless_partial_grid,
         )?;
-        if Self::inter_transform_plan_requires_exact_geometry(transform_plan) {
-            let exact_b4x8 =
-                block_size == BlockSize::B4x8 && visible_width == 4 && visible_height == 8;
-            let exact_b8x4 =
-                block_size == BlockSize::B8x4 && visible_width == 8 && visible_height == 4;
-            let exact_b4x16 =
-                block_size == BlockSize::B4x16 && visible_width == 4 && visible_height == 16;
-            let exact_b16x4 =
-                block_size == BlockSize::B16x4 && visible_width == 16 && visible_height == 4;
-            let i422_b4_axis_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
-                && (exact_b4x8 || exact_b8x4)
-                && tools.transform_mode == 2
-                && quantization.segment_qindex == 0
-                && !quantization.segment_lossless;
-            let i422_b4_long_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
-                && (exact_b4x16 || exact_b16x4)
-                && tools.transform_mode == 2
-                && quantization.segment_qindex == 0
-                && !quantization.segment_lossless;
-            let mono_i444_b4_rect_mode2_q0 = matches!(
-                chroma_sampling,
-                ChromaSampling::Monochrome | ChromaSampling::Full
-            ) && matches!(
-                block_size,
-                BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
-            ) && (visible_width, visible_height)
-                == block_size.pixel_dimensions()
-                && tools.transform_mode == 2
-                && quantization.segment_qindex == 0
-                && !quantization.segment_lossless;
-            let i420_narrow_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled420
-                && matches!(
-                    block_size,
-                    BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
-                )
-                && (exact_b4x8 || exact_b8x4 || exact_b4x16 || exact_b16x4)
-                && tools.transform_mode == 2
-                && quantization.segment_qindex == 0
-                && !quantization.segment_lossless;
-            let exact_b8x16 =
-                block_size == BlockSize::B8x16 && visible_width == 8 && visible_height == 16;
-            let exact_b16x8 =
-                block_size == BlockSize::B16x8 && visible_width == 16 && visible_height == 8;
-            let exact_b8x32 =
-                block_size == BlockSize::B8x32 && visible_width == 8 && visible_height == 32;
-            let exact_b32x8 =
-                block_size == BlockSize::B32x8 && visible_width == 32 && visible_height == 8;
-            let exact_b16x64 =
-                block_size == BlockSize::B16x64 && visible_width == 16 && visible_height == 64;
-            let exact_b64x16 =
-                block_size == BlockSize::B64x16 && visible_width == 64 && visible_height == 16;
-            let exact_b32x64 =
-                block_size == BlockSize::B32x64 && visible_width == 32 && visible_height == 64;
-            let exact_b64x32 =
-                block_size == BlockSize::B64x32 && visible_width == 64 && visible_height == 32;
-            let exact_geometry = Self::inter_transform_plan_geometry_matches(
-                transform_plan,
-                block_size,
-                visible_width,
-                visible_height,
-                chroma_sampling,
-                lossless_partial_grid,
-            );
-            let is_split_plan = Self::inter_transform_plan_is_split(transform_plan);
-            (exact_geometry
-                && matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Full
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                )
-                && (!is_split_plan
-                    || (matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                        && tools.sample_depth == quantization.sample_depth))
-                && (!lossless_grid
-                    || lossless_monochrome
-                    || (lossless_i422
-                        && matches!(chroma_sampling, ChromaSampling::Subsampled422))
-                    || (lossless_i444 && matches!(chroma_sampling, ChromaSampling::Full))
-                    || (!lossless_i422
-                        && !lossless_i444
-                        && matches!(chroma_sampling, ChromaSampling::Subsampled420)))
-                && (!is_split_plan || !predecoded_skip))
-                .then_some(())
-                .portable()?;
-            if split_b4x8 || split_b8x4 {
-                let layout_supported = matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome | ChromaSampling::Full
-                ) || (split_b4x8
-                    && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b8x4 && chroma_sampling == ChromaSampling::Subsampled422)
-                    || ((split_b4x8 || split_b8x4)
-                        && chroma_sampling == ChromaSampling::Subsampled420);
-                (layout_supported
-                    && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && (quantization.segment_qindex > 0
-                        || i422_b4_axis_mode2_q0
-                        || i420_narrow_mode2_q0
-                        || mono_i444_b4_rect_mode2_q0)
-                    && !quantization.segment_lossless
-                    && prediction_state.inter_intra.is_none()
-                    && prediction_state.obmc.is_none())
-                .then_some(())
-                .portable()?;
-            }
-            if split_b4x16 || split_b16x4 {
-                let layout_supported = matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome | ChromaSampling::Full
-                ) || (split_b4x16
-                    && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4 && chroma_sampling == ChromaSampling::Subsampled422)
-                    || ((split_b4x16 || split_b16x4)
-                        && chroma_sampling == ChromaSampling::Subsampled420);
-                (layout_supported
-                    && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && (quantization.segment_qindex > 0
-                        || i422_b4_long_mode2_q0
-                        || i420_narrow_mode2_q0
-                        || mono_i444_b4_rect_mode2_q0)
-                    && !quantization.segment_lossless
-                    && prediction_state.inter_intra.is_none()
-                    && prediction_state.obmc.is_none())
-                .then_some(())
-                .portable()?;
-            }
-            if split_b8x16_deep || split_b16x8_deep {
-                let layout_supported = if split_b8x16_deep {
-                    matches!(
-                        chroma_sampling,
-                        ChromaSampling::Monochrome
-                            | ChromaSampling::Subsampled420
-                            | ChromaSampling::Full
-                    )
-                } else {
-                    matches!(
-                        chroma_sampling,
-                        ChromaSampling::Monochrome
-                            | ChromaSampling::Subsampled420
-                            | ChromaSampling::Subsampled422
-                            | ChromaSampling::Full
-                    )
-                };
-                (layout_supported
-                    && ((split_b8x16_deep && exact_b8x16) || (split_b16x8_deep && exact_b16x8))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && !quantization.segment_lossless)
-                    .then_some(())
-                    .portable()?;
-            }
-            if split_b4x16_deep || split_b16x4_deep {
-                let layout_supported = matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome | ChromaSampling::Full
-                ) || (split_b4x16_deep
-                    && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4_deep && chroma_sampling == ChromaSampling::Subsampled422)
-                    || ((split_b4x16_deep || split_b16x4_deep)
-                        && chroma_sampling == ChromaSampling::Subsampled420);
-                (layout_supported
-                    && ((split_b4x16_deep && exact_b4x16) || (split_b16x4_deep && exact_b16x4))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && (quantization.segment_qindex > 0
-                        || i422_b4_long_mode2_q0
-                        || i420_narrow_mode2_q0
-                        || mono_i444_b4_rect_mode2_q0)
-                    && !quantization.segment_lossless
-                    && prediction_state.inter_intra.is_none()
-                    && prediction_state.obmc.is_none())
-                .then_some(())
-                .portable()?;
-            }
-            if split_b4x16_topology || split_b16x4_topology {
-                let child_splits = match transform_plan {
-                    InterTransformPlan::SplitB4x16Topology { child_splits }
-                    | InterTransformPlan::SplitB16x4Topology { child_splits } => child_splits,
-                    _ => return Err(PortableUnavailable),
-                };
-                let any_child_split = child_splits.into_iter().any(|split| split);
-                let all_children_split = child_splits.into_iter().all(|split| split);
-                let layout_supported = matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome | ChromaSampling::Full
-                ) || (split_b4x16_topology
-                    && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4_topology && chroma_sampling == ChromaSampling::Subsampled422)
-                    || ((split_b4x16_topology || split_b16x4_topology)
-                        && chroma_sampling == ChromaSampling::Subsampled420);
-                (layout_supported
-                    && ((split_b4x16_topology && exact_b4x16)
-                        || (split_b16x4_topology && exact_b16x4))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && (quantization.segment_qindex > 0
-                        || i422_b4_long_mode2_q0
-                        || i420_narrow_mode2_q0
-                        || mono_i444_b4_rect_mode2_q0)
-                    && !quantization.segment_lossless
-                    && any_child_split
-                    && !all_children_split
-                    && prediction_state.inter_intra.is_none()
-                    && prediction_state.obmc.is_none())
-                .then_some(())
-                .portable()?;
-            }
-            if split_b8x32_deep || split_b32x8_deep {
-                let layout_supported = if split_b8x32_deep {
-                    matches!(
-                        chroma_sampling,
-                        ChromaSampling::Monochrome
-                            | ChromaSampling::Subsampled420
-                            | ChromaSampling::Full
-                    )
-                } else {
-                    matches!(
-                        chroma_sampling,
-                        ChromaSampling::Monochrome
-                            | ChromaSampling::Subsampled420
-                            | ChromaSampling::Subsampled422
-                            | ChromaSampling::Full
-                    )
-                };
-                (layout_supported
-                    && ((split_b8x32_deep && exact_b8x32) || (split_b32x8_deep && exact_b32x8))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && (quantization.segment_qindex > 0
-                        || (split_b8x32_deep && exact_b8x32)
-                        || (split_b32x8_deep && exact_b32x8))
-                    && !quantization.segment_lossless)
-                    .then_some(())
-                    .portable()?;
-            }
-            if split_b8x32_topology || split_b32x8_topology {
-                let child_splits = match transform_plan {
-                    InterTransformPlan::SplitB8x32Topology { child_splits }
-                    | InterTransformPlan::SplitB32x8Topology { child_splits } => child_splits,
-                    _ => return Err(PortableUnavailable),
-                };
-                let any_child_split = child_splits.into_iter().any(|split| split);
-                let all_children_split = child_splits.into_iter().all(|split| split);
-                (matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                ) && ((split_b8x32_topology && exact_b8x32)
-                    || (split_b32x8_topology && exact_b32x8))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && !quantization.segment_lossless
-                    && any_child_split
-                    && !all_children_split)
-                    .then_some(())
-                    .portable()?;
-            }
-            if split_b16x64_topology || split_b64x16_topology {
-                let child_splits = match transform_plan {
-                    InterTransformPlan::SplitB16x64Topology { child_splits }
-                    | InterTransformPlan::SplitB64x16Topology { child_splits } => child_splits,
-                    _ => return Err(PortableUnavailable),
-                };
-                let any_child_split = child_splits.into_iter().any(|split| split);
-                let all_children_split = child_splits.into_iter().all(|split| split);
-                (matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                ) && ((split_b16x64_topology && exact_b16x64)
-                    || (split_b64x16_topology && exact_b64x16))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && !quantization.segment_lossless
-                    && any_child_split
-                    && !all_children_split)
-                    .then_some(())
-                    .portable()?;
-            }
-            if split_b32x64_topology || split_b64x32_topology {
-                let child_splits = match transform_plan {
-                    InterTransformPlan::SplitB32x64Topology { child_splits }
-                    | InterTransformPlan::SplitB64x32Topology { child_splits } => child_splits,
-                    _ => return Err(PortableUnavailable),
-                };
-                let any_child_split = child_splits.into_iter().any(|split| split);
-                let all_children_split = child_splits.into_iter().all(|split| split);
-                (matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome
-                        | ChromaSampling::Subsampled420
-                        | ChromaSampling::Subsampled422
-                        | ChromaSampling::Full
-                ) && ((split_b32x64_topology && exact_b32x64)
-                    || (split_b64x32_topology && exact_b64x32))
-                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                    && tools.sample_depth == quantization.sample_depth
-                    && tools.transform_mode == 2
-                    && !quantization.segment_lossless
-                    && any_child_split
-                    && !all_children_split)
-                    .then_some(())
-                    .portable()?;
-            }
-        }
+        Self::validate_inter_transform_plan_geometry(InterPlanGeometryValidation {
+            transform_plan,
+            block_size,
+            visible_width,
+            visible_height,
+            chroma_sampling,
+            tools,
+            quantization,
+            lossless_partial_grid,
+            lossless_grid,
+            lossless_monochrome,
+            lossless_i422,
+            lossless_i444,
+            predecoded_skip,
+            split_b4x8,
+            split_b8x4,
+            split_b4x16,
+            split_b16x4,
+            split_b8x16_deep,
+            split_b16x8_deep,
+            split_b4x16_deep,
+            split_b16x4_deep,
+            split_b4x16_topology,
+            split_b16x4_topology,
+            split_b8x32_deep,
+            split_b32x8_deep,
+            split_b8x32_topology,
+            split_b32x8_topology,
+            split_b16x64_topology,
+            split_b64x16_topology,
+            split_b32x64_topology,
+            split_b64x32_topology,
+            inter_intra_is_none: prediction_state.inter_intra.is_none(),
+            obmc_is_none: prediction_state.obmc.is_none(),
+        })?;
         let (luma_tx_size, luma_txb_skipped, mut luma_transform) = match transform_plan {
             InterTransformPlan::Single {
                 tx_size,
