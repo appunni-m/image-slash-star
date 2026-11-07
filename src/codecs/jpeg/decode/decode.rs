@@ -1261,6 +1261,16 @@ pub(super) fn ycck_to_cmyk_pixels(
     comp_buf_height: &[usize],
     converter: &YccColorConverter,
 ) -> CodecResult<Vec<u8>> {
+    #[cfg(coverage)]
+    let comp_buffers = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneCountMismatch,
+    ) {
+        // Valid YCCK decoding supplies four planes; shorten it only for the
+        // target-only malformed-buffer contract.
+        comp_buffers.get(..3).unwrap_or(&[])
+    } else {
+        comp_buffers
+    };
     let width = usize::from(info.width);
     let height = usize::from(info.height);
     if info.components.len() != 4 || comp_buffers.len() < 4 {

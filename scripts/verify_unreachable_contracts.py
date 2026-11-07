@@ -853,6 +853,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.ycck.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_ycck_component_plane_count_mismatch": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_ycck_component_plane_count_mismatch",
+        "source_case": "decode:jpeg:color_ycck_app14_transform_2",
+        "point": "jpeg.ycck.component_plane_count_mismatch",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "jpeg_h1v2_upsample_plane_reservation_failure": {
         "format": "jpeg",
         "category": "structured-diagnostics",

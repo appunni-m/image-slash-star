@@ -182,6 +182,8 @@ pub enum CoverageFaultPoint {
     JpegFancyUpsampleRowDestinationHeightOverflow,
     /// Force Adobe YCCK decoded-pixel output reservation to fail.
     JpegYcckPixelsReservation,
+    /// Remove one decoded Adobe YCCK component plane before geometry validation.
+    JpegYcckComponentPlaneCountMismatch,
     /// Force reservation of a BMP palette to fail before reading its entries.
     BmpPaletteReservation,
     /// Force the BMP 24-bit decoded-pixel output reservation to fail.
