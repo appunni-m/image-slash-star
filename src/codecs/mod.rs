@@ -387,6 +387,13 @@ pub(crate) fn inspect_png_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     into_image_result(inspected, ImageFormat::Png, ImageErrorStage::Inspection)
 }
 
+/// Invoke JPEG inspection directly for target-only malformed-signature contracts.
+#[cfg(all(coverage, feature = "jpeg"))]
+pub(crate) fn inspect_jpeg_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected = jpeg::inspect::inspect(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Jpeg, ImageErrorStage::Inspection)
+}
+
 /// Invoke BMP inspection directly for coverage-only contracts that cannot
 /// reach the codec after public signature detection.
 #[cfg(all(coverage, feature = "bmp"))]

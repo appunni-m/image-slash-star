@@ -1056,6 +1056,15 @@ FAULT_CONTRACTS = {
         "contract": "inspection_invalid_signature_rejected",
         "operation": "inspect",
     },
+    "jpeg_inspect_invalid_signature_rejected": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_inspect_invalid_signature_rejected",
+        "source_case": "decode:jpeg:subsampling_444",
+        "point": "jpeg.inspect.signature_mismatch",
+        "contract": "inspection_invalid_signature_rejected",
+        "operation": "inspect",
+    },
     "ico_reserved_header_nonzero_rejected": {
         "format": "ico",
         "category": "structured-diagnostics",

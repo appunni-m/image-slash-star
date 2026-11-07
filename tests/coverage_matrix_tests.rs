@@ -2020,6 +2020,13 @@ fn execute_inspect_signature_contract(
             "inspect: invalid PNG signature",
             true,
         ),
+        "jpeg" => (
+            2,
+            img::ImageFormat::Jpeg,
+            "jpeg.inspect.signature_mismatch",
+            "inspect: invalid JPEG signature",
+            false,
+        ),
         _ => {
             return Err(format!(
                 "{}: unsupported signature-inspection format",
@@ -2105,6 +2112,7 @@ fn execute_inspect_signature_contract(
     let inspected = match row.format.as_str() {
         "bmp" => img::__coverage_inspect_bmp(&invalid_signature),
         "png" => img::__coverage_inspect_png(&invalid_signature),
+        "jpeg" => img::__coverage_inspect_jpeg(&invalid_signature),
         _ => {
             return Err(format!(
                 "{}: unsupported signature-inspection format",
@@ -2772,7 +2780,9 @@ fn execute_fault_contract(
     }
     if matches!(
         row.fault.point.as_str(),
-        "bmp.inspect.signature_mismatch" | "png.inspect.signature_mismatch"
+        "bmp.inspect.signature_mismatch"
+            | "png.inspect.signature_mismatch"
+            | "jpeg.inspect.signature_mismatch"
     ) {
         return execute_inspect_signature_contract(manifest_dir, matrix, row);
     }
