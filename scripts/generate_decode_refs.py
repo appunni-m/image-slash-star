@@ -3488,6 +3488,18 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.ycck.component_height_missing": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.ycck.component_stride_too_short": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.ycck.component_height_too_short": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.ycck.component_plane_samples_too_short": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.ycck.component_stride_overflow": {
+            "decode_error_then_retry_succeeds"
+        },
         "bmp.palette.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

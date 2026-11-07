@@ -1586,10 +1586,24 @@ with quality 99, speed 8, one encoder thread, and autotiling disabled. Its
 4x4 checker cells alternate RGB `(17,91,203)` and `(0,255,0)`. The coded
 frame selects four terminal 8x8 leaves; each leaf carries paired Y and UV
 palette size 2 syntax, and later leaves reuse the spatial palette cache. It
-proves only this narrow palette class: it does not establish Y-only or
-UV-only palettes, palette sizes above two, other subsampling or bit depths,
-cropped/non-8x8 leaves, or multi-tile support. Its Pillow RGB SHA-256 is
+proves only this narrow color-format palette class: it does not establish a
+Y-only palette in a color format, UV-only palettes, palette sizes above two,
+other subsampling or bit depths, cropped/non-8x8 leaves, or multi-tile
+support. Its Pillow RGB SHA-256 is
 `ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b`.
+
+`coverage_monochrome_palette_16x16.avif`
+(`64d2f38fe719b898ad11c4c84e36ef26653daa2596844b2ff8cff782f1a75ff0`)
+adds an 8-bit YUV400 still-image witness. The input is a 16x16 grayscale
+pattern whose 4x4 cells cycle through four values. The pinned libavif 1.4.1 /
+libaom 3.13.2 `avifenc` runs with quality 99, speed 8, one worker, one tile,
+and `enable-palette=1`; the sequence header is checked to be monochrome. The
+generator is `scripts/generate_avif_monochrome_palette_fixture.py`. Generation
+with `--avifenc` checks repeated byte-stable encoding; `--check` validates the
+locked AVIF bytes, monochrome header, and Pillow pixels without requiring the
+encoder binary. Its selected public parity case exercises the monochrome
+palette validation path; the pinned Pillow RGB SHA-256 is
+`7da6d6dc0cb94021c2425b4fc418377c69c69b03b494a8a9a1080461a8e77e72`.
 
 The asymmetric-gradient public family also includes seven active 8-bit,
 full-range, lossy 4:4:4 witnesses at quality 99. They are intentionally
@@ -1617,11 +1631,11 @@ top-right extension, and combined top/left/upper-left contexts; luma covers
 DC, Vertical, Horizontal, and Smooth, including the zero-delta directional
 angle symbol. Cases 05-10 enable screen-content tools and consume only
 palette-use false: all four UV decisions are false, while luma decisions are
-present only on palette-eligible DC leaves. No fixture claims a nonzero
-palette, palette cache entry, intra block copy, CFL, non-DC chroma,
-filter-intra selection, transform split, or non-DCT transform. Exact
-partition ranges, adaptive entropy operations, coefficient endpoints, Y/U/V
-planes, and Pillow RGB bytes are pinned by the reconstruction oracle.
+present only on palette-eligible DC leaves. These ten cases do not claim a
+nonzero palette, palette cache entry, intra block copy, CFL, non-DC chroma,
+filter-intra selection, transform split, or non-DCT transform. Exact partition
+ranges, adaptive entropy operations, coefficient endpoints, Y/U/V planes,
+and Pillow RGB bytes are pinned by the reconstruction oracle.
 
 | Fixture | Fixture SHA-256 | Pillow RGB SHA-256 |
 | --- | --- | --- |
