@@ -3479,6 +3479,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.ycck.component_plane_count_mismatch": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.ycck.component_height_missing": {
+            "decode_error_then_retry_succeeds"
+        },
         "bmp.palette.output_reservation": {
             "decode_error_then_retry_succeeds"
         },

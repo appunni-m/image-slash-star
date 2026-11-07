@@ -1262,14 +1262,27 @@ pub(super) fn ycck_to_cmyk_pixels(
     converter: &YccColorConverter,
 ) -> CodecResult<Vec<u8>> {
     #[cfg(coverage)]
-    let comp_buffers = if crate::coverage_support::take_fault_point(
-        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneCountMismatch,
-    ) {
-        // Valid YCCK decoding supplies four planes; shorten it only for the
-        // target-only malformed-buffer contract.
-        comp_buffers.get(..3).unwrap_or(&[])
-    } else {
-        comp_buffers
+    let (comp_buffers, comp_buf_height) = {
+        let comp_buffers = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneCountMismatch,
+        ) {
+            // Valid YCCK decoding supplies four planes; shorten it only for the
+            // target-only malformed-buffer contract.
+            comp_buffers.get(..3).unwrap_or(&[])
+        } else {
+            comp_buffers
+        };
+        let comp_buf_height = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegYcckComponentHeightMissing,
+        ) {
+            // Drop the final validated plane height only for its fault contract.
+            comp_buf_height
+                .get(..comp_buf_height.len().saturating_sub(1))
+                .unwrap_or(&[])
+        } else {
+            comp_buf_height
+        };
+        (comp_buffers, comp_buf_height)
     };
     let width = usize::from(info.width);
     let height = usize::from(info.height);
