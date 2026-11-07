@@ -216,6 +216,14 @@ fn fill_hash_chain(
     }
 }
 
+// Keep coverage outcomes for both const-generic profiles in one body. Release
+// builds inline this helper and fold the profile flag without hot-loop dispatch.
+#[cfg_attr(coverage, inline(never))]
+#[cfg_attr(not(coverage), inline(always))]
+fn hash_chain_candidate_search_continues(low_effort: bool, best_length: usize) -> bool {
+    low_effort || best_length < MAX_LENGTH
+}
+
 // Keep the two encoder profiles' direct-match branches together for coverage.
 // Release builds inline this helper and fold the compile-time profile flag.
 #[cfg_attr(coverage, inline(never))]
@@ -381,7 +389,7 @@ fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
             while candidate != usize::MAX
                 && candidate >= minimum
                 && remaining > 1
-                && best_length < MAX_LENGTH
+                && hash_chain_candidate_search_continues(LOW_EFFORT, best_length)
             {
                 remaining -= 1;
                 let candidate_index = candidate;
@@ -405,7 +413,7 @@ fn fill_hash_chain_impl<const LOW_EFFORT: bool>(
             while candidate != usize::MAX
                 && candidate >= minimum
                 && remaining > 1
-                && best_length < MAX_LENGTH
+                && hash_chain_candidate_search_continues(LOW_EFFORT, best_length)
             {
                 remaining -= 1;
                 let candidate_index = candidate;
