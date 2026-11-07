@@ -2126,6 +2126,62 @@ fault_contracts:
       point: jpeg.ycck.component_height_missing
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: jpeg_ycck_component_stride_too_short
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.ycck.component_stride_too_short
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_ycck_component_height_too_short
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.ycck.component_height_too_short
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_ycck_component_plane_samples_too_short
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.ycck.component_plane_samples_too_short
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_ycck_component_stride_overflow
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:color_ycck_app14_transform_2
+    fault:
+      point: jpeg.ycck.component_stride_overflow
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: jpeg_h1v2_upsample_plane_reservation_failure
     type: fault-contract
     operation: decode

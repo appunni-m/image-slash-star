@@ -1262,27 +1262,73 @@ pub(super) fn ycck_to_cmyk_pixels(
     converter: &YccColorConverter,
 ) -> CodecResult<Vec<u8>> {
     #[cfg(coverage)]
-    let (comp_buffers, comp_buf_height) = {
-        let comp_buffers = if crate::coverage_support::take_fault_point(
-            crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneCountMismatch,
-        ) {
-            // Valid YCCK decoding supplies four planes; shorten it only for the
-            // target-only malformed-buffer contract.
-            comp_buffers.get(..3).unwrap_or(&[])
-        } else {
-            comp_buffers
-        };
-        let comp_buf_height = if crate::coverage_support::take_fault_point(
-            crate::coverage_support::CoverageFaultPoint::JpegYcckComponentHeightMissing,
-        ) {
-            // Drop the final validated plane height only for its fault contract.
-            comp_buf_height
-                .get(..comp_buf_height.len().saturating_sub(1))
-                .unwrap_or(&[])
-        } else {
-            comp_buf_height
-        };
-        (comp_buffers, comp_buf_height)
+    let comp_buffers_storage = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneSamplesTooShort,
+    ) {
+        let mut shortened = comp_buffers.to_vec();
+        if let Some(plane) = shortened.first_mut() {
+            plane.clear();
+        }
+        Some(shortened)
+    } else {
+        None
+    };
+    #[cfg(coverage)]
+    let comp_buf_width_storage = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentStrideTooShort,
+    ) {
+        let mut shortened = comp_buf_width.to_vec();
+        if let Some(stride) = shortened.first_mut() {
+            *stride = 0;
+        }
+        Some(shortened)
+    } else if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentStrideOverflow,
+    ) {
+        let mut oversized = comp_buf_width.to_vec();
+        if let Some(stride) = oversized.first_mut() {
+            *stride = usize::MAX;
+        }
+        Some(oversized)
+    } else {
+        None
+    };
+    #[cfg(coverage)]
+    let comp_buf_height_storage = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentHeightTooShort,
+    ) {
+        let mut shortened = comp_buf_height.to_vec();
+        if let Some(height) = shortened.first_mut() {
+            *height = 0;
+        }
+        Some(shortened)
+    } else {
+        None
+    };
+    #[cfg(coverage)]
+    let comp_buffers = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentPlaneCountMismatch,
+    ) {
+        // Valid YCCK decoding supplies four planes; shorten it only for the
+        // target-only malformed-buffer contract.
+        comp_buffers.get(..3).unwrap_or(&[])
+    } else {
+        comp_buffers_storage.as_deref().unwrap_or(comp_buffers)
+    };
+    #[cfg(coverage)]
+    let comp_buf_width = comp_buf_width_storage.as_deref().unwrap_or(comp_buf_width);
+    #[cfg(coverage)]
+    let comp_buf_height = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::JpegYcckComponentHeightMissing,
+    ) {
+        // Drop the final validated plane height only for its fault contract.
+        comp_buf_height
+            .get(..comp_buf_height.len().saturating_sub(1))
+            .unwrap_or(&[])
+    } else {
+        comp_buf_height_storage
+            .as_deref()
+            .unwrap_or(comp_buf_height)
     };
     let width = usize::from(info.width);
     let height = usize::from(info.height);

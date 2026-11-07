@@ -3821,6 +3821,32 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.ycck.component_stride_too_short", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegYcckComponentStrideTooShort,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.ycck.component_height_too_short", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegYcckComponentHeightTooShort,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.ycck.component_plane_samples_too_short", "decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::JpegYcckComponentPlaneSamplesTooShort,
+                    false,
+                    img::ImageFormat::Jpeg,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("jpeg.ycck.component_stride_overflow", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegYcckComponentStrideOverflow,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("bmp.palette.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::BmpPaletteReservation,
                 false,
@@ -4194,6 +4220,12 @@ fn execute_fault_contract(
         "jpeg.ycck.component_height_missing" => {
             Some("decode: Adobe YCCK JPEG component height is missing")
         }
+        "jpeg.ycck.component_stride_too_short"
+        | "jpeg.ycck.component_height_too_short"
+        | "jpeg.ycck.component_plane_samples_too_short"
+        | "jpeg.ycck.component_stride_overflow" => {
+            Some("decode: Adobe YCCK JPEG component plane is shorter than its image geometry")
+        }
         "jpeg.upsample.h1v2_empty_geometry"
         | "jpeg.upsample.h1v2_zero_width"
         | "jpeg.upsample.h1v2_source_length_mismatch"
@@ -4415,6 +4447,10 @@ fn execute_fault_contract(
                 | "av1.motion.reference_mv_geometry_guard_sweep"
                 | "jpeg.ycck.component_plane_count_mismatch"
                 | "jpeg.ycck.component_height_missing"
+                | "jpeg.ycck.component_stride_too_short"
+                | "jpeg.ycck.component_height_too_short"
+                | "jpeg.ycck.component_plane_samples_too_short"
+                | "jpeg.ycck.component_stride_overflow"
                 | "jpeg.upsample.h1v2_empty_geometry"
                 | "jpeg.upsample.h1v2_zero_width"
                 | "jpeg.upsample.h1v2_source_length_mismatch"

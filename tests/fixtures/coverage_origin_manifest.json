@@ -538,7 +538,7 @@
       "path": "src/codecs/jpeg/decode/bit_reader.rs"
     },
     {
-      "guard_count": 8,
+      "guard_count": 13,
       "origin": "defensive_model",
       "path": "src/codecs/jpeg/decode/decode.rs"
     },
