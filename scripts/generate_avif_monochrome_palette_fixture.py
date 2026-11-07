@@ -98,6 +98,16 @@ def verify_monochrome_bitstream(path: Path) -> None:
         raise RuntimeError("AV1 sequence header does not match the monochrome witness")
 
 
+def verify_fixture(path: Path) -> bytes:
+    data = path.read_bytes()
+    actual = sha256(data)
+    if actual != EXPECTED_AVIF_SHA256:
+        raise RuntimeError(f"AVIF hash mismatch: {actual}")
+    verify_monochrome_bitstream(path)
+    verify_pillow_pixels(path)
+    return data
+
+
 def encode(avifenc: Path, source: Path, output: Path) -> None:
     result = subprocess.run(
         [
@@ -166,18 +176,29 @@ def generate(avifenc: Path) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--avifenc", type=Path, required=True)
+    parser.add_argument(
+        "--avifenc",
+        type=Path,
+        help="pinned avifenc binary; required to generate or re-encode the fixture",
+    )
     parser.add_argument("--output", type=Path, default=ASSET)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
-    data = generate(args.avifenc.resolve())
     if args.check:
-        if not args.output.is_file() or args.output.read_bytes() != data:
+        manifest = yaml.safe_load(
+            (ROOT / "manifest.yaml").read_text(encoding="utf-8")
+        )
+        verify_primary_oracle(manifest)
+        existing = verify_fixture(args.output)
+        if args.avifenc is not None and existing != generate(args.avifenc.resolve()):
             raise RuntimeError(f"fixture differs from deterministic output: {args.output}")
-        print(f"verified {args.output.relative_to(ROOT)} ({len(data)} bytes)")
+        print(f"verified {args.output.relative_to(ROOT)} ({len(existing)} bytes)")
         return 0
 
+    if args.avifenc is None:
+        parser.error("--avifenc is required when generating the fixture")
+    data = generate(args.avifenc.resolve())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(data)
     print(f"wrote {args.output.relative_to(ROOT)} ({len(data)} bytes)")

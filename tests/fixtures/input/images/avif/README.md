@@ -1598,9 +1598,11 @@ adds an 8-bit YUV400 still-image witness. The input is a 16x16 grayscale
 pattern whose 4x4 cells cycle through four values. The pinned libavif 1.4.1 /
 libaom 3.13.2 `avifenc` runs with quality 99, speed 8, one worker, one tile,
 and `enable-palette=1`; the sequence header is checked to be monochrome. The
-generator is `scripts/generate_avif_monochrome_palette_fixture.py`. Its
-selected public parity case exercises the monochrome palette validation path;
-the pinned Pillow RGB SHA-256 is
+generator is `scripts/generate_avif_monochrome_palette_fixture.py`. Generation
+with `--avifenc` checks repeated byte-stable encoding; `--check` validates the
+locked AVIF bytes, monochrome header, and Pillow pixels without requiring the
+encoder binary. Its selected public parity case exercises the monochrome
+palette validation path; the pinned Pillow RGB SHA-256 is
 `7da6d6dc0cb94021c2425b4fc418377c69c69b03b494a8a9a1080461a8e77e72`.
 
 The asymmetric-gradient public family also includes seven active 8-bit,
