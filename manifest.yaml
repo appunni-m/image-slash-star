@@ -9237,6 +9237,11 @@ formats:
       source_format: png
       source_asset: webp_skip_sparse_64x64.png
       params: {'lossless': False, 'quality': 80, 'method': 2, 'rust_encode_with_token': true}
+    - id: enc_lossy_quality_80_method_2_header_budget_noise_gray_4096x3072
+      description: Large noisy grayscale input probes method-two VP8 intra4 header-budget fallback
+      source_format: png
+      source_asset: webp_vp8_header_budget_noise_gray_4096x3072.png
+      params: {'lossless': False, 'quality': 80, 'method': 2, 'rust_encode_with_token': true}
     - id: enc_lossy_alpha_effort_m0_q80_combined_17x19
       description: Lossy RGBA method 0 preserves exact alpha bytes and decoded pixels for combined at clipped 17x19 geometry through ordinary and token-aware encoding
       source_format: png

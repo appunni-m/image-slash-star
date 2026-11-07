@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,867 total rows: 3,192 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,192 decode rows are
-active and 648 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,868 total rows: 3,192 decode /
+inspect / verify rows and 676 encode rows. Of those, 3,192 decode rows are
+active and 649 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF sequence mode mismatch alpha fault contract — 2026-11-07
 
@@ -17426,7 +17426,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fa616e5ec10526867dc48d48df5fb9c94b0b28d1d055cbf5eaba8907f52a40a6`; matrix `af269af81c03e0fe03559f5fdb42b236ba932573a22a52424df66f1b018edf2a`.
+- Current fixture integrity only: manifest `77819d16afc964a2278fe4ae07fae62d770fba077170aea9319eb9c8977af708`; matrix `c249a82b5fff1b59f6fc1ef05401cad866638ade244d382cc49b427a3def8355`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -22967,3 +22967,32 @@ receipt is
 `26d83c5672f2b6188b25b6ee348592d351bb4a15fb3c16dcef90ffa2fbbc7652`). No
 source or fixture files changed during the run. Coverage MCP was not queried,
 and the receipt identifies this as local selected evidence only.
+
+## WebP VP8 method-two header-budget parity — 2026-11-07
+
+Added active parity row
+`encode:webp:enc_lossy_quality_80_method_2_header_budget_noise_gray_4096x3072`.
+Its deterministic 4,096×3,072 grayscale source uses a pinned xorshift pixel
+stream and a platform-independent stored-DEFLATE PNG writer. The source PNG
+SHA-256 is
+`f2821e63e4de32ca6113807da7ba2742c047610a72084368ea46e84c15668b39`; the
+decoded source-pixel SHA-256 is
+`5c16d025c0764c693e8733e816e8f1e4888a726d58c8907f318cbc3249498b71`.
+
+The selected Pillow 12.2.0 parity run passed 1/1 row, with five public encode
+calls, no panics, exact encoded bytes (13,312,062 bytes; SHA-256
+`ee56640fc2ed618b1456d13ff12d099076871d6b4303497e84ac153a9fa61983`) and
+decoded pixel parity for 4,096×3,072 RGB output. The selected LLVM report
+records both outcomes of the method-two intra4 header-budget comparison at
+`src/codecs/webp/encode/vp8/frame.rs:328`: 177,856 within-budget and 5,800
+over-budget outcomes. The latter reaches the Intra16 fallback when Intra4
+scored better but exceeded the frame's per-macroblock header budget.
+
+The local report is
+`.coverage-mcp/local-evidence/selected/20261107T231652.470132Z-8abd6cb923a44607a0e1fb83bf94ffd4/coverage.json`
+(SHA-256
+`d98fc929299c728efde333c95a2d09cc8b8375eca586c505ae9573e5e04612ba`). Its
+receipt identifies a local LLVM run on `aarch64-apple-darwin` with
+`nightly-2026-07-16`, but marks Coverage MCP as not queried and source
+attribution as unverified. These selected counters prove this case reaches the
+branch; they do not establish aggregate coverage or a Coverage MCP result.
