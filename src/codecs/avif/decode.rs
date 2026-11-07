@@ -193,18 +193,15 @@ pub fn decode_sequence(
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
+    // Pillow presents `avif` major-brand files as a still image, even when a
+    // sequence track is also present. Skip extracting that hidden track.
+    if file_type.major_brand() == *b"avif" {
+        return decode_single_frame_sequence(data, token);
+    }
     let extracted = extract_av1(data)?;
 
     let Some(sequence_payload) = extracted.sequence.as_ref() else {
-        let (mut image, consumed) = decode(data, token)?;
-        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
-        let metadata = std::mem::take(&mut image.metadata);
-        let source_color = std::mem::take(&mut image.source_color);
-        let mut sequence = DecodedSequence::from_image(image);
-        sequence.opaque_blocks = opaque_blocks;
-        sequence.metadata = metadata;
-        sequence.source_color = source_color;
-        return Ok((sequence, consumed));
+        return decode_single_frame_sequence(data, token);
     };
     let loop_count = sequence_payload.loop_count;
 
@@ -217,10 +214,30 @@ pub fn decode_sequence(
         .map_err(|error| error.context("AVIF sequence inspection failed"))?;
     let sample_count = u32::try_from(sequence_payload.color.samples.len())
         .map_err(|_| CodecError::Dimensions("AVIF sequence frame count exceeds u32".to_owned()))?;
+    #[cfg(coverage)]
+    let sample_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifSequenceFrameCountDeclarationMismatch,
+    ) {
+        sample_count.saturating_add(1)
+    } else {
+        sample_count
+    };
     let mode = if sequence_payload.alpha.is_some() {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
+    };
+    #[cfg(coverage)]
+    let mode = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifSequenceModeDeclarationMismatch,
+    ) {
+        if mode == ImageMode::Rgb8 {
+            ImageMode::Rgba8
+        } else {
+            ImageMode::Rgb8
+        }
+    } else {
+        mode
     };
     if info.frame_count != Some(sample_count) || info.mode != mode {
         return Err(CodecError::NotImplemented(
@@ -317,6 +334,21 @@ pub fn decode_sequence(
         },
         consumed,
     ))
+}
+
+fn decode_single_frame_sequence(
+    data: &[u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<(DecodedSequence, usize)> {
+    let (mut image, consumed) = decode(data, token)?;
+    let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+    let metadata = std::mem::take(&mut image.metadata);
+    let source_color = std::mem::take(&mut image.source_color);
+    let mut sequence = DecodedSequence::from_image(image);
+    sequence.opaque_blocks = opaque_blocks;
+    sequence.metadata = metadata;
+    sequence.source_color = source_color;
+    Ok((sequence, consumed))
 }
 
 fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<u32> {
