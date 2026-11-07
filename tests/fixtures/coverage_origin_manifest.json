@@ -476,7 +476,7 @@
       "path": "src/codecs/avif/container.rs"
     },
     {
-      "guard_count": 24,
+      "guard_count": 26,
       "origin": "defensive_model",
       "path": "src/codecs/avif/decode.rs"
     },

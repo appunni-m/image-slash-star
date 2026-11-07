@@ -104557,6 +104557,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "animated_sequence_still_major_brand",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "AVIF sequence with an avif major brand that Pillow presents as a one-frame still image",
+          "asset": "animated_sequence_still_major_brand.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "06a99217231d89648adc72f3f45f6007d8270c5968d4d45556f4f4bbcc6a75b7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_sequence_still_major_brand_avif.bin",
+          "ref_sha256": "669d5a993541104956ce34cffddf429da46847e5e1ec880e4f38c85de66efbbb",
+          "ref_bytes": 3072,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            32,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "animated_has_chroma_4x4",
           "type": "decode",
           "format": "avif",
@@ -368603,12 +368681,12 @@
     }
   },
   "summary": {
-    "total_rows": 3863,
-    "decode_rows": 3188,
+    "total_rows": 3864,
+    "decode_rows": 3189,
     "encode_rows": 675,
     "formats": 8,
-    "assets_available": 3184,
-    "decode_active": 3188,
+    "assets_available": 3185,
+    "decode_active": 3189,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
@@ -371080,6 +371158,44 @@
       "fault": {
         "point": "av1.temporal_motion_field.reservation",
         "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_sequence_frame_count_declaration_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:animated_motion_chroma"
+      },
+      "fault": {
+        "point": "avif.sequence.frame_count_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_sequence_mode_declaration_mismatch",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:animated_motion_chroma"
+      },
+      "fault": {
+        "point": "avif.sequence.mode_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
     },

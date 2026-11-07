@@ -658,6 +658,22 @@ FAULT_CONTRACTS = {
         "point": "avif.sequence_frames.output_reservation",
         "contract": "sequence_decode_error_then_retry_succeeds",
     },
+    "avif_sequence_frame_count_declaration_mismatch": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sequence_frame_count_declaration_mismatch",
+        "source_case": "decode:avif:animated_motion_chroma",
+        "point": "avif.sequence.frame_count_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_sequence_mode_declaration_mismatch": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sequence_mode_declaration_mismatch",
+        "source_case": "decode:avif:animated_motion_chroma",
+        "point": "avif.sequence.mode_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_superresolution_positions_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

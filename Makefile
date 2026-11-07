@@ -82,6 +82,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_palette_alpha_tail_fixture.py --check
 	$(PYTHON) scripts/generate_webp_alpha_zero_palette_checkpoint_fixture.py --check
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
+	$(PYTHON) scripts/generate_avif_sequence_still_brand.py --check
 	$(PYTHON) scripts/generate_avif_colr_edge_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_frame_id_continuity.py --check
 	$(PYTHON) scripts/generate_avif_frame_id_high_contiguous.py --check

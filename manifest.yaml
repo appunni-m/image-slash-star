@@ -1874,6 +1874,34 @@ fault_contracts:
       point: av1.temporal_motion_field.reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_sequence_frame_count_declaration_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_chroma
+    fault:
+      point: avif.sequence.frame_count_declaration_mismatch
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_sequence_mode_declaration_mismatch
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_chroma
+    fault:
+      point: avif.sequence.mode_declaration_mismatch
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_sequence_frames_reservation_failure
     type: fault-contract
     operation: decode
@@ -17398,6 +17426,11 @@ formats:
       description: Four-frame 4:2:0 AVIF sequence with a translating small block and chroma-boundary motion
       test_assets:
       - animated_motion_chroma.avif
+      status: active
+    - id: animated_sequence_still_major_brand
+      description: AVIF sequence with an avif major brand that Pillow presents as a one-frame still image
+      test_assets:
+      - animated_sequence_still_major_brand.avif
       status: active
     - id: animated_has_chroma_4x4
       description: Three-frame 4:2:0 sequence with forced 4x4 inter partitions and a small luma/chroma change

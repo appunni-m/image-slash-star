@@ -3281,6 +3281,12 @@ def sync_fault_contract_rows(manifest, matrix):
         "avif.sequence_frames.output_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
+        "avif.sequence.frame_count_declaration_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "avif.sequence.mode_declaration_mismatch": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "avif.i444_10bit_alpha.plane_length_mismatch": {
             "decode_unsupported_then_retry_succeeds"
         },

@@ -3041,6 +3041,24 @@ fn execute_fault_contract(
                 img::ImageErrorStage::SequenceDecode,
             ),
             (
+                "avif.sequence.frame_count_declaration_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifSequenceFrameCountDeclarationMismatch,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "avif.sequence.mode_declaration_mismatch",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifSequenceModeDeclarationMismatch,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
                 "avif.i444_10bit_alpha.plane_length_mismatch",
                 "decode_unsupported_then_retry_succeeds",
             ) => (
@@ -3981,6 +3999,10 @@ fn execute_fault_contract(
         "av1.inter_translation.sample_depth_mismatch" => Some(
             "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
         ),
+        "avif.sequence.frame_count_declaration_mismatch"
+        | "avif.sequence.mode_declaration_mismatch" => Some(
+            "decode sequence: AVIF sequence track differs from the inspected presentation declaration",
+        ),
         "av1.motion_predictor.zero_width" => Some(
             "decode sequence: AVIF sequence validation failed: AVIF sequence rendering has no completed color surface",
         ),
@@ -4451,7 +4473,9 @@ fn execute_fault_contract(
             identity: None,
         }) if matches!(
             row.fault.point.as_str(),
-            "avif.i444_10bit_alpha.plane_length_mismatch"
+            "avif.sequence.frame_count_declaration_mismatch"
+                | "avif.sequence.mode_declaration_mismatch"
+                | "avif.i444_10bit_alpha.plane_length_mismatch"
                 | "avif.i444_generic_alpha.plane_length_mismatch"
                 | "avif.i444_generic_rgb.u_plane_length_mismatch"
                 | "avif.i444_generic_rgb.v_plane_length_mismatch"
@@ -18412,6 +18436,33 @@ fn assert_frame_request_parity(row: &DecodeRow, data: &[u8]) -> Result<(), Strin
 
 fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
     assert_sequence_base(manifest_dir, row, data)?;
+    if row.format == "avif" && row.id == "animated_sequence_still_major_brand" {
+        let expected_image = img::decode(data)
+            .map_err(|error| format!("Pillow-matched AVIF still decode failed: {error}"))?;
+        let single_frame_bytes = u64::try_from(expected_image.content.pixels.len())
+            .map_err(|error| format!("AVIF still byte count exceeds u64: {error}"))?;
+        let policy = img::DecodePolicy::default()
+            .with_max_frames(1)
+            .with_max_sequence_decoded_bytes(single_frame_bytes);
+        let bounded = img::decode_sequence_with_policy(data, &policy).map_err(|error| {
+            format!("AVIF still-brand sequence exceeded its one-frame budget: {error}")
+        })?;
+        let [frame] = bounded.content.frames.as_slice() else {
+            return Err(format!(
+                "AVIF still-brand sequence produced {} frames under a one-frame policy",
+                bounded.content.frames.len()
+            ));
+        };
+        if frame.image.width != expected_image.content.width
+            || frame.image.height != expected_image.content.height
+            || frame.image.mode != expected_image.content.mode
+            || frame.image.pixels != expected_image.content.pixels
+        {
+            return Err(
+                "AVIF still-brand sequence differs from Pillow-checked still pixels".to_owned(),
+            );
+        }
+    }
     if row.frame_request.is_some() {
         assert_frame_request_parity(row, data)?;
     }
