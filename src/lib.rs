@@ -138,6 +138,14 @@ pub fn __coverage_inspect_png(data: &[u8]) -> ImageResult<ImageInfo> {
     codecs::inspect_png_for_coverage(data)
 }
 
+/// Inspect JPEG bytes below public format detection for target-only
+/// malformed-signature contracts. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "jpeg"))]
+#[doc(hidden)]
+pub fn __coverage_inspect_jpeg(data: &[u8]) -> ImageResult<ImageInfo> {
+    codecs::inspect_jpeg_for_coverage(data)
+}
+
 /// Inspect BMP bytes below public format detection for a target-only coverage
 /// contract. This hook is absent from non-coverage builds.
 #[cfg(all(coverage, feature = "bmp"))]

@@ -3491,6 +3491,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.inspect.signature_mismatch": {
             "inspection_invalid_signature_rejected"
         },
+        "jpeg.inspect.signature_mismatch": {
+            "inspection_invalid_signature_rejected"
+        },
         "ico.header.reserved_nonzero": {"decode_rejects_invalid_header"},
         "ico.header.unsupported_type": {"decode_rejects_invalid_header"},
         "ico.inspect.reserved_nonzero": {"inspection_rejects_invalid_header"},
@@ -3820,6 +3823,11 @@ def sync_fault_contract_rows(manifest, matrix):
                 or point == "png.inspect.signature_mismatch"
                 and contract == "inspection_invalid_signature_rejected"
             )
+            supported_jpeg_inspection = (
+                row["format"] == "jpeg"
+                and point == "jpeg.inspect.signature_mismatch"
+                and contract == "inspection_invalid_signature_rejected"
+            )
             supported_bmp_inspection = (
                 row["format"] == "bmp"
                 and point == "bmp.inspect.signature_mismatch"
@@ -3876,6 +3884,7 @@ def sync_fault_contract_rows(manifest, matrix):
             )
             if not (
                 supported_png_inspection
+                or supported_jpeg_inspection
                 or supported_bmp_inspection
                 or supported_ico_inspection
                 or supported_webp_inspection
