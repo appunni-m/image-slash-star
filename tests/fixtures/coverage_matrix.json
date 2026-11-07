@@ -371278,6 +371278,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_sequence_mode_declaration_mismatch_alpha",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:high_bitdepth"
+      },
+      "fault": {
+        "point": "avif.sequence.mode_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_sequence_frames_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

@@ -674,6 +674,14 @@ FAULT_CONTRACTS = {
         "point": "avif.sequence.mode_declaration_mismatch",
         "contract": "sequence_decode_error_then_retry_succeeds",
     },
+    "avif_sequence_mode_declaration_mismatch_alpha": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sequence_mode_declaration_mismatch_alpha",
+        "source_case": "decode:avif:high_bitdepth",
+        "point": "avif.sequence.mode_declaration_mismatch",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_superresolution_positions_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",
