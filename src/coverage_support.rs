@@ -190,6 +190,14 @@ pub enum CoverageFaultPoint {
     JpegYcckComponentPlaneCountMismatch,
     /// Remove the final Adobe YCCK component height before geometry validation.
     JpegYcckComponentHeightMissing,
+    /// Force an Adobe YCCK component stride to be shorter than its image width.
+    JpegYcckComponentStrideTooShort,
+    /// Force an Adobe YCCK component height to be shorter than its image height.
+    JpegYcckComponentHeightTooShort,
+    /// Empty an Adobe YCCK component plane before validating its required length.
+    JpegYcckComponentPlaneSamplesTooShort,
+    /// Force checked Adobe YCCK component-plane length arithmetic to overflow.
+    JpegYcckComponentStrideOverflow,
     /// Force reservation of a BMP palette to fail before reading its entries.
     BmpPaletteReservation,
     /// Force the BMP 24-bit decoded-pixel output reservation to fail.

@@ -728,6 +728,30 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_ycck_component_stride_too_short",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_ycck_component_stride_too_short",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_ycck_component_height_too_short",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_ycck_component_height_too_short",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_ycck_component_plane_samples_too_short",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_ycck_component_plane_samples_too_short",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_ycck_component_stride_overflow",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_ycck_component_stride_overflow",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "jpeg_h1v2_upsample_plane_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:jpeg:jpeg_h1v2_upsample_plane_reservation_failure",
