@@ -198,6 +198,58 @@ cmake --build target/oracle-staging/libavif-force-i420-cdef-restoration-build --
   --variant i420_cdef_restoration --check
 ```
 
+## Combined 10-bit I422 loop filtering and Wiener restoration
+
+The 16x16 fixture `coverage_i422_intra_loopfilter_restoration_10bit_16x16.avif`
+selects the bounded I422 intra postfilter profile with active Wiener luma
+restoration and nonzero Y/U/V deblocking levels. Libaom's normal tiny-frame
+search leaves these levels at zero, so the fixture-only companion patch
+[`libaom-force-i422-intra-loopfilter.patch`](libaom-force-i422-intra-loopfilter.patch)
+sets all four levels to 1 on a 10-bit 16x16 I422 key frame. Apply it after
+[`libaom-force-i422-inter-loopfilter.patch`](libaom-force-i422-inter-loopfilter.patch)
+to the clean pinned libaom 3.13.2 source tree, then build in a separate
+directory.
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-intra-loopfilter
+git -C target/oracle-staging/libaom-i422-intra-loopfilter checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i422-intra-loopfilter apply --check "$PWD/scripts/avif_fixture_oracle/libaom-force-i422-inter-loopfilter.patch"
+git -C target/oracle-staging/libaom-i422-intra-loopfilter apply "$PWD/scripts/avif_fixture_oracle/libaom-force-i422-inter-loopfilter.patch"
+git -C target/oracle-staging/libaom-i422-intra-loopfilter apply --check "$PWD/scripts/avif_fixture_oracle/libaom-force-i422-intra-loopfilter.patch"
+git -C target/oracle-staging/libaom-i422-intra-loopfilter apply "$PWD/scripts/avif_fixture_oracle/libaom-force-i422-intra-loopfilter.patch"
+cmake -S target/oracle-staging/libaom-i422-intra-loopfilter -B target/oracle-staging/libaom-i422-intra-loopfilter-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i422-intra-loopfilter-prefix"
+cmake --build target/oracle-staging/libaom-i422-intra-loopfilter-build -j 4
+cmake --install target/oracle-staging/libaom-i422-intra-loopfilter-build
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i422-intra-loopfilter
+git -C target/oracle-staging/libavif-i422-intra-loopfilter checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i422-intra-loopfilter apply --check "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+git -C target/oracle-staging/libavif-i422-intra-loopfilter apply "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i422-intra-loopfilter -B target/oracle-staging/libavif-i422-intra-loopfilter-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=ON \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i422-intra-loopfilter-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i422-intra-loopfilter-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i422-intra-loopfilter-prefix/include"
+cmake --build target/oracle-staging/libavif-i422-intra-loopfilter-build --target avifenc -j 4
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i422_loopfilter_restoration \
+  --avifenc target/oracle-staging/libavif-i422-intra-loopfilter-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i422_loopfilter_restoration --check
+```
+
+The generator checks the exact I422 key-frame syntax, all four active filter
+levels, Wiener restoration, repeat-encode identity, and Pillow 12.2.0/libavif
+1.4.1 pixel output. The AVIF SHA-256 is
+`9366ceb13fc73ec12ff778d9f55a1924025cd166bd75e2cd8322358914b326fe`; its
+768-byte RGB reference SHA-256 is
+`93f7718993194043da301e4f78d6a36848058c1a18599546db3628ca579519dc`.
+
 ## Combined 10-bit I420 loop filtering, CDEF, and SGR restoration
 
 The 16x16 fixture `coverage_i420_intra_loopfilter_cdef_restoration_10bit_16x16.avif`
