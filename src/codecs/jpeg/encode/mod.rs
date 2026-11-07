@@ -3911,7 +3911,7 @@ fn encode_raw_dc(writer: &mut RawBlockWriter, difference: i32, table: &huffman::
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
-    reason = "baseline JPEG bounds runs to 63 AC coefficients and bounds categories and ready-table indices"
+    reason = "baseline JPEG bounds zero runs, categories, and ready-table indices"
 )]
 #[inline(always)]
 fn encode_raw_ac_value(
@@ -3922,8 +3922,7 @@ fn encode_raw_ac_value(
     ready: &huffman::CoefficientReadyTable,
 ) {
     if coefficient == 0 {
-        // This run belongs to one block, which has at most 63 AC coefficients.
-        *run += 1;
+        *run = run.saturating_add(1);
         return;
     }
 
