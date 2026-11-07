@@ -15660,6 +15660,12 @@ formats:
       test_assets:
       - grid_unreferenced_alpha_items.avif
       status: active
+    - id: grid_orphan_dimg_reference
+      description: RGB AVIF 1x2 color grid ignores a dimg reference whose source item is outside the primary color grid
+      test_assets:
+      - grid_orphan_dimg_reference.avif
+      status: active
+      pixel_reference_case: grid_unreferenced_alpha_items
     - id: animated
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:

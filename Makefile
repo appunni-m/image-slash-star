@@ -274,6 +274,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_grid_alpha_sample_count_mismatch.py --check
 	$(PYTHON) scripts/generate_avif_grid_non_av1_color_tile.py --check
 	$(PYTHON) scripts/generate_avif_grid_unreferenced_alpha.py --check
+	$(PYTHON) scripts/generate_avif_grid_orphan_dimg.py --check
 	$(PYTHON) scripts/generate_avif_padding_count_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_obu_header_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_operating_point_fixtures.py --check

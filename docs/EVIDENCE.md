@@ -1,8 +1,26 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,862 total rows: 3,187 decode /
-inspect / verify rows and 675 encode rows. Of those, 3,187 decode rows are
+The current public evidence matrix contains 3,863 total rows: 3,188 decode /
+inspect / verify rows and 675 encode rows. Of those, 3,188 decode rows are
 active and 648 encode rows are active; 27 encode rows remain planned.
+
+## AVIF grid with orphan dimg reference — 2026-11-07
+
+`decode:avif:grid_orphan_dimg_reference` preserves the primary color-grid
+references, removes the two auxiliary-alpha relationships, and adds a `dimg`
+reference from auxiliary item 5 to auxiliary item 6. A sibling `free` box fills
+the removed `iref` bytes, preserving the enclosing metadata extent and every
+`iloc` item payload offset. Pinned Pillow accepts the 2,373-byte file as RGB
+and returns the shared 19,200-byte pixel reference used by
+`grid_unreferenced_alpha_items`.
+
+The selected parity and LLVM coverage run passed 1/1. Its local report observes
+both outcomes of the `color_items.contains(&reference.from_id)` branch in
+`src/codecs/avif/container.rs:1457` and `:1484`; the retained full report had
+zero hits on the previously missing outcomes. This selected report does not
+change full-suite coverage percentages. The report, command log, and local
+execution receipt are retained under
+`.coverage-mcp/local-evidence/selected/avif-grid-orphan-dimg-20261107-retry/`.
 
 ## AVIF monochrome padded-edge context parity — 2026-11-07
 
@@ -17319,7 +17337,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8a866c0452516fcca3457abf6a23c16b64a83e11617f0794eb8f85fdbbd95777`; matrix `a70164f16db92e1f6364939e110fafe1f0a8deba94904a68fbb86da98ae8a954`.
+- Current fixture integrity only: manifest `8e0bfd7cbbf950846aa152e209071b9de12aacde7fe893f157161507da06180b`; matrix `2feed409f4b52810e6277bee2c672f4ffb3821f39659ffc9f87cba7631826095`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
