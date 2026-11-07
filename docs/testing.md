@@ -66,6 +66,12 @@ and source revision. Report all four aggregate totals (lines, branches,
 functions, and regions). Selected-case reports do not establish full coverage,
 and missing observations are not automatically regressions.
 
+Successful still-image AVIF decode parity rows also require `inspect`,
+`inspect_basic`, and `inspect_with_policy` to agree. They compare source and
+color metadata through the public accessors against decode output, including
+normalized auxiliary-item relationships. Sequence metadata has separate parity
+coverage because its decoded frame source can include sequence-only item data.
+
 For focused exploration, pass one or more exact manifest keys to
 `make coverage-selected`, separated by spaces:
 
