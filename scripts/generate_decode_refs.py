@@ -3493,6 +3493,8 @@ def sync_fault_contract_rows(manifest, matrix):
         },
         "ico.header.reserved_nonzero": {"decode_rejects_invalid_header"},
         "ico.header.unsupported_type": {"decode_rejects_invalid_header"},
+        "ico.inspect.reserved_nonzero": {"inspection_rejects_invalid_header"},
+        "ico.inspect.unsupported_type": {"inspection_rejects_invalid_header"},
         "gif.sequence.invalid_signature": {
             "direct_sequence_decoder_rejects_unrecognized_signature"
         },
@@ -3823,6 +3825,10 @@ def sync_fault_contract_rows(manifest, matrix):
                 and point == "bmp.inspect.signature_mismatch"
                 and contract == "inspection_invalid_signature_rejected"
             )
+            supported_ico_inspection = row["format"] == "ico" and (
+                point in {"ico.inspect.reserved_nonzero", "ico.inspect.unsupported_type"}
+                and contract == "inspection_rejects_invalid_header"
+            )
             supported_webp_inspection = row["format"] == "webp" and (
                 (
                     point == "webp.inspect.invalid_riff_signature"
@@ -3871,6 +3877,7 @@ def sync_fault_contract_rows(manifest, matrix):
             if not (
                 supported_png_inspection
                 or supported_bmp_inspection
+                or supported_ico_inspection
                 or supported_webp_inspection
                 or supported_avif_inspection
                 or supported_tiff_inspection

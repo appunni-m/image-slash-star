@@ -1430,21 +1430,40 @@ fn execute_ico_header_validation_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    let (expected_contract, expected_offset, expected_message) = match row.fault.point.as_str() {
-        "ico.header.reserved_nonzero" => (
-            "decode_rejects_invalid_header",
-            0,
-            "ICO reserved header field is nonzero",
-        ),
-        "ico.header.unsupported_type" => (
-            "decode_rejects_invalid_header",
-            2,
-            "ICO container type is neither icon nor cursor",
-        ),
-        _ => return Err(format!("{}: unsupported ICO header fault point", row.id)),
-    };
+    let (expected_operation, expected_contract, expected_offset, expected_stage, expected_message) =
+        match row.fault.point.as_str() {
+            "ico.header.reserved_nonzero" => (
+                "decode",
+                "decode_rejects_invalid_header",
+                0,
+                img::ImageErrorStage::StillDecode,
+                "ICO reserved header field is nonzero",
+            ),
+            "ico.header.unsupported_type" => (
+                "decode",
+                "decode_rejects_invalid_header",
+                2,
+                img::ImageErrorStage::StillDecode,
+                "ICO container type is neither icon nor cursor",
+            ),
+            "ico.inspect.reserved_nonzero" => (
+                "inspect",
+                "inspection_rejects_invalid_header",
+                0,
+                img::ImageErrorStage::Inspection,
+                "invalid ICO reserved header field",
+            ),
+            "ico.inspect.unsupported_type" => (
+                "inspect",
+                "inspection_rejects_invalid_header",
+                2,
+                img::ImageErrorStage::Inspection,
+                "invalid ICO container type",
+            ),
+            _ => return Err(format!("{}: unsupported ICO header fault point", row.id)),
+        };
     if row.row_type != "fault-contract"
-        || row.operation != "decode"
+        || row.operation != expected_operation
         || row.format != "ico"
         || row.status != "active"
         || row.verification != "fault-contract"
@@ -1459,7 +1478,12 @@ fn execute_ico_header_validation_contract(
     }
 
     let source_bytes = unknown_format_parity_source(manifest_dir, matrix, row, "ico")?;
-    match img::__coverage_decode_ico(&source_bytes) {
+    let result = match row.operation.as_str() {
+        "decode" => img::__coverage_decode_ico(&source_bytes).map(|_| ()),
+        "inspect" => img::__coverage_inspect_ico(&source_bytes).map(|_| ()),
+        _ => return Err(format!("{}: unsupported ICO header operation", row.id)),
+    };
+    match result {
         Err(img::ImageError::Malformed {
             format,
             message,
@@ -1467,18 +1491,18 @@ fn execute_ico_header_validation_contract(
             offset: Some(offset),
             ..
         }) if format == img::ImageFormat::Ico
-            && stage == img::ImageErrorStage::StillDecode
+            && stage == expected_stage
             && offset == expected_offset
             && message.contains(expected_message) =>
         {
             Ok(())
         }
         Err(error) => Err(format!(
-            "{}: direct ICO decoder returned the wrong header result: {error:?}",
+            "{}: direct ICO parser returned the wrong header result: {error:?}",
             row.id
         )),
         Ok(_) => Err(format!(
-            "{}: direct ICO decoder accepted a malformed header",
+            "{}: direct ICO parser accepted a malformed header",
             row.id
         )),
     }
@@ -2702,7 +2726,10 @@ fn execute_fault_contract(
 ) -> Result<(), String> {
     if matches!(
         row.fault.point.as_str(),
-        "ico.header.reserved_nonzero" | "ico.header.unsupported_type"
+        "ico.header.reserved_nonzero"
+            | "ico.header.unsupported_type"
+            | "ico.inspect.reserved_nonzero"
+            | "ico.inspect.unsupported_type"
     ) {
         #[cfg(feature = "ico")]
         {

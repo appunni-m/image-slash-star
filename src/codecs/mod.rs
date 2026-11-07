@@ -409,6 +409,13 @@ pub(crate) fn decode_ico_for_coverage(data: &[u8]) -> ImageResult<DecodedImage> 
     decode_format(data, ImageFormat::Ico).map(|(image, _, _)| image)
 }
 
+/// Invoke ICO inspection directly for target-only malformed-header contracts.
+#[cfg(all(coverage, feature = "ico"))]
+pub(crate) fn inspect_ico_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected = ico::inspect::inspect(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::Ico, ImageErrorStage::Inspection)
+}
+
 /// Measure BMP metadata below public format detection for a target-only
 /// malformed-input contract.
 #[cfg(all(coverage, feature = "bmp"))]
