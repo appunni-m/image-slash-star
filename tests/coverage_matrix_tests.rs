@@ -7089,6 +7089,137 @@ fn assert_avif_mirror_axis_parity(
     Ok(())
 }
 
+fn assert_avif_inspection_entrypoint_parity(
+    data: &[u8],
+    full: &img::ImageInfo,
+    decoded_source: &img::SourceDescriptor,
+    decoded_source_color: &img::SourceColor,
+) -> Result<(), String> {
+    assert_source_metadata_entrypoint_parity(&full.source, decoded_source)?;
+    assert_source_color_entrypoint_parity(&full.source_color, decoded_source_color)?;
+
+    let basic = img::inspect_basic(data)
+        .map_err(|error| format!("AVIF basic inspection failed: {error}"))?;
+    if basic != *full {
+        return Err("AVIF basic inspection differs from full inspection".to_owned());
+    }
+
+    let policy = img::DecodePolicy::default();
+    let policy_inspected = img::inspect_with_policy(data, &policy)
+        .map_err(|error| format!("AVIF policy-based inspection failed: {error}"))?;
+    if policy_inspected != *full {
+        return Err("AVIF policy-based inspection differs from full inspection".to_owned());
+    }
+
+    Ok(())
+}
+
+fn assert_source_metadata_entrypoint_parity(
+    inspected: &img::SourceDescriptor,
+    decoded: &img::SourceDescriptor,
+) -> Result<(), String> {
+    let inspected_core = (
+        inspected.byte_order(),
+        inspected.alpha(),
+        inspected.avif_auxiliary_relationship(),
+        inspected.avif_auxiliary_relationships(),
+        inspected.avif_item_relationships(),
+        inspected.avif_premultiplied_relationships(),
+    );
+    let decoded_core = (
+        decoded.byte_order(),
+        decoded.alpha(),
+        decoded.avif_auxiliary_relationship(),
+        decoded.avif_auxiliary_relationships(),
+        decoded.avif_item_relationships(),
+        decoded.avif_premultiplied_relationships(),
+    );
+    if inspected_core != decoded_core {
+        return Err(format!(
+            "AVIF inspection and decode differ in source relationships: inspect={inspected_core:?}, decode={decoded_core:?}"
+        ));
+    }
+
+    let inspected_items = (
+        inspected.avif_item_color_properties(),
+        inspected.avif_item_icc_profiles(),
+        inspected.avif_item_properties(),
+        inspected.avif_item_plane_properties(),
+        inspected.avif_item_codec_properties(),
+    );
+    let decoded_items = (
+        decoded.avif_item_color_properties(),
+        decoded.avif_item_icc_profiles(),
+        decoded.avif_item_properties(),
+        decoded.avif_item_plane_properties(),
+        decoded.avif_item_codec_properties(),
+    );
+    if inspected_items != decoded_items {
+        return Err(format!(
+            "AVIF inspection and decode differ in item properties: inspect={inspected_items:?}, decode={decoded_items:?}"
+        ));
+    }
+
+    let inspected_container = (
+        inspected.avif_item_locations(),
+        inspected.avif_grid_item_ids(),
+        inspected.avif_grid_properties(),
+        inspected.avif_file_type(),
+        inspected.avif_transform(),
+        inspected.is_empty(),
+    );
+    let decoded_container = (
+        decoded.avif_item_locations(),
+        decoded.avif_grid_item_ids(),
+        decoded.avif_grid_properties(),
+        decoded.avif_file_type(),
+        decoded.avif_transform(),
+        decoded.is_empty(),
+    );
+    if inspected_container != decoded_container {
+        return Err(format!(
+            "AVIF inspection and decode differ in container properties: inspect={inspected_container:?}, decode={decoded_container:?}"
+        ));
+    }
+
+    Ok(())
+}
+
+fn assert_source_color_entrypoint_parity(
+    inspected: &img::SourceColor,
+    decoded: &img::SourceColor,
+) -> Result<(), String> {
+    let inspected_properties = (
+        inspected.srgb(),
+        inspected.gamma(),
+        inspected.chromaticities(),
+        inspected.icc_profile(),
+        inspected.avif_color(),
+        inspected.avif_chroma_sample_position(),
+        inspected.avif_content_light_level(),
+        inspected.avif_mastering_display_color_volume(),
+        inspected.is_empty(),
+    );
+    let decoded_properties = (
+        decoded.srgb(),
+        decoded.gamma(),
+        decoded.chromaticities(),
+        decoded.icc_profile(),
+        decoded.avif_color(),
+        decoded.avif_chroma_sample_position(),
+        decoded.avif_content_light_level(),
+        decoded.avif_mastering_display_color_volume(),
+        decoded.is_empty(),
+    );
+    if inspected_properties != decoded_properties {
+        return Err(format!(
+            "AVIF inspection and decode differ in source color properties: inspect={inspected_properties:?}, decode={decoded_properties:?}"
+        ));
+    }
+
+    Ok(())
+}
+
 fn load_pixel_reference(
     manifest_dir: &Path,
     id: &str,
@@ -9565,7 +9696,17 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 let expected_is_animated = row
                     .ref_is_animated
                     .unwrap_or(row.ref_frame_count.is_some_and(|count| count > 1));
-                if fmt_name == "avif" {
+                if fmt_name == "avif" && !expected_is_animated {
+                    if let Err(message) = assert_avif_inspection_entrypoint_parity(
+                        &data,
+                        &info,
+                        &decoded.source,
+                        &decoded.source_color,
+                    ) {
+                        eprintln!("  FAIL [{}]: inspect {message}", row.id);
+                        failed += 1;
+                        continue;
+                    }
                     let avif_mdcv_origin =
                         row.assertion_origins.get("avif_mdcv").map(String::as_str);
                     if let Some(expected_mdcv) = row.avif_mdcv.as_deref() {
