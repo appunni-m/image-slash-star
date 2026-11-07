@@ -5196,6 +5196,58 @@
       ]
     },
     {
+      "id": "lossless_monochrome_padded_right_context_1x128",
+      "asset": "lossless_monochrome_padded_right_context_1x128.avif",
+      "asset_sha256": "df479165e32b051ca47509336ed3cd0e40f4948234cdfe528b352bfe7f029e5b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/lossless_monochrome_padded_right_context_1x128.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "portable_lossless_monochrome_superres_clamped_3x3",
       "asset": "portable_lossless_monochrome_superres_clamped_3x3.avif",
       "asset_sha256": "b2e3a50cf5e71bbde9324c3b8f3b1fb8a050e088c25aa1029fd7bad93dd0c2d6",
@@ -50438,6 +50490,68 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/animated_lossless_inter_420_vertical_b64x128.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_lossless_inter_i422_invalid_vertical_b64x128",
+      "asset": "animated_lossless_inter_i422_invalid_vertical_b64x128.avif",
+      "asset_sha256": "610a7eb024ac94f7576f583766a9fd3f9adf035292f5f1c40757ebba3fc455ea",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_sequence_contract": "defensive_model"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": true,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": true,
+      "rust_sequence_error_kind": "malformed",
+      "rust_sequence_error_reason": "The AV1 sequence decoder rejects a vertical B64x128 partition for I422 before decoding residuals for a vertically unsampled chroma plane.",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_lossless_inter_i422_invalid_vertical_b64x128.avif",
         "operations": [
           "PIL.Image.open",
           "load",

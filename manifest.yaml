@@ -12705,6 +12705,12 @@ formats:
       - lossless_monochrome_adaptive_above_right_128x128.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: lossless_monochrome_padded_right_context_1x128
+      description: 1x128 8-bit all-lossless monochrome still with 4x4 coded leaves beyond the visible right edge and above-right context
+      test_assets:
+      - lossless_monochrome_padded_right_context_1x128.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_monochrome_superres_clamped_3x3
       description: 3x3 lossless monochrome key frame with super-resolution enabled at the minimum-width clamp
       test_assets:
@@ -16987,6 +16993,16 @@ formats:
       - animated_lossless_inter_420_vertical_b64x128.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: error_animated_lossless_inter_i422_invalid_vertical_b64x128
+      description: Two-frame 128x128 8-bit I422 all-lossless AVIF sequence whose inter B128x128 root is fixture-forced to invalid B64x128 leaves; Pillow decodes frame 0 and errors on frame 1
+      test_assets:
+      - animated_lossless_inter_i422_invalid_vertical_b64x128.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: true
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: malformed
+      rust_sequence_error_reason: The AV1 sequence decoder rejects a vertical B64x128 partition for I422 before decoding residuals for a vertically unsampled chroma plane.
     - id: animated_lossless_inter_420_clipped_b32x32_10bit_28x28
       description: Two-frame 28x28 10-bit full-range 4:2:0 all-lossless AVIF sequence with edge-clipped B8x8 inter leaves
       test_assets:
