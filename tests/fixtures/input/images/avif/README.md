@@ -2096,6 +2096,14 @@ Pillow 12.2.0 with libavif 1.4.1. The I420 AVIF SHA-256 is
 I422 AVIF SHA-256 is
 `2dfdaa9d17c34e5656e5fa458ef951abe28cec6452d17eef1ca7820022a6c19f`.
 
+`coverage_i422_intra_loopfilter_no_restoration_10bit_16x16.avif` uses the
+same deterministic 10-bit I422 source with nonzero deblocking levels and with
+CDEF and restoration disabled. It is generated and checked by the same pinned
+fixture encoder and Pillow workflow. Its AVIF SHA-256 is
+`c1ec0059b7a8a50eaa8d9a962b31216366a10b8128a64ed4e5cfba8026d246b3`; its
+768-byte RGB reference SHA-256 is
+`368fe5a808fef0e71905830503b08737a4ec8b6ee28e3d46a0065b8399d12d22`.
+
 `coverage_i420_intra_cdef_10bit_16x16.avif` and
 `coverage_i422_intra_cdef_10bit_16x16.avif` are 16x16 still pictures with a
 single-entry CDEF strength set, no loop filtering or restoration, no

@@ -18132,6 +18132,11 @@ formats:
       test_assets:
       - coverage_i422_intra_loopfilter_restoration_10bit_16x16.avif
       status: active
+    - id: coverage_i422_intra_loopfilter_no_restoration_10bit_16x16
+      description: Single-frame full-range 10-bit I422 AVIF with nonzero deblocking levels and no CDEF or restoration
+      test_assets:
+      - coverage_i422_intra_loopfilter_no_restoration_10bit_16x16.avif
+      status: active
     - id: coverage_i422_intra_cdef_10bit_16x16
       description: Single-frame full-range 10-bit I422 AVIF with a 16x16 intra frame using CDEF and no restoration
       test_assets:
