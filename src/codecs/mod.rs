@@ -438,6 +438,13 @@ pub(crate) fn measure_webp_metadata_for_coverage(data: &[u8]) -> ImageResult<u64
     metadata_bytes_format(data, ImageFormat::WebP)
 }
 
+/// Invoke WebP inspection directly for target-only malformed-input contracts.
+#[cfg(all(coverage, feature = "webp"))]
+pub(crate) fn inspect_webp_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
+    let inspected = webp::inspect::inspect(data).map_err(|error| error.context("inspect"));
+    into_image_result(inspected, ImageFormat::WebP, ImageErrorStage::Inspection)
+}
+
 #[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn inspect_avif_container_for_coverage(data: &[u8]) -> ImageResult<ImageInfo> {
     let inspected =

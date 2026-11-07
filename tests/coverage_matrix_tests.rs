@@ -1327,6 +1327,18 @@ fn execute_invalid_signature_contract(
             img::ImageErrorStage::Inspection,
             "invalid WebP RIFF signature",
         ),
+        "webp.inspect.invalid_riff_signature" => (
+            "webp",
+            "inspection_rejects_invalid_riff_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid WebP signature",
+        ),
+        "webp.inspect.invalid_webp_signature" => (
+            "webp",
+            "inspection_rejects_invalid_webp_signature",
+            img::ImageErrorStage::Inspection,
+            "invalid WebP signature",
+        ),
         _ => {
             return Err(format!(
                 "{}: unsupported invalid-signature fault point",
@@ -1334,8 +1346,13 @@ fn execute_invalid_signature_contract(
             ));
         }
     };
+    let expected_operation = if row.fault.point.starts_with("webp.inspect.") {
+        "inspect"
+    } else {
+        "decode"
+    };
     if row.row_type != "fault-contract"
-        || row.operation != "decode"
+        || row.operation != expected_operation
         || row.format != format_name
         || row.status != "active"
         || row.verification != "fault-contract"
@@ -1384,6 +1401,16 @@ fn execute_invalid_signature_contract(
         "webp.metadata.invalid_riff_signature" | "webp.metadata.invalid_webp_signature" => {
             assert_malformed_signature_result(
                 img::__coverage_measure_webp_metadata(&source_bytes),
+                &row.id,
+                img::ImageFormat::WebP,
+                stage,
+                message_fragment,
+            )
+        }
+        #[cfg(feature = "webp")]
+        "webp.inspect.invalid_riff_signature" | "webp.inspect.invalid_webp_signature" => {
+            assert_malformed_signature_result(
+                img::__coverage_inspect_webp(&source_bytes),
                 &row.id,
                 img::ImageFormat::WebP,
                 stage,
@@ -2694,6 +2721,8 @@ fn execute_fault_contract(
             | "gif.metadata.invalid_signature"
             | "webp.metadata.invalid_riff_signature"
             | "webp.metadata.invalid_webp_signature"
+            | "webp.inspect.invalid_riff_signature"
+            | "webp.inspect.invalid_webp_signature"
     ) {
         return execute_invalid_signature_contract(manifest_dir, matrix, row);
     }

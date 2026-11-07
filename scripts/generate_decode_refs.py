@@ -3505,6 +3505,12 @@ def sync_fault_contract_rows(manifest, matrix):
         "webp.metadata.invalid_webp_signature": {
             "metadata_measure_rejects_invalid_webp_signature"
         },
+        "webp.inspect.invalid_riff_signature": {
+            "inspection_rejects_invalid_riff_signature"
+        },
+        "webp.inspect.invalid_webp_signature": {
+            "inspection_rejects_invalid_webp_signature"
+        },
         "bmp.rle.entry_work_budget": {
             "decode_work_budget_exceeded_then_retry_succeeds"
         },
@@ -3817,6 +3823,16 @@ def sync_fault_contract_rows(manifest, matrix):
                 and point == "bmp.inspect.signature_mismatch"
                 and contract == "inspection_invalid_signature_rejected"
             )
+            supported_webp_inspection = row["format"] == "webp" and (
+                (
+                    point == "webp.inspect.invalid_riff_signature"
+                    and contract == "inspection_rejects_invalid_riff_signature"
+                )
+                or (
+                    point == "webp.inspect.invalid_webp_signature"
+                    and contract == "inspection_rejects_invalid_webp_signature"
+                )
+            )
             supported_avif_inspection = row["format"] == "avif" and (
                 (
                     point
@@ -3855,6 +3871,7 @@ def sync_fault_contract_rows(manifest, matrix):
             if not (
                 supported_png_inspection
                 or supported_bmp_inspection
+                or supported_webp_inspection
                 or supported_avif_inspection
                 or supported_tiff_inspection
             ):
