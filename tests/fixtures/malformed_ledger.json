@@ -964,6 +964,35 @@
         "verify_status": "ok"
       },
       {
+        "asset": "animated_lossless_inter_i422_invalid_vertical_b64x128.avif",
+        "class": "error_animated_lossless_inter_i422_invalid_vertical_b64x128",
+        "contracts": {
+          "decode_sequence": {
+            "origin": "defensive_model",
+            "pillow_message": null,
+            "pillow_type": null,
+            "rust_format": "AVIF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Two-frame 128x128 8-bit I422 all-lossless AVIF sequence whose inter B128x128 root is fixture-forced to invalid B64x128 leaves; Pillow decodes frame 0 and errors on frame 1",
+        "inspect_status": "ok",
+        "origins": [
+          "defensive_model",
+          "pillow_fixture",
+          "specification_reference"
+        ],
+        "pillow_message": null,
+        "pillow_status": "ok",
+        "pillow_type": null,
+        "sequence_error_message": "Failed to decode frame 1: Decoding of color planes failed",
+        "sequence_error_type": "builtins.RuntimeError",
+        "sequence_status": "error",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "animated_missing_stco.avif",
         "class": "error_animated_missing_chunk_offsets",
         "contracts": {
@@ -39963,7 +39992,7 @@
   "source": "tests/fixtures/coverage_matrix.json",
   "summary": {
     "by_format": {
-      "avif": 237,
+      "avif": 238,
       "bmp": 86,
       "gif": 49,
       "ico": 31,
@@ -39973,19 +40002,19 @@
       "webp": 142
     },
     "by_origin": {
-      "defensive_model": 5,
+      "defensive_model": 6,
       "independent_implementation": 1,
-      "pillow_fixture": 902,
-      "specification_reference": 237
+      "pillow_fixture": 903,
+      "specification_reference": 238
     },
     "by_spec_status": {
       "ambiguous": 36,
       "not_the_format": 41,
-      "spec_violation": 544,
+      "spec_violation": 545,
       "tolerated": 1,
       "truncated": 280
     },
-    "classes": 902,
+    "classes": 903,
     "formats": 8
   }
 }

@@ -1261,6 +1261,65 @@ RGB frames. `make verify` runs its `--check` mode without rebuilding the
 fixture encoder. The retained AVIF SHA-256 is
 `9ed8dd60feedcb8480bb8d6de7f8ea2ec23583da923e916e28a128c3746ca650`.
 
+## Invalid lossless I422 B64x128 partition
+
+`animated_lossless_inter_i422_invalid_vertical_b64x128.avif` uses the same
+128x128 inter-root override with I422 sampling. The forced vertical split
+creates B64x128 leaves whose chroma geometry is invalid for vertically
+unsampled chroma. Pillow 12.2.0 decodes frame 0 and raises
+`RuntimeError: Failed to decode frame 1: Decoding of color planes failed`.
+The parity case checks that Rust reports a structured malformed sequence
+error. Its normalized file SHA-256 is
+`610a7eb024ac94f7576f583766a9fd3f9adf035292f5f1c40757ebba3fc455ea`.
+
+Build the fixture-only encoder from the pinned libaom and libavif sources:
+
+```sh
+mkdir -p target/oracle-staging
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-b64x128-source
+git -C target/oracle-staging/libaom-i422-b64x128-source checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git -C target/oracle-staging/libaom-i422-b64x128-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libaom-invalid-i422-vertical-b64x128.patch"
+cmake -S target/oracle-staging/libaom-i422-b64x128-source \
+  -B target/oracle-staging/libaom-i422-b64x128-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DAOM_TARGET_CPU=generic \
+  -DENABLE_TESTS=OFF -DENABLE_DOCS=OFF -DENABLE_TOOLS=OFF -DENABLE_EXAMPLES=OFF \
+  -DCONFIG_AV1_DECODER=0 -DCONFIG_MULTITHREAD=0 \
+  -DCMAKE_INSTALL_PREFIX="$PWD/target/oracle-staging/libaom-i422-b64x128-prefix"
+cmake --build target/oracle-staging/libaom-i422-b64x128-build -j 4
+cmake --install target/oracle-staging/libaom-i422-b64x128-build
+
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif-i422-b64x128-source
+git -C target/oracle-staging/libavif-i422-b64x128-source checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+git -C target/oracle-staging/libavif-i422-b64x128-source apply \
+  "$PWD/scripts/avif_fixture_oracle/libavif-av1-fixture-controls.patch"
+cmake -S target/oracle-staging/libavif-i422-b64x128-source \
+  -B target/oracle-staging/libavif-i422-b64x128-build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+  -DAVIF_CODEC_AOM=SYSTEM -DAVIF_CODEC_AOM_DECODE=OFF \
+  -DAVIF_CODEC_DAV1D=OFF -DAVIF_LIBYUV=OFF -DAVIF_BUILD_APPS=OFF \
+  -DCMAKE_PREFIX_PATH="$PWD/target/oracle-staging/libaom-i422-b64x128-prefix" \
+  -DAOM_LIBRARY="$PWD/target/oracle-staging/libaom-i422-b64x128-prefix/lib/libaom.a" \
+  -DAOM_INCLUDE_DIR="$PWD/target/oracle-staging/libaom-i422-b64x128-prefix/include"
+cmake --build target/oracle-staging/libavif-i422-b64x128-build --target avif_static -j 4
+
+cc -std=c99 -O2 -Wall -Wextra -Werror \
+  -I target/oracle-staging/libavif-i422-b64x128-source/include \
+  -I target/oracle-staging/libavif-i422-b64x128-build/include \
+  -I target/oracle-staging/libaom-i422-b64x128-prefix/include \
+  scripts/avif_fixture_oracle/encode_lossless_inter_invalid_i422_b64x128.c \
+  target/oracle-staging/libavif-i422-b64x128-build/libavif.a \
+  target/oracle-staging/libaom-i422-b64x128-prefix/lib/libaom.a \
+  -lz -lm -lpthread -o target/oracle-staging/encode-avif-lossless-i422-b64x128
+.oracle-venv/bin/python scripts/generate_avif_invalid_lossless_i422_b64x128.py \
+  --encoder target/oracle-staging/encode-avif-lossless-i422-b64x128
+```
+
+The generator requires two identical normalized encodes and verifies the
+profile-2 I422 key/inter headers, all-lossless flags, exact frame-0 RGB hash,
+and the pinned Pillow frame-1 error. `make verify` runs its `--check` mode
+without rebuilding the native fixture encoder.
+
 The compound-prediction witness
 `animated_lossless_compound_vertical_i420_b64x128.avif` uses the same pinned
 libaom/libavif revisions and fixture-only vertical-partition patch. Reuse the

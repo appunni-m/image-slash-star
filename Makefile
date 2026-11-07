@@ -341,6 +341,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_lossless_compound_wide_i420.py --check
 	$(PYTHON) scripts/generate_avif_lossless_compound_tall_i420.py --check
 	$(PYTHON) scripts/generate_avif_lossless_inter_i420_b64x128.py --check
+	$(PYTHON) scripts/generate_avif_invalid_lossless_i422_b64x128.py --check
 	$(PYTHON) scripts/generate_avif_10bit_lossless_inter_fixture.py --fixture clipped_b16x16_10bit_partition16_60x64 --check
 	$(PYTHON) scripts/generate_avif_inter_i420_mode_largest_64x16.py --check
 	$(PYTHON) scripts/generate_avif_inter_i420_b64x16.py --mode largest --check

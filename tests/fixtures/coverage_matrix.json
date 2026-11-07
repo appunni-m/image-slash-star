@@ -96921,6 +96921,98 @@
           "error_contracts": {}
         },
         {
+          "id": "error_animated_lossless_inter_i422_invalid_vertical_b64x128",
+          "type": "decode",
+          "format": "avif",
+          "category": "error",
+          "description": "Two-frame 128x128 8-bit I422 all-lossless AVIF sequence whose inter B128x128 root is fixture-forced to invalid B64x128 leaves; Pillow decodes frame 0 and errors on frame 1",
+          "asset": "animated_lossless_inter_i422_invalid_vertical_b64x128.avif",
+          "expect_error": false,
+          "expect_sequence_error": true,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": true,
+          "rust_sequence_error_kind": "malformed",
+          "rust_sequence_error_reason": "The AV1 sequence decoder rejects a vertical B64x128 partition for I422 before decoding residuals for a vertically unsampled chroma plane.",
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "610a7eb024ac94f7576f583766a9fd3f9adf035292f5f1c40757ebba3fc455ea",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_invalid_vertical_b64x128_avif.bin",
+          "ref_sha256": "e780ef0ee496a4df6d0dd75380b657752c8a440cce6c8de4ef64a6e87bb26976",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence_status": "error",
+          "sequence_error_type": "builtins.RuntimeError",
+          "sequence_error_message": "Failed to decode frame 1: Decoding of color planes failed",
+          "sequence_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_sequence_contract": "defensive_model"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          }
+        },
+        {
           "id": "animated_lossless_inter_420_clipped_b32x32_10bit_28x28",
           "type": "decode",
           "format": "avif",
@@ -368433,12 +368525,12 @@
     }
   },
   "summary": {
-    "total_rows": 3861,
-    "decode_rows": 3186,
+    "total_rows": 3862,
+    "decode_rows": 3187,
     "encode_rows": 675,
     "formats": 8,
-    "assets_available": 3182,
-    "decode_active": 3186,
+    "assets_available": 3183,
+    "decode_active": 3187,
     "decode_planned": 0,
     "encode_not_wired": 27
   },

@@ -7392,6 +7392,86 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "lossless_monochrome_padded_right_context_1x128",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "df479165e32b051ca47509336ed3cd0e40f4948234cdfe528b352bfe7f029e5b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_lossless_monochrome_padded_right_context_1x128_avif.bin",
+      "ref_bytes": 384,
+      "ref_sha256": "5167506bf86eee4b41543a81267f54bd5928e73320d896d5e3ddd5c62222796c",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "portable_lossless_monochrome_superres_clamped_3x3",
       "status": "ok",
       "error_type": null,
@@ -99932,6 +100012,96 @@
           "repetition_count": -1
         }
       }
+    },
+    {
+      "id": "error_animated_lossless_inter_i422_invalid_vertical_b64x128",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "610a7eb024ac94f7576f583766a9fd3f9adf035292f5f1c40757ebba3fc455ea",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_sequence_contract": "defensive_model"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_invalid_vertical_b64x128_avif.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "e780ef0ee496a4df6d0dd75380b657752c8a440cce6c8de4ef64a6e87bb26976",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": "error",
+      "sequence_error_type": "builtins.RuntimeError",
+      "sequence_error_message": "Failed to decode frame 1: Decoding of color planes failed",
+      "sequence_error_kind": "malformed",
+      "rust_expect_sequence_error": true,
+      "rust_sequence_error_kind": "malformed",
+      "rust_sequence_error_reason": "The AV1 sequence decoder rejects a vertical B64x128 partition for I422 before decoding residuals for a vertically unsampled chroma plane."
     },
     {
       "id": "animated_lossless_inter_420_clipped_b32x32_10bit_28x28",
