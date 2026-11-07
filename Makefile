@@ -109,6 +109,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_avif_identity_matrix_profile1_444.py --check
 	$(PYTHON) scripts/generate_avif_identity_matrix_profile2_12bit_444.py --check
 	$(PYTHON) scripts/generate_avif_profile0_identity_matrix_error.py --check
+	$(PYTHON) scripts/generate_avif_monochrome_palette_fixture.py --avifenc target/oracle-staging/cdef-chroma-aligned-avif-build/avifenc --check
 	$(PYTHON) scripts/generate_avif_lossless_monochrome_superres_small.py --check
 	$(PYTHON) scripts/generate_avif_nonuniform_tile_fixture.py --check
 	$(PYTHON) scripts/generate_avif_nonuniform_tile_limit_error.py --check
