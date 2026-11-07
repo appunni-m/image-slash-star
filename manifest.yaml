@@ -544,6 +544,34 @@ fault_contracts:
       point: webp.metadata.invalid_webp_signature
       contract: metadata_measure_rejects_invalid_webp_signature
     oracle_status: not_applicable
+  - id: webp_inspect_riff_signature_contract
+    type: fault-contract
+    operation: inspect
+    format: webp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:webp:error_malformed_container
+    fault:
+      point: webp.inspect.invalid_riff_signature
+      contract: inspection_rejects_invalid_riff_signature
+    oracle_status: not_applicable
+  - id: webp_inspect_webp_signature_contract
+    type: fault-contract
+    operation: inspect
+    format: webp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:webp:error_malformed_container_bad_webp_signature
+    fault:
+      point: webp.inspect.invalid_webp_signature
+      contract: inspection_rejects_invalid_webp_signature
+    oracle_status: not_applicable
   - id: tiff_lzw_zero_expected_output_rejection
     type: fault-contract
     operation: decode

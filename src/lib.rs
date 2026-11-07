@@ -194,6 +194,14 @@ pub fn __coverage_measure_webp_metadata(data: &[u8]) -> ImageResult<u64> {
     codecs::measure_webp_metadata_for_coverage(data)
 }
 
+/// Inspect WebP bytes below public format detection for target-only
+/// malformed-input contracts. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "webp"))]
+#[doc(hidden)]
+pub fn __coverage_inspect_webp(data: &[u8]) -> ImageResult<ImageInfo> {
+    codecs::inspect_webp_for_coverage(data)
+}
+
 /// Inspect AVIF bytes below public format detection for a target-only
 /// malformed-input contract. This hook is absent from normal builds.
 #[cfg(coverage)]
