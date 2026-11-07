@@ -74,6 +74,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "ico_reserved_header_nonzero_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:ico:ico_reserved_header_nonzero_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "ico_unsupported_header_type_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:ico:ico_unsupported_header_type_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "gif_sequence_decoder_invalid_signature_contract",
       "category": "structured-diagnostics",
       "selector": "fault-contract:gif:gif_sequence_decoder_invalid_signature_contract",

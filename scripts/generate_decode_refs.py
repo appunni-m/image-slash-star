@@ -3491,6 +3491,8 @@ def sync_fault_contract_rows(manifest, matrix):
         "bmp.inspect.signature_mismatch": {
             "inspection_invalid_signature_rejected"
         },
+        "ico.header.reserved_nonzero": {"decode_rejects_invalid_header"},
+        "ico.header.unsupported_type": {"decode_rejects_invalid_header"},
         "gif.sequence.invalid_signature": {
             "direct_sequence_decoder_rejects_unrecognized_signature"
         },
@@ -3726,6 +3728,7 @@ def sync_fault_contract_rows(manifest, matrix):
             "avif",
             "bmp",
             "gif",
+            "ico",
             "jpeg",
             "png",
             "tiff",

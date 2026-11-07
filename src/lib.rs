@@ -154,6 +154,14 @@ pub fn __coverage_decode_bmp(data: &[u8]) -> ImageResult<DecodedImage> {
     codecs::decode_bmp_for_coverage(data)
 }
 
+/// Decode ICO bytes below public format detection for target-only malformed
+/// header contracts. This hook is absent from normal builds.
+#[cfg(all(coverage, feature = "ico"))]
+#[doc(hidden)]
+pub fn __coverage_decode_ico(data: &[u8]) -> ImageResult<DecodedImage> {
+    codecs::decode_ico_for_coverage(data)
+}
+
 /// Measure BMP metadata below public format detection for a target-only
 /// malformed-input contract. This hook is absent from normal builds.
 #[cfg(all(coverage, feature = "bmp"))]
