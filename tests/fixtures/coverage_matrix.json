@@ -61146,6 +61146,84 @@
           "error_contracts": {}
         },
         {
+          "id": "grid_orphan_dimg_reference",
+          "type": "decode",
+          "format": "avif",
+          "category": "grid",
+          "description": "RGB AVIF 1x2 color grid ignores a dimg reference whose source item is outside the primary color grid",
+          "asset": "grid_orphan_dimg_reference.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_grid_unreferenced_alpha_items_avif.bin",
+          "ref_bytes": 19200,
+          "ref_sha256": "f9a11555c837abeb321bdedd737638cc4a62c1784ad58f9b699fd49d3288c019",
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            80,
+            80
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "asset_sha256": "8e168a723ea15a1a3f50032cb7b427e131929c9f7b0b56198abdd3a281a0ca80",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "animated.avif",
           "category": "animated",
           "description": "Five-frame AVIF with exact frame pixels and timing",
@@ -368525,12 +368603,12 @@
     }
   },
   "summary": {
-    "total_rows": 3862,
-    "decode_rows": 3187,
+    "total_rows": 3863,
+    "decode_rows": 3188,
     "encode_rows": 675,
     "formats": 8,
-    "assets_available": 3183,
-    "decode_active": 3187,
+    "assets_available": 3184,
+    "decode_active": 3188,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
