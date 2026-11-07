@@ -121,6 +121,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420 --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i422 --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i422_loopfilter_restoration --check
+	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i422_loopfilter_no_restoration --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420_cdef --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420_cdef_low_variance --check
 	$(PYTHON) scripts/generate_avif_intra_filters.py --variant i420_cdef_odd_edge --check

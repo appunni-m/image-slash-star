@@ -198,7 +198,7 @@ cmake --build target/oracle-staging/libavif-force-i420-cdef-restoration-build --
   --variant i420_cdef_restoration --check
 ```
 
-## Combined 10-bit I422 loop filtering and Wiener restoration
+## 10-bit I422 intra loop-filter profiles
 
 The 16x16 fixture `coverage_i422_intra_loopfilter_restoration_10bit_16x16.avif`
 selects the bounded I422 intra postfilter profile with active Wiener luma
@@ -209,6 +209,12 @@ sets all four levels to 1 on a 10-bit 16x16 I422 key frame. Apply it after
 [`libaom-force-i422-inter-loopfilter.patch`](libaom-force-i422-inter-loopfilter.patch)
 to the clean pinned libaom 3.13.2 source tree, then build in a separate
 directory.
+
+The companion `coverage_i422_intra_loopfilter_no_restoration_10bit_16x16.avif`
+uses the same source and active deblocking levels with both CDEF and restoration
+disabled. Together, the fixtures exercise both restoration settings while
+holding the remaining filter profile constant. Both variants use the same pinned
+encoder below.
 
 ```sh
 git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom-i422-intra-loopfilter
@@ -241,14 +247,23 @@ cmake --build target/oracle-staging/libavif-i422-intra-loopfilter-build --target
   --avifenc target/oracle-staging/libavif-i422-intra-loopfilter-build/avifenc
 .oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
   --variant i422_loopfilter_restoration --check
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i422_loopfilter_no_restoration \
+  --avifenc target/oracle-staging/libavif-i422-intra-loopfilter-build/avifenc
+.oracle-venv/bin/python scripts/generate_avif_intra_filters.py \
+  --variant i422_loopfilter_no_restoration --check
 ```
 
 The generator checks the exact I422 key-frame syntax, all four active filter
-levels, Wiener restoration, repeat-encode identity, and Pillow 12.2.0/libavif
-1.4.1 pixel output. The AVIF SHA-256 is
+levels, restoration profile, repeat-encode identity, and Pillow 12.2.0/libavif
+1.4.1 pixel output. The restoration AVIF SHA-256 is
 `9366ceb13fc73ec12ff778d9f55a1924025cd166bd75e2cd8322358914b326fe`; its
 768-byte RGB reference SHA-256 is
 `93f7718993194043da301e4f78d6a36848058c1a18599546db3628ca579519dc`.
+The no-restoration AVIF SHA-256 is
+`c1ec0059b7a8a50eaa8d9a962b31216366a10b8128a64ed4e5cfba8026d246b3`; its
+768-byte RGB reference SHA-256 is
+`368fe5a808fef0e71905830503b08737a4ec8b6ee28e3d46a0065b8399d12d22`.
 
 ## Combined 10-bit I420 loop filtering, CDEF, and SGR restoration
 
