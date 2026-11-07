@@ -2714,6 +2714,34 @@ fault_contracts:
       point: webp.riff_sink.declared_size_mismatch
       contract: encode_invalid_riff_header_then_retry_matches_reference
     oracle_status: not_applicable
+  - id: ico_reserved_header_nonzero_rejected
+    type: fault-contract
+    operation: decode
+    format: ico
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:ico:error_malformed_invalid_reserved
+    fault:
+      point: ico.header.reserved_nonzero
+      contract: decode_rejects_invalid_header
+    oracle_status: not_applicable
+  - id: ico_unsupported_header_type_rejected
+    type: fault-contract
+    operation: decode
+    format: ico
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:ico:error_malformed_invalid_type
+    fault:
+      point: ico.header.unsupported_type
+      contract: decode_rejects_invalid_header
+    oracle_status: not_applicable
 
 formats:
   jpeg:

@@ -1165,7 +1165,7 @@ fn execute_bmp_rle_work_budget_contract(
 }
 
 #[cfg(coverage)]
-fn invalid_signature_parity_source(
+fn unknown_format_parity_source(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
@@ -1233,7 +1233,7 @@ fn invalid_signature_parity_source(
     assert_sha256(
         &source_bytes,
         source.asset_sha256.as_deref(),
-        &format!("{format_name} invalid-signature parity source asset"),
+        &format!("{format_name} Pillow unknown-format parity source asset"),
     )?;
 
     match img::decode(&source_bytes) {
@@ -1346,7 +1346,7 @@ fn execute_invalid_signature_contract(
         return Err(format!("{}: invalid signature fault contract", row.id));
     }
 
-    let source_bytes = invalid_signature_parity_source(manifest_dir, matrix, row, format_name)?;
+    let source_bytes = unknown_format_parity_source(manifest_dir, matrix, row, format_name)?;
     match row.fault.point.as_str() {
         #[cfg(feature = "bmp")]
         "bmp.decode.invalid_signature" => assert_malformed_signature_result(
@@ -1392,6 +1392,66 @@ fn execute_invalid_signature_contract(
         }
         _ => Err(format!(
             "{}: no coverage hook is enabled for this signature fault point",
+            row.id
+        )),
+    }
+}
+
+#[cfg(all(coverage, feature = "ico"))]
+fn execute_ico_header_validation_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    let (expected_contract, expected_offset, expected_message) = match row.fault.point.as_str() {
+        "ico.header.reserved_nonzero" => (
+            "decode_rejects_invalid_header",
+            0,
+            "ICO reserved header field is nonzero",
+        ),
+        "ico.header.unsupported_type" => (
+            "decode_rejects_invalid_header",
+            2,
+            "ICO container type is neither icon nor cursor",
+        ),
+        _ => return Err(format!("{}: unsupported ICO header fault point", row.id)),
+    };
+    if row.row_type != "fault-contract"
+        || row.operation != "decode"
+        || row.format != "ico"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.contract != expected_contract
+    {
+        return Err(format!(
+            "{}: invalid ICO header validation contract",
+            row.id
+        ));
+    }
+
+    let source_bytes = unknown_format_parity_source(manifest_dir, matrix, row, "ico")?;
+    match img::__coverage_decode_ico(&source_bytes) {
+        Err(img::ImageError::Malformed {
+            format,
+            message,
+            stage: Some(stage),
+            offset: Some(offset),
+            ..
+        }) if format == img::ImageFormat::Ico
+            && stage == img::ImageErrorStage::StillDecode
+            && offset == expected_offset
+            && message.contains(expected_message) =>
+        {
+            Ok(())
+        }
+        Err(error) => Err(format!(
+            "{}: direct ICO decoder returned the wrong header result: {error:?}",
+            row.id
+        )),
+        Ok(_) => Err(format!(
+            "{}: direct ICO decoder accepted a malformed header",
             row.id
         )),
     }
@@ -2615,6 +2675,19 @@ fn execute_fault_contract(
 ) -> Result<(), String> {
     if matches!(
         row.fault.point.as_str(),
+        "ico.header.reserved_nonzero" | "ico.header.unsupported_type"
+    ) {
+        #[cfg(feature = "ico")]
+        {
+            return execute_ico_header_validation_contract(manifest_dir, matrix, row);
+        }
+        #[cfg(not(feature = "ico"))]
+        {
+            return Err(format!("{}: ICO feature is disabled", row.id));
+        }
+    }
+    if matches!(
+        row.fault.point.as_str(),
         "bmp.decode.invalid_signature"
             | "bmp.metadata.invalid_signature"
             | "gif.sequence.invalid_signature"
@@ -2660,7 +2733,7 @@ fn execute_fault_contract(
         || !matches!(row.operation.as_str(), "decode" | "inspect")
         || !matches!(
             row.format.as_str(),
-            "avif" | "bmp" | "gif" | "jpeg" | "png" | "tiff" | "webp"
+            "avif" | "bmp" | "gif" | "ico" | "jpeg" | "png" | "tiff" | "webp"
         )
         || row.status != "active"
         || row.verification != "fault-contract"
