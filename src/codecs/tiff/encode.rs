@@ -141,7 +141,8 @@ fn encode_page_with_token(
     let width = img.width as usize;
     let height = img.height as usize;
     let palette_alpha = img.raster_mode == Mode::ImagePaletteAlpha8;
-    let color_map = if palette_alpha {
+    let indexed = img.mode == ImageMode::P8 || palette_alpha;
+    let color_map = if indexed {
         Some(tiff_palette_color_map(img.palette.as_ref())?)
     } else {
         None
@@ -151,6 +152,7 @@ fn encode_page_with_token(
     } else {
         match img.mode {
             ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
+            ImageMode::P8 => (3, 1, 8, false, width),
             ImageMode::La8 => (1, 2, 8, true, width.saturating_mul(2)),
             ImageMode::L16 => (1, 1, 16, false, width.saturating_mul(2)),
             ImageMode::F32 => (1, 1, 32, false, width.saturating_mul(4)),

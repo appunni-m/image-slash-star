@@ -1,8 +1,30 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,887 total rows: 3,200 decode /
-inspect / verify rows and 687 encode rows. Of those, 3,200 decode rows are
-active and 660 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,888 total rows: 3,200 decode /
+inspect / verify rows and 688 encode rows. Of those, 3,200 decode rows are
+active and 661 encode rows are active; 27 encode rows remain planned.
+
+## TIFF indexed encoding with no retained palette — 2026-11-08
+
+Added `encode:tiff:enc_indexed_missing_palette`, using Pillow 12.2.0's
+`short_color_map.tiff` input. TIFF encoding now preserves its indexed `P8`
+samples and emits the required palette ColorMap even when the decoded source
+has no retained palette entries. The exact encode and decode-back parity row
+passes. The unsupported-mode contract no longer lists `P8` for TIFF.
+
+`PYTHON=.oracle-venv/bin/python make coverage-parity` passes all 3,861 active
+decode/encode rows (3,200 decode and 661 encode); 27 planned encode rows were
+not run. The run did not execute separate fault-contract cases. Its matrix-run
+LLVM report measures 97,670/142,643 lines (68.4716%), 20,312/32,080 branches
+(63.3167%), 5,256/9,170 functions (57.3173%), and 148,610/220,959 regions
+(67.2568%). These figures describe this parity-matrix run, not full-suite
+coverage or the managed release baseline.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261108T171104.159617Z-9aab56d3b8864d3091ce6335eebfeec6/coverage.json`
+(SHA-256 `464de80a08252c239055b850cc2c3033a422736beadcd363c8e895ff24d1e089`).
+Coverage MCP was not queried for this local report; its receipt marks source
+identity unverified and test attribution unknown.
 
 ## CIELAB TIFF identity and PA encoder parity — 2026-11-08
 
@@ -17607,7 +17629,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1a182a726094b48bdca2027134f95da5202c29119205a2b47c5109b7a87acc96`; matrix `cdb4fdf4acb3066b1cc433d6499b4f4a568667e3130b5a84ff75dff9fa87470f`.
+- Current fixture integrity only: manifest `88c7e1a59d922eeec65bc6b4372bb7a36096b303cd3f25297b37b22c53dba086`; matrix `f0cbc5ef81fcf562f28308fb1409381611229aedb9a350606efe33a583016087`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

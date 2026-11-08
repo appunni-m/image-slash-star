@@ -118,7 +118,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "TIFF does not directly accept P8 or multi-channel 16-bit and float modes"
+      "rust_error_reason": "TIFF does not directly accept multi-channel 16-bit and float modes"
     },
     {
       "id": "enc_palette_alpha",
@@ -135,6 +135,46 @@
       "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
       "source_mode": "PA",
       "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_indexed_missing_palette",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_indexed_missing_palette.bin",
+      "ref_bytes": 16384,
+      "ref_mode": "P",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_indexed_missing_palette.bin",
+      "encoded_ref_bytes": 18054,
+      "encoded_ref_sha256": "7b468806b83f0aee751357001e5a54ec0c18daa40c0aad84f90397b595fb76d9",
+      "source_mode": "P",
+      "source_sha256": "2aa741bab166270dadb5515f01f972035ad793e817e484026270591c578fcacb",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

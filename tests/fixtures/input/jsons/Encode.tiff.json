@@ -133,7 +133,6 @@
       },
       "params": {
         "rust_unsupported_modes": [
-          "P",
           "La16",
           "Rgb16",
           "Rgba16",
@@ -144,7 +143,7 @@
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "TIFF does not directly accept P8 or multi-channel 16-bit and float modes",
+      "rust_error_reason": "TIFF does not directly accept multi-channel 16-bit and float modes",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",
@@ -207,6 +206,49 @@
           "token": "fresh non-cancelled cancellation token",
           "comparison": "exact Pillow encoded bytes and ordinary encode output"
         }
+      }
+    },
+    {
+      "id": "enc_indexed_missing_palette",
+      "source_asset": "short_color_map.tiff",
+      "source_format": "tiff",
+      "source_mode": "P",
+      "source_sha256": "2aa741bab166270dadb5515f01f972035ad793e817e484026270591c578fcacb",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/short_color_map.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
       }
     },
     {
