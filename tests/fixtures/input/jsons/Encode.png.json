@@ -360,14 +360,13 @@
           "Rgba16",
           "Rgb32F",
           "Rgba32F",
-          "F32",
-          "I32"
+          "F32"
         ],
         "rust_invalid_color_mode": true
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and L16",
+      "rust_error_reason": "PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, L16, and I32",
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/1x1.png",
         "method": "PIL.Image.Image.save",
@@ -3354,6 +3353,92 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/16bit.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_i32_little_endian",
+      "source_asset": "signed32.tiff",
+      "source_format": "tiff",
+      "source_mode": "I",
+      "source_sha256": "16639a907659db86c025f99e9338c787d19e716e4a127e8ad1a6f0110da5d7be",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/signed32.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_i32_big_endian",
+      "source_asset": "be_signed32_predictor.tiff",
+      "source_format": "tiff",
+      "source_mode": "I",
+      "source_sha256": "40e72cc85aaf2f04de4053f5babce1283b568917f554a0e28d5993e23037cd32",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/be_signed32_predictor.tiff",
         "method": "PIL.Image.Image.save",
         "format": "PNG",
         "kwargs": {},

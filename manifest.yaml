@@ -7152,11 +7152,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and L16
+      rust_error_reason: PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, L16, and I32
     - id: enc_error_retained_sequence_duration
       description: A still PNG cannot represent a retained presentation duration
       params: {'sequence_duration_ms': 10}
@@ -7400,6 +7400,14 @@ formats:
       description: 
       source_asset: 16bit.png
       params: {'bit_depth': 16}
+    - id: enc_i32_little_endian
+      description: I-mode samples from little-endian TIFF clamp to PNG unsigned 16-bit grayscale
+      source_format: tiff
+      source_asset: signed32.tiff
+    - id: enc_i32_big_endian
+      description: I-mode samples from big-endian TIFF clamp to PNG unsigned 16-bit grayscale
+      source_format: tiff
+      source_asset: be_signed32_predictor.tiff
     - id: enc_filter_none
       description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'none'}
@@ -11102,6 +11110,7 @@ formats:
       test_assets:
       - associated_rgba_separate_strips_raw.tiff
       expect_error: true
+      inspect_raster_mode: RGBa
     - id: associated_rgba_separate_strips_deflate
       description: Associated alpha in Deflate separate component planes and multiple strips follows Pillow transfer bytes
       test_assets:
@@ -11119,6 +11128,7 @@ formats:
       test_assets:
       - associated_rgba_separate_tiles_raw.tiff
       expect_error: true
+      inspect_raster_mode: RGBa
     - id: associated_rgba_separate_tiles_deflate
       description: Associated alpha in Deflate separate component planes and clipped edge tiles follows Pillow transfer bytes
       test_assets:
@@ -11143,20 +11153,26 @@ formats:
       description: Raw separate RGB planes remain readable with an omitted alpha plane and zero alpha samples
       test_assets:
       - associated_rgba_separate_strips_raw_missing_alpha_plane.tiff
+      inspect_raster_mode: RGBa
+      decoded_raster_mode: RGBa
     - id: associated_rgba_separate_strips_raw_first_alpha_block
       description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
       test_assets:
       - associated_rgba_separate_strips_raw_first_alpha_block.tiff
       expect_error: true
+      inspect_raster_mode: RGBa
     - id: associated_rgba_separate_tiles_raw_missing_alpha_plane
       description: Raw separate RGB planes remain readable with an omitted alpha plane and zero alpha samples
       test_assets:
       - associated_rgba_separate_tiles_raw_missing_alpha_plane.tiff
+      inspect_raster_mode: RGBa
+      decoded_raster_mode: RGBa
     - id: associated_rgba_separate_tiles_raw_first_alpha_block
       description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
       test_assets:
       - associated_rgba_separate_tiles_raw_first_alpha_block.tiff
       expect_error: true
+      inspect_raster_mode: RGBa
     - id: extra_samples_zero_rgbx_row_255_contiguous_strips_raw
       description: One complete raw RGB row with an ignored fourth sample stays below the 1024 stored-byte boundary
       test_assets:
@@ -12290,7 +12306,7 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32']
         rust_invalid_color_mode: true
         sizes: [[1, 1]]
       rust_expect_error: true

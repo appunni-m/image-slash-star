@@ -303,6 +303,11 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
                 row.pop("rust_expected_metadata", None)
             else:
                 row["rust_expected_metadata"] = case["rust_expected_metadata"]
+            for field in ("inspect_raster_mode", "decoded_raster_mode"):
+                if case.get(field) is None:
+                    row.pop(field, None)
+                else:
+                    row[field] = case[field]
             if case.get("avif_mdcv") is None:
                 row.pop("avif_mdcv", None)
             else:
@@ -338,6 +343,9 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
     }
     if case.get("rust_expected_metadata") is not None:
         row["rust_expected_metadata"] = case["rust_expected_metadata"]
+    for field in ("inspect_raster_mode", "decoded_raster_mode"):
+        if case.get(field) is not None:
+            row[field] = case[field]
     if case.get("avif_mdcv") is not None:
         row["avif_mdcv"] = case["avif_mdcv"]
     if case.get("frame_request") is not None:
@@ -405,6 +413,11 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                         "status": case_status,
                     }
                 )
+                for field in ("inspect_raster_mode", "decoded_raster_mode"):
+                    if case.get(field) is None:
+                        row.pop(field, None)
+                    else:
+                        row[field] = case[field]
                 if case.get("assert_sequence_frame_pixels", False):
                     if fmt_name != "gif":
                         raise RuntimeError(
@@ -5993,6 +6006,8 @@ def generate_decode(manifest, matrix, target_format=None):
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_sha256": r.get("ref_sha256"),
                 "ref_mode": r.get("ref_mode"),
+                "inspect_raster_mode": r.get("inspect_raster_mode"),
+                "decoded_raster_mode": r.get("decoded_raster_mode"),
                 "ref_size": r.get("ref_size"),
                 "ref_frame_count": r.get("ref_frame_count"),
                 "ref_is_animated": r.get("ref_is_animated"),

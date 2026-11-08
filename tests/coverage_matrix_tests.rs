@@ -255,6 +255,8 @@ struct DecodeRow {
     verify_error_kind: Option<String>,
     verification_scope: String,
     ref_mode: Option<String>,
+    inspect_raster_mode: Option<String>,
+    decoded_raster_mode: Option<String>,
     ref_size: Option<Vec<u32>>,
     ref_frame_count: Option<u32>,
     ref_is_animated: Option<bool>,
@@ -5321,6 +5323,8 @@ impl FromJson for DecodeRow {
             verify_error_kind: object.take("verify_error_kind")?,
             verification_scope: object.take("verification_scope")?,
             ref_mode: object.take("ref_mode")?,
+            inspect_raster_mode: object.take("inspect_raster_mode")?,
+            decoded_raster_mode: object.take("decoded_raster_mode")?,
             ref_size: object.take("ref_size")?,
             ref_frame_count: object.take("ref_frame_count")?,
             ref_is_animated: object.take("ref_is_animated")?,
@@ -7303,6 +7307,7 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
         "LA" | "La8" => img::Mode::ImageLumaA8,
         "RGB" | "Rgb8" => img::Mode::ImageRgb8,
         "RGBA" | "Rgba8" => img::Mode::ImageRgba8,
+        "RGBa" => img::Mode::ImageRgbPremultiplied8,
         "CMYK" | "Cmyk8" => img::Mode::ImageCmyk8,
         "I;16B"
             if info.format == img::ImageFormat::Tiff
@@ -9065,6 +9070,35 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
 
+            if let Some(mode_name) = row.inspect_raster_mode.as_deref() {
+                let expected_raster_mode = inspected
+                    .as_ref()
+                    .ok()
+                    .and_then(|info| expected_raster_mode(mode_name, info));
+                let header_matches = inspected
+                    .as_ref()
+                    .ok()
+                    .zip(expected_raster_mode)
+                    .is_some_and(|(info, expected)| info.raster_mode == expected);
+                let encoded_matches = img::EncodedImage::new(Arc::<[u8]>::from(data.clone()))
+                    .is_ok_and(|source| {
+                        expected_raster_mode
+                            .is_some_and(|expected| source.raster_mode() == expected)
+                            && !source.is_decoded()
+                    });
+                let view_matches = img::EncodedImageView::new(&data).is_ok_and(|source| {
+                    expected_raster_mode.is_some_and(|expected| source.raster_mode() == expected)
+                });
+                if !header_matches || !encoded_matches || !view_matches {
+                    eprintln!(
+                        "  FAIL [{}]: TIFF raster identity differs between inspection entry points (inspect={inspected:?}, expected={mode_name})",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
             if row.rust_inspect_basic {
                 let basic_inspected = img::inspect_basic(&data);
                 let matches_basic_contract = match (&basic_inspected, &inspected) {
@@ -9759,9 +9793,15 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
-                let expected_raster_mode = row
-                    .ref_mode
+                let expected_inspect_raster_mode = row
+                    .inspect_raster_mode
                     .as_deref()
+                    .or(row.ref_mode.as_deref())
+                    .and_then(|mode| expected_raster_mode(mode, &info));
+                let expected_decoded_raster_mode = row
+                    .decoded_raster_mode
+                    .as_deref()
+                    .or(row.ref_mode.as_deref())
                     .and_then(|mode| expected_raster_mode(mode, &info));
                 if info.format != expected_format
                     || Some(info.width)
@@ -9769,7 +9809,10 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
                     || Some(info.mode) != expected_mode
-                    || expected_raster_mode.is_some_and(|expected| info.raster_mode != expected)
+                    || expected_inspect_raster_mode
+                        .is_some_and(|expected| info.raster_mode != expected)
+                    || expected_decoded_raster_mode
+                        .is_some_and(|expected| decoded.raster_mode != expected)
                     || Some(u32::from(info.bit_depth)) != expected_bit_depth
                     || (matches!(fmt_name.as_str(), "png" | "bmp" | "tiff" | "ico")
                         && info.palette != decoded.palette)

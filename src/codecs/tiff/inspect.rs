@@ -2,7 +2,10 @@
 
 use super::decode::{Directory, Endian};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
-use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode, SourceDescriptor};
+use crate::types::{
+    ImageFormat, ImageInfo, ImageMode, ImagePalette, Mode, SourceAlpha, SourceByteOrder,
+    SourceDescriptor,
+};
 
 const COMPRESSION_NONE: usize = 1;
 const COMPRESSION_JPEG: usize = 7;
@@ -82,8 +85,16 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         source = source.with_alpha(alpha);
     }
     let mode = layout.mode();
-    let raster_mode =
-        Mode::from_header(mode, ImageFormat::Tiff, source.alpha(), source.byte_order());
+    let raw_separate_associated_alpha = matches!(layout, TiffLayout::Rgba8)
+        && alpha == Some(SourceAlpha::Premultiplied)
+        && directory.one_or(284, 1) == 2
+        && compression == COMPRESSION_NONE;
+    let raster_mode = raster_mode(
+        mode,
+        alpha,
+        endian.source_byte_order(),
+        raw_separate_associated_alpha,
+    );
 
     Ok(ImageInfo {
         format: ImageFormat::Tiff,
@@ -100,6 +111,19 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         source,
         source_color: crate::types::SourceColor::new(),
     })
+}
+
+pub(super) const fn raster_mode(
+    mode: ImageMode,
+    alpha: Option<SourceAlpha>,
+    byte_order: SourceByteOrder,
+    raw_separate_associated_alpha: bool,
+) -> Mode {
+    if matches!(mode, ImageMode::Rgba8) && raw_separate_associated_alpha {
+        Mode::ImageRgbPremultiplied8
+    } else {
+        Mode::from_header(mode, ImageFormat::Tiff, alpha, Some(byte_order))
+    }
 }
 
 fn verify_separate_planar_offset_count(
