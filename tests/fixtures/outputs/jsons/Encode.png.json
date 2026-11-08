@@ -333,6 +333,56 @@
       "error_kind": "unsupported"
     },
     {
+      "id": "enc_error_lab_mode",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "LAB",
+      "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode LAB as PNG",
+          "rust_kind": "unsupported",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode LAB as PNG",
+      "error_kind": "unsupported"
+    },
+    {
       "id": "enc_error_retained_sequence_duration",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_error_retained_sequence_duration.bin",
       "ref_bytes": 49152,

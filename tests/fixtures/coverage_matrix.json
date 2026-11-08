@@ -284884,6 +284884,58 @@
           "oracle_error_kind": "unsupported"
         },
         {
+          "id": "enc_error_lab_mode",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "PNG rejects CIELAB raster identity instead of writing LAB samples as RGB",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "lab.tiff",
+          "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "LAB",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode LAB as PNG",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "cannot write mode LAB as PNG",
+              "rust_kind": "unsupported",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "enc_error_retained_sequence_duration",
           "type": "encode",
           "format": "png",
@@ -326054,7 +326106,7 @@
           "type": "encode",
           "format": "tiff",
           "category": "error",
-          "description": "Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking",
+          "description": "Unsupported public ImageModes and inconsistent color or LAB transfer states return structured errors without panicking",
           "params": {
             "rust_unsupported_modes": [
               "La16",
@@ -326063,7 +326115,8 @@
               "Rgb32F",
               "Rgba32F"
             ],
-            "rust_invalid_color_mode": true
+            "rust_invalid_color_mode": true,
+            "rust_invalid_lab_transfer_carrier": true
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
@@ -326169,6 +326222,57 @@
           "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
           "ref_bytes": 12,
           "ref_mode": "PA",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lab",
+          "type": "encode",
+          "format": "tiff",
+          "category": "lab",
+          "description": "TIFF preserves CIELAB samples and LAB mode identity",
+          "params": {},
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "lab.tiff",
+          "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "LAB",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lab.bin",
+          "encoded_ref_bytes": 158,
+          "encoded_ref_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lab.bin",
+          "ref_sha256": "403fa5475429b8200e15e60e01ffdb4f2499732bf9538e2d98e78bc1a1d0e64e",
+          "ref_bytes": 18,
+          "ref_mode": "LAB",
           "ref_size": [
             3,
             2
@@ -370416,9 +370520,9 @@
     }
   },
   "summary": {
-    "total_rows": 3890,
+    "total_rows": 3892,
     "decode_rows": 3201,
-    "encode_rows": 689,
+    "encode_rows": 691,
     "formats": 8,
     "assets_available": 3197,
     "decode_active": 3201,
@@ -374890,6 +374994,12 @@
     "case_id": "enc_i16_big_endian",
     "source_mode": "I;16B",
     "decoded_mode": "I;16"
+  },
+  {
+    "format": "tiff",
+    "case_id": "enc_lab",
+    "source_mode": "LAB",
+    "decoded_mode": "LAB"
   }
 ]
 }

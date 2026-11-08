@@ -435,6 +435,59 @@
       }
     },
     {
+      "id": "enc_error_lab_mode",
+      "source_asset": "lab.tiff",
+      "source_format": "tiff",
+      "source_mode": "LAB",
+      "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode LAB as PNG",
+          "rust_kind": "unsupported",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {},
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lab.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_error_retained_sequence_duration",
       "source_asset": "rgb.png",
       "source_format": "png",

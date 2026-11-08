@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,889 total rows: 3,201 decode /
-inspect / verify rows and 688 encode rows. Of those, 3,201 decode rows are
-active and 661 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,892 total rows: 3,201 decode /
+inspect / verify rows and 691 encode rows. Of those, 3,201 decode rows are
+active and 664 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF indexed encoding with no retained palette — 2026-11-08
 
@@ -17629,7 +17629,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b5e6fd014229830c798e05f2aae870709c0c3fe9971c8f02b3f3b15a3b9f49d7`; matrix `ebe7c69d8a5caca3b28be6a6016ab6b8e4612067cf917c9b972f94272066c904`.
+- Current fixture integrity only: manifest `e1fd876f1a5ce517407eeae0cb3af958226a6822d1a27865e6f26d112ca28382`; matrix `b86f8b3077f921adbf651dc1cf5a739e9db4858e4bf8244b3301aa5ba21a6277`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23248,6 +23248,29 @@ MCP labels this selected measurement's source identity unverified and test
 attribution unknown. It is local selected-case evidence and does not establish
 aggregate coverage.
 
-The current public evidence matrix contains 3,890 total rows: 3,201 decode /
-inspect / verify rows and 689 encode rows. Of those, 3,201 decode rows and 662
+The current public evidence matrix contains 3,892 total rows: 3,201 decode /
+inspect / verify rows and 691 encode rows. Of those, 3,201 decode rows and 664
+encode rows are active; 27 encode rows remain planned.
+
+## CIELAB encode identity parity — 2026-11-09
+
+Added Pillow-backed parity rows for TIFF LAB encoding and PNG's unsupported
+LAB outcome. TIFF emitted the exact 158-byte Pillow output and decoded back to
+the same 3×2 LAB pixels. The existing public-mode contract now also checks
+that a LAB raster identity paired with an L8 transfer carrier returns a
+structured parameter error. The selected run passed all three rows with no
+panics.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261108T225105.016293Z-1e69b86f8aef46db9b645c64dc2bc5f4/coverage.json`
+(SHA-256
+`2aec37edae09c0b5075b98be2540a21eb3ae0a45229eb900bb3f8f77c04a611a`). Its
+local receipt SHA-256 is
+`3db7c518efb7ae7d62b4c760723bf6140eea1d19aae106e05be19283a1096798`. The
+receipt marks Coverage MCP as not queried, source identity unverified, and
+test attribution unknown. This selected subset is not an aggregate coverage
+measurement.
+
+The current public evidence matrix contains 3,892 total rows: 3,201 decode /
+inspect / verify rows and 691 encode rows. Of those, 3,201 decode rows and 664
 encode rows are active; 27 encode rows remain planned.

@@ -161,6 +161,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lab",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_lab.bin",
+      "ref_bytes": 18,
+      "ref_mode": "LAB",
+      "ref_size": [
+        3,
+        2
+      ],
+      "ref_sha256": "403fa5475429b8200e15e60e01ffdb4f2499732bf9538e2d98e78bc1a1d0e64e",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_lab.bin",
+      "encoded_ref_bytes": 158,
+      "encoded_ref_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+      "source_mode": "LAB",
+      "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_indexed_missing_palette",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_indexed_missing_palette.bin",
       "ref_bytes": 16384,
