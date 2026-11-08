@@ -76,6 +76,18 @@ const RESERVED_SELECTOR_STEM: &str = "__image_slash_star_";
 // assertion or coverage-only input.
 type CachedEncodeSequence = Result<Arc<img::DecodedSequence>, String>;
 
+#[derive(Default)]
+struct AppendOnlySink {
+    bytes: Vec<u8>,
+}
+
+impl img::OutputSink for AppendOnlySink {
+    fn write_all(&mut self, bytes: &[u8]) -> img::ImageResult<()> {
+        self.bytes.extend_from_slice(bytes);
+        Ok(())
+    }
+}
+
 static ENCODE_SEQUENCE_CACHE: OnceLock<
     Mutex<HashMap<PathBuf, Arc<OnceLock<CachedEncodeSequence>>>>,
 > = OnceLock::new();
@@ -11135,7 +11147,8 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
             };
             if let Some(sink_parity_is_still) = sink_parity_is_still {
                 let options = require_ok(opts.as_ref(), "sink parity options");
-                let mut sink = Vec::new();
+                // Omit checkpoint so parity covers the append-only sink mode.
+                let mut sink = AppendOnlySink::default();
                 let Some(sink_result) = run_counted_public_encode_call(
                     &mut public_encode_calls,
                     &mut public_encode_panics,
@@ -11167,21 +11180,21 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         continue;
                     }
                 };
-                if written != sink.len() {
+                if written != sink.bytes.len() {
                     eprintln!(
                         "  FAIL [{}]: sink reported {written} bytes but wrote {}",
                         row.id,
-                        sink.len()
+                        sink.bytes.len()
                     );
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &sink) {
+                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &sink.bytes) {
                     eprintln!("  FAIL [{}]: sink and Pillow reference: {message}", row.id);
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_encoded_byte_parity(&encoded, &sink) {
+                if let Err(message) = assert_encoded_byte_parity(&encoded, &sink.bytes) {
                     eprintln!("  FAIL [{}]: regular and sink encoders: {message}", row.id);
                     failed += 1;
                     continue;
