@@ -4743,6 +4743,59 @@
       }
     },
     {
+      "id": "enc_8x8_444_independent_entropy_no_optimize",
+      "source_asset": "8x8.jpg",
+      "source_format": "jpeg",
+      "source_mode": "Rgb8",
+      "source_sha256": "678cc8b35a46b62bccb0800c5fd9c173633c067f12b4d9aaa6ac57a21b0531c5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "size": [
+          8,
+          8
+        ],
+        "optimize": false,
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/8x8.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "optimize": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_odd_size",
       "source_asset": "17x17.jpg",
       "source_format": "jpeg",

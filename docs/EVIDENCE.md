@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,877 total rows: 3,195 decode /
-inspect / verify rows and 682 encode rows. Of those, 3,195 decode rows are
-active and 655 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,878 total rows: 3,195 decode /
+inspect / verify rows and 683 encode rows. Of those, 3,195 decode rows are
+active and 656 encode rows are active; 27 encode rows remain planned.
 
 ## JPEG grayscale restart markers without DRI — 2026-11-08
 
@@ -24,6 +24,28 @@ Report: `.coverage-mcp/local-evidence/selected/20261108T000622.475420Z-17fe23a16
 (SHA-256 `67565ae163e90a75b53c91afb21d13f365e5d838de843eb5e42fb1603992dd22`).
 The adjacent `coverage.local-evidence.json` records the exact selector, fixture
 hashes, toolchain, and passing execution.
+
+## JPEG small baseline 4:4:4 entropy parity — 2026-11-08
+
+Added `encode:jpeg:enc_8x8_444_independent_entropy_no_optimize`, using the
+existing 8×8 RGB JPEG source with baseline 4:4:4 sampling and Huffman
+optimization disabled. Pinned Pillow 12.2.0 produces the exact 672-byte
+reference; selected parity passed 1/1 and re-decoded to pixel-identical 8×8
+RGB. The selected report records the
+`baseline_444_independent_entropy_is_compatible` true arm at
+`src/codecs/jpeg/encode/mod.rs:4717` three times. Targeted checks of the existing
+16×16 4:2:0 and 32×16 4:2:2 rows also pass and reach their matching
+independent-entropy helpers.
+
+Coverage MCP reports 523/32,064 branches for the one-row report. The false arm
+of the 4:4:4 sampling predicate remains unobserved. MCP marks source identity
+unverified and test attribution unknown, so this is selected-case evidence and
+not an aggregate coverage claim. Report:
+`.coverage-mcp/local-evidence/selected/20261108T071608.429017Z-70390c41963a420aa4d42e9929e03a52/coverage.json`
+(SHA-256 `464de2355f13b8539e18b06fa22f51b0d64fa2ab641a29ff06208bacd41ac18c`).
+The 4:2:0/4:2:2 selected report is
+`.coverage-mcp/local-evidence/selected/20261108T072051.187354Z-f147db75ef3f4ec190a949692a23b6ff/coverage.json`
+(SHA-256 `e669869098ee86114adaea06596166a705440c6fc39cf54c55ba955dc040b136`).
 
 ## AVIF sequence mode mismatch alpha fault contract — 2026-11-07
 
@@ -17447,7 +17469,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `cd3d14524d93542b66bd1a1bc7cec87727c5746f667c223cf81a260d76ec2caf`; matrix `2595bbe627f87138f835154a7a539a184be84dedf2d53943a3033fe1dba6219b`.
+- Current fixture integrity only: manifest `ea98a7dbca65f75993dfacd990e924fd47a239009ddddc5cf7b13bbcdebd1cb7`; matrix `052cffcd35a26254f14472b27b326bea88338877ff2898fac59a6fc8387bed4a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

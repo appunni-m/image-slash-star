@@ -6255,6 +6255,10 @@ formats:
       description: 
       params: {'size': [8, 8]}
       source_asset: 8x8.jpg
+    - id: enc_8x8_444_independent_entropy_no_optimize
+      description: Small baseline 4:4:4 input with optimization disabled exercises the independent entropy fallback
+      params: {'size': [8, 8], 'optimize': false, 'subsampling': '444'}
+      source_asset: 8x8.jpg
     - id: enc_odd_size
       description: 
       params: {'size': [17, 17]}

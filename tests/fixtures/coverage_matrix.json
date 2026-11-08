@@ -262221,6 +262221,64 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_8x8_444_independent_entropy_no_optimize",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "8x8",
+          "description": "Small baseline 4:4:4 input with optimization disabled exercises the independent entropy fallback",
+          "params": {
+            "size": [
+              8,
+              8
+            ],
+            "optimize": false,
+            "subsampling": "444"
+          },
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "8x8.jpg",
+          "source_sha256": "678cc8b35a46b62bccb0800c5fd9c173633c067f12b4d9aaa6ac57a21b0531c5",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_8x8_444_independent_entropy_no_optimize.bin",
+          "encoded_ref_bytes": 672,
+          "encoded_ref_sha256": "43b3d88becbe5e2b4d46d4cedb9e000f897877ebc4a1918853c40d9501b82896",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_8x8_444_independent_entropy_no_optimize.bin",
+          "ref_sha256": "19587effb896a1ce15db7fe405d3fb7fb169c550b72637e99d519ad19d3102f1",
+          "ref_bytes": 192,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "description": "",
           "format": "jpeg",
           "id": "enc_odd_size",
@@ -369560,9 +369618,9 @@
     }
   },
   "summary": {
-    "total_rows": 3877,
+    "total_rows": 3878,
     "decode_rows": 3195,
-    "encode_rows": 682,
+    "encode_rows": 683,
     "formats": 8,
     "assets_available": 3191,
     "decode_active": 3195,
