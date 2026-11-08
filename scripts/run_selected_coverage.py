@@ -21,6 +21,7 @@ from typing import Any, Optional
 ROOT = Path(__file__).resolve().parent.parent
 MATRIX_PATH = Path("tests/fixtures/coverage_matrix.json")
 SELECTOR_PREFIX = "__image_slash_star_matrix_row_selector__="
+ALL_PARITY_SELECTOR = "__all_parity__"
 RECEIPT_SCHEMA = "image-slash-star.selected-coverage.local-evidence.v1"
 REPORT_DIR = Path(".coverage-mcp/local-evidence/selected")
 
@@ -141,6 +142,29 @@ def load_selected_rows(cases: list[str], matrix_path: Path = ROOT / MATRIX_PATH)
         planned = ", ".join(row.key for row in selected)
         raise ValueError(f"planned-only selection cannot execute: {planned}")
     return selected
+
+
+def load_all_parity_rows(matrix_path: Path = ROOT / MATRIX_PATH) -> list[SelectedRow]:
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    if not isinstance(matrix, dict) or not isinstance(matrix.get("formats"), dict):
+        raise ValueError("coverage matrix must contain a formats object")
+
+    cases: list[str] = []
+    for format_name, format_data in matrix["formats"].items():
+        if not isinstance(format_name, str) or not isinstance(format_data, dict):
+            raise ValueError(f"coverage matrix format {format_name!r} is invalid")
+        for operation in ("decode", "encode"):
+            rows = format_data.get(operation, [])
+            if not isinstance(rows, list):
+                raise ValueError(f"coverage matrix {operation}:{format_name} rows are invalid")
+            for row in rows:
+                if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+                    raise ValueError(
+                        f"coverage matrix contains an invalid {operation}:{format_name} row"
+                    )
+                cases.append(f"{operation}:{format_name}:{row['id']}")
+
+    return load_selected_rows(cases, matrix_path)
 
 
 def _status(row: dict[str, Any], key: str) -> str:
@@ -516,8 +540,15 @@ def _write_json(path: Path, value: Any) -> None:
     temporary.replace(path)
 
 
-def run(toolchain: str, cases: list[str], report: Path) -> int:
-    selected = load_selected_rows(cases)
+def run(
+    toolchain: str,
+    cases: list[str],
+    selected: list[SelectedRow],
+    report: Path,
+    *,
+    all_parity: bool = False,
+) -> int:
+    selector_cases = [ALL_PARITY_SELECTOR] if all_parity else cases
     report.parent.mkdir(parents=True, exist_ok=True)
     log_path = report.with_suffix(".log")
     receipt_path = report.with_name(f"{report.stem}.local-evidence.json")
@@ -527,7 +558,7 @@ def run(toolchain: str, cases: list[str], report: Path) -> int:
     before = source_state()
     fixture_digests = fixture_hashes(selected)
     versions = discover_toolchain(toolchain)
-    argv = build_command(toolchain, report, cases, versions["target"])
+    argv = build_command(toolchain, report, selector_cases, versions["target"])
     environment = os.environ.copy()
     # LLVM-Cov scans host and target output trees. Full coverage uses Cargo's
     # host layout, while this command sets --target explicitly. Keep their
@@ -700,10 +731,15 @@ def run(toolchain: str, cases: list[str], report: Path) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument(
         "--cases",
-        required=True,
         help="space-separated exact operation:format:row-id selectors",
+    )
+    selection.add_argument(
+        "--all-parity",
+        action="store_true",
+        help="select the full decode/encode matrix; execute active rows and report planned rows",
     )
     parser.add_argument(
         "--toolchain", default="nightly-2026-07-16", help="Rust coverage toolchain"
@@ -711,10 +747,16 @@ def main() -> None:
     parser.add_argument("--report", help="new report path inside this repository")
     args = parser.parse_args()
     try:
-        cases = parse_case_list(args.cases)
-        selected = load_selected_rows(cases)
+        cases = parse_case_list(args.cases) if args.cases is not None else []
+        selected = load_all_parity_rows() if args.all_parity else load_selected_rows(cases)
         report = _absolute_report_path(args.report)
-        exit_code = run(args.toolchain, cases, report)
+        exit_code = run(
+            args.toolchain,
+            cases,
+            selected,
+            report,
+            all_parity=args.all_parity,
+        )
     except (OSError, ValueError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
         raise SystemExit(f"selected coverage setup failed: {error}") from error
     raise SystemExit(exit_code)
