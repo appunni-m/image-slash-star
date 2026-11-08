@@ -4618,6 +4618,10 @@ formats:
       description: Restart markers every N MCUs
       test_assets:
       - restart.jpg
+    - id: baseline_422_restart_markers_without_dri
+      description: Pillow decodes baseline 4:2:2 restart markers after their DRI interval is removed
+      test_assets:
+      - baseline_422_restart_markers_without_dri.jpg
     - id: baseline_420_restart_not_row_aligned
       description: Pillow baseline 4:2:0 JPEG with DRI 3 takes the checked restart path because the interval is not an MCU-row multiple
       test_assets:
