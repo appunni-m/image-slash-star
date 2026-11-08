@@ -104,6 +104,30 @@ impl Mode {
         Self::ImageRgba32F,
     ];
 
+    /// Return the default raster identity implied by a decoded byte mode.
+    ///
+    /// Codec paths with source-specific semantics can override this identity
+    /// without changing the transfer buffer's byte layout.
+    pub(crate) const fn from_image_mode(mode: super::ImageMode) -> Self {
+        match mode {
+            super::ImageMode::L1 => Self::One,
+            super::ImageMode::P8 => Self::ImagePalette8,
+            super::ImageMode::L8 => Self::ImageLuma8,
+            super::ImageMode::La8 => Self::ImageLumaA8,
+            super::ImageMode::L16 => Self::ImageI16,
+            super::ImageMode::La16 => Self::ImageLumaA16,
+            super::ImageMode::Rgb8 => Self::ImageRgb8,
+            super::ImageMode::Rgba8 => Self::ImageRgba8,
+            super::ImageMode::Rgb16 => Self::ImageRgb16,
+            super::ImageMode::Rgba16 => Self::ImageRgba16,
+            super::ImageMode::Rgb32F => Self::ImageRgb32F,
+            super::ImageMode::Rgba32F => Self::ImageRgba32F,
+            super::ImageMode::F32 => Self::ImageF32,
+            super::ImageMode::I32 => Self::ImageI32,
+            super::ImageMode::Cmyk8 => Self::ImageCmyk8,
+        }
+    }
+
     /// Compatibility alias for Pillow's `L` mode.
     pub const L: Self = Self::ImageLuma8;
     /// Compatibility alias for Pillow's `LA` mode.
@@ -327,16 +351,9 @@ impl Mode {
         byte_order: Option<SourceByteOrder>,
     ) -> Self {
         match mode {
-            ImageMode::L1 => Self::One,
-            ImageMode::P8 => Self::ImagePalette8,
-            ImageMode::L8 => Self::ImageLuma8,
             ImageMode::La8 if matches!(alpha, Some(SourceAlpha::Premultiplied)) => {
                 Self::ImageLaPremultiplied8
             }
-            ImageMode::La8 => Self::ImageLumaA8,
-            ImageMode::Rgb8 => Self::ImageRgb8,
-            ImageMode::Rgba8 => Self::ImageRgba8,
-            ImageMode::Cmyk8 => Self::ImageCmyk8,
             ImageMode::L16
                 if matches!(
                     (format, byte_order),
@@ -345,14 +362,7 @@ impl Mode {
             {
                 Self::ImageI16B
             }
-            ImageMode::L16 => Self::ImageI16,
-            ImageMode::La16 => Self::ImageLumaA16,
-            ImageMode::Rgb16 => Self::ImageRgb16,
-            ImageMode::Rgba16 => Self::ImageRgba16,
-            ImageMode::Rgb32F => Self::ImageRgb32F,
-            ImageMode::Rgba32F => Self::ImageRgba32F,
-            ImageMode::F32 => Self::ImageF32,
-            ImageMode::I32 => Self::ImageI32,
+            _ => Self::from_image_mode(mode),
         }
     }
 }

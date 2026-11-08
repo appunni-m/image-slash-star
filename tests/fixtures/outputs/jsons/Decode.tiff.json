@@ -18972,7 +18972,8 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa"
     },
     {
       "id": "associated_rgba_separate_strips_deflate",
@@ -19300,7 +19301,8 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa"
     },
     {
       "id": "associated_rgba_separate_tiles_deflate",
@@ -19780,7 +19782,9 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa",
+      "decoded_raster_mode": "RGBa"
     },
     {
       "id": "associated_rgba_separate_strips_raw_first_alpha_block",
@@ -19868,7 +19872,8 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa"
     },
     {
       "id": "associated_rgba_separate_tiles_raw_missing_alpha_plane",
@@ -19948,7 +19953,9 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa",
+      "decoded_raster_mode": "RGBa"
     },
     {
       "id": "associated_rgba_separate_tiles_raw_first_alpha_block",
@@ -20036,7 +20043,8 @@
       "sequence_error_kind": null,
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
+      "rust_sequence_error_reason": null,
+      "inspect_raster_mode": "RGBa"
     },
     {
       "id": "extra_samples_zero_rgbx_row_255_contiguous_strips_raw",

@@ -68,6 +68,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -154,6 +156,8 @@
       "ref_bytes": 32768,
       "ref_sha256": "c0ad0336cbf07b059de27184d72ff878a2d9b33819860e36bdfb7620959a7c87",
       "ref_mode": "La8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -240,6 +244,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -326,6 +332,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -412,6 +420,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -498,6 +508,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -600,6 +612,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -672,6 +686,8 @@
       "ref_bytes": 65536,
       "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -758,6 +774,8 @@
       "ref_bytes": 65536,
       "ref_sha256": "6b4e0e27ac0a042958c1a976561c6d890fe2042e3e54c8e898cd859c87db332b",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -844,6 +862,8 @@
       "ref_bytes": 65536,
       "ref_sha256": "b98a466391c7faa8c62e9d5728e21a6ebca6d8ea4c29b3276379b0d20f6fbf8d",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -930,6 +950,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "e1075df1fc6de2463770b0d4c53f953e6a5f6f2f3586f2701ec54d7432addfc7",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1022,6 +1044,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "64f95b899d5343723b68194028fc9e8b3051f706eb592b97d67457113561d007",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1114,6 +1138,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "ae52b47ea9efc04a85a57dd9b30d6a8b3de24741e3020aa3a78c694552ba13b6",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1206,6 +1232,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "e76712e2edbfef8d17528d76c11e98c6d4716e40ca6bffe787677b7d19b9c210",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1298,6 +1326,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "6195eb1e08e310b4426e524f0ba6e148da75da4cefc5eae2a5f87cb8051a9a02",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1390,6 +1420,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "5132e33bc15641fd0412ea6e468b80d74d8854ca540130feddb0f31ba93f4040",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1488,6 +1520,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -1586,6 +1620,8 @@
       "ref_bytes": 2048,
       "ref_sha256": "3ce53162e902b8ae7f46faf1a1cd98321628df7529e208d5872775d058c2d5ea",
       "ref_mode": "1",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -1672,6 +1708,8 @@
       "ref_bytes": 6,
       "ref_sha256": "36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203",
       "ref_mode": "1",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         3
@@ -1758,6 +1796,8 @@
       "ref_bytes": 221,
       "ref_sha256": "a5bc913e66c2349b8f0b4f510e0c3ae2d5b2af41975f50a07c8eec7318062a25",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         17,
         13
@@ -1844,6 +1884,8 @@
       "ref_bytes": 221,
       "ref_sha256": "79d388f81a6c99db3e12716003d05d22048fb0ddff2832b13c9613c4bfa0f922",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         17,
         13
@@ -1930,6 +1972,8 @@
       "ref_bytes": 16384,
       "ref_sha256": "1928fc10cb7c056f9c5de7ee534445e876fac9fd1ea050bc3c8b6eb29371c707",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -2016,6 +2060,8 @@
       "ref_bytes": 32768,
       "ref_sha256": "2fd61a2cde9c0580c8008c6d8db9b21cd7f0b692adb09730dd28088e3e4055b7",
       "ref_mode": "I;16",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -2102,6 +2148,8 @@
       "ref_bytes": 189,
       "ref_sha256": "e9532de849115ae33b33d8d6203281a62c3053400ff0b151bb26d784f7f83061",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         7
@@ -2188,6 +2236,8 @@
       "ref_bytes": 252,
       "ref_sha256": "82579e13af1e1bdf351c546b350073023c11862633884ddf50d188af45166452",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         7
@@ -2274,6 +2324,8 @@
       "ref_bytes": 252,
       "ref_sha256": "526ccc504ccad66721f3a7c194ca85367162b54a57d884a6f298cc3392edeab2",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         7
@@ -2360,6 +2412,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -2446,6 +2500,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -2532,6 +2588,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -2618,6 +2676,8 @@
       "ref_bytes": 18,
       "ref_sha256": "7dc72b9a7506b9056296a4a821bf5ae9215a452550db6cd46415a92b8b60134d",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         2,
         3
@@ -2704,6 +2764,8 @@
       "ref_bytes": 81,
       "ref_sha256": "ce9a80be9c20aa5764ee76770e206e5a8a5a078931fa8f62cb3de580498bc088",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         9
@@ -2790,6 +2852,8 @@
       "ref_bytes": 162,
       "ref_sha256": "67e8f6a15c947fe9be0a64cc8233bf28d7c531ef095c8e622ada90f403dcacb6",
       "ref_mode": "I;16",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         9
@@ -2876,6 +2940,8 @@
       "ref_bytes": 243,
       "ref_sha256": "fdd488e078dac07ca3813a65dce0146ee1b9fc2f451301d579356f95f512920e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         9
@@ -2962,6 +3028,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3048,6 +3116,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3134,6 +3204,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3220,6 +3292,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3306,6 +3380,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3392,6 +3468,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3478,6 +3556,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3564,6 +3644,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3650,6 +3732,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3736,6 +3820,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3822,6 +3908,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3908,6 +3996,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -3994,6 +4084,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4080,6 +4172,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4166,6 +4260,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4252,6 +4348,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4338,6 +4436,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4424,6 +4524,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4510,6 +4612,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4595,6 +4699,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4676,6 +4782,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4771,6 +4879,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4866,6 +4976,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -4952,6 +5064,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5037,6 +5151,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5118,6 +5234,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5204,6 +5322,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5290,6 +5410,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5376,6 +5498,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5462,6 +5586,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5548,6 +5674,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -5643,6 +5771,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5729,6 +5859,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -5815,6 +5947,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5901,6 +6035,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -5987,6 +6123,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -6073,6 +6211,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -6159,6 +6299,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -6245,6 +6387,8 @@
       "ref_bytes": 395523,
       "ref_sha256": "f5b341e7f8f2cc8e42f62c8ddc81c25de020e25c4b7d9ed972aae82aea88a253",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         513,
         257
@@ -6331,6 +6475,8 @@
       "ref_bytes": 867,
       "ref_sha256": "4c2763e32c50aa37de740d1b1db96ab82b296c676d8ee6a4e4e90966d859e1de",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         17,
         17
@@ -6417,6 +6563,8 @@
       "ref_bytes": 18,
       "ref_sha256": "7dc72b9a7506b9056296a4a821bf5ae9215a452550db6cd46415a92b8b60134d",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         2,
         3
@@ -6503,6 +6651,8 @@
       "ref_bytes": 765,
       "ref_sha256": "838cdd282ffa7d6f5152cc0e44e708ac07da419463548591df6e577cedbfea82",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         255
@@ -6589,6 +6739,8 @@
       "ref_bytes": 765,
       "ref_sha256": "838cdd282ffa7d6f5152cc0e44e708ac07da419463548591df6e577cedbfea82",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         255,
         1
@@ -6707,6 +6859,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -6819,6 +6973,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -6923,6 +7079,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7035,6 +7193,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7147,6 +7307,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7251,6 +7413,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7355,6 +7519,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7459,6 +7625,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7563,6 +7731,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7667,6 +7837,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7771,6 +7943,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7859,6 +8033,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -7963,6 +8139,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8067,6 +8245,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8155,6 +8335,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8243,6 +8425,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8331,6 +8515,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8419,6 +8605,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8507,6 +8695,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8595,6 +8785,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8683,6 +8875,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8771,6 +8965,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8859,6 +9055,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -8947,6 +9145,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9035,6 +9235,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9123,6 +9325,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9211,6 +9415,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9299,6 +9505,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9387,6 +9595,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9475,6 +9685,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9563,6 +9775,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9651,6 +9865,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9755,6 +9971,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9843,6 +10061,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -9939,6 +10159,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10035,6 +10257,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10131,6 +10355,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10235,6 +10461,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10339,6 +10567,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10443,6 +10673,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10547,6 +10779,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10651,6 +10885,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10739,6 +10975,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10835,6 +11073,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -10939,6 +11179,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11027,6 +11269,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11115,6 +11359,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11203,6 +11449,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11291,6 +11539,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11379,6 +11629,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11483,6 +11735,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11587,6 +11841,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11691,6 +11947,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11795,6 +12053,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11899,6 +12159,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -11971,6 +12233,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12057,6 +12321,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12152,6 +12418,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12238,6 +12506,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -12333,6 +12603,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -12419,6 +12691,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12517,6 +12791,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12603,6 +12879,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12689,6 +12967,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12775,6 +13055,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12867,6 +13149,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -12953,6 +13237,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13045,6 +13331,8 @@
       "ref_bytes": 1,
       "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13143,6 +13431,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13229,6 +13519,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13315,6 +13607,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13401,6 +13695,8 @@
       "ref_bytes": 3,
       "ref_sha256": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13487,6 +13783,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13573,6 +13871,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -13659,6 +13959,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -13745,6 +14047,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -13831,6 +14135,8 @@
       "ref_bytes": 3,
       "ref_sha256": "709e80c88487a2411e1ee4dfb9f22a861492d20c4765150c0c794abd70f8147c",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -13917,6 +14223,8 @@
       "ref_bytes": 3,
       "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         1,
         1
@@ -14003,6 +14311,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -14092,6 +14402,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -14253,6 +14565,8 @@
       "ref_bytes": 4,
       "ref_sha256": "2196d24a989fee982488070afd64307bbcc2b64ff5c7aecffc3850657e9eefe0",
       "ref_mode": "I;16",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         2,
         1
@@ -14423,6 +14737,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -14613,6 +14929,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -14688,6 +15006,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -14849,6 +15169,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15040,6 +15362,8 @@
       "ref_bytes": 64,
       "ref_sha256": "957b89f29094b9204de1cb6ffe2a34907be0727480911fda03681330b3502557",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15231,6 +15555,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15422,6 +15748,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15613,6 +15941,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15804,6 +16134,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -15995,6 +16327,8 @@
       "ref_bytes": 2,
       "ref_sha256": "8509b81230019d2ad970d970f791dfbdc8caf54f5c594fcd327cef9feed206c1",
       "ref_mode": "1",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         8,
         2
@@ -16186,6 +16520,8 @@
       "ref_bytes": 16,
       "ref_sha256": "8d7329c83bc6acb953a584d0c816c38df01743ce1f8ce642dcc2ec72f4247eda",
       "ref_mode": "L8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -16347,6 +16683,8 @@
       "ref_bytes": 32,
       "ref_sha256": "857795d2f435cf9f62f92dd6b0dcf5c6a94d743f35df64e93ff81fb81b37f3f6",
       "ref_mode": "La8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -16508,6 +16846,8 @@
       "ref_bytes": 16,
       "ref_sha256": "292afde3b64e6636d68f1120d9242f1f85e38ef7bf306e4407c2303eb63791ef",
       "ref_mode": "P",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -16681,6 +17021,8 @@
       "ref_bytes": 189,
       "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         9,
         7
@@ -16812,6 +17154,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -16986,6 +17330,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17090,6 +17436,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17194,6 +17542,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17298,6 +17648,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17402,6 +17754,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17490,6 +17844,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17578,6 +17934,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17674,6 +18032,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17762,6 +18122,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17866,6 +18228,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -17954,6 +18318,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -18035,6 +18401,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18137,6 +18505,8 @@
       "ref_bytes": null,
       "ref_sha256": null,
       "ref_mode": null,
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": null,
       "ref_frame_count": null,
       "ref_is_animated": null,
@@ -18218,6 +18588,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18313,6 +18685,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18408,6 +18782,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18503,6 +18879,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18598,6 +18976,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18693,6 +19073,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18788,6 +19170,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4
@@ -18883,6 +19267,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -18978,6 +19364,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19073,6 +19461,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19168,6 +19558,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19254,6 +19646,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19340,6 +19734,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19426,6 +19822,8 @@
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
       "ref_mode": "Rgb8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         128,
         128
@@ -19512,6 +19910,8 @@
       "ref_bytes": 64,
       "ref_sha256": "21b7dac1be9dacf604fd4475304d962dc50a83b6b9623340f59de886d398b8c6",
       "ref_mode": "Rgba8",
+      "inspect_raster_mode": null,
+      "decoded_raster_mode": null,
       "ref_size": [
         4,
         4

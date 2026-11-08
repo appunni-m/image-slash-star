@@ -292,6 +292,7 @@ fn decode_ifd(
         // unpackers. LA stores alpha in the fourth internal byte, so copying
         // its second source plane into G leaves the exported alpha at zero.
         clear_gray_alpha: layout == TiffLayout::GrayAlpha8 && separate_planar,
+        raw_associated_alpha: raw_separate_associated_alpha,
     };
     if let Some(budget) = budget {
         budget
@@ -1994,6 +1995,7 @@ struct TiffAlpha {
     source: Option<SourceAlpha>,
     unassociate: bool,
     clear_gray_alpha: bool,
+    raw_associated_alpha: bool,
 }
 
 /// Normalize one associated RGBA pixel exactly as Pillow's RGBa unpacker does.
@@ -2206,7 +2208,15 @@ fn convert_pixels(
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
-    Ok(image.with_source_descriptor(descriptor))
+    let raster_mode = super::inspect::raster_mode(
+        image.mode,
+        alpha.source,
+        endian.source_byte_order(),
+        alpha.raw_associated_alpha,
+    );
+    Ok(image
+        .with_source_descriptor(descriptor)
+        .with_raster_mode(raster_mode))
 }
 
 /// Remove one ignored trailing sample using the checked assembly buffer.
@@ -2469,7 +2479,15 @@ fn convert_pixels_with_token(
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
-    Ok(image.with_source_descriptor(descriptor))
+    let raster_mode = super::inspect::raster_mode(
+        image.mode,
+        alpha.source,
+        endian.source_byte_order(),
+        alpha.raw_associated_alpha,
+    );
+    Ok(image
+        .with_source_descriptor(descriptor)
+        .with_raster_mode(raster_mode))
 }
 
 /// Expand supported contiguous TIFF YCbCr clumps using Pillow/libtiff's RGB path.

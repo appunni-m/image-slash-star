@@ -280,7 +280,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, and L16"
+      "rust_error_reason": "PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, L16, and I32"
     },
     {
       "id": "enc_error_retained_sequence_duration",
@@ -2795,6 +2795,86 @@
       "encoded_ref_sha256": "ba3be70e8c5b8fdce3f31e6f7587f66eacff97579c7077d3bbed9479c8ea1119",
       "source_mode": "I;16",
       "source_sha256": "ba3be70e8c5b8fdce3f31e6f7587f66eacff97579c7077d3bbed9479c8ea1119",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_i32_little_endian",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_i32_little_endian.bin",
+      "ref_bytes": 16,
+      "ref_mode": "I;16",
+      "ref_size": [
+        4,
+        2
+      ],
+      "ref_sha256": "44e35b0c8e9b01df30a3584235233e6251c369632dcb7e26f38a358ac76a4aa5",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_i32_little_endian.bin",
+      "encoded_ref_bytes": 78,
+      "encoded_ref_sha256": "35af4e5efd0dd6191ccced5feaa41f9d2d9d0766157ca51a328156d29b82e25a",
+      "source_mode": "I",
+      "source_sha256": "16639a907659db86c025f99e9338c787d19e716e4a127e8ad1a6f0110da5d7be",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_i32_big_endian",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_i32_big_endian.bin",
+      "ref_bytes": 16,
+      "ref_mode": "I;16",
+      "ref_size": [
+        4,
+        2
+      ],
+      "ref_sha256": "ff018d13c5fd596f3db24669e1b22b4cbaaaa6ee26531bc186a6014dd2c3de8c",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_i32_big_endian.bin",
+      "encoded_ref_bytes": 83,
+      "encoded_ref_sha256": "4b154a99167f388bca2c52d2717265f554a5ff2330c66f3411a4915849c5e2e7",
+      "source_mode": "I",
+      "source_sha256": "40e72cc85aaf2f04de4053f5babce1283b568917f554a0e28d5993e23037cd32",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

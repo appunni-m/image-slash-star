@@ -987,6 +987,11 @@ fn decode_portable_inner(
         } else {
             ImageMode::Rgb8
         },
+        raster_mode: if has_alpha {
+            crate::types::Mode::ImageRgba8
+        } else {
+            crate::types::Mode::ImageRgb8
+        },
         palette: None,
         cursor_hotspot: None,
         source: if has_alpha {
@@ -1120,6 +1125,11 @@ fn decode_monochrome_portable(
             ImageMode::Rgba8
         } else {
             ImageMode::Rgb8
+        },
+        raster_mode: if has_alpha {
+            crate::types::Mode::ImageRgba8
+        } else {
+            crate::types::Mode::ImageRgb8
         },
         palette: None,
         cursor_hotspot: None,

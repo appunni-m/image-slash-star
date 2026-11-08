@@ -2537,6 +2537,12 @@ pub struct DecodedImage {
     /// Direct struct literals are unchecked. Use [`Self::try_with_mode`] when
     /// the constructor should validate this mode and the pixel buffer.
     pub mode: ImageMode,
+    /// Exact semantic identity of the decoded raster samples.
+    ///
+    /// This can differ from `mode` when both identities share the same byte
+    /// carrier, such as straight and premultiplied RGBA. Header-derived
+    /// identity is available without decoding through [`ImageInfo::raster_mode`].
+    pub raster_mode: Mode,
     /// Palette retained for `P8` images.
     pub palette: Option<ImagePalette>,
     /// Selected Windows cursor hotspot, or `None` for ordinary images/icons.
@@ -2559,12 +2565,14 @@ impl DecodedImage {
     /// to code that relies on those invariants; encoders validate inputs.
     #[must_use = "retain the decoded image for further processing"]
     pub fn new(width: u32, height: u32, pixels: Vec<u8>, color: ColorType) -> Self {
+        let mode = color.into();
         Self {
             width,
             height,
             pixels,
             color,
-            mode: color.into(),
+            mode,
+            raster_mode: Mode::from_image_mode(mode),
             palette: None,
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
@@ -2608,6 +2616,7 @@ impl DecodedImage {
             pixels,
             color: mode.color_type(),
             mode,
+            raster_mode: Mode::from_image_mode(mode),
             palette: None,
             cursor_hotspot: None,
             source: SourceDescriptor::new(),
@@ -2615,6 +2624,16 @@ impl DecodedImage {
             metadata: Vec::new(),
             source_color: SourceColor::new(),
         }
+    }
+
+    /// Set the exact semantic identity of these decoded samples.
+    ///
+    /// Use this when codec transfer semantics differ from the default implied
+    /// by the byte carrier while keeping `mode` unchanged for buffer layout.
+    #[must_use]
+    pub fn with_raster_mode(mut self, raster_mode: Mode) -> Self {
+        self.raster_mode = raster_mode;
+        self
     }
 
     /// Create an exact-mode image and validate its dimensions and bytes.

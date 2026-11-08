@@ -82,6 +82,32 @@ fn write_encoded(
                 }
                 (0, 16, width.saturating_mul(2), 2, Cow::Owned(big_endian))
             }
+            ImageMode::I32 => {
+                let mut big_endian = Vec::with_capacity(img.pixels.len() / 2);
+                for samples in img
+                    .pixels
+                    .as_chunks::<4>()
+                    .0
+                    .chunks(FILTER_CHECKPOINT_BYTES)
+                {
+                    crate::codecs::error::check_cancelled(token)?;
+                    for sample in samples {
+                        // Pillow interprets mode-I raster bytes as little-endian
+                        // integers when writing PNG, even if TIFF retained
+                        // big-endian source bytes.
+                        let value = i32::from_le_bytes(*sample);
+                        // Pillow writes I-mode PNG as unsigned 16-bit grayscale
+                        // and clips samples outside the PNG range.
+                        let value = match u16::try_from(value) {
+                            Ok(value) => value,
+                            Err(_) if value < 0 => 0,
+                            Err(_) => u16::MAX,
+                        };
+                        big_endian.extend_from_slice(&value.to_be_bytes());
+                    }
+                }
+                (0, 16, width.saturating_mul(2), 2, Cow::Owned(big_endian))
+            }
             _ => {
                 let (png_color, channels) = match img.color {
                     ColorType::L8 => (0, 1usize),
