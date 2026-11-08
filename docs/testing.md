@@ -59,6 +59,12 @@ format/header-mode/decoded-mode pair. When a decoder adds a new pair, append a
 representative row to that index. The parity harness checks that indexed rows
 remain active and that every successful mode pair is listed.
 
+The matrix also keeps an append-only `mode_encode_cases` index with one active
+Pillow-reference-backed encoder row for each format/source-mode/decoded-mode
+pair. When an encoder adds a new pair, append a representative row; the parity
+harness checks that each listed case retains its byte and pixel references and
+that no successful mode pair is omitted.
+
 Some oracle outputs are checked in because clean CI source checkouts consume
 them. They are reproducible through maintained generators, but regeneration
 requires the exact source assets and pinned oracle. In particular, AV1's index
