@@ -89,15 +89,15 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         && alpha == Some(SourceAlpha::Premultiplied)
         && directory.one_or(284, 1) == 2
         && compression == COMPRESSION_NONE;
-    let raster_mode = if matches!(layout, TiffLayout::PaletteAlpha8) {
-        Mode::ImagePaletteAlpha8
-    } else {
-        raster_mode(
+    let raster_mode = match layout {
+        TiffLayout::PaletteAlpha8 => Mode::ImagePaletteAlpha8,
+        TiffLayout::Lab8 => Mode::ImageLab8,
+        _ => raster_mode(
             mode,
             alpha,
             endian.source_byte_order(),
             raw_separate_associated_alpha,
-        )
+        ),
     };
 
     Ok(ImageInfo {
@@ -305,6 +305,7 @@ pub(super) enum TiffLayout {
     I32,
     F32,
     Rgb8,
+    Lab8,
     Rgb16,
     RgbIgnored8,
     Rgba8,
@@ -364,6 +365,7 @@ impl TiffLayout {
             Self::I32 => ImageMode::I32,
             Self::F32 => ImageMode::F32,
             Self::Rgb8
+            | Self::Lab8
             | Self::Rgb16
             | Self::RgbIgnored8
             | Self::Ycbcr8
@@ -433,6 +435,14 @@ pub(super) fn layout_and_palette(
         (1, 2, 8) if planar == 2 && extra_samples == [0] => TiffLayout::GrayIgnored8,
         (3, 2, 8) if planar == 1 && extra_samples == [2] => TiffLayout::PaletteAlpha8,
         (2, 3, 8) => TiffLayout::Rgb8,
+        (8, 3, 8)
+            if sample_format == 1
+                && (sample_formats.is_empty()
+                    || sample_formats.iter().all(|&format| format == 1))
+                && extra_samples.is_empty() =>
+        {
+            TiffLayout::Lab8
+        }
         (2, 3, 16)
             if sample_format == 1
                 && fill_order == 1

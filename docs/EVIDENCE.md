@@ -1,8 +1,29 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,883 total rows: 3,196 decode /
-inspect / verify rows and 687 encode rows. Of those, 3,196 decode rows are
+The current public evidence matrix contains 3,884 total rows: 3,197 decode /
+inspect / verify rows and 687 encode rows. Of those, 3,197 decode rows are
 active and 660 encode rows are active; 27 encode rows remain planned.
+
+## CIELAB TIFF identity and PA encoder parity — 2026-11-08
+
+Added active decode row `decode:tiff:lab` from Pillow 12.2.0. Basic and full
+header inspection, `EncodedImage`, `EncodedImageView`, normal decode, and
+token-aware decode retain the Pillow-visible `LAB` identity over the RGB8
+transfer carrier; all six three-channel samples match exactly. The TIFF
+decoder accepts unsigned 8-bit CIELAB samples and reports `Mode::ImageLab8`
+without converting them to RGB.
+
+The existing PA encoder rows were also confirmed together: TIFF preserves PA
+indices, per-pixel alpha, and palette colors; PNG rejects PA with Pillow's
+`cannot write mode PA as PNG` error. The focused parity selection passed 3/3
+rows (one decode and two encodes), with zero panics.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261108T152700.992871Z-2c0d00c6b484489e8ff2f534ace3dd9c/coverage.json`
+(SHA-256 `8288c824bf0fd5f0dc9e7d181225704f710651d6d3c39227b4d782a52da3d4e6`).
+Coverage MCP marks this retained selected report's source as unverified and
+test attribution as unknown; it supports the focused parity outcome, not an
+aggregate coverage-gain claim.
 
 ## F-mode encoder rejection parity — 2026-11-08
 
@@ -17565,7 +17586,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `64595bbd737aabe27c5011c503fbe11d2552adbdca2177b21462e43f6f73dcae`; matrix `5ea1770f4011f65ce39a3701fbfa8ed5b0d8c8e16c7d58236000776b743961d1`.
+- Current fixture integrity only: manifest `28682c5258c9b0208144c8a237292bfa7773188437005b048214725f98fda5ee`; matrix `ffb4912f8ae71b10053dea6469d90cedeaafb584705be47b8e3a36718e1395fb`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
