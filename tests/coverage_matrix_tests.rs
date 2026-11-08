@@ -7320,6 +7320,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "LA" | "La8" | "PA" => Some(img::ImageMode::La8),
         "RGB" | "Rgb8" => Some(img::ImageMode::Rgb8),
         "RGBA" | "Rgba8" => Some(img::ImageMode::Rgba8),
+        "LAB" => Some(img::ImageMode::Rgb8),
         "CMYK" | "Cmyk8" => Some(img::ImageMode::Cmyk8),
         "I;16" | "I;16B" | "I;16L" | "L16" => Some(img::ImageMode::L16),
         "La16" => Some(img::ImageMode::La16),
@@ -7345,6 +7346,7 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
         "LA" | "La8" => img::Mode::ImageLumaA8,
         "RGB" | "Rgb8" => img::Mode::ImageRgb8,
         "RGBA" | "Rgba8" => img::Mode::ImageRgba8,
+        "LAB" => img::Mode::ImageLab8,
         "RGBa" => img::Mode::ImageRgbPremultiplied8,
         "CMYK" | "Cmyk8" => img::Mode::ImageCmyk8,
         "I;16B"

@@ -77,6 +77,7 @@ MODE_ALIASES = {
     "Rgb8": "Rgb8",
     "RGBA": "Rgba8",
     "Rgba8": "Rgba8",
+    "LAB": "LAB",
     "CMYK": "Cmyk8",
     "Cmyk8": "Cmyk8",
     "I;16": "L16",

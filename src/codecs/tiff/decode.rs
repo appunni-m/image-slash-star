@@ -2154,7 +2154,9 @@ fn convert_pixels(
         }
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
-        TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
+        TiffLayout::Rgb8 | TiffLayout::Lab8 => {
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
         TiffLayout::Rgb16 => DecodedImage::new(
             width,
             height,
@@ -2216,15 +2218,15 @@ fn convert_pixels(
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
-    let raster_mode = if matches!(layout, TiffLayout::PaletteAlpha8) {
-        crate::types::Mode::ImagePaletteAlpha8
-    } else {
-        super::inspect::raster_mode(
+    let raster_mode = match layout {
+        TiffLayout::PaletteAlpha8 => crate::types::Mode::ImagePaletteAlpha8,
+        TiffLayout::Lab8 => crate::types::Mode::ImageLab8,
+        _ => super::inspect::raster_mode(
             image.mode,
             alpha.source,
             endian.source_byte_order(),
             alpha.raw_associated_alpha,
-        )
+        ),
     };
     Ok(image
         .with_source_descriptor(descriptor)
@@ -2419,7 +2421,9 @@ fn convert_pixels_with_token(
         }
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
-        TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
+        TiffLayout::Rgb8 | TiffLayout::Lab8 => {
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
         TiffLayout::Rgb16 => DecodedImage::new(
             width,
             height,
@@ -2500,15 +2504,15 @@ fn convert_pixels_with_token(
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
-    let raster_mode = if matches!(layout, TiffLayout::PaletteAlpha8) {
-        crate::types::Mode::ImagePaletteAlpha8
-    } else {
-        super::inspect::raster_mode(
+    let raster_mode = match layout {
+        TiffLayout::PaletteAlpha8 => crate::types::Mode::ImagePaletteAlpha8,
+        TiffLayout::Lab8 => crate::types::Mode::ImageLab8,
+        _ => super::inspect::raster_mode(
             image.mode,
             alpha.source,
             endian.source_byte_order(),
             alpha.raw_associated_alpha,
-        )
+        ),
     };
     Ok(image
         .with_source_descriptor(descriptor)

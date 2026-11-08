@@ -10559,6 +10559,14 @@ formats:
       description: Grayscale with alpha
       test_assets:
       - gray_alpha.tiff
+    - id: lab
+      description: CIELAB TIFF retains LAB header identity and three-channel transfer samples
+      inspect_raster_mode: LAB
+      decoded_raster_mode: LAB
+      rust_inspect_basic: true
+      rust_decode_with_token: true
+      test_assets:
+      - lab.tiff
     - id: palette
       description: Palette/indexed color
       test_assets:
