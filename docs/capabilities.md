@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `ebe7c69d8a5caca3b28be6a6016ab6b8e4612067cf917c9b972f94272066c904`.
+- Active fixture source SHA-256: `b86f8b3077f921adbf651dc1cf5a739e9db4858e4bf8244b3301aa5ba21a6277`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,863 (3,201 decode; 662 encode).
+- Active fixture rows: 3,865 (3,201 decode; 664 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 147.
+- Active `not_applicable` operation outcomes excluded from evidence groups: 148.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -459,6 +459,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | sequence_encode | accepted | Rgba8 | 1 frame | Rgba8 | SingleFrame | — | 2: `png:enc_rgba`, `png:enc_rgba8` |
 | PNG | sequence_encode | rejected | Cmyk8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_cmyk` |
 | PNG | sequence_encode | rejected | F32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_float32_mode` |
+| PNG | sequence_encode | rejected | LAB | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_lab_mode` |
 | PNG | sequence_encode | rejected | P8 | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `png:enc_error_oversized_public_palette` |
 | PNG | sequence_encode | rejected | PA | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_palette_alpha_mode` |
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 3: `png:enc_error_compression_level`, `png:enc_error_compression_text`, `png:enc_error_palette_on_nonindexed` |
@@ -479,6 +480,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `tiff:enc_bilevel` |
 | TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `tiff:enc_16bit` |
 | TIFF | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
+| TIFF | sequence_encode | accepted | LAB | 1 frame | LAB | SingleFrame | — | 1: `tiff:enc_lab` |
 | TIFF | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 1: `tiff:enc_grayscale_alpha` |
 | TIFF | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 1: `tiff:enc_indexed_missing_palette` |
 | TIFF | sequence_encode | accepted | PA | 1 frame | PA | SingleFrame | — | 1: `tiff:enc_palette_alpha` |
@@ -497,6 +499,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `tiff:enc_bilevel` |
 | TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `tiff:enc_16bit` |
 | TIFF | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
+| TIFF | still_encode | accepted | LAB | 1 frame | LAB | — (still result) | — | 1: `tiff:enc_lab` |
 | TIFF | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 1: `tiff:enc_grayscale_alpha` |
 | TIFF | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 1: `tiff:enc_indexed_missing_palette` |
 | TIFF | still_encode | accepted | PA | 1 frame | PA | — (still result) | — | 1: `tiff:enc_palette_alpha` |

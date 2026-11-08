@@ -7181,6 +7181,11 @@ formats:
       source_asset: palette_alpha.tiff
       params: {}
       expect_error: true
+    - id: enc_error_lab_mode
+      description: PNG rejects CIELAB raster identity instead of writing LAB samples as RGB
+      source_format: tiff
+      source_asset: lab.tiff
+      expect_error: true
     - id: enc_error_retained_sequence_duration
       description: A still PNG cannot represent a retained presentation duration
       params: {'sequence_duration_ms': 10}
@@ -11920,12 +11925,13 @@ formats:
       rust_error_kind: unsupported
       rust_error_reason: The current TIFF encoder is still-only and cannot discard sequence geometry
     - id: enc_error_public_mode_contract
-      description: Every unsupported public ImageMode and one inconsistent color/mode state return structured errors without panicking
+      description: Unsupported public ImageModes and inconsistent color or LAB transfer states return structured errors without panicking
       source_format: png
       source_asset: 1x1.png
       params:
         rust_unsupported_modes: ['La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F']
         rust_invalid_color_mode: true
+        rust_invalid_lab_transfer_carrier: true
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: TIFF does not directly accept multi-channel 16-bit and float modes
@@ -11933,6 +11939,9 @@ formats:
       description: TIFF preserves PA indices, per-pixel alpha, and the RGB ColorMap
       source_asset: palette_alpha.tiff
       params: {'rust_encode_with_token': true}
+    - id: enc_lab
+      description: TIFF preserves CIELAB samples and LAB mode identity
+      source_asset: lab.tiff
     - id: enc_indexed_missing_palette
       description: TIFF preserves P indices when the decoded source has no retained palette
       source_format: tiff

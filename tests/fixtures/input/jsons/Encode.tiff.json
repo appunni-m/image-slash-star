@@ -139,7 +139,8 @@
           "Rgb32F",
           "Rgba32F"
         ],
-        "rust_invalid_color_mode": true
+        "rust_invalid_color_mode": true,
+        "rust_invalid_lab_transfer_carrier": true
       },
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
@@ -155,7 +156,8 @@
           "tobytes"
         ],
         "rust_source_transform": "construct one valid zero-filled DecodedImage for every named mode",
-        "rust_invalid_transform": "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType"
+        "rust_invalid_transform": "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType",
+        "rust_invalid_raster_mode_transform": "set raster identity to LAB on an L8 transfer image before public TIFF encoding"
       }
     },
     {
@@ -206,6 +208,49 @@
           "token": "fresh non-cancelled cancellation token",
           "comparison": "exact Pillow encoded bytes and ordinary encode output"
         }
+      }
+    },
+    {
+      "id": "enc_lab",
+      "source_asset": "lab.tiff",
+      "source_format": "tiff",
+      "source_mode": "LAB",
+      "source_sha256": "305ca36742bba9d7d07303482ef68515bce77c4159d5811c4d2931506a024671",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/lab.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
       }
     },
     {

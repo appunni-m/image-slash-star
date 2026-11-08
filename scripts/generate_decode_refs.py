@@ -537,6 +537,7 @@ def encode_params(fmt, params):
         "load_truncated_images",
         "rust_unsupported_modes",
         "rust_invalid_color_mode",
+        "rust_invalid_lab_transfer_carrier",
         "rust_pa_invalid_transfer_carrier",
         "rust_pa_palette_alpha_table",
         "rust_encode_with_token",
@@ -3089,6 +3090,10 @@ def describe_encode_call(fmt_name, row):
     if row.get("params", {}).get("rust_invalid_color_mode"):
         call["rust_invalid_transform"] = (
             "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType"
+        )
+    if row.get("params", {}).get("rust_invalid_lab_transfer_carrier"):
+        call["rust_invalid_raster_mode_transform"] = (
+            "set raster identity to LAB on an L8 transfer image before public TIFF encoding"
         )
     if row.get("params", {}).get("rust_encode_with_token"):
         call["rust_public_call_parity"] = {

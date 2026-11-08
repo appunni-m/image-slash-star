@@ -11406,6 +11406,37 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         }
                     }
                 }
+                if row
+                    .params
+                    .get("rust_invalid_lab_transfer_carrier")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
+                    let mut invalid = require_ok(
+                        zero_image_for_mode(base.width, base.height, img::ImageMode::L8),
+                        "invalid LAB transfer contract image must be constructible",
+                    );
+                    invalid.raster_mode = img::Mode::ImageLab8;
+                    let result = run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:invalid-lab-transfer-carrier", row.id),
+                        || img::encode(&invalid, format, options),
+                    );
+                    match result {
+                        Some(Err(img::ImageError::Parameter { .. })) => {}
+                        Some(result) => {
+                            contract_failures.push(format!(
+                                "LAB identity with non-RGB8 transfer carrier: {result:?}"
+                            ));
+                        }
+                        None => {
+                            contract_failures.push(
+                                "LAB identity with non-RGB8 transfer carrier: panic".to_owned(),
+                            );
+                        }
+                    }
+                }
                 let fixture_has_oracle_success = row.rust_expect_error
                     && row.rust_error_kind.as_deref() == Some("unsupported")
                     && row.oracle_status.as_deref() == Some("ok")
@@ -11421,7 +11452,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     && operation_contract_matches
                 {
                     matrix_success!(
-                        "  OK   [{}] all public unsupported modes and invalid state returned structured errors",
+                        "  OK   [{}] all declared public mode error contracts returned structured errors",
                         row.id
                     );
                     report_matrix_case_passed("encode", fmt_name, &row.id);

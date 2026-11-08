@@ -141,6 +141,12 @@ fn encode_page_with_token(
     let width = img.width as usize;
     let height = img.height as usize;
     let palette_alpha = img.raster_mode == Mode::ImagePaletteAlpha8;
+    let lab = img.raster_mode == Mode::ImageLab8;
+    if lab && img.mode != ImageMode::Rgb8 {
+        return Err(CodecError::Parameter(
+            "LAB raster identity requires an RGB8 transfer carrier".to_owned(),
+        ));
+    }
     let indexed = img.mode == ImageMode::P8 || palette_alpha;
     let color_map = if indexed {
         Some(tiff_palette_color_map(img.palette.as_ref())?)
@@ -149,6 +155,8 @@ fn encode_page_with_token(
     };
     let (photometric, channels, bits_per_sample, extra_sample, row_len) = if palette_alpha {
         (3u16, 2u16, 8u16, true, width.saturating_mul(2))
+    } else if lab {
+        (8u16, 3u16, 8u16, false, width.saturating_mul(3))
     } else {
         match img.mode {
             ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),

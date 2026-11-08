@@ -67,6 +67,11 @@ fn write_encoded(
             "PNG cannot encode mode PA".to_owned(),
         ));
     }
+    if img.raster_mode == Mode::ImageLab8 {
+        return Err(CodecError::Unsupported(
+            "PNG cannot encode mode LAB".to_owned(),
+        ));
+    }
 
     let width = bounded_usize(img.width);
     let height = bounded_usize(img.height);
