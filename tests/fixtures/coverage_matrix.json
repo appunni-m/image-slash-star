@@ -374209,5 +374209,235 @@
       },
       "oracle_status": "not_applicable"
     }
+  ],
+  "mode_decode_cases": [
+    {
+      "format": "avif",
+      "case_id": "baseline",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "avif",
+      "case_id": "portable_lossless_monochrome_fullrange_alpha_12bit_17x9",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "bmp",
+      "case_id": "depth_1",
+      "inspect_mode": "1",
+      "decoded_mode": "1"
+    },
+    {
+      "format": "bmp",
+      "case_id": "depth_4",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "bmp",
+      "case_id": "depth_8_gray",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "bmp",
+      "case_id": "depth_16",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "bmp",
+      "case_id": "compression_bitfields_bitfields_32_layout_4",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "gif",
+      "case_id": "static_gif",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "gif",
+      "case_id": "identity_gray_palette",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "ico",
+      "case_id": "single_icon",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "ico",
+      "case_id": "multi_res_equal_area_bit_depth_tiebreak",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "ico",
+      "case_id": "cursor",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "subsampling_444",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "subsampling_gray",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "color_cmyk",
+      "inspect_mode": "CMYK",
+      "decoded_mode": "CMYK"
+    },
+    {
+      "format": "png",
+      "case_id": "color_gray",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "png",
+      "case_id": "color_gray_alpha",
+      "inspect_mode": "La8",
+      "decoded_mode": "La8"
+    },
+    {
+      "format": "png",
+      "case_id": "color_rgb",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "png",
+      "case_id": "color_rgba",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "png",
+      "case_id": "color_indexed",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "png",
+      "case_id": "depth_1",
+      "inspect_mode": "1",
+      "decoded_mode": "1"
+    },
+    {
+      "format": "png",
+      "case_id": "depth_16",
+      "inspect_mode": "I;16",
+      "decoded_mode": "I;16"
+    },
+    {
+      "format": "tiff",
+      "case_id": "byte_order_le",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_lzw_gray_lzw",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_lzw_rgba_lzw",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_lzw_gray16_lzw_predictor",
+      "inspect_mode": "I;16",
+      "decoded_mode": "I;16"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_deflate_deflate_predictor_checkpoint_257x1_gray32_signed",
+      "inspect_mode": "I",
+      "decoded_mode": "I"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_deflate_float32_deflate_predictor",
+      "inspect_mode": "F",
+      "decoded_mode": "F"
+    },
+    {
+      "format": "tiff",
+      "case_id": "compression_deflate_be_unsigned16_wraparound_predictor",
+      "inspect_mode": "I;16B",
+      "decoded_mode": "I;16B"
+    },
+    {
+      "format": "tiff",
+      "case_id": "bilevel",
+      "inspect_mode": "1",
+      "decoded_mode": "1"
+    },
+    {
+      "format": "tiff",
+      "case_id": "grayscale_alpha",
+      "inspect_mode": "La8",
+      "decoded_mode": "La8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "lab",
+      "inspect_mode": "LAB",
+      "decoded_mode": "LAB"
+    },
+    {
+      "format": "tiff",
+      "case_id": "palette",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "tiff",
+      "case_id": "palette_alpha",
+      "inspect_mode": "PA",
+      "decoded_mode": "PA"
+    },
+    {
+      "format": "tiff",
+      "case_id": "cmyk",
+      "inspect_mode": "CMYK",
+      "decoded_mode": "CMYK"
+    },
+    {
+      "format": "tiff",
+      "case_id": "associated_rgba_separate_strips_raw_missing_alpha_plane",
+      "inspect_mode": "RGBa",
+      "decoded_mode": "RGBa"
+    },
+    {
+      "format": "webp",
+      "case_id": "lossy_vp8",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "webp",
+      "case_id": "lossless_rgba_singleton_color_cache",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    }
   ]
 }
