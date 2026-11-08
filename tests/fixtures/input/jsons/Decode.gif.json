@@ -161,6 +161,7 @@
       "rust_expect_sequence_error": false,
       "rust_sequence_error_kind": null,
       "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 1725,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/animated_3frame.gif",
         "operations": [

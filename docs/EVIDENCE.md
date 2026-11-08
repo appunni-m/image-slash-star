@@ -47,6 +47,44 @@ The 4:2:0/4:2:2 selected report is
 `.coverage-mcp/local-evidence/selected/20261108T072051.187354Z-f147db75ef3f4ec190a949692a23b6ff/coverage.json`
 (SHA-256 `e669869098ee86114adaea06596166a705440c6fc39cf54c55ba955dc040b136`).
 
+## GIF local color table under metadata limit — 2026-11-08
+
+Split `animated_gif_animated_3frame` into its own active manifest row and set
+`rust_decode_with_metadata_limit` to 1,725 bytes. Its three-frame GIF contains
+a global color table, one local color table, four extensions, and 24,207 bytes
+of compressed LZW payload inside a 25,932-byte container. Selected public decode
+parity passed 1/1 with the exact 16,384-byte Pillow pixel reference in P mode.
+
+The selected LLVM report observes the metadata preflight's local color-table
+read at `src/codecs/gif/decode.rs:408-410` once per line; the file summary is
+703/1,101 regions, 430/652 lines, 66/140 branches, and 21/34 functions. The
+selected report totals are 1,891/220,940 regions, 1,339/142,623 lines,
+148/32,064 branches, and 141/9,169 functions. Coverage MCP was not queried in
+this session; its local receipt marks source identity unverified and test
+attribution unknown. These are selected local observations, not an aggregate
+coverage claim. No Rust unit tests were added.
+
+Report: `.coverage-mcp/local-evidence/selected/20261108T081716.234967Z-441ed5026fe34bb9ba830e6c02b1970d/coverage.json`
+(SHA-256 `34dd567a8795afa429d3124fc41bc57e3340bb3fa9b0217f37f762f7be1c79f2`);
+its local receipt and command log are adjacent.
+
+The existing `post_frame_zero_padding` and `valid_frame_missing_trailer` parity
+rows also passed together (2/2) at their exact metadata limits. Their selected
+report observed the end-of-input-after-frame and padding-block outcomes in
+`metadata_bytes` at `src/codecs/gif/decode.rs:382-383` and `:423`. Coverage MCP
+was not queried; the selected report and local receipt are
+`.coverage-mcp/local-evidence/selected/20261108T082216.233656Z-8eb2d55d1dc64672a277c7bc30099811/coverage.json`
+(SHA-256 `392b2603a399f8d9696b05049bfb52e920cfbba60345275f04a70d602b9d1ff8`).
+
+After merging the current `main` history into `develop`, the three rows above
+passed together (3/3) against the merged tree. The selected report records
+710/1,101 regions, 435/652 lines, 73/140 branches, and 21/34 functions in
+`src/codecs/gif/decode.rs`. The receipt marks Coverage MCP as not queried, the
+source as unverified, and test attribution as unknown; these remain local
+selected-run observations, not aggregate coverage claims. Report:
+`.coverage-mcp/local-evidence/selected/20261108T083132.867282Z-b869ddaedb8244ecaab61e5d4a60806c/coverage.json`
+(SHA-256 `1b00597a814ad6adbc86058b232764ef2d5cd0895cf9f21e7720c8b32a284d03`).
+
 ## AVIF sequence mode mismatch alpha fault contract — 2026-11-07
 
 Added target-only row
@@ -17469,7 +17507,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ea98a7dbca65f75993dfacd990e924fd47a239009ddddc5cf7b13bbcdebd1cb7`; matrix `052cffcd35a26254f14472b27b326bea88338877ff2898fac59a6fc8387bed4a`.
+- Current fixture integrity only: manifest `095bf82e6080be3beee82f132a45e721622ca751231bd7ec78a9c842c1abc29b`; matrix `00245fa748a104f3ac293eabb4257587f07107d0f8d9b9963a8250538f0e1011`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
