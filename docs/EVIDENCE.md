@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,876 total rows: 3,194 decode /
-inspect / verify rows and 682 encode rows. Of those, 3,194 decode rows are
+The current public evidence matrix contains 3,877 total rows: 3,195 decode /
+inspect / verify rows and 682 encode rows. Of those, 3,195 decode rows are
 active and 655 encode rows are active; 27 encode rows remain planned.
 
 ## JPEG grayscale restart markers without DRI — 2026-11-08
@@ -17447,7 +17447,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `83be9de8d0b6eb01b782e7be825989b97bda00583ddbf73f2e0990be1afbc933`; matrix `e907ffaa01d925993bbc00c138e18d8bb01cc3897e0f459fbd2c567f2373ae11`.
+- Current fixture integrity only: manifest `cd3d14524d93542b66bd1a1bc7cec87727c5746f667c223cf81a260d76ec2caf`; matrix `2595bbe627f87138f835154a7a539a184be84dedf2d53943a3033fe1dba6219b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23017,3 +23017,32 @@ receipt identifies a local LLVM run on `aarch64-apple-darwin` with
 `nightly-2026-07-16`, but marks Coverage MCP as not queried and source
 attribution as unverified. These selected counters prove this case reaches the
 branch; they do not establish aggregate coverage or a Coverage MCP result.
+
+## Baseline multi-scan JPEG truncated COM parity — 2026-11-08
+
+Added the input-only parity row
+`decode:jpeg:baseline_444_multiscan_com_oversized_length`. Its generator starts
+from the pinned multi-scan interleaved-restart JPEG and replaces the terminal
+EOI with a COM marker declaring a 65,533-byte payload but containing only two
+bytes. Pillow 12.2.0 accepts and verifies the JPEG RGB 16×8 header, then rejects
+pixel loading with `OSError: image file is truncated (0 bytes not processed)`;
+the Rust public decoder returned the matching malformed result. The source
+fixture SHA-256 is
+`ddbcf29eb1549aae0356661ff2b879b7b2b23b7aae924adbb424af22246e20d7`; the
+mutated input SHA-256 is
+`4177af354fc11b8ff4ecd71f7e75e37afb9528806c18e524927946e4b004853c`.
+
+The selected public parity run passed 1/1. Coverage MCP's preceding full
+report showed the false outcome missing at
+`src/codecs/jpeg/decode/parser.rs:741`; the selected case report leaves the
+true outcome missing, showing that this case exercised the false multi-scan
+arm. Both reports remain local measurements: Coverage MCP labels source
+identity `unverified` and test attribution `unknown`. The aggregate full report
+was not refreshed, so this does not claim a new whole-suite percentage.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261108T063050.792605Z-a43bbc8532c64dabbf57a4884438e501/coverage.json`
+(SHA-256
+`5365e77b5a4c8cc621fbc9dbefc2cb0dfe395f2aa83528fd0bde97bd7186ff5b`). Its
+local receipt records the exact selector, fixture hash, toolchain, and passing
+execution. No Rust decoder code or unit tests changed.

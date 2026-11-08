@@ -4889,6 +4889,11 @@ formats:
       test_assets:
       - baseline_multiscan_dc_category_16.jpg
       expect_error: true
+    - id: baseline_444_multiscan_com_oversized_length
+      description: Baseline multi-scan JPEG ends with a COM marker whose declared payload extends past the file
+      test_assets:
+      - baseline_444_multiscan_com_oversized_length.jpg
+      expect_error: true
     - id: progressive_trailing_com_oversized
       description: Progressive JPEG with a post-scan COM marker whose declared payload extends beyond the file
       test_assets:

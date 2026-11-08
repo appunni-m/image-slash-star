@@ -18799,6 +18799,41 @@
         "verify_status": "ok"
       },
       {
+        "asset": "baseline_444_multiscan_com_oversized_length.jpg",
+        "class": "baseline_444_multiscan_com_oversized_length",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline multi-scan JPEG ends with a COM marker whose declared payload extends past the file",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (0 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "baseline_444_single_scan_reserved_jpg0.jpg",
         "class": "baseline_444_single_scan_reserved_jpg0",
         "contracts": {
@@ -39996,7 +40031,7 @@
       "bmp": 86,
       "gif": 49,
       "ico": 31,
-      "jpeg": 129,
+      "jpeg": 130,
       "png": 81,
       "tiff": 147,
       "webp": 142
@@ -40004,17 +40039,17 @@
     "by_origin": {
       "defensive_model": 6,
       "independent_implementation": 1,
-      "pillow_fixture": 903,
+      "pillow_fixture": 904,
       "specification_reference": 238
     },
     "by_spec_status": {
       "ambiguous": 36,
       "not_the_format": 41,
-      "spec_violation": 545,
+      "spec_violation": 546,
       "tolerated": 1,
       "truncated": 280
     },
-    "classes": 903,
+    "classes": 904,
     "formats": 8
   }
 }

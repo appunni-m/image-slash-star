@@ -18632,6 +18632,75 @@
       ]
     },
     {
+      "id": "baseline_444_multiscan_com_oversized_length",
+      "asset": "baseline_444_multiscan_com_oversized_length.jpg",
+      "asset_sha256": "4177af354fc11b8ff4ecd71f7e75e37afb9528806c18e524927946e4b004853c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "image file is truncated (0 bytes not processed)",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "image file is truncated (0 bytes not processed)",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444_multiscan_com_oversized_length.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "progressive_trailing_com_oversized",
       "asset": "progressive_trailing_com_oversized.jpg",
       "asset_sha256": "c18a2f350fa0905e4967b085d5ba74960dda23d684048c1a85ae81da819a759d",
