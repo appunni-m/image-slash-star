@@ -7341,6 +7341,12 @@ formats:
       source_asset: baseline_cmyk.jpg
       params: {}
       expect_error: true
+    - id: enc_error_float32_mode
+      description: Pillow cannot write single-precision floating-point TIFF samples as PNG
+      source_format: tiff
+      source_asset: float32.tiff
+      params: {}
+      expect_error: true
     - id: enc_error_truncated_pixels
       description: Pixel buffer shorter than the declared dimensions
       params: {'truncate_pixels': true}

@@ -7375,25 +7375,23 @@ fn assert_encoded_header_raster_identity(
     let view = img::EncodedImageView::new(bytes)
         .map_err(|error| format!("borrowed encoded header inspection failed: {error}"))?;
 
-    let owned_matches = encoded.format() == expected_info.format
+    let owned_matches = encoded.info() == expected_info
+        && encoded.format() == expected_info.format
         && encoded.mode() == expected_info.mode
         && encoded.raster_mode() == expected_raster_mode
         && encoded.info().raster_mode == expected_raster_mode
         && !encoded.is_decoded();
-    let borrowed_matches = view.format() == expected_info.format
+    let borrowed_matches = view.info() == expected_info
+        && view.format() == expected_info.format
         && view.mode() == expected_info.mode
         && view.raster_mode() == expected_raster_mode
         && view.info().raster_mode == expected_raster_mode;
     if !owned_matches || !borrowed_matches {
         return Err(format!(
-            "header identity mismatch: inspect={:?}/{:?}, owned={:?}/{:?} (decoded={}), borrowed={:?}/{:?}, expected={expected_raster_mode:?}",
-            expected_info.mode,
-            expected_info.raster_mode,
-            encoded.mode(),
-            encoded.raster_mode(),
+            "header metadata mismatch: inspect={expected_info:?}, owned={:?} (decoded={}), borrowed={:?}, expected raster identity={expected_raster_mode:?}",
+            encoded.info(),
             encoded.is_decoded(),
-            view.mode(),
-            view.raster_mode(),
+            view.info(),
         ));
     }
 
