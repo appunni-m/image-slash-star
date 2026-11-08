@@ -53,6 +53,12 @@ Do not replace exact comparisons with prefix checks, dimensions, or hashes
 chosen to match the Rust output. Add the corresponding public input when
 changing codec behavior. Preserve planned and not-applicable outcomes.
 
+`tests/fixtures/coverage_matrix.json` also keeps an append-only
+`mode_decode_cases` index, with one active Pillow-backed decode row for each
+format/header-mode/decoded-mode pair. When a decoder adds a new pair, append a
+representative row to that index. The parity harness checks that indexed rows
+remain active and that every successful mode pair is listed.
+
 Some oracle outputs are checked in because clean CI source checkouts consume
 them. They are reproducible through maintained generators, but regeneration
 requires the exact source assets and pinned oracle. In particular, AV1's index

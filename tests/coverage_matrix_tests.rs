@@ -207,6 +207,15 @@ struct CoverageMatrix {
     formats: HashMap<String, FormatData>,
     fault_contracts: Vec<FaultContractRow>,
     summary: Summary,
+    mode_decode_cases: Vec<ModeDecodeCase>,
+}
+
+#[derive(Debug)]
+struct ModeDecodeCase {
+    format: String,
+    case_id: String,
+    inspect_mode: String,
+    decoded_mode: String,
 }
 
 #[derive(Debug)]
@@ -842,7 +851,129 @@ fn append_matrix_catalog_row(
     Ok(())
 }
 
+fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String> {
+    let mut listed_pairs = HashSet::new();
+    let mut listed_case_ids = HashSet::new();
+
+    for case in &matrix.mode_decode_cases {
+        if !listed_case_ids.insert((case.format.as_str(), case.case_id.as_str())) {
+            return Err(format!(
+                "mode decode case index repeats {}:{}",
+                case.format, case.case_id
+            ));
+        }
+
+        let row = matrix
+            .formats
+            .get(&case.format)
+            .and_then(|format| format.decode.iter().find(|row| row.id == case.case_id))
+            .ok_or_else(|| {
+                format!(
+                    "mode decode case {}:{} is missing from the decode matrix",
+                    case.format, case.case_id
+                )
+            })?;
+        if row.status != "active"
+            || row.expect_error.unwrap_or(false)
+            || row.oracle_status.as_deref() != Some("ok")
+            || row.ref_mode.is_none()
+        {
+            return Err(format!(
+                "mode decode case {}:{} must remain an active successful Pillow parity row",
+                case.format, case.case_id
+            ));
+        }
+
+        let inspect_mode = row
+            .inspect_raster_mode
+            .as_deref()
+            .or(row.ref_mode.as_deref())
+            .ok_or_else(|| {
+                format!(
+                    "mode decode case {}:{} has no expected header mode",
+                    case.format, case.case_id
+                )
+            })?;
+        let decoded_mode = row
+            .decoded_raster_mode
+            .as_deref()
+            .or(row.ref_mode.as_deref())
+            .ok_or_else(|| {
+                format!(
+                    "mode decode case {}:{} has no expected transfer mode",
+                    case.format, case.case_id
+                )
+            })?;
+        if case.inspect_mode != inspect_mode || case.decoded_mode != decoded_mode {
+            return Err(format!(
+                "mode decode case {}:{} expects header/transfer modes {:?}/{:?}, but its parity row declares {inspect_mode:?}/{decoded_mode:?}",
+                case.format, case.case_id, case.inspect_mode, case.decoded_mode
+            ));
+        }
+
+        if !listed_pairs.insert((
+            case.format.as_str(),
+            case.inspect_mode.as_str(),
+            case.decoded_mode.as_str(),
+        )) {
+            return Err(format!(
+                "mode decode case index repeats format/modes {}:{:?}/{:?}",
+                case.format, case.inspect_mode, case.decoded_mode
+            ));
+        }
+    }
+
+    let mut active_pairs = HashSet::new();
+    for (format_name, format) in &matrix.formats {
+        for row in &format.decode {
+            if row.status != "active"
+                || row.expect_error.unwrap_or(false)
+                || row.oracle_status.as_deref() != Some("ok")
+                || row.ref_mode.is_none()
+            {
+                continue;
+            }
+
+            let inspect_mode = row
+                .inspect_raster_mode
+                .as_deref()
+                .or(row.ref_mode.as_deref())
+                .ok_or_else(|| format!("active mode row {} has no header mode", row.id))?;
+            let decoded_mode = row
+                .decoded_raster_mode
+                .as_deref()
+                .or(row.ref_mode.as_deref())
+                .ok_or_else(|| format!("active mode row {} has no transfer mode", row.id))?;
+            active_pairs.insert((format_name.as_str(), inspect_mode, decoded_mode));
+        }
+    }
+
+    if active_pairs != listed_pairs {
+        let mut unlisted = active_pairs
+            .difference(&listed_pairs)
+            .map(|(format, inspect, decoded)| {
+                (format.to_string(), inspect.to_string(), decoded.to_string())
+            })
+            .collect::<Vec<_>>();
+        unlisted.sort_unstable();
+        let mut stale = listed_pairs
+            .difference(&active_pairs)
+            .map(|(format, inspect, decoded)| {
+                (format.to_string(), inspect.to_string(), decoded.to_string())
+            })
+            .collect::<Vec<_>>();
+        stale.sort_unstable();
+        return Err(format!(
+            "mode decode case index must match every active format/header-mode/decoded-mode pair; unlisted={unlisted:?}, stale={stale:?}"
+        ));
+    }
+
+    Ok(())
+}
+
 fn matrix_row_catalog(matrix: &CoverageMatrix) -> Result<Vec<MatrixCatalogRow>, String> {
+    validate_mode_decode_case_index(matrix)?;
+
     let mut format_names = matrix.formats.keys().collect::<Vec<_>>();
     format_names.sort_unstable();
 
@@ -5285,6 +5416,13 @@ json_object!(CoverageMatrix {
     formats,
     fault_contracts,
     summary,
+    mode_decode_cases,
+});
+json_object!(ModeDecodeCase {
+    format,
+    case_id,
+    inspect_mode,
+    decoded_mode,
 });
 json_object!(FormatData { decode, encode });
 json_object!(FaultContractInput { source_case });
@@ -7365,6 +7503,121 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
         "I" | "I32" => img::Mode::ImageI32,
         _ => return None,
     })
+}
+
+#[derive(Clone, Copy)]
+struct ExpectedModeApi {
+    pillow_name: Option<&'static str>,
+    band_count: usize,
+    uppercase_a_band_index: Option<usize>,
+    has_alpha: bool,
+}
+
+const fn mode_api(
+    pillow_name: Option<&'static str>,
+    band_count: usize,
+    uppercase_a_band_index: Option<usize>,
+    has_alpha: bool,
+) -> ExpectedModeApi {
+    ExpectedModeApi {
+        pillow_name,
+        band_count,
+        uppercase_a_band_index,
+        has_alpha,
+    }
+}
+
+// Active decode rows are the mode/format case list; new reference names need
+// an explicit Pillow API contract here before the parity matrix can accept them.
+fn expected_mode_api(
+    mode: &str,
+    format: img::ImageFormat,
+    source: &img::SourceDescriptor,
+) -> Option<ExpectedModeApi> {
+    let expected = match mode {
+        "1" => mode_api(Some("1"), 1, None, false),
+        "L" | "L8" => mode_api(Some("L"), 1, None, false),
+        "LA" => mode_api(Some("LA"), 2, Some(1), true),
+        "La" => mode_api(Some("La"), 2, None, true),
+        "La8" if matches!(source.alpha(), Some(img::SourceAlpha::Premultiplied)) => {
+            mode_api(Some("La"), 2, None, true)
+        }
+        "La8" => mode_api(Some("LA"), 2, Some(1), true),
+        "P" => mode_api(Some("P"), 1, None, false),
+        "PA" => mode_api(Some("PA"), 2, Some(1), true),
+        "RGB" | "Rgb8" => mode_api(Some("RGB"), 3, None, false),
+        "RGBA" | "Rgba8" => mode_api(Some("RGBA"), 4, Some(3), true),
+        "RGBa" => mode_api(Some("RGBa"), 4, None, true),
+        "RGBX" => mode_api(Some("RGBX"), 4, None, false),
+        "CMYK" | "Cmyk8" => mode_api(Some("CMYK"), 4, None, false),
+        "YCbCr" => mode_api(Some("YCbCr"), 3, None, false),
+        "LAB" => mode_api(Some("LAB"), 3, Some(1), false),
+        "HSV" => mode_api(Some("HSV"), 3, None, false),
+        "I" | "I32" => mode_api(Some("I"), 1, None, false),
+        "F" | "F32" => mode_api(Some("F"), 1, None, false),
+        "I;16" | "L16" => mode_api(Some("I;16"), 1, None, false),
+        "I;16B"
+            if format == img::ImageFormat::Tiff
+                && source.byte_order() == Some(img::SourceByteOrder::Big) =>
+        {
+            mode_api(Some("I;16B"), 1, None, false)
+        }
+        "I;16B" | "I;16L" | "I;16N" => mode_api(Some("I;16"), 1, None, false),
+        "La16" => mode_api(None, 2, Some(1), true),
+        "Rgb16" | "Rgb32F" => mode_api(None, 3, None, false),
+        "Rgba16" | "Rgba32F" => mode_api(None, 4, Some(3), true),
+        _ => return None,
+    };
+    Some(expected)
+}
+
+fn assert_mode_api_parity(
+    mode_name: &str,
+    format: img::ImageFormat,
+    source: &img::SourceDescriptor,
+    mode: img::Mode,
+) -> Result<(), String> {
+    let expected = expected_mode_api(mode_name, format, source)
+        .ok_or_else(|| format!("no Pillow mode API expectation for {mode_name:?}"))?;
+    if mode.pillow_name() != expected.pillow_name {
+        return Err(format!(
+            "mode {mode:?} Pillow spelling {:?} differs from reference {:?} for {mode_name:?}",
+            mode.pillow_name(),
+            expected.pillow_name,
+        ));
+    }
+    if let Some(pillow_name) = expected.pillow_name
+        && img::Mode::from_pillow_name(pillow_name) != Some(mode)
+    {
+        return Err(format!(
+            "Pillow mode {pillow_name:?} does not parse back to raster mode {mode:?}"
+        ));
+    }
+
+    let expected_pillow_band_count = if expected.pillow_name.is_some() {
+        expected.band_count
+    } else {
+        0
+    };
+    if mode.band_count() != expected.band_count
+        || mode.pillow_band_count() != expected_pillow_band_count
+        || mode.uppercase_a_band_index() != expected.uppercase_a_band_index
+        || mode.has_alpha() != expected.has_alpha
+    {
+        return Err(format!(
+            "mode {mode:?} metadata differs from Pillow mode {mode_name:?}: expected bands={}/{}, uppercase-A={:?}, alpha={}, observed bands={}/{}, uppercase-A={:?}, alpha={}",
+            expected.band_count,
+            expected_pillow_band_count,
+            expected.uppercase_a_band_index,
+            expected.has_alpha,
+            mode.band_count(),
+            mode.pillow_band_count(),
+            mode.uppercase_a_band_index(),
+            mode.has_alpha(),
+        ));
+    }
+
+    Ok(())
 }
 
 fn assert_encoded_header_raster_identity(
@@ -9961,22 +10214,28 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
-                let expected_inspect_raster_mode = row
+                let inspect_raster_mode_name = row
                     .inspect_raster_mode
                     .as_deref()
-                    .or(row.ref_mode.as_deref())
-                    .and_then(|mode| expected_raster_mode(mode, &info));
-                let expected_decoded_raster_mode = row
+                    .or(row.ref_mode.as_deref());
+                let decoded_raster_mode_name = row
                     .decoded_raster_mode
                     .as_deref()
-                    .or(row.ref_mode.as_deref())
-                    .and_then(|mode| expected_raster_mode(mode, &info));
+                    .or(row.ref_mode.as_deref());
+                let expected_inspect_raster_mode =
+                    inspect_raster_mode_name.and_then(|mode| expected_raster_mode(mode, &info));
+                let expected_decoded_raster_mode =
+                    decoded_raster_mode_name.and_then(|mode| expected_raster_mode(mode, &info));
                 if info.format != expected_format
                     || Some(info.width)
                         != row.ref_size.as_ref().and_then(|size| size.first()).copied()
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
                     || Some(info.mode) != expected_mode
+                    || (inspect_raster_mode_name.is_some()
+                        && expected_inspect_raster_mode.is_none())
+                    || (decoded_raster_mode_name.is_some()
+                        && expected_decoded_raster_mode.is_none())
                     || expected_inspect_raster_mode
                         .is_some_and(|expected| info.raster_mode != expected)
                     || expected_decoded_raster_mode
@@ -10000,6 +10259,36 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         "  FAIL [{}]: metadata {:?} differs from Pillow mode/size/frame and decoded palette",
                         row.id, info
                     );
+                    failed += 1;
+                    continue;
+                }
+                let mode_api_error = [
+                    (
+                        "header",
+                        inspect_raster_mode_name,
+                        expected_inspect_raster_mode,
+                        info.format,
+                        &info.source,
+                    ),
+                    (
+                        "decoded transfer",
+                        decoded_raster_mode_name,
+                        expected_decoded_raster_mode,
+                        info.format,
+                        &decoded.source,
+                    ),
+                ]
+                .into_iter()
+                .filter_map(|(identity, mode_name, mode, format, source)| {
+                    Some((identity, mode_name?, mode?, format, source))
+                })
+                .find_map(|(identity, mode_name, mode, format, source)| {
+                    assert_mode_api_parity(mode_name, format, source, mode)
+                        .err()
+                        .map(|message| (identity, message))
+                });
+                if let Some((identity, message)) = mode_api_error {
+                    eprintln!("  FAIL [{}]: {identity} mode parity: {message}", row.id);
                     failed += 1;
                     continue;
                 }
