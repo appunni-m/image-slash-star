@@ -1,8 +1,42 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,880 total rows: 3,196 decode /
-inspect / verify rows and 684 encode rows. Of those, 3,196 decode rows are
-active and 657 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,883 total rows: 3,196 decode /
+inspect / verify rows and 687 encode rows. Of those, 3,196 decode rows are
+active and 660 encode rows are active; 27 encode rows remain planned.
+
+## F-mode encoder rejection parity — 2026-11-08
+
+Added active encode rows for `float32.tiff` (Pillow mode `F`) to BMP, JPEG,
+and ICO. Pinned Pillow 12.2.0 rejects them with `cannot write mode F as BMP`,
+`cannot write mode F as JPEG`, and `cannot write mode F as PNG` for ICO's
+PNG-backed entry. The Rust encoder returns the corresponding structured
+`Unsupported` errors. Focused parity passed 3/3 rows with no panics.
+
+The existing I32-to-PNG transfer was also rechecked: little- and big-endian
+signed TIFF inputs both match Pillow's 16-bit grayscale output after clamping
+to 0..65535; focused parity passed 2/2 rows.
+
+TIFF associated-alpha identity was checked across contiguous raw, contiguous
+Deflate, separate raw, and separate Deflate strips. The successful decode paths
+match Pillow's straight-RGBA samples; separate raw retains the `RGBa` inspected
+header identity and the Pillow-compatible decode rejection. Focused parity
+passed 4/4 selected rows across two runs.
+
+Selected LLVM reports are retained under
+`.coverage-mcp/local-evidence/selected/`:
+
+- F-mode BMP/JPEG/ICO: `20261108T141847.357857Z-9a8c1d70713649da9527a49fac6f26f8/coverage.json`
+  (SHA-256 `a623052732ad32af4cdc48930b4d8b3eea57cfcc6df2d5c257546b5b0e46f6ba`).
+- I32 PNG little/big endian: `20261108T142634.812024Z-5b451ed7275e4c928cee1cc7197c71fd/coverage.json`
+  (SHA-256 `ae10f26072f8a46ca044f5f88af46075e49c8250bd1e176b0e8d7b16f1c02f2e`).
+- TIFF associated-alpha raw strips: `20261108T141417.735466Z-92637700e538406487c40a196b6884d9/coverage.json`
+  (SHA-256 `8dc919465acc235c449271f96ba766455773027595b934df072019545067fd30`).
+- TIFF associated-alpha compressed strips: `20261108T142949.995633Z-86bf6264e36a49a8b13d27a2b37077b1/coverage.json`
+  (SHA-256 `c9f03a541550733025cf549e4a22aaa74252356107a38a9faaee73b4660dbb99`).
+
+Coverage MCP reports these selected measurements as `source=unverified` and
+`tests=unknown`; they support the focused parity outcomes, not an aggregate
+coverage-gain claim.
 
 ## JPEG grayscale restart markers without DRI — 2026-11-08
 
@@ -17531,7 +17565,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `94464d315f4781b354576823d70f12a970e80fc8d02463ebcf975ba21c9615db`; matrix `732111060133dcbe6bacfe757544b0f9a9b34e4dda2b8a2e1f55bf64826be756`.
+- Current fixture integrity only: manifest `64595bbd737aabe27c5011c503fbe11d2552adbdca2177b21462e43f6f73dcae`; matrix `5ea1770f4011f65ce39a3701fbfa8ed5b0d8c8e16c7d58236000776b743961d1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

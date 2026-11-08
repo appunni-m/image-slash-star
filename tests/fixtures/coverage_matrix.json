@@ -188096,6 +188096,58 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_error_float32_mode",
+          "type": "encode",
+          "format": "bmp",
+          "category": "error",
+          "description": "Pillow cannot write single-precision floating-point TIFF samples as BMP",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "float32.tiff",
+          "source_sha256": "375b7ffbfa4760c35a2a20c67967fce30321dfc812a2d749b144de46426e4cac",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "F",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode F as BMP",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "cannot write mode F as BMP",
+              "rust_kind": "unsupported",
+              "rust_format": "BMP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "enc_indexed_missing_palette",
           "type": "encode",
           "format": "bmp",
@@ -209805,6 +209857,65 @@
           "oracle_error_type": "builtins.KeyError",
           "oracle_error_message": "'CMYK'",
           "oracle_error_kind": "unsupported"
+        },
+        {
+          "id": "enc_error_float32_mode",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "Pillow cannot write single-precision floating-point TIFF samples as a PNG-backed ICO entry",
+          "params": {
+            "sizes": [
+              [
+                128,
+                128
+              ]
+            ]
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "float32.tiff",
+          "source_sha256": "375b7ffbfa4760c35a2a20c67967fce30321dfc812a2d749b144de46426e4cac",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "F",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode F as PNG",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "cannot write mode F as PNG",
+              "rust_kind": "unsupported",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         }
       ]
     },
@@ -257359,6 +257470,58 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_error_float32_mode",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "error",
+          "description": "Pillow cannot write single-precision floating-point TIFF samples as JPEG",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "float32.tiff",
+          "source_sha256": "375b7ffbfa4760c35a2a20c67967fce30321dfc812a2d749b144de46426e4cac",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "F",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode F as JPEG",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "cannot write mode F as JPEG",
+              "rust_kind": "unsupported",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
         },
         {
           "description": "",
@@ -369748,9 +369911,9 @@
     }
   },
   "summary": {
-    "total_rows": 3880,
+    "total_rows": 3883,
     "decode_rows": 3196,
-    "encode_rows": 684,
+    "encode_rows": 687,
     "formats": 8,
     "assets_available": 3192,
     "decode_active": 3196,

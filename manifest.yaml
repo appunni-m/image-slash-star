@@ -5886,6 +5886,11 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: JPEG directly accepts L1, L8, Rgb8, and Cmyk8
+    - id: enc_error_float32_mode
+      description: Pillow cannot write single-precision floating-point TIFF samples as JPEG
+      source_format: tiff
+      source_asset: float32.tiff
+      expect_error: true
     - id: enc_q100
       description: 
       params: {'quality': 100}
@@ -8449,6 +8454,11 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: BMP directly accepts only L1, P8, L8, Rgb8, and Rgba8
+    - id: enc_error_float32_mode
+      description: Pillow cannot write single-precision floating-point TIFF samples as BMP
+      source_format: tiff
+      source_asset: float32.tiff
+      expect_error: true
     - id: enc_indexed_missing_palette
       description: Pillow emits a palette-less BMP here; truncated-image loading permits its roundtrip, while strict decoding reports the missing implicit palette
       source_format: png
@@ -12446,6 +12456,12 @@ formats:
       source_format: tiff
       source_asset: cmyk.tiff
       params: {'entry_type': 'bmp', 'sizes': [[128, 128]]}
+      expect_error: true
+    - id: enc_error_float32_mode
+      description: Pillow cannot write single-precision floating-point TIFF samples as a PNG-backed ICO entry
+      source_format: tiff
+      source_asset: float32.tiff
+      params: {'sizes': [[128, 128]]}
       expect_error: true
   avif:
     name: AVIF
