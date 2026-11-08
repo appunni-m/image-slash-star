@@ -76,10 +76,11 @@ const RESERVED_SELECTOR_STEM: &str = "__image_slash_star_";
 // assertion or coverage-only input.
 type CachedEncodeSequence = Result<Arc<img::DecodedSequence>, String>;
 
-#[derive(Default)]
 struct AppendOnlySink {
     bytes: Vec<u8>,
 }
+
+const APPEND_ONLY_SINK_PREFIX: &[u8] = b"existing-output-prefix";
 
 impl img::OutputSink for AppendOnlySink {
     fn write_all(&mut self, bytes: &[u8]) -> img::ImageResult<()> {
@@ -11268,7 +11269,10 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
             if let Some(sink_parity_is_still) = sink_parity_is_still {
                 let options = require_ok(opts.as_ref(), "sink parity options");
                 // Omit checkpoint so parity covers the append-only sink mode.
-                let mut sink = AppendOnlySink::default();
+                let mut sink = AppendOnlySink {
+                    bytes: APPEND_ONLY_SINK_PREFIX.to_vec(),
+                };
+                let prefix_len = sink.bytes.len();
                 let Some(sink_result) = run_counted_public_encode_call(
                     &mut public_encode_calls,
                     &mut public_encode_panics,
@@ -11300,21 +11304,31 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         continue;
                     }
                 };
-                if written != sink.bytes.len() {
+                if !sink.bytes.starts_with(APPEND_ONLY_SINK_PREFIX) || sink.bytes.len() < prefix_len
+                {
                     eprintln!(
-                        "  FAIL [{}]: sink reported {written} bytes but wrote {}",
-                        row.id,
-                        sink.bytes.len()
+                        "  FAIL [{}]: append-only sink changed its pre-existing prefix",
+                        row.id
                     );
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &sink.bytes) {
+                let appended = &sink.bytes[prefix_len..];
+                if written != appended.len() {
+                    eprintln!(
+                        "  FAIL [{}]: sink reported {written} appended bytes but wrote {}",
+                        row.id,
+                        appended.len()
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, appended) {
                     eprintln!("  FAIL [{}]: sink and Pillow reference: {message}", row.id);
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_encoded_byte_parity(&encoded, &sink.bytes) {
+                if let Err(message) = assert_encoded_byte_parity(&encoded, appended) {
                     eprintln!("  FAIL [{}]: regular and sink encoders: {message}", row.id);
                     failed += 1;
                     continue;
