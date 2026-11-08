@@ -7380,6 +7380,63 @@ fn assert_encoded_header_raster_identity(
     Ok(())
 }
 
+fn assert_encoded_decoded_transfer_identity(
+    bytes: &[u8],
+    expected_format: img::ImageFormat,
+    expected_image: &img::DecodedImage,
+) -> Result<(), String> {
+    let encoded = img::EncodedImage::new(Arc::<[u8]>::from(bytes.to_vec()))
+        .map_err(|error| format!("owned encoded decode construction failed: {error}"))?;
+    let view = img::EncodedImageView::new(bytes)
+        .map_err(|error| format!("borrowed encoded decode construction failed: {error}"))?;
+
+    let owned_header_matches = encoded.format() == expected_format
+        && encoded.mode() == expected_image.mode
+        && encoded.raster_mode() == expected_image.raster_mode
+        && encoded.info().raster_mode == expected_image.raster_mode;
+    let borrowed_header_matches = view.format() == expected_format
+        && view.mode() == expected_image.mode
+        && view.raster_mode() == expected_image.raster_mode
+        && view.info().raster_mode == expected_image.raster_mode;
+    if !owned_header_matches || !borrowed_header_matches {
+        return Err(format!(
+            "source header identity differs from decoded transfer: expected={:?}/{:?}, owned={:?}/{:?}, borrowed={:?}/{:?}",
+            expected_image.mode,
+            expected_image.raster_mode,
+            encoded.mode(),
+            encoded.raster_mode(),
+            view.mode(),
+            view.raster_mode(),
+        ));
+    }
+
+    let owned_decoded = encoded
+        .decode()
+        .map_err(|error| format!("owned source decode failed: {error}"))?;
+    let borrowed_decoded = view
+        .decode()
+        .map_err(|error| format!("borrowed source decode failed: {error}"))?;
+    if !encoded.is_decoded()
+        || owned_decoded.format != expected_format
+        || borrowed_decoded.format != expected_format
+        || &owned_decoded.content != expected_image
+        || &borrowed_decoded.content != expected_image
+    {
+        return Err(format!(
+            "source decode differs from matrix-verified transfer: expected={:?}/{:?}, owned={:?}/{:?}, borrowed={:?}/{:?}, owned_cached={}",
+            expected_image.mode,
+            expected_image.raster_mode,
+            owned_decoded.content.mode,
+            owned_decoded.content.raster_mode,
+            borrowed_decoded.content.mode,
+            borrowed_decoded.content.raster_mode,
+            encoded.is_decoded(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn zero_image_for_mode(
     width: u32,
     height: u32,
@@ -8886,6 +8943,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
     let mut planned_not_executed = 0u32;
     let mut source_lifecycle_formats = HashSet::new();
     let mut source_raster_identities = HashSet::new();
+    let mut source_decoded_raster_identities = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if format_filter.is_some_and(|filter| filter != fmt_name) {
@@ -10095,7 +10153,15 @@ fn run_decode_matrix(format_filter: Option<&str>) {
 
             match assert_pixel_parity(&expected, &decoded)
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
-            {
+                .and_then(|()| {
+                    if source_decoded_raster_identities
+                        .insert((fmt_name.to_owned(), decoded.raster_mode))
+                    {
+                        assert_encoded_decoded_transfer_identity(&data, expected_format, &decoded)
+                    } else {
+                        Ok(())
+                    }
+                }) {
                 Ok(()) => {
                     matrix_success!(
                         "  OK   [{}] {} bytes pixel-parity (mode={})",
