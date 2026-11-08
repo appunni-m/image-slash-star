@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,888 total rows: 3,200 decode /
-inspect / verify rows and 688 encode rows. Of those, 3,200 decode rows are
+The current public evidence matrix contains 3,889 total rows: 3,201 decode /
+inspect / verify rows and 688 encode rows. Of those, 3,201 decode rows are
 active and 661 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF indexed encoding with no retained palette — 2026-11-08
@@ -17629,7 +17629,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `88c7e1a59d922eeec65bc6b4372bb7a36096b303cd3f25297b37b22c53dba086`; matrix `cf0a0e393d31459044aec6ecb57308ee051a8fbbe8d50a61bc1063ef1cd12204`.
+- Current fixture integrity only: manifest `19bc39372b6604df95a773d3f801dc77fa45a80e15f8f3b80cc39529dae62665`; matrix `1c9e5f6cbe8ae87fe6a1d71b14a5f606637728c8348a4c15dfe591b50374929a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
