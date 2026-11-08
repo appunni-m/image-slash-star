@@ -89,12 +89,16 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         && alpha == Some(SourceAlpha::Premultiplied)
         && directory.one_or(284, 1) == 2
         && compression == COMPRESSION_NONE;
-    let raster_mode = raster_mode(
-        mode,
-        alpha,
-        endian.source_byte_order(),
-        raw_separate_associated_alpha,
-    );
+    let raster_mode = if matches!(layout, TiffLayout::PaletteAlpha8) {
+        Mode::ImagePaletteAlpha8
+    } else {
+        raster_mode(
+            mode,
+            alpha,
+            endian.source_byte_order(),
+            raw_separate_associated_alpha,
+        )
+    };
 
     Ok(ImageInfo {
         format: ImageFormat::Tiff,
@@ -307,6 +311,7 @@ pub(super) enum TiffLayout {
     Palette {
         bits: u8,
     },
+    PaletteAlpha8,
     Cmyk8,
     Ycbcr8,
     YcbcrFull8 {
@@ -366,6 +371,7 @@ impl TiffLayout {
             | Self::YcbcrSubsampled8 { .. } => ImageMode::Rgb8,
             Self::Rgba8 => ImageMode::Rgba8,
             Self::Palette { .. } => ImageMode::P8,
+            Self::PaletteAlpha8 => ImageMode::La8,
             Self::Cmyk8 => ImageMode::Cmyk8,
         }
     }
@@ -425,6 +431,7 @@ pub(super) fn layout_and_palette(
         },
         (1, 2, 8) if extra_samples == [2] => TiffLayout::GrayAlpha8,
         (1, 2, 8) if planar == 2 && extra_samples == [0] => TiffLayout::GrayIgnored8,
+        (3, 2, 8) if planar == 1 && extra_samples == [2] => TiffLayout::PaletteAlpha8,
         (2, 3, 8) => TiffLayout::Rgb8,
         (2, 3, 16)
             if sample_format == 1
@@ -466,7 +473,12 @@ pub(super) fn layout_and_palette(
             ));
         }
     };
-    let palette = if let TiffLayout::Palette { bits } = layout {
+    let palette_bits = match layout {
+        TiffLayout::Palette { bits } => Some(bits),
+        TiffLayout::PaletteAlpha8 => Some(8),
+        _ => None,
+    };
+    let palette = if let Some(bits) = palette_bits {
         let entries = 1usize << usize::from(bits);
         let map = color_map
             .malformed("indexed TIFF contains no color map")?

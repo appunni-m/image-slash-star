@@ -283,6 +283,56 @@
       "rust_error_reason": "PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, L16, and I32"
     },
     {
+      "id": "enc_error_palette_alpha_mode",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "PA",
+      "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode PA as PNG",
+          "rust_kind": "unsupported",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "cannot write mode PA as PNG",
+      "error_kind": "unsupported"
+    },
+    {
       "id": "enc_error_retained_sequence_duration",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_error_retained_sequence_duration.bin",
       "ref_bytes": 49152,

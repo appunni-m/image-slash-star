@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 import struct
 import zlib
@@ -24,6 +25,47 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIRECTORY = ROOT / "tests" / "fixtures" / "input" / "images" / "tiff"
 WIDTH, HEIGHT = 17, 9
 ROWS_PER_STRIP, TILE_SIZE = 4, 16
+PALETTE_ALPHA_PIXELS = bytes([0, 0, 1, 17, 2, 128, 1, 255, 2, 64, 0, 200])
+
+
+def palette_alpha_rgb() -> bytes:
+    """Return a complete deterministic RGB palette for the PA witness."""
+    return bytes(
+        value
+        for index in range(256)
+        for value in ((index * 3) & 255, (index * 5 + 1) & 255, (index * 7 + 2) & 255)
+    )
+
+
+def build_palette_alpha_tiff() -> bytes:
+    """Build a Pillow-authored TIFF carrying palette indices and alpha bytes."""
+    from PIL import Image
+
+    palette = palette_alpha_rgb()
+    image = Image.frombytes("PA", (3, 2), PALETTE_ALPHA_PIXELS)
+    image.putpalette(palette, rawmode="RGB")
+    output = BytesIO()
+    image.save(output, format="TIFF")
+    data = output.getvalue()
+
+    with Image.open(BytesIO(data)) as reopened:
+        tags = reopened.tag_v2
+        if reopened.mode != "PA" or reopened.size != (3, 2):
+            raise RuntimeError("Pillow did not retain the PA TIFF mode and dimensions")
+        if reopened.tobytes() != PALETTE_ALPHA_PIXELS:
+            raise RuntimeError("Pillow did not retain the PA index/alpha sample pairs")
+        if bytes(reopened.getpalette("RGB") or b"") != palette:
+            raise RuntimeError("Pillow did not retain the PA RGB palette")
+        if (
+            tuple(tags.get(258, ())) != (8, 8)
+            or tags.get(262) != 3
+            or tags.get(277) != 2
+            or tags.get(284) != 1
+            or tuple(tags.get(338, ())) != (2,)
+            or len(tags.get(320, ())) != 768
+        ):
+            raise RuntimeError("Pillow emitted unexpected PA TIFF sample or palette tags")
+    return data
 
 
 @dataclass(frozen=True)
@@ -173,6 +215,13 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
                 raise RuntimeError(f"{destination}: deterministic extra-sample input differs")
         else:
             destination.write_bytes(data)
+    palette_alpha_path = directory / "palette_alpha.tiff"
+    palette_alpha_data = build_palette_alpha_tiff()
+    if check:
+        if not palette_alpha_path.is_file() or palette_alpha_path.read_bytes() != palette_alpha_data:
+            raise RuntimeError(f"{palette_alpha_path}: deterministic PA input differs")
+    else:
+        palette_alpha_path.write_bytes(palette_alpha_data)
 
 
 def main() -> None:
@@ -182,7 +231,10 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args()
     generate_fixtures(arguments.output_directory, check=arguments.check)
-    print(f"{'Checked' if arguments.check else 'Generated'} {len(RECIPES)} complete extra-sample TIFFs")
+    print(
+        f"{'Checked' if arguments.check else 'Generated'} "
+        f"{len(RECIPES)} complete extra-sample TIFF inputs, including PA"
+    )
 
 
 if __name__ == "__main__":

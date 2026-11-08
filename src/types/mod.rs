@@ -137,7 +137,7 @@ impl ImageInfo {
     /// Whether the encoded image uses palette indices as its sample mode.
     #[must_use]
     pub const fn is_indexed(&self) -> bool {
-        matches!(self.mode, ImageMode::P8)
+        matches!(self.mode, ImageMode::P8) || matches!(self.raster_mode, Mode::ImagePaletteAlpha8)
     }
 
     /// Whether inspection retained an explicit palette table.
@@ -2472,9 +2472,9 @@ impl DetailedTransferLayout {
 /// RGB palette and optional per-entry alpha values for indexed images.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImagePalette {
-    /// Consecutive RGB triplets indexed by the decoded `P8` samples.
+    /// Consecutive RGB triplets indexed by `P8` samples or the first channel of `PA` samples.
     pub rgb: Vec<u8>,
-    /// Optional alpha value for each palette entry.
+    /// Optional alpha value for each palette entry, independent of per-pixel `PA` alpha.
     pub alpha: Vec<u8>,
 }
 
@@ -2761,6 +2761,11 @@ impl DecodedImage {
                 "decoded color type does not match its byte mode",
             ));
         }
+        if self.raster_mode == Mode::ImagePaletteAlpha8 && self.mode != ImageMode::La8 {
+            return Err(ImageError::parameter(
+                "PA raster identity requires an LA8 transfer carrier",
+            ));
+        }
         match &self.palette {
             Some(palette) if self.mode == ImageMode::P8 => {
                 palette.validate()?;
@@ -2773,6 +2778,9 @@ impl DecodedImage {
                         "palette index is outside the retained palette",
                     ));
                 }
+            }
+            Some(palette) if self.raster_mode == Mode::ImagePaletteAlpha8 => {
+                palette.validate()?;
             }
             Some(_) => {
                 return Err(ImageError::parameter(

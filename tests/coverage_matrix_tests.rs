@@ -6906,6 +6906,7 @@ fn assert_palette_parity(
     manifest_dir: &Path,
     expected: Option<&PaletteParityRef>,
     mode: img::ImageMode,
+    raster_mode: img::Mode,
     actual: Option<&img::ImagePalette>,
     label: &str,
 ) -> Result<(), String> {
@@ -6919,21 +6920,22 @@ fn assert_palette_parity(
     ) {
         return Err(format!("{label} palette origin is invalid"));
     }
+    let is_indexed = mode == img::ImageMode::P8 || raster_mode == img::Mode::ImagePaletteAlpha8;
     match expected.state.as_str() {
         "absent" => {
-            if mode == img::ImageMode::P8 || actual.is_some() {
+            if is_indexed || actual.is_some() {
                 return Err(format!("{label} palette should be absent"));
             }
         }
         "implicit" => {
-            if mode != img::ImageMode::P8 || actual.is_some() {
+            if !is_indexed || actual.is_some() {
                 return Err(format!(
                     "{label} should be indexed without an explicit table"
                 ));
             }
         }
         "table" => {
-            if mode != img::ImageMode::P8 {
+            if !is_indexed {
                 return Err(format!("{label} palette table requires indexed mode"));
             }
             let actual = actual.ok_or_else(|| format!("{label} palette table is missing"))?;
@@ -7278,7 +7280,9 @@ fn load_pixel_reference(
 fn mode_bytes_per_pixel(mode: Option<&str>) -> Option<usize> {
     match mode {
         Some("1") | Some("P") | Some("L") | Some("L8") => Some(1),
-        Some("I;16") | Some("I;16B") | Some("I;16L") | Some("L16") | Some("La8") => Some(2),
+        Some("I;16") | Some("I;16B") | Some("I;16L") | Some("L16") | Some("La8") | Some("PA") => {
+            Some(2)
+        }
         Some("RGB") | Some("Rgb8") => Some(3),
         Some("RGBA") | Some("Rgba8") | Some("La16") | Some("I") | Some("I32") => Some(4),
         Some("Rgb16") => Some(6),
@@ -7292,7 +7296,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "1" => Some(img::ImageMode::L1),
         "P" => Some(img::ImageMode::P8),
         "L" | "L8" => Some(img::ImageMode::L8),
-        "LA" | "La8" => Some(img::ImageMode::La8),
+        "LA" | "La8" | "PA" => Some(img::ImageMode::La8),
         "RGB" | "Rgb8" => Some(img::ImageMode::Rgb8),
         "RGBA" | "Rgba8" => Some(img::ImageMode::Rgba8),
         "CMYK" | "Cmyk8" => Some(img::ImageMode::Cmyk8),
@@ -7312,6 +7316,7 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
     Some(match mode {
         "1" => img::Mode::One,
         "P" => img::Mode::ImagePalette8,
+        "PA" => img::Mode::ImagePaletteAlpha8,
         "L" | "L8" => img::Mode::ImageLuma8,
         "LA" | "La8" if matches!(info.source.alpha(), Some(img::SourceAlpha::Premultiplied)) => {
             img::Mode::ImageLaPremultiplied8
@@ -9828,6 +9833,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     manifest_dir,
                     row.inspect_palette.as_ref(),
                     info.mode,
+                    info.raster_mode,
                     info.palette.as_ref(),
                     "inspect",
                 )
@@ -9836,6 +9842,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         manifest_dir,
                         row.decoded_palette.as_ref(),
                         decoded.mode,
+                        decoded.raster_mode,
                         decoded.palette.as_ref(),
                         "decoded",
                     )
@@ -9868,7 +9875,9 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     || (matches!(fmt_name.as_str(), "png" | "bmp" | "tiff" | "ico")
                         && info.palette != decoded.palette)
                     || (fmt_name == "gif" && info.palette.is_some() != decoded.palette.is_some())
-                    || info.is_indexed() != (decoded.mode == img::ImageMode::P8)
+                    || info.is_indexed()
+                        != (decoded.mode == img::ImageMode::P8
+                            || decoded.raster_mode == img::Mode::ImagePaletteAlpha8)
                     || info.has_palette_table() != info.palette.is_some()
                     || info.frame_count != row.ref_frame_count
                     || info.is_animated != expected_is_animated
@@ -10874,9 +10883,81 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 .params
                 .get("truncate_pixels")
                 .is_some_and(|v| v.as_bool().unwrap_or(false))
-                || row.params.contains_key("source_dimensions");
+                || row.params.contains_key("source_dimensions")
+                || row
+                    .params
+                    .get("rust_pa_invalid_transfer_carrier")
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                || row
+                    .params
+                    .get("rust_pa_palette_alpha_table")
+                    .and_then(Value::as_bool)
+                    == Some(true);
             let encoded = match opts.as_ref() {
                 Err(error) => Err((*error).clone()),
+                Ok(options)
+                    if row
+                        .params
+                        .get("rust_pa_invalid_transfer_carrier")
+                        .and_then(Value::as_bool)
+                        == Some(true) =>
+                {
+                    let mut malformed = require_some(
+                        decoded.first_image(),
+                        "PA carrier contract requires a decoded fixture frame",
+                    )
+                    .clone();
+                    let indices = malformed
+                        .pixels
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .map(|samples| samples[0])
+                        .collect();
+                    malformed.pixels = indices;
+                    malformed.mode = img::ImageMode::L8;
+                    malformed.color = img::ColorType::L8;
+                    let Some(result) = run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:pa-invalid-carrier", row.id),
+                        || img::encode(&malformed, format, options),
+                    ) else {
+                        failed += 1;
+                        continue;
+                    };
+                    result
+                }
+                Ok(options)
+                    if row
+                        .params
+                        .get("rust_pa_palette_alpha_table")
+                        .and_then(Value::as_bool)
+                        == Some(true) =>
+                {
+                    let mut malformed = require_some(
+                        decoded.first_image(),
+                        "PA palette-alpha contract requires a decoded fixture frame",
+                    )
+                    .clone();
+                    require_some(
+                        malformed.palette.as_mut(),
+                        "PA palette-alpha contract requires a retained RGB palette",
+                    )
+                    .alpha
+                    .push(127);
+                    let Some(result) = run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:pa-palette-alpha", row.id),
+                        || img::encode(&malformed, format, options),
+                    ) else {
+                        failed += 1;
+                        continue;
+                    };
+                    result
+                }
                 Ok(options)
                     if row
                         .params
@@ -11013,7 +11094,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     )
                 {
                     matrix_success!(
-                        "  OK   [{}] rejected retained sequence semantics: {}",
+                        "  OK   [{}] returned the declared Rust error: {}",
                         row.id,
                         row.rust_error_reason.as_deref().unwrap_or("unspecified")
                     );
