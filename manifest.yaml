@@ -5705,6 +5705,11 @@ formats:
         scan MCU
       test_assets:
       - grayscale_sampling_420_128x128_restart_rows_4.jpg
+    - id: grayscale_sampling_420_128x128_restart_markers_without_dri
+      description: Pillow decodes a complete grayscale scan with entropy restart markers
+        after its restart interval marker is removed
+      test_assets:
+      - grayscale_sampling_420_128x128_restart_markers_without_dri.jpg
     - id: grayscale_sampling_420_17x9_late_changed_dqt
       description: Complete grayscale scan retains its original tables when a changed
         definition follows entropy

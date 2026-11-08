@@ -1,8 +1,29 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,868 total rows: 3,192 decode /
-inspect / verify rows and 676 encode rows. Of those, 3,192 decode rows are
+The current public evidence matrix contains 3,869 total rows: 3,193 decode /
+inspect / verify rows and 676 encode rows. Of those, 3,193 decode rows are
 active and 649 encode rows are active; 27 encode rows remain planned.
+
+## JPEG grayscale restart markers without DRI — 2026-11-08
+
+Added the active parity row
+`decode:jpeg:grayscale_sampling_420_128x128_restart_markers_without_dri`. Its
+deterministic source retains the entropy-coded restart markers while removing
+the preceding restart-interval (DRI) segment. Pinned Pillow 12.2.0 accepts the
+complete grayscale image. The selected public parity run passed 1/1 row with
+exact 16,384-byte pixel output and no panic.
+
+The selected LLVM report records the previously unobserved outcome at
+`src/codecs/jpeg/decode/decode.rs:2896` with branch counts 4/0 for this run.
+Coverage MCP's local `gaps` query returned `status=measured` and 285/32,024
+branches for the selected report, with the other arm still unobserved. The
+report's source identity is `unverified` and test attribution is `unknown`;
+these are local selected observations, not a verified aggregate gain.
+
+Report: `.coverage-mcp/local-evidence/selected/20261108T000622.475420Z-17fe23a16c234b878586bc49da2aa5ba/coverage.json`
+(SHA-256 `67565ae163e90a75b53c91afb21d13f365e5d838de843eb5e42fb1603992dd22`).
+The adjacent `coverage.local-evidence.json` records the exact selector, fixture
+hashes, toolchain, and passing execution.
 
 ## AVIF sequence mode mismatch alpha fault contract — 2026-11-07
 
@@ -17426,7 +17447,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `77819d16afc964a2278fe4ae07fae62d770fba077170aea9319eb9c8977af708`; matrix `c249a82b5fff1b59f6fc1ef05401cad866638ade244d382cc49b427a3def8355`.
+- Current fixture integrity only: manifest `cdbc02f81071cb36af446b328f5df5fe1bea5a312a23362e1c1df08de80342bb`; matrix `0f741f5678f20881d1f95907c8347be0c7e588031d27a269d3ed90b433af6130`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

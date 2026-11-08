@@ -29186,6 +29186,58 @@
       ]
     },
     {
+      "id": "grayscale_sampling_420_128x128_restart_markers_without_dri",
+      "asset": "grayscale_sampling_420_128x128_restart_markers_without_dri.jpg",
+      "asset_sha256": "0ea7ecc674612953673d702dfb66ea9680ab7105f86861d419e2c4b509a53466",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_sampling_420_128x128_restart_markers_without_dri.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "grayscale_sampling_420_17x9_late_changed_dqt",
       "asset": "grayscale_sampling_420_17x9_late_changed_dqt.jpg",
       "asset_sha256": "67de8cbe884b353955dce05b9dd097616f63c3ce41a454d71bb1e009fc370cc7",
