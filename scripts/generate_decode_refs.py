@@ -537,6 +537,8 @@ def encode_params(fmt, params):
         "load_truncated_images",
         "rust_unsupported_modes",
         "rust_invalid_color_mode",
+        "rust_pa_invalid_transfer_carrier",
+        "rust_pa_palette_alpha_table",
         "rust_encode_with_token",
         "rust_encode_sequence_with_token",
         "rust_redecode_error_kind",
@@ -1867,7 +1869,12 @@ def decode_operation_expectations(row):
 def encode_operation_expectations(row):
     expected = "error" if row.get("expect_error") or row.get("rust_expect_error") else "ok"
     params = row.get("params", {})
-    direct_still = bool(params.get("truncate_pixels")) or "source_dimensions" in params
+    direct_still = (
+        bool(params.get("truncate_pixels"))
+        or "source_dimensions" in params
+        or bool(params.get("rust_pa_invalid_transfer_carrier"))
+        or bool(params.get("rust_pa_palette_alpha_table"))
+    )
     public_mode_contract = bool(params.get("rust_unsupported_modes"))
     single_frame_success = (
         row.get("source_frame_count") == 1
@@ -2090,7 +2097,7 @@ def first_png_transparency(data):
 
 def pillow_palette(image, fmt_name, image_path, *, decoded):
     """Return Pillow-observable palette state and crate transfer bytes."""
-    if image.mode != "P":
+    if image.mode not in {"P", "PA"}:
         return "absent", b"", b""
     rgb = bytes(image.getpalette("RGB") or [])
     rgb = rgb[: len(rgb) // 3 * 3]
@@ -6006,8 +6013,6 @@ def generate_decode(manifest, matrix, target_format=None):
                 "ref_bytes": r.get("ref_bytes"),
                 "ref_sha256": r.get("ref_sha256"),
                 "ref_mode": r.get("ref_mode"),
-                "inspect_raster_mode": r.get("inspect_raster_mode"),
-                "decoded_raster_mode": r.get("decoded_raster_mode"),
                 "ref_size": r.get("ref_size"),
                 "ref_frame_count": r.get("ref_frame_count"),
                 "ref_is_animated": r.get("ref_is_animated"),
@@ -6033,6 +6038,16 @@ def generate_decode(manifest, matrix, target_format=None):
                 ),
                 "rust_sequence_error_kind": r.get("rust_sequence_error_kind"),
                 "rust_sequence_error_reason": r.get("rust_sequence_error_reason"),
+                **(
+                    {"inspect_raster_mode": r["inspect_raster_mode"]}
+                    if r.get("inspect_raster_mode") is not None
+                    else {}
+                ),
+                **(
+                    {"decoded_raster_mode": r["decoded_raster_mode"]}
+                    if r.get("decoded_raster_mode") is not None
+                    else {}
+                ),
                 **({"sequence": r["sequence"]} if r.get("sequence") else {}),
             }
             for r in dec_cases

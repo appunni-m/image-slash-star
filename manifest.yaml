@@ -7157,6 +7157,12 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: PNG directly accepts L1, P8, L8, La8, Rgb8, Rgba8, L16, and I32
+    - id: enc_error_palette_alpha_mode
+      description: PNG cannot preserve Pillow's PA palette-index and per-pixel alpha mode
+      source_format: tiff
+      source_asset: palette_alpha.tiff
+      params: {}
+      expect_error: true
     - id: enc_error_retained_sequence_duration
       description: A still PNG cannot represent a retained presentation duration
       params: {'sequence_duration_ms': 10}
@@ -10524,6 +10530,13 @@ formats:
       description: Palette/indexed color
       test_assets:
       - palette.tiff
+    - id: palette_alpha
+      description: Palette indices and unassociated alpha are retained as two-byte PA samples
+      inspect_raster_mode: PA
+      decoded_raster_mode: PA
+      rust_decode_with_token: true
+      test_assets:
+      - palette_alpha.tiff
     - id: palette_low_depth
       description: Packed 2-bit and 4-bit palette indices
       test_assets:
@@ -11861,6 +11874,24 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: TIFF does not directly accept P8 or multi-channel 16-bit and float modes
+    - id: enc_palette_alpha
+      description: TIFF preserves PA indices, per-pixel alpha, and the RGB ColorMap
+      source_asset: palette_alpha.tiff
+      params: {'rust_encode_with_token': true}
+    - id: enc_error_pa_invalid_transfer_carrier
+      description: PA encoding rejects an indexed raster identity with a non-LA8 transfer carrier
+      source_asset: palette_alpha.tiff
+      params: {'rust_pa_invalid_transfer_carrier': true}
+      rust_expect_error: true
+      rust_error_kind: parameter
+      rust_error_reason: PA raster identity requires an LA8 transfer carrier
+    - id: enc_error_pa_palette_alpha_table
+      description: TIFF encoding rejects palette-entry alpha that the ColorMap cannot preserve
+      source_asset: palette_alpha.tiff
+      params: {'rust_pa_palette_alpha_table': true}
+      rust_expect_error: true
+      rust_error_kind: unsupported
+      rust_error_reason: TIFF cannot preserve a PA palette alpha table
     - id: enc_compress_none
       description:
       params: {'compression': 'none'}

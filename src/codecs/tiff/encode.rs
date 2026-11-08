@@ -4,7 +4,9 @@ use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{TiffCompression, TiffEncodeOptions, TiffPredictor};
 use crate::encode_policy::EncodePolicy;
-use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
+use crate::types::{
+    DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode, ImagePalette, Mode,
+};
 use crate::{CodecOperation, ImageFormat};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -138,20 +140,30 @@ fn encode_page_with_token(
     crate::codecs::error::check_cancelled(token)?;
     let width = img.width as usize;
     let height = img.height as usize;
-    let (photometric, channels, bits_per_sample, extra_sample, row_len) = match img.mode {
-        ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
-        ImageMode::La8 => (1, 2, 8, true, width.saturating_mul(2)),
-        ImageMode::L16 => (1, 1, 16, false, width.saturating_mul(2)),
-        ImageMode::F32 => (1, 1, 32, false, width.saturating_mul(4)),
-        ImageMode::I32 => (1, 1, 32, false, width.saturating_mul(4)),
-        ImageMode::L8 => (1, 1, 8, false, width),
-        ImageMode::Rgb8 => (2, 3, 8, false, width.saturating_mul(3)),
-        ImageMode::Rgba8 => (2, 4, 8, true, width.saturating_mul(4)),
-        ImageMode::Cmyk8 => (5, 4, 8, false, width.saturating_mul(4)),
-        _ => {
-            return Err(CodecError::Unsupported(
-                "TIFF cannot encode this image mode".to_owned(),
-            ));
+    let palette_alpha = img.raster_mode == Mode::ImagePaletteAlpha8;
+    let color_map = if palette_alpha {
+        Some(tiff_palette_color_map(img.palette.as_ref())?)
+    } else {
+        None
+    };
+    let (photometric, channels, bits_per_sample, extra_sample, row_len) = if palette_alpha {
+        (3u16, 2u16, 8u16, true, width.saturating_mul(2))
+    } else {
+        match img.mode {
+            ImageMode::L1 => (1u16, 1u16, 1u16, false, width.div_ceil(8)),
+            ImageMode::La8 => (1, 2, 8, true, width.saturating_mul(2)),
+            ImageMode::L16 => (1, 1, 16, false, width.saturating_mul(2)),
+            ImageMode::F32 => (1, 1, 32, false, width.saturating_mul(4)),
+            ImageMode::I32 => (1, 1, 32, false, width.saturating_mul(4)),
+            ImageMode::L8 => (1, 1, 8, false, width),
+            ImageMode::Rgb8 => (2, 3, 8, false, width.saturating_mul(3)),
+            ImageMode::Rgba8 => (2, 4, 8, true, width.saturating_mul(4)),
+            ImageMode::Cmyk8 => (5, 4, 8, false, width.saturating_mul(4)),
+            _ => {
+                return Err(CodecError::Unsupported(
+                    "TIFF cannot encode this image mode".to_owned(),
+                ));
+            }
         }
     };
     // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
@@ -206,7 +218,8 @@ fn encode_page_with_token(
         .wrapping_add(u16::from(channels > 1))
         .wrapping_add(u16::from(extra_sample))
         .wrapping_add(u16::from(predictor == 2))
-        .wrapping_add(u16::from(has_sample_format));
+        .wrapping_add(u16::from(has_sample_format))
+        .wrapping_add(u16::from(color_map.is_some()));
     let ifd_size = 2_usize
         .saturating_add(usize::from(entry_count).saturating_mul(12))
         .saturating_add(4);
@@ -234,14 +247,22 @@ fn encode_page_with_token(
         8
     };
     let bits_offset = ifd_offset.saturating_add(ifd_size);
+    let color_map_offset = bits_offset.saturating_add(bits_len);
+    let color_map_len = color_map
+        .as_ref()
+        .map_or(0, |values| values.len().saturating_mul(2));
+    let trailing_values_len = bits_len.saturating_add(color_map_len);
     let pixel_offset = if compressed_layout {
         8
     } else {
-        bits_offset.saturating_add(bits_len).saturating_add(1) & !1
+        bits_offset
+            .saturating_add(trailing_values_len)
+            .saturating_add(1)
+            & !1
     };
 
     let output_len = if compressed_layout {
-        bits_offset.saturating_add(bits_len)
+        bits_offset.saturating_add(trailing_values_len)
     } else {
         pixel_offset.saturating_add(encoded.len())
     };
@@ -311,6 +332,19 @@ fn encode_page_with_token(
     if predictor == 2 {
         write_short_entry(&mut output, endian, 317, predictor);
     }
+    if let Some(color_map) = color_map.as_ref() {
+        offset_positions.push(output.len().saturating_add(8));
+        write_entry(
+            &mut output,
+            endian,
+            320,
+            3,
+            u32::try_from(color_map.len()).map_err(|_| {
+                CodecError::Dimensions("TIFF palette color map exceeds classic limits".to_owned())
+            })?,
+            bounded_u32(color_map_offset),
+        );
+    }
     if extra_sample {
         write_short_entry(&mut output, endian, 338, 2);
     }
@@ -327,6 +361,11 @@ fn encode_page_with_token(
             endian.push_u16(&mut output, bits_per_sample);
         }
     }
+    if let Some(color_map) = color_map.as_ref() {
+        for &sample in color_map {
+            endian.push_u16(&mut output, sample);
+        }
+    }
     if !compressed_layout {
         output.resize(pixel_offset, 0);
         output.extend_from_slice(&encoded);
@@ -337,6 +376,31 @@ fn encode_page_with_token(
         offset_positions,
         next_position,
     })
+}
+
+/// Expand an RGB table to TIFF's fixed 256-entry, 16-bit ColorMap.
+fn tiff_palette_color_map(palette: Option<&ImagePalette>) -> CodecResult<[u16; 768]> {
+    let mut color_map = [0u16; 768];
+    let Some(palette) = palette else {
+        return Ok(color_map);
+    };
+    if !palette.alpha.is_empty() {
+        return Err(CodecError::Unsupported(
+            "TIFF cannot preserve a PA palette alpha table".to_owned(),
+        ));
+    }
+    let (red_map, channels) = color_map.split_at_mut(256);
+    let (green_map, blue_map) = channels.split_at_mut(256);
+    for ((red, green), (blue, rgb)) in red_map
+        .iter_mut()
+        .zip(green_map.iter_mut())
+        .zip(blue_map.iter_mut().zip(palette.rgb.as_chunks::<3>().0))
+    {
+        *red = u16::from(rgb[0]) << 8;
+        *green = u16::from(rgb[1]) << 8;
+        *blue = u16::from(rgb[2]) << 8;
+    }
+    Ok(color_map)
 }
 
 /// Encode ordered TIFF pages without changing any page pixels or dimensions.

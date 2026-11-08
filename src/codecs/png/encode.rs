@@ -4,7 +4,7 @@ use crate::codecs::compression::deflate::compress_zlib_png_repeated;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{PngCompression, PngEncodeOptions};
 use crate::encode_policy::EncodePolicy;
-use crate::types::{ColorType, DecodedImage, ImageMode};
+use crate::types::{ColorType, DecodedImage, ImageMode, Mode};
 use crate::{CodecOperation, ImageFormat};
 use std::borrow::Cow;
 
@@ -62,6 +62,11 @@ fn write_encoded(
 ) -> CodecResult<usize> {
     crate::codecs::error::check_cancelled(token)?;
     img.validate().map_err(CodecError::from_image_error)?;
+    if img.raster_mode == Mode::ImagePaletteAlpha8 {
+        return Err(CodecError::Unsupported(
+            "PNG cannot encode mode PA".to_owned(),
+        ));
+    }
 
     let width = bounded_usize(img.width);
     let height = bounded_usize(img.height);

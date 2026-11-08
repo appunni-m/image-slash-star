@@ -68,6 +68,7 @@ TIMED_SEQUENCE_FORMATS = {"avif", "gif", "png", "webp"}
 MODE_ALIASES = {
     "1": "L1",
     "P": "P8",
+    "PA": "PA",
     "L": "L8",
     "L8": "L8",
     "LA": "La8",

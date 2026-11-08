@@ -121,6 +121,154 @@
       "rust_error_reason": "TIFF does not directly accept P8 or multi-channel 16-bit and float modes"
     },
     {
+      "id": "enc_palette_alpha",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_palette_alpha.bin",
+      "ref_bytes": 12,
+      "ref_mode": "PA",
+      "ref_size": [
+        3,
+        2
+      ],
+      "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_palette_alpha.bin",
+      "encoded_ref_bytes": 1706,
+      "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "source_mode": "PA",
+      "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_error_pa_invalid_transfer_carrier",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_error_pa_invalid_transfer_carrier.bin",
+      "ref_bytes": 12,
+      "ref_mode": "PA",
+      "ref_size": [
+        3,
+        2
+      ],
+      "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_error_pa_invalid_transfer_carrier.bin",
+      "encoded_ref_bytes": 1706,
+      "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "source_mode": "PA",
+      "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "parameter",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "parameter",
+      "rust_error_reason": "PA raster identity requires an LA8 transfer carrier"
+    },
+    {
+      "id": "enc_error_pa_palette_alpha_table",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_error_pa_palette_alpha_table.bin",
+      "ref_bytes": 12,
+      "ref_mode": "PA",
+      "ref_size": [
+        3,
+        2
+      ],
+      "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_error_pa_palette_alpha_table.bin",
+      "encoded_ref_bytes": 1706,
+      "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "source_mode": "PA",
+      "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "error",
+        "encode_sequence": "not_applicable"
+      },
+      "error_contracts": {
+        "encode": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "unsupported",
+      "rust_error_reason": "TIFF cannot preserve a PA palette alpha table"
+    },
+    {
       "id": "enc_compress_none",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_compress_none.bin",
       "ref_bytes": 49152,

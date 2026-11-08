@@ -284376,6 +284376,58 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_error_palette_alpha_mode",
+          "type": "encode",
+          "format": "png",
+          "category": "error",
+          "description": "PNG cannot preserve Pillow's PA palette-index and per-pixel alpha mode",
+          "params": {},
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "palette_alpha.tiff",
+          "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "PA",
+          "source_frame_count": 1,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode PA as PNG",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "cannot write mode PA as PNG",
+              "rust_kind": "unsupported",
+              "rust_format": "PNG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "enc_error_retained_sequence_duration",
           "type": "encode",
           "format": "png",
@@ -295819,6 +295871,93 @@
           "decoded_source_color": null,
           "rust_inspect_basic": false,
           "rust_decode_with_metadata_limit": null
+        },
+        {
+          "id": "palette_alpha",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Palette indices and unassociated alpha are retained as two-byte PA samples",
+          "asset": "palette_alpha.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "PA",
+          "decoded_raster_mode": "PA",
+          "asset_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_alpha_tiff.bin",
+          "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+          "ref_bytes": 12,
+          "ref_mode": "PA",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_alpha_tiff.inspect-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "5cbb1d39c8d897e63cc953057a5bf5b1eead5d0decb4580c9e2b1010f1db981a"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_alpha_tiff.decoded-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "5cbb1d39c8d897e63cc953057a5bf5b1eead5d0decb4580c9e2b1010f1db981a"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "rust_decode_with_token": true
         },
         {
           "id": "palette_low_depth",
@@ -325098,6 +325237,193 @@
           "ref_size": [
             1,
             1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_palette_alpha",
+          "type": "encode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "TIFF preserves PA indices, per-pixel alpha, and the RGB ColorMap",
+          "params": {
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "palette_alpha.tiff",
+          "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "PA",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_palette_alpha.bin",
+          "encoded_ref_bytes": 1706,
+          "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_palette_alpha.bin",
+          "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+          "ref_bytes": 12,
+          "ref_mode": "PA",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_error_pa_invalid_transfer_carrier",
+          "type": "encode",
+          "format": "tiff",
+          "category": "error",
+          "description": "PA encoding rejects an indexed raster identity with a non-LA8 transfer carrier",
+          "params": {
+            "rust_pa_invalid_transfer_carrier": true
+          },
+          "rust_expect_error": true,
+          "rust_error_kind": "parameter",
+          "rust_error_reason": "PA raster identity requires an LA8 transfer carrier",
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "palette_alpha.tiff",
+          "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "PA",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model"
+          },
+          "operations": {
+            "encode": "error",
+            "encode_sequence": "not_applicable"
+          },
+          "error_contracts": {
+            "encode": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "parameter",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
+          "oracle_status": "ok",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_error_pa_invalid_transfer_carrier.bin",
+          "encoded_ref_bytes": 1706,
+          "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_error_pa_invalid_transfer_carrier.bin",
+          "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+          "ref_bytes": 12,
+          "ref_mode": "PA",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_error_pa_palette_alpha_table",
+          "type": "encode",
+          "format": "tiff",
+          "category": "error",
+          "description": "TIFF encoding rejects palette-entry alpha that the ColorMap cannot preserve",
+          "params": {
+            "rust_pa_palette_alpha_table": true
+          },
+          "rust_expect_error": true,
+          "rust_error_kind": "unsupported",
+          "rust_error_reason": "TIFF cannot preserve a PA palette alpha table",
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "palette_alpha.tiff",
+          "source_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "PA",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model"
+          },
+          "operations": {
+            "encode": "error",
+            "encode_sequence": "not_applicable"
+          },
+          "error_contracts": {
+            "encode": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "unsupported",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
+          "oracle_status": "ok",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_error_pa_palette_alpha_table.bin",
+          "encoded_ref_bytes": 1706,
+          "encoded_ref_sha256": "bb2e2af28eb2f8f806a4f7269077fec64f1e1c3b8561af63a26fee4e509139e0",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_error_pa_palette_alpha_table.bin",
+          "ref_sha256": "5d7ec2ab3eb30fac7ea99c8314f131162a25a07fef0570dfd09d7e6ac48e0846",
+          "ref_bytes": 12,
+          "ref_mode": "PA",
+          "ref_size": [
+            3,
+            2
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
@@ -369157,12 +369483,12 @@
     }
   },
   "summary": {
-    "total_rows": 3871,
-    "decode_rows": 3193,
-    "encode_rows": 678,
+    "total_rows": 3876,
+    "decode_rows": 3194,
+    "encode_rows": 682,
     "formats": 8,
-    "assets_available": 3189,
-    "decode_active": 3193,
+    "assets_available": 3190,
+    "decode_active": 3194,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
