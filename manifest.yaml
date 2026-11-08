@@ -7430,6 +7430,10 @@ formats:
       description: 
       source_asset: 16bit.png
       params: {'bit_depth': 16}
+    - id: enc_i16_big_endian
+      description: Big-endian I;16 TIFF samples retain values when written to PNG
+      source_format: tiff
+      source_asset: gray16_be_deflate_predictor_contiguous_tiled.tiff
     - id: enc_i32_little_endian
       description: I-mode samples from little-endian TIFF clamp to PNG unsigned 16-bit grayscale
       source_format: tiff

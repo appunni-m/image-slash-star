@@ -2921,6 +2921,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_i16_big_endian",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_i16_big_endian.bin",
+      "ref_bytes": 578,
+      "ref_mode": "I;16",
+      "ref_size": [
+        17,
+        17
+      ],
+      "ref_sha256": "aedf4544aaf1eb4a2a9c7219a79f158a4b9625be0226f6b4aacebd04603526b6",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_i16_big_endian.bin",
+      "encoded_ref_bytes": 153,
+      "encoded_ref_sha256": "e5e7e1d1845ac5842da8007b496441206f12c0f278e5a6d52f283e4c6fca7935",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_i32_little_endian",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_i32_little_endian.bin",
       "ref_bytes": 16,

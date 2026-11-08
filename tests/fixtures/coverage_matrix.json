@@ -288179,6 +288179,57 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_i16_big_endian",
+          "type": "encode",
+          "format": "png",
+          "category": "i16",
+          "description": "Big-endian I;16 TIFF samples retain values when written to PNG",
+          "params": {},
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+          "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_i16_big_endian.bin",
+          "encoded_ref_bytes": 153,
+          "encoded_ref_sha256": "e5e7e1d1845ac5842da8007b496441206f12c0f278e5a6d52f283e4c6fca7935",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_i16_big_endian.bin",
+          "ref_sha256": "aedf4544aaf1eb4a2a9c7219a79f158a4b9625be0226f6b4aacebd04603526b6",
+          "ref_bytes": 578,
+          "ref_mode": "I;16",
+          "ref_size": [
+            17,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_i32_little_endian",
           "type": "encode",
           "format": "png",
@@ -370365,9 +370416,9 @@
     }
   },
   "summary": {
-    "total_rows": 3889,
+    "total_rows": 3890,
     "decode_rows": 3201,
-    "encode_rows": 688,
+    "encode_rows": 689,
     "formats": 8,
     "assets_available": 3197,
     "decode_active": 3201,
@@ -374833,6 +374884,12 @@
     "case_id": "enc_lossless_1x1_transparent",
     "source_mode": "Rgba8",
     "decoded_mode": "Rgba8"
+  },
+  {
+    "format": "png",
+    "case_id": "enc_i16_big_endian",
+    "source_mode": "I;16B",
+    "decoded_mode": "I;16"
   }
 ]
 }
