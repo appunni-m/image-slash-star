@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,884 total rows: 3,197 decode /
-inspect / verify rows and 687 encode rows. Of those, 3,197 decode rows are
+The current public evidence matrix contains 3,887 total rows: 3,200 decode /
+inspect / verify rows and 687 encode rows. Of those, 3,200 decode rows are
 active and 660 encode rows are active; 27 encode rows remain planned.
 
 ## CIELAB TIFF identity and PA encoder parity — 2026-11-08
@@ -24,6 +24,27 @@ Selected LLVM report:
 Coverage MCP marks this retained selected report's source as unverified and
 test attribution as unknown; it supports the focused parity outcome, not an
 aggregate coverage-gain claim.
+
+## CIELAB TIFF compression parity — 2026-11-08
+
+Added Pillow 12.2.0 CIELAB inputs for LZW, Adobe Deflate, and PackBits TIFF.
+The four selected rows (`decode:tiff:lab` and the three compressed variants)
+all pass 18-byte exact pixel parity and retain `LAB` identity through basic
+inspection, ordinary decode, and token-aware decode. The compressed fixtures
+are generated and pinned by
+`scripts/generate_tiff_lab_compressed_fixtures.py`; their TIFF tags retain
+PhotometricInterpretation 8 and the requested compression.
+
+The Coverage MCP `gaps` query on the selected report still ranks
+`tiff::inspect::layout_and_palette` and decoder branches as remaining gaps.
+This report is selected evidence only; MCP marks the source unverified and
+test attribution unknown, so it does not support an aggregate coverage claim.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261108T161041.861067Z-4c0d6fe5d8754ba696b01168977b5c03/coverage.json`
+(SHA-256 `39924a91884f9cfb07e0d05de82a27b7d55762499fecba973c5edcb02eca7fee`).
+Its local receipt has SHA-256
+`c0176a586c60de58512644f9dec2ad9966dd7ee8c61522627d36bf5ee206caad`.
 
 ## F-mode encoder rejection parity — 2026-11-08
 
@@ -17586,7 +17607,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `28682c5258c9b0208144c8a237292bfa7773188437005b048214725f98fda5ee`; matrix `ffb4912f8ae71b10053dea6469d90cedeaafb584705be47b8e3a36718e1395fb`.
+- Current fixture integrity only: manifest `1a182a726094b48bdca2027134f95da5202c29119205a2b47c5109b7a87acc96`; matrix `cdb4fdf4acb3066b1cc433d6499b4f4a568667e3130b5a84ff75dff9fa87470f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

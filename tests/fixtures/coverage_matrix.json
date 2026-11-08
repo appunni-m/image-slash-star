@@ -296298,6 +296298,249 @@
           "rust_decode_with_token": true
         },
         {
+          "id": "lab_compressed",
+          "type": "decode",
+          "format": "tiff",
+          "category": "lab",
+          "description": "CIELAB TIFF retains LAB identity and samples with LZW, Deflate, and PackBits compression",
+          "asset": "lab_lzw.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": true,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "LAB",
+          "decoded_raster_mode": "LAB",
+          "rust_decode_with_token": true,
+          "asset_sha256": "4ab3a1dd27b1c8fc9a0579deec08bae2620d3b5349e7b05893ce78cca629b6dc",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lab_lzw_tiff.bin",
+          "ref_sha256": "403fa5475429b8200e15e60e01ffdb4f2499732bf9538e2d98e78bc1a1d0e64e",
+          "ref_bytes": 18,
+          "ref_mode": "LAB",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "lab_compressed_lab_deflate",
+          "type": "decode",
+          "format": "tiff",
+          "category": "lab",
+          "description": "CIELAB TIFF retains LAB identity and samples with LZW, Deflate, and PackBits compression",
+          "asset": "lab_deflate.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": true,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "LAB",
+          "decoded_raster_mode": "LAB",
+          "rust_decode_with_token": true,
+          "asset_sha256": "ec537b7f3473b0d5e0a6194f68a94ff02c1d89cf4c9edc9cb1c24f4953ed759c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lab_deflate_tiff.bin",
+          "ref_sha256": "403fa5475429b8200e15e60e01ffdb4f2499732bf9538e2d98e78bc1a1d0e64e",
+          "ref_bytes": 18,
+          "ref_mode": "LAB",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "lab_compressed_lab_packbits",
+          "type": "decode",
+          "format": "tiff",
+          "category": "lab",
+          "description": "CIELAB TIFF retains LAB identity and samples with LZW, Deflate, and PackBits compression",
+          "asset": "lab_packbits.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": true,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "LAB",
+          "decoded_raster_mode": "LAB",
+          "rust_decode_with_token": true,
+          "asset_sha256": "3d55dcb8ba69106acd622636959a299fb16fa9060d784a6d3633a80b113c0088",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_lab_packbits_tiff.bin",
+          "ref_sha256": "403fa5475429b8200e15e60e01ffdb4f2499732bf9538e2d98e78bc1a1d0e64e",
+          "ref_bytes": 18,
+          "ref_mode": "LAB",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "palette.tiff",
           "category": "palette",
           "description": "Palette/indexed color",
@@ -369992,12 +370235,12 @@
     }
   },
   "summary": {
-    "total_rows": 3884,
-    "decode_rows": 3197,
+    "total_rows": 3887,
+    "decode_rows": 3200,
     "encode_rows": 687,
     "formats": 8,
-    "assets_available": 3193,
-    "decode_active": 3197,
+    "assets_available": 3196,
+    "decode_active": 3200,
     "decode_planned": 0,
     "encode_not_wired": 27
   },

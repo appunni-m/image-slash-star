@@ -10567,6 +10567,16 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - lab.tiff
+    - id: lab_compressed
+      description: CIELAB TIFF retains LAB identity and samples with LZW, Deflate, and PackBits compression
+      inspect_raster_mode: LAB
+      decoded_raster_mode: LAB
+      rust_inspect_basic: true
+      rust_decode_with_token: true
+      test_assets:
+      - lab_lzw.tiff
+      - lab_deflate.tiff
+      - lab_packbits.tiff
     - id: palette
       description: Palette/indexed color
       test_assets:
