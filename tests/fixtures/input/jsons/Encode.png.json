@@ -3470,6 +3470,49 @@
       }
     },
     {
+      "id": "enc_i16_big_endian",
+      "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+      "source_format": "tiff",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray16_be_deflate_predictor_contiguous_tiled.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_i32_little_endian",
       "source_asset": "signed32.tiff",
       "source_format": "tiff",

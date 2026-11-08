@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `1c9e5f6cbe8ae87fe6a1d71b14a5f606637728c8348a4c15dfe591b50374929a`.
+- Active fixture source SHA-256: `ebe7c69d8a5caca3b28be6a6016ab6b8e4612067cf917c9b972f94272066c904`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,862 (3,201 decode; 661 encode).
+- Active fixture rows: 3,863 (3,201 decode; 662 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 147.
 
@@ -451,7 +451,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | JPEG | still_encode | rejected | Rgb8; invalid-mode witness: P8, La8, Rgba8, L16, La16, Rgb16, Rgba16, Rgb32F, Rgba32F, F32, I32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `jpeg:enc_error_public_mode_contract` |
 | PNG | sequence_encode | accepted | I32 | 1 frame | L16 | SingleFrame | — | 2: `png:enc_i32_big_endian`, `png:enc_i32_little_endian` |
 | PNG | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 2: `png:enc_1bit`, `png:enc_1bit_odd_width` |
-| PNG | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `png:enc_16bit` |
+| PNG | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 2: `png:enc_16bit`, `png:enc_i16_big_endian` |
 | PNG | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |
 | PNG | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 4: `png:enc_indexed`, `png:enc_indexed_alpha`, `png:enc_indexed_missing_palette`, `png:enc_indexed_opaque_trns` |
@@ -465,7 +465,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 11: `png:enc_error_retained_sequence_background`, `png:enc_error_retained_sequence_blend`, `png:enc_error_retained_sequence_canvas_height`, `png:enc_error_retained_sequence_canvas_width`, `png:enc_error_retained_sequence_default_image`, `png:enc_error_retained_sequence_disposal`, `png:enc_error_retained_sequence_duration`, `png:enc_error_retained_sequence_geometry`, `png:enc_error_retained_sequence_interlace`, `png:enc_error_retained_sequence_loop`, `png:enc_error_retained_sequence_top` |
 | PNG | still_encode | accepted | I32 | 1 frame | L16 | — (still result) | — | 2: `png:enc_i32_big_endian`, `png:enc_i32_little_endian` |
 | PNG | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 2: `png:enc_1bit`, `png:enc_1bit_odd_width` |
-| PNG | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `png:enc_16bit` |
+| PNG | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 2: `png:enc_16bit`, `png:enc_i16_big_endian` |
 | PNG | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |
 | PNG | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 4: `png:enc_indexed`, `png:enc_indexed_alpha`, `png:enc_indexed_missing_palette`, `png:enc_indexed_opaque_trns` |

@@ -17629,7 +17629,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `19bc39372b6604df95a773d3f801dc77fa45a80e15f8f3b80cc39529dae62665`; matrix `1c9e5f6cbe8ae87fe6a1d71b14a5f606637728c8348a4c15dfe591b50374929a`.
+- Current fixture integrity only: manifest `b5e6fd014229830c798e05f2aae870709c0c3fe9971c8f02b3f3b15a3b9f49d7`; matrix `ebe7c69d8a5caca3b28be6a6016ab6b8e4612067cf917c9b972f94272066c904`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23228,3 +23228,26 @@ Selected report:
 `5365e77b5a4c8cc621fbc9dbefc2cb0dfe395f2aa83528fd0bde97bd7186ff5b`). Its
 local receipt records the exact selector, fixture hash, toolchain, and passing
 execution. No Rust decoder code or unit tests changed.
+
+## Big-endian I;16 → PNG parity — 2026-11-09
+
+Added the active Pillow-backed row `encode:png:enc_i16_big_endian` to exercise
+TIFF `I;16B` input through PNG encoding. The 17×17 fixture has asymmetric
+samples; the selected run matched Pillow's 153 encoded bytes and re-decoded
+`I;16` samples exactly (1/1). TIFF's public L16 transfer buffer normalizes
+samples to little-endian even when its header identity is `I;16B`, so the
+existing PNG byte swap is required. No production encoder change was needed.
+
+The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261108T214145.559689Z-0f970e0a17f94a87bad76f029341c679/coverage.json`
+(SHA-256
+`b87e2d0048e6c0f3ee1b0dbbac0467e3b1258b653cf0f2709aa80ad0df9ebfb0`); its
+local receipt SHA-256 is
+`76f0342111b538649b5fde26644240c611032f2ebe0e912c00bd173abdbf7524`. Coverage
+MCP labels this selected measurement's source identity unverified and test
+attribution unknown. It is local selected-case evidence and does not establish
+aggregate coverage.
+
+The current public evidence matrix contains 3,890 total rows: 3,201 decode /
+inspect / verify rows and 689 encode rows. Of those, 3,201 decode rows and 662
+encode rows are active; 27 encode rows remain planned.
