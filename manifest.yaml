@@ -12306,7 +12306,7 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32', 'I32']
+        rust_unsupported_modes: ['Cmyk8', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F', 'F32']
         rust_invalid_color_mode: true
         sizes: [[1, 1]]
       rust_expect_error: true

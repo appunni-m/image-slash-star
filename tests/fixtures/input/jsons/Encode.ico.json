@@ -139,8 +139,7 @@
           "Rgba16",
           "Rgb32F",
           "Rgba32F",
-          "F32",
-          "I32"
+          "F32"
         ],
         "rust_invalid_color_mode": true,
         "sizes": [
