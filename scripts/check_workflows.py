@@ -11,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 import platform
 import re
+import shutil
 import socket
 import ssl
 import subprocess
@@ -1824,10 +1825,76 @@ def cached_actionlint_binary(archive: Path, url: str, checksum: str) -> bytes:
             )
             archive.unlink(missing_ok=True)
 
-    data = download_archive(url)
+    try:
+        data = download_archive(url)
+    except (http.client.HTTPException, OSError) as error:
+        if not is_transient_download_failure(error):
+            raise
+        print(
+            f"Pinned actionlint release download failed ({error}); "
+            "trying the checksum-verified Go module source",
+            file=sys.stderr,
+        )
+        return build_actionlint_from_go_module()
+
     executable = binary_bytes(data, checksum)
     write_archive_atomically(archive, data)
     return executable
+
+
+def build_actionlint_from_go_module() -> bytes:
+    """Build the pinned actionlint module when its release asset is unavailable."""
+
+    go = shutil.which("go")
+    if go is None:
+        raise RuntimeError("Go is required for the actionlint source-build fallback")
+
+    with tempfile.TemporaryDirectory(prefix="image-slash-star-actionlint-") as temporary:
+        binary_directory = Path(temporary)
+        environment = os.environ.copy()
+        environment["GOBIN"] = str(binary_directory)
+        environment["GOPROXY"] = "https://proxy.golang.org"
+        environment["GOSUMDB"] = "sum.golang.org"
+        command = [
+            go,
+            "install",
+            f"github.com/rhysd/actionlint/cmd/actionlint@v{VERSION}",
+        ]
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            details = (result.stderr or result.stdout).strip()
+            raise RuntimeError(
+                f"building pinned actionlint v{VERSION} failed: {details[-4000:]}"
+            )
+
+        binary = binary_directory / "actionlint"
+        if not binary.is_file():
+            raise RuntimeError("Go install succeeded without producing actionlint")
+
+        version = subprocess.run(
+            [str(binary), "-version"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        version_output = (version.stdout or version.stderr).strip()
+        version_line = version_output.splitlines()[0] if version_output else ""
+        if version.returncode != 0 or version_line not in {
+            f"actionlint {VERSION}",
+            f"v{VERSION}",
+        }:
+            raise RuntimeError(
+                f"Go-built actionlint version mismatch: {version_output!r}"
+            )
+        return binary.read_bytes()
 
 
 def is_transient_download_failure(error: BaseException) -> bool:
