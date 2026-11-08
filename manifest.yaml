@@ -15634,6 +15634,13 @@ formats:
       test_assets:
       - alpha_item_icc_profile_ignored.avif
       status: active
+    - id: non_alpha_auxiliary_depth
+      description: A depth-type auxiliary image does not become the decoded RGB image's alpha channel
+      test_assets:
+      - non_alpha_auxiliary_depth.avif
+      status: active
+      inspect_raster_mode: Rgb8
+      decoded_raster_mode: Rgb8
     - id: iref_version_1_alpha_auxl
       description: Version-1 item references retain the direct auxl alpha relationship with exact Pillow RGBA output
       test_assets:

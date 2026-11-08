@@ -303,6 +303,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_iref_v1_alpha_fixture.py --check
 	$(PYTHON) scripts/generate_avif_alpha_missing_auxiliary_ispe_fixture.py --check
 	$(PYTHON) scripts/generate_avif_non_primary_property_duplicate_fixtures.py --check
+	$(PYTHON) scripts/generate_avif_non_alpha_auxiliary_fixture.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_grid_fixture.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_grid_edges.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_noise_fixture.py --check
