@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `cdb4fdf4acb3066b1cc433d6499b4f4a568667e3130b5a84ff75dff9fa87470f`.
+- Active fixture source SHA-256: `f0cbc5ef81fcf562f28308fb1409381611229aedb9a350606efe33a583016087`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,860 (3,200 decode; 660 encode).
+- Active fixture rows: 3,861 (3,200 decode; 661 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 147.
 
@@ -480,6 +480,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `tiff:enc_16bit` |
 | TIFF | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 1: `tiff:enc_grayscale_alpha` |
+| TIFF | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 1: `tiff:enc_indexed_missing_palette` |
 | TIFF | sequence_encode | accepted | PA | 1 frame | PA | SingleFrame | — | 1: `tiff:enc_palette_alpha` |
 | TIFF | sequence_encode | accepted | Rgb8 | 1 frame | Rgb8 | SingleFrame | — | 20: `tiff:enc_1x1`, `tiff:enc_be`, `tiff:enc_byte_be`, `tiff:enc_byte_le`, `tiff:enc_compress_deflate`, `tiff:enc_compress_lzw`, `tiff:enc_compress_none`, `tiff:enc_compress_packbits`, `tiff:enc_deflate`, `tiff:enc_le`, `tiff:enc_lzw`, `tiff:enc_lzw_predictor_horiz`, `tiff:enc_multi_page`, `tiff:enc_predictor_horiz`, `tiff:enc_predictor_none`, `tiff:enc_rgb`, `tiff:enc_single_page`, `tiff:enc_stripped`, `tiff:enc_tiled`, `tiff:enc_uncompressed` |
 | TIFF | sequence_encode | accepted | Rgb8 | 2 frames | Rgb8 | UntimedPages | — | 6: `tiff:enc_sequence_deflate`, `tiff:enc_sequence_lzw`, `tiff:enc_sequence_mixed_pages`, `tiff:enc_sequence_packbits`, `tiff:enc_sequence_raw`, `tiff:enc_sequence_raw_final_aligned` |
@@ -497,12 +498,13 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `tiff:enc_16bit` |
 | TIFF | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 1: `tiff:enc_grayscale_alpha` |
+| TIFF | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 1: `tiff:enc_indexed_missing_palette` |
 | TIFF | still_encode | accepted | PA | 1 frame | PA | — (still result) | — | 1: `tiff:enc_palette_alpha` |
 | TIFF | still_encode | accepted | Rgb8 | 1 frame | Rgb8 | — (still result) | — | 20: `tiff:enc_1x1`, `tiff:enc_be`, `tiff:enc_byte_be`, `tiff:enc_byte_le`, `tiff:enc_compress_deflate`, `tiff:enc_compress_lzw`, `tiff:enc_compress_none`, `tiff:enc_compress_packbits`, `tiff:enc_deflate`, `tiff:enc_le`, `tiff:enc_lzw`, `tiff:enc_lzw_predictor_horiz`, `tiff:enc_multi_page`, `tiff:enc_predictor_horiz`, `tiff:enc_predictor_none`, `tiff:enc_rgb`, `tiff:enc_single_page`, `tiff:enc_stripped`, `tiff:enc_tiled`, `tiff:enc_uncompressed` |
 | TIFF | still_encode | accepted | Rgba8 | 1 frame | Rgba8 | — (still result) | — | 1: `tiff:enc_rgba` |
 | TIFF | still_encode | rejected | PA | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `tiff:enc_error_pa_invalid_transfer_carrier` |
 | TIFF | still_encode | rejected | PA | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_pa_palette_alpha_table` |
-| TIFF | still_encode | rejected | Rgb8; invalid-mode witness: P8, La16, Rgb16, Rgba16, Rgb32F, Rgba32F | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_public_mode_contract` |
+| TIFF | still_encode | rejected | Rgb8; invalid-mode witness: La16, Rgb16, Rgba16, Rgb32F, Rgba32F | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_public_mode_contract` |
 | WEBP | sequence_encode | accepted | Cmyk8 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_cmyk`, `webp:enc_lossless_cmyk_token`, `webp:enc_lossy_cmyk` |
 | WEBP | sequence_encode | accepted | L1 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_bilevel`, `webp:enc_lossless_bilevel_token`, `webp:enc_lossy_bilevel` |
 | WEBP | sequence_encode | accepted | L16 | 1 frame | Rgb8 | SingleFrame | — | 2: `webp:enc_lossless_l16`, `webp:enc_lossy_l16` |

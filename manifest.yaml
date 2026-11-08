@@ -11920,15 +11920,19 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params:
-        rust_unsupported_modes: ['P', 'La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F']
+        rust_unsupported_modes: ['La16', 'Rgb16', 'Rgba16', 'Rgb32F', 'Rgba32F']
         rust_invalid_color_mode: true
       rust_expect_error: true
       rust_error_kind: unsupported
-      rust_error_reason: TIFF does not directly accept P8 or multi-channel 16-bit and float modes
+      rust_error_reason: TIFF does not directly accept multi-channel 16-bit and float modes
     - id: enc_palette_alpha
       description: TIFF preserves PA indices, per-pixel alpha, and the RGB ColorMap
       source_asset: palette_alpha.tiff
       params: {'rust_encode_with_token': true}
+    - id: enc_indexed_missing_palette
+      description: TIFF preserves P indices when the decoded source has no retained palette
+      source_format: tiff
+      source_asset: short_color_map.tiff
     - id: enc_error_pa_invalid_transfer_carrier
       description: PA encoding rejects an indexed raster identity with a non-LA8 transfer carrier
       source_asset: palette_alpha.tiff
