@@ -1260,6 +1260,73 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_error_float32_mode",
+      "source_asset": "float32.tiff",
+      "source_format": "tiff",
+      "source_mode": "F",
+      "source_sha256": "375b7ffbfa4760c35a2a20c67967fce30321dfc812a2d749b144de46426e4cac",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "cannot write mode F as PNG",
+          "rust_kind": "unsupported",
+          "rust_format": "ICO",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "sizes": [
+          [
+            128,
+            128
+          ]
+        ]
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/float32.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              128,
+              128
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }
