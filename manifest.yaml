@@ -7535,6 +7535,10 @@ formats:
       description: Animated GIF (decode first frame)
       test_assets:
       - animated.gif
+    - id: animated_gif_animated_3frame
+      description: Three-frame GIF with a local color table and exact metadata-limit decode
+      rust_decode_with_metadata_limit: 1725
+      test_assets:
       - animated_3frame.gif
     - id: finite_loop_u16_max
       description: Maximum finite repeat count in the NETSCAPE2.0 application extension
