@@ -7437,6 +7437,37 @@ fn assert_encoded_decoded_transfer_identity(
     Ok(())
 }
 
+fn assert_encoded_output_identity(
+    bytes: &[u8],
+    expected_format: img::ImageFormat,
+    expected_mode_name: &str,
+    expected_image: &img::DecodedImage,
+) -> Result<(), String> {
+    let info = img::inspect(bytes)
+        .map_err(|error| format!("encoded-output inspection failed: {error}"))?;
+    if info.format != expected_format {
+        return Err(format!(
+            "encoded header format {:?} differs from expected {expected_format:?}",
+            info.format
+        ));
+    }
+    let expected_raster_mode =
+        expected_raster_mode(expected_mode_name, &info).ok_or_else(|| {
+            format!("no encoded raster mapping for Pillow mode {expected_mode_name:?}")
+        })?;
+    if info.raster_mode != expected_raster_mode
+        || expected_image.raster_mode != expected_raster_mode
+    {
+        return Err(format!(
+            "encoded header/transfer identity differs from Pillow mode {expected_mode_name:?}: inspected={:?}/{:?}, decoded={:?}/{:?}, expected raster={expected_raster_mode:?}",
+            info.mode, info.raster_mode, expected_image.mode, expected_image.raster_mode,
+        ));
+    }
+
+    assert_encoded_header_raster_identity(bytes, &info, expected_raster_mode)?;
+    assert_encoded_decoded_transfer_identity(bytes, expected_format, expected_image)
+}
+
 fn zero_image_for_mode(
     width: u32,
     height: u32,
@@ -10327,6 +10358,9 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         .join("images");
     let mut asset_cache: HashMap<PathBuf, Vec<u8>> = HashMap::new();
     let mut decoded_cache: HashMap<PathBuf, Arc<img::DecodedSequence>> = HashMap::new();
+    // Encoded-output lifecycle checks decode twice more (owned and borrowed),
+    // so run one representative for each observable raster mode per format.
+    let mut encoded_raster_identities = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if format_filter.is_some_and(|filter| filter != fmt_name) {
@@ -11611,6 +11645,33 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         }
                         match assert_pixel_parity(&expected, &redecoded) {
                             Ok(()) => {
+                                let raster_identity_key =
+                                    (fmt_name.to_owned(), redecoded.raster_mode);
+                                if !encoded_raster_identities.contains(&raster_identity_key) {
+                                    let Some(expected_mode_name) = row.ref_mode.as_deref() else {
+                                        eprintln!(
+                                            "  FAIL [{}]: active encode row has no decoded mode reference",
+                                            row.id
+                                        );
+                                        failed += 1;
+                                        continue;
+                                    };
+                                    if let Err(message) = assert_encoded_output_identity(
+                                        &encoded,
+                                        format,
+                                        expected_mode_name,
+                                        &redecoded,
+                                    ) {
+                                        eprintln!(
+                                            "  FAIL [{}]: encoded output identity: {message}",
+                                            row.id
+                                        );
+                                        failed += 1;
+                                        continue;
+                                    }
+                                    encoded_raster_identities.insert(raster_identity_key);
+                                }
+
                                 if fmt_name == "jpeg" {
                                     let token = img::CancellationToken::new();
                                     let token_redecoded = match img::decode_with_token(
