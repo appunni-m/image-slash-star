@@ -253,6 +253,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_jpeg_ycck_even_upsample_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_compressed_fill_order2_gray8.py --check
+	$(PYTHON) scripts/generate_tiff_lab_compressed_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_rgb16_fixtures.py --check
 	$(PYTHON) scripts/generate_tiff_gray16_tiled_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_gray32_tiled_predictor_fixture.py --check
