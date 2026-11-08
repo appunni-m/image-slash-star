@@ -1886,9 +1886,11 @@ def build_actionlint_from_go_module() -> bytes:
             text=True,
         )
         version_output = (version.stdout or version.stderr).strip()
-        if version.returncode != 0 or not version_output.startswith(
-            f"actionlint {VERSION}"
-        ):
+        version_line = version_output.splitlines()[0] if version_output else ""
+        if version.returncode != 0 or version_line not in {
+            f"actionlint {VERSION}",
+            f"v{VERSION}",
+        }:
             raise RuntimeError(
                 f"Go-built actionlint version mismatch: {version_output!r}"
             )
