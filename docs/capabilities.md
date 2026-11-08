@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `2e473f29b2e7146291435bf93f540236b9bda141fc67d487ca7e9b237dcdc6ee`.
+- Active fixture source SHA-256: `732111060133dcbe6bacfe757544b0f9a9b34e4dda2b8a2e1f55bf64826be756`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,852 (3,196 decode; 656 encode).
+- Active fixture rows: 3,853 (3,196 decode; 657 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 143.
+- Active `not_applicable` operation outcomes excluded from evidence groups: 144.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -453,6 +453,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | sequence_encode | accepted | Rgb8 | 1 frame | Rgb8 | SingleFrame | — | 51: `png:enc_1x1`, `png:enc_adam7`, `png:enc_chunk_gamma`, `png:enc_chunk_phys`, `png:enc_chunk_srgb`, `png:enc_chunk_text`, `png:enc_chunk_time`, `png:enc_compress_0`, `png:enc_compress_1`, `png:enc_compress_1_1x1`, `png:enc_compress_1_boundary`, `png:enc_compress_1_large_solid`, `png:enc_compress_2`, `png:enc_compress_2_boundary`, `png:enc_compress_3`, `png:enc_compress_3_1x1`, `png:enc_compress_3_boundary`, `png:enc_compress_4`, `png:enc_compress_4_boundary`, `png:enc_compress_5`, `png:enc_compress_5_boundary`, `png:enc_compress_6`, `png:enc_compress_6_boundary`, `png:enc_compress_6_large_solid`, `png:enc_compress_7`, `png:enc_compress_7_1x1`, `png:enc_compress_7_boundary`, `png:enc_compress_8`, `png:enc_compress_8_1x1`, `png:enc_compress_8_boundary`, `png:enc_compress_9`, `png:enc_compress_9_1x1`, `png:enc_compress_9_boundary`, `png:enc_compress_9_large_solid`, `png:enc_compress_default`, `png:enc_compress_max`, `png:enc_compress_none`, `png:enc_compress_stored`, `png:enc_filter_adaptive`, `png:enc_filter_avg`, `png:enc_filter_none`, `png:enc_filter_paeth`, `png:enc_filter_sub`, `png:enc_filter_up`, `png:enc_interlaced`, `png:enc_no_interlace`, `png:enc_odd_size`, `png:enc_optimize`, `png:enc_optimize_average`, `png:enc_rgb`, `png:enc_rgb8` |
 | PNG | sequence_encode | accepted | Rgba8 | 1 frame | Rgba8 | SingleFrame | — | 2: `png:enc_rgba`, `png:enc_rgba8` |
 | PNG | sequence_encode | rejected | Cmyk8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_cmyk` |
+| PNG | sequence_encode | rejected | F32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_float32_mode` |
 | PNG | sequence_encode | rejected | P8 | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `png:enc_error_oversized_public_palette` |
 | PNG | sequence_encode | rejected | PA | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `png:enc_error_palette_alpha_mode` |
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 3: `png:enc_error_compression_level`, `png:enc_error_compression_text`, `png:enc_error_palette_on_nonindexed` |
