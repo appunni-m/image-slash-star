@@ -86,6 +86,54 @@ def add_restart_interval_before_sos(source, interval):
     raise RuntimeError("Pillow JPEG has no SOS marker")
 
 
+def remove_restart_interval_before_sos(source):
+    """Remove the DRI while preserving its entropy-coded restart markers."""
+    if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
+        raise RuntimeError("complete Pillow JPEG required for restart-marker input")
+
+    position = 2
+    dri_range = None
+    while position < len(source):
+        marker_start = position
+        if source[position] != 0xFF:
+            raise RuntimeError("unexpected JPEG marker alignment before SOS")
+        while position < len(source) and source[position] == 0xFF:
+            position += 1
+        if position >= len(source):
+            raise RuntimeError("truncated JPEG marker before SOS")
+        marker = source[position]
+        position += 1
+        if marker == 0xDA:
+            segment_length = int.from_bytes(source[position:position + 2], "big")
+            entropy_start = position + segment_length
+            if segment_length < 8 or entropy_start > len(source) - 2:
+                raise RuntimeError("grayscale SOS header is incomplete")
+            if dri_range is None:
+                raise RuntimeError("Pillow restart source has no DRI marker")
+            entropy = source[entropy_start:]
+            has_restart_marker = any(
+                bytes((0xFF, marker)) in entropy for marker in range(0xD0, 0xD8)
+            )
+            if not has_restart_marker:
+                raise RuntimeError("Pillow restart source has no entropy restart markers")
+            dri_start, dri_end = dri_range
+            return source[:dri_start] + source[dri_end:]
+        if marker in (0xD8, 0xD9, *range(0xD0, 0xD8)):
+            raise RuntimeError("unexpected standalone marker before SOS")
+        if position + 2 > len(source):
+            raise RuntimeError("truncated JPEG segment length before SOS")
+        segment_length = int.from_bytes(source[position:position + 2], "big")
+        end = position + segment_length
+        if segment_length < 2 or end > len(source):
+            raise RuntimeError("invalid JPEG segment length before SOS")
+        if marker == 0xDD:
+            if dri_range is not None or segment_length != 4:
+                raise RuntimeError("restart source has a duplicate or malformed DRI")
+            dri_range = (marker_start, end)
+        position = end
+    raise RuntimeError("Pillow JPEG has no SOS marker")
+
+
 def add_restart_interval_before_eoi(source, interval):
     """Change the next-scan DRI state after a complete JPEG scan."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
@@ -220,6 +268,11 @@ def generate(output, check):
     expected[
         Path("jpeg/grayscale_sampling_422_17x9_restart_interval_snapshot_7_to_0.jpg")
     ] = add_restart_interval_before_eoi(scan_restart_7, 0)
+    expected[
+        Path("jpeg/grayscale_sampling_420_128x128_restart_markers_without_dri.jpg")
+    ] = remove_restart_interval_before_sos(
+        expected[Path("jpeg/grayscale_sampling_420_128x128_restart_rows_4.jpg")]
+    )
     for name, complete_input in late_table_cases(expected[Path("jpeg/grayscale_sampling_420_17x9.jpg")]).items():
         expected[Path("jpeg") / (name + ".jpg")] = complete_input
     expected[Path("jpeg/grayscale_sampling_420_17x9_sos_ss_nonzero.jpg")] = (
