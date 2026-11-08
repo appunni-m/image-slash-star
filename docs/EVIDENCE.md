@@ -76,6 +76,15 @@ was not queried; the selected report and local receipt are
 `.coverage-mcp/local-evidence/selected/20261108T082216.233656Z-8eb2d55d1dc64672a277c7bc30099811/coverage.json`
 (SHA-256 `392b2603a399f8d9696b05049bfb52e920cfbba60345275f04a70d602b9d1ff8`).
 
+After merging the current `main` history into `develop`, the three rows above
+passed together (3/3) against the merged tree. The selected report records
+710/1,101 regions, 435/652 lines, 73/140 branches, and 21/34 functions in
+`src/codecs/gif/decode.rs`. The receipt marks Coverage MCP as not queried, the
+source as unverified, and test attribution as unknown; these remain local
+selected-run observations, not aggregate coverage claims. Report:
+`.coverage-mcp/local-evidence/selected/20261108T083132.867282Z-b869ddaedb8244ecaab61e5d4a60806c/coverage.json`
+(SHA-256 `1b00597a814ad6adbc86058b232764ef2d5cd0895cf9f21e7720c8b32a284d03`).
+
 ## AVIF sequence mode mismatch alpha fault contract — 2026-11-07
 
 Added target-only row
