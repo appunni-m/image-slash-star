@@ -208,6 +208,7 @@ struct CoverageMatrix {
     fault_contracts: Vec<FaultContractRow>,
     summary: Summary,
     mode_decode_cases: Vec<ModeDecodeCase>,
+    mode_encode_cases: Vec<ModeEncodeCase>,
 }
 
 #[derive(Debug)]
@@ -215,6 +216,14 @@ struct ModeDecodeCase {
     format: String,
     case_id: String,
     inspect_mode: String,
+    decoded_mode: String,
+}
+
+#[derive(Debug)]
+struct ModeEncodeCase {
+    format: String,
+    case_id: String,
+    source_mode: String,
     decoded_mode: String,
 }
 
@@ -971,8 +980,140 @@ fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String
     Ok(())
 }
 
+fn is_pillow_mode_encode_row(row: &EncodeRow) -> bool {
+    let has_reference_bytes = row
+        .encoded_ref_path
+        .as_deref()
+        .is_some_and(|path| !path.is_empty())
+        && row
+            .encoded_ref_sha256
+            .as_deref()
+            .is_some_and(|digest| !digest.is_empty());
+    let has_pixel_reference = row.ref_mode.as_deref().is_some_and(|mode| !mode.is_empty())
+        && row.ref_path.as_deref().is_some_and(|path| !path.is_empty())
+        && row
+            .ref_sha256
+            .as_deref()
+            .is_some_and(|digest| !digest.is_empty());
+    let has_pillow_origins = row.assertion_origins.get("source").map(String::as_str)
+        == Some("pillow_fixture")
+        && row.assertion_origins.get("encode").map(String::as_str) == Some("pillow_fixture");
+    let has_successful_encode_operation =
+        matches!(operation_status(&row.operations, "encode"), Ok("ok"))
+            || matches!(
+                operation_status(&row.operations, "encode_sequence"),
+                Ok("ok")
+            );
+
+    row.status == "active"
+        && !row.expect_error
+        && !row.rust_expect_error
+        && !row.source_mode.is_empty()
+        && has_reference_bytes
+        && has_pixel_reference
+        && has_pillow_origins
+        && has_successful_encode_operation
+}
+
+fn validate_mode_encode_case_index(matrix: &CoverageMatrix) -> Result<(), String> {
+    let mut listed_pairs = HashSet::new();
+    let mut listed_case_ids = HashSet::new();
+
+    for case in &matrix.mode_encode_cases {
+        if !listed_case_ids.insert((case.format.as_str(), case.case_id.as_str())) {
+            return Err(format!(
+                "mode encode case index repeats {}:{}",
+                case.format, case.case_id
+            ));
+        }
+
+        let row = matrix
+            .formats
+            .get(&case.format)
+            .and_then(|format| format.encode.iter().find(|row| row.id == case.case_id))
+            .ok_or_else(|| {
+                format!(
+                    "mode encode case {}:{} is missing from the encode matrix",
+                    case.format, case.case_id
+                )
+            })?;
+        if !is_pillow_mode_encode_row(row) {
+            return Err(format!(
+                "mode encode case {}:{} must remain an active successful Pillow parity row with byte and pixel references",
+                case.format, case.case_id
+            ));
+        }
+
+        let decoded_mode = row.ref_mode.as_deref().ok_or_else(|| {
+            format!(
+                "mode encode case {}:{} has no decoded mode",
+                case.format, case.case_id
+            )
+        })?;
+        if case.source_mode != row.source_mode || case.decoded_mode != decoded_mode {
+            return Err(format!(
+                "mode encode case {}:{} expects source/decoded modes {:?}/{:?}, but its parity row declares {:?}/{:?}",
+                case.format,
+                case.case_id,
+                case.source_mode,
+                case.decoded_mode,
+                row.source_mode,
+                decoded_mode
+            ));
+        }
+
+        if !listed_pairs.insert((
+            case.format.as_str(),
+            case.source_mode.as_str(),
+            case.decoded_mode.as_str(),
+        )) {
+            return Err(format!(
+                "mode encode case index repeats format/modes {}:{:?}->{:?}",
+                case.format, case.source_mode, case.decoded_mode
+            ));
+        }
+    }
+
+    let mut active_pairs = HashSet::new();
+    for (format_name, format) in &matrix.formats {
+        for row in &format.encode {
+            if !is_pillow_mode_encode_row(row) {
+                continue;
+            }
+            let decoded_mode = row
+                .ref_mode
+                .as_deref()
+                .ok_or_else(|| format!("active mode encode row {} has no decoded mode", row.id))?;
+            active_pairs.insert((format_name.as_str(), row.source_mode.as_str(), decoded_mode));
+        }
+    }
+
+    if active_pairs != listed_pairs {
+        let mut unlisted = active_pairs
+            .difference(&listed_pairs)
+            .map(|(format, source, decoded)| {
+                (format.to_string(), source.to_string(), decoded.to_string())
+            })
+            .collect::<Vec<_>>();
+        unlisted.sort_unstable();
+        let mut stale = listed_pairs
+            .difference(&active_pairs)
+            .map(|(format, source, decoded)| {
+                (format.to_string(), source.to_string(), decoded.to_string())
+            })
+            .collect::<Vec<_>>();
+        stale.sort_unstable();
+        return Err(format!(
+            "mode encode case index must match every active format/source-mode/decoded-mode pair; unlisted={unlisted:?}, stale={stale:?}"
+        ));
+    }
+
+    Ok(())
+}
+
 fn matrix_row_catalog(matrix: &CoverageMatrix) -> Result<Vec<MatrixCatalogRow>, String> {
     validate_mode_decode_case_index(matrix)?;
+    validate_mode_encode_case_index(matrix)?;
 
     let mut format_names = matrix.formats.keys().collect::<Vec<_>>();
     format_names.sort_unstable();
@@ -5417,11 +5558,18 @@ json_object!(CoverageMatrix {
     fault_contracts,
     summary,
     mode_decode_cases,
+    mode_encode_cases,
 });
 json_object!(ModeDecodeCase {
     format,
     case_id,
     inspect_mode,
+    decoded_mode,
+});
+json_object!(ModeEncodeCase {
+    format,
+    case_id,
+    source_mode,
     decoded_mode,
 });
 json_object!(FormatData { decode, encode });

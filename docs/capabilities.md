@@ -10,7 +10,7 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `b6f5ba4918bebcfd20d5a3644ea47db8b5585fa4d295e51fa57b8580784f22a9`.
+- Active fixture source SHA-256: `cf0a0e393d31459044aec6ecb57308ee051a8fbbe8d50a61bc1063ef1cd12204`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
