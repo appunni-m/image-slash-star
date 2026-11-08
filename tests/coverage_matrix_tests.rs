@@ -7339,6 +7339,41 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
     })
 }
 
+fn assert_encoded_header_raster_identity(
+    bytes: &[u8],
+    expected_info: &img::ImageInfo,
+    expected_raster_mode: img::Mode,
+) -> Result<(), String> {
+    let encoded = img::EncodedImage::new(Arc::<[u8]>::from(bytes.to_vec()))
+        .map_err(|error| format!("owned encoded header inspection failed: {error}"))?;
+    let view = img::EncodedImageView::new(bytes)
+        .map_err(|error| format!("borrowed encoded header inspection failed: {error}"))?;
+
+    let owned_matches = encoded.format() == expected_info.format
+        && encoded.mode() == expected_info.mode
+        && encoded.raster_mode() == expected_raster_mode
+        && encoded.info().raster_mode == expected_raster_mode
+        && !encoded.is_decoded();
+    let borrowed_matches = view.format() == expected_info.format
+        && view.mode() == expected_info.mode
+        && view.raster_mode() == expected_raster_mode
+        && view.info().raster_mode == expected_raster_mode;
+    if !owned_matches || !borrowed_matches {
+        return Err(format!(
+            "header identity mismatch: inspect={:?}/{:?}, owned={:?}/{:?} (decoded={}), borrowed={:?}/{:?}, expected={expected_raster_mode:?}",
+            expected_info.mode,
+            expected_info.raster_mode,
+            encoded.mode(),
+            encoded.raster_mode(),
+            encoded.is_decoded(),
+            view.mode(),
+            view.raster_mode(),
+        ));
+    }
+
+    Ok(())
+}
+
 fn zero_image_for_mode(
     width: u32,
     height: u32,
@@ -8844,6 +8879,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
     let mut skipped = 0u32;
     let mut planned_not_executed = 0u32;
     let mut source_lifecycle_formats = HashSet::new();
+    let mut source_raster_identities = HashSet::new();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if format_filter.is_some_and(|filter| filter != fmt_name) {
@@ -9082,30 +9118,33 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
 
-            if let Some(mode_name) = row.inspect_raster_mode.as_deref() {
-                let expected_raster_mode = inspected
-                    .as_ref()
-                    .ok()
-                    .and_then(|info| expected_raster_mode(mode_name, info));
-                let header_matches = inspected
-                    .as_ref()
-                    .ok()
-                    .zip(expected_raster_mode)
-                    .is_some_and(|(info, expected)| info.raster_mode == expected);
-                let encoded_matches = img::EncodedImage::new(Arc::<[u8]>::from(data.clone()))
-                    .is_ok_and(|source| {
-                        expected_raster_mode
-                            .is_some_and(|expected| source.raster_mode() == expected)
-                            && !source.is_decoded()
-                    });
-                let view_matches = img::EncodedImageView::new(&data).is_ok_and(|source| {
-                    expected_raster_mode.is_some_and(|expected| source.raster_mode() == expected)
-                });
-                if !header_matches || !encoded_matches || !view_matches {
+            if let Some(mode_name) = row
+                .inspect_raster_mode
+                .as_deref()
+                .or(row.ref_mode.as_deref())
+            {
+                let Some(info) = inspected.as_ref().ok() else {
                     eprintln!(
-                        "  FAIL [{}]: TIFF raster identity differs between inspection entry points (inspect={inspected:?}, expected={mode_name})",
+                        "  FAIL [{}]: expected header raster mode {mode_name:?} but inspection failed ({inspected:?})",
                         row.id
                     );
+                    failed += 1;
+                    continue;
+                };
+                let Some(expected_raster_mode) = expected_raster_mode(mode_name, info) else {
+                    eprintln!(
+                        "  FAIL [{}]: no raster identity mapping for header mode {mode_name:?}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                };
+
+                if source_raster_identities.insert((fmt_name.to_owned(), expected_raster_mode))
+                    && let Err(message) =
+                        assert_encoded_header_raster_identity(&data, info, expected_raster_mode)
+                {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
                     failed += 1;
                     continue;
                 }
