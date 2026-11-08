@@ -98,6 +98,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install pinned npm
         run: npm install --global "npm@$NPM_VERSION"
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: "1.26.10"
+          check-latest: false
+          cache: false
       - name: Verify quality, parity, feature lanes, and exact package
         run: make ci-quality
       - name: Retain verified candidate bundle
