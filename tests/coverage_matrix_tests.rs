@@ -60,6 +60,7 @@ static SELECTOR_ARGUMENTS: OnceLock<Result<ParsedSelectorArguments, String>> = O
 
 const MATRIX_ROW_SELECTOR_STEM: &str = "__image_slash_star_matrix_row_selector__";
 const MATRIX_ROW_SELECTOR_PREFIX: &str = "__image_slash_star_matrix_row_selector__=";
+const ALL_PARITY_SELECTOR: &str = "__all_parity__";
 const AV1_FIXTURE_SELECTOR_STEM: &str = "__image_slash_star_av1_fixture_selector__";
 const AV1_FIXTURE_SELECTOR_PREFIX: &str = "__image_slash_star_av1_fixture_selector__=";
 const RESERVED_SELECTOR_STEM: &str = "__image_slash_star_";
@@ -917,17 +918,36 @@ fn resolve_matrix_row_keys(
         }
     }
 
+    let select_all_parity = requested_keys.iter().any(|key| key == ALL_PARITY_SELECTOR);
+    if select_all_parity && requested_keys.len() != 1 {
+        return Err("all-parity selector must be used by itself".to_owned());
+    }
+
     let mut requested = HashSet::new();
-    for raw in requested_keys {
-        let parsed = parse_matrix_row_key(raw)?;
-        let key = parsed.qualified();
-        if !requested.insert(key.clone()) {
-            return Err(format!("duplicate matrix row selector key {key:?}"));
-        }
-        if !known.contains_key(&key) {
-            return Err(format!(
-                "unknown matrix row selector key {key:?}; keys are exact qualified operation:format:row-id tuples"
-            ));
+    if select_all_parity {
+        requested.extend(
+            catalog
+                .iter()
+                .filter(|row| {
+                    matches!(
+                        row.operation,
+                        MatrixOperation::Decode | MatrixOperation::Encode
+                    )
+                })
+                .map(|row| row.key.clone()),
+        );
+    } else {
+        for raw in requested_keys {
+            let parsed = parse_matrix_row_key(raw)?;
+            let key = parsed.qualified();
+            if !requested.insert(key.clone()) {
+                return Err(format!("duplicate matrix row selector key {key:?}"));
+            }
+            if !known.contains_key(&key) {
+                return Err(format!(
+                    "unknown matrix row selector key {key:?}; keys are exact qualified operation:format:row-id tuples"
+                ));
+            }
         }
     }
 

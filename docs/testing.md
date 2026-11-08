@@ -27,6 +27,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
 | Selected coverage | `make coverage-selected COVERAGE_CASES='decode:webp:<id>'` | Runs exact matrix cases and retains the report, command log, and local execution evidence outside `target/` |
+| Parity coverage | `make coverage-parity` | Runs every active decode/encode parity row and reports planned rows without running unit tests or fault-contract rows |
 | Complete coverage | `make coverage-complete` | Requires all four metrics to reach 100% |
 | Package inspection | `make package-verify` | Builds, extracts, and tests the distributable archive |
 | Documentation setup | `make docs-setup` | Creates an isolated environment and installs the hashed lock |
@@ -78,6 +79,13 @@ For focused exploration, pass one or more exact manifest keys to
 ```sh
 make coverage-selected COVERAGE_CASES='decode:webp:lossy_vp8 encode:png:enc_rgb'
 ```
+
+Use `make coverage-parity` to execute the complete active decode/encode matrix
+through the parity harness. Planned rows are retained in the report as not
+executed; fault-contract rows and ordinary unit tests are excluded. The command
+also retains its LLVM report, log, and local evidence receipt under
+`.coverage-mcp/local-evidence/selected/`, using the same source and fixture
+identity checks as focused selected coverage.
 
 Full coverage uses `target/cargo-llvm-cov/full`; selected coverage uses
 `target/cargo-llvm-cov/selected`. Each is isolated from ordinary and feature-matrix
