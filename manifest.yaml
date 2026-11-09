@@ -3128,6 +3128,10 @@ formats:
       description: Baseline JPEG combines an interleaved component scan with one-MCU restart segments
       test_assets:
       - baseline_444_multiscan_interleaved_restart.jpg
+    - id: baseline_444_multiscan_restart_markers_without_dri
+      description: Baseline two-scan JPEG retains restart markers after its restart interval is removed
+      test_assets:
+      - baseline_444_multiscan_restart_markers_without_dri.jpg
     - id: baseline_444_multiscan_restart_overrun
       description: Baseline multi-scan JPEG has extra restart markers after the final MCU
       test_assets:
