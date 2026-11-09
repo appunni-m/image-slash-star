@@ -407,6 +407,8 @@ struct Intra4SelectionInput<'a> {
     method: u8,
     coefficient_probabilities: &'a [[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
+    fixed_modes: Option<&'a [Intra4Mode; 16]>,
+    update_intrablock_contexts: bool,
 }
 
 #[allow(
@@ -430,6 +432,8 @@ pub(super) fn select_macroblock(
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
+    fixed_modes: Option<&[Intra4Mode; 16]>,
+    update_intrablock_contexts: bool,
 ) -> Intra4Result {
     select_macroblock_with_control(
         Intra4SelectionInput {
@@ -448,6 +452,8 @@ pub(super) fn select_macroblock(
             method,
             coefficient_probabilities,
             trellis,
+            fixed_modes,
+            update_intrablock_contexts,
         },
         &mut NoopSelectionCheckpoint,
     )
@@ -474,6 +480,8 @@ pub(super) fn select_macroblock_with_token(
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
+    fixed_modes: Option<&[Intra4Mode; 16]>,
+    update_intrablock_contexts: bool,
     token: &crate::CancellationToken,
 ) -> CodecResult<Intra4Result> {
     select_macroblock_with_control(
@@ -493,6 +501,8 @@ pub(super) fn select_macroblock_with_token(
             method,
             coefficient_probabilities,
             trellis,
+            fixed_modes,
+            update_intrablock_contexts,
         },
         &mut TokenSelectionCheckpoint { token },
     )
@@ -518,6 +528,8 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
         method,
         coefficient_probabilities,
         trellis,
+        fixed_modes,
+        update_intrablock_contexts,
     } = input;
     let distortion_only = method <= 2;
     let compare_predictions = method == 2;
@@ -610,7 +622,9 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
             };
             let context = usize::from(top_nonzero[block_x].wrapping_add(left_nonzero[block_y]));
             let mut prediction_score = 0;
-            let selected_mode = if distortion_only {
+            let selected_mode = if let Some(modes) = fixed_modes {
+                Some(modes[block_index])
+            } else if distortion_only {
                 let mut selected: Option<(u32, Intra4Mode)> = None;
                 for mode in Intra4Mode::ALL {
                     let prediction = predict(mode, &top, &left, block_top_left);
@@ -753,8 +767,11 @@ fn select_macroblock_with_control<C: SelectionCheckpointControl>(
             if nonzero {
                 result.nonzero |= 1_u32.wrapping_shl(block_index.to_le_bytes()[0].into());
             }
-            top_nonzero[block_x] = u8::from(nonzero);
-            left_nonzero[block_y] = u8::from(nonzero);
+            // Method-5 SimpleQuantize reuses macroblock-edge contexts for I4 blocks.
+            if update_intrablock_contexts {
+                top_nonzero[block_x] = u8::from(nonzero);
+                left_nonzero[block_y] = u8::from(nonzero);
+            }
             for row in 0_usize..4 {
                 let destination_offset = block_y
                     .wrapping_mul(4)

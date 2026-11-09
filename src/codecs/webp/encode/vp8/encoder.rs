@@ -191,7 +191,7 @@ fn encode_vp8_planes(
             quality: f64::from(quality),
             method,
             coefficient_probabilities: &COEFF_PROBS,
-            trellis: false,
+            trellis: method >= 6,
             token,
         },
     )?;
@@ -208,7 +208,7 @@ fn encode_vp8_planes(
     };
     // Methods zero through two leave the statistics pass's header cost at
     // zero. With one segment, libwebp exits before finalizing probabilities.
-    let mut probabilities = if method <= 2 && params.num_segments == 1 {
+    let probabilities = if method <= 2 && params.num_segments == 1 {
         default_probabilities()
     } else {
         adapt_coefficients(
@@ -220,27 +220,6 @@ fn encode_vp8_planes(
         )?
     };
     crate::codecs::error::check_cancelled(token)?;
-    if method >= 6 {
-        decisions = select_frame(
-            [&y_plane, &u_plane, &v_plane],
-            (padded_width as usize, padded_height as usize),
-            &analysis,
-            FrameSelectionOptions {
-                quality: f64::from(quality),
-                method,
-                coefficient_probabilities: &COEFF_PROBS,
-                trellis: true,
-                token,
-            },
-        )?;
-        crate::codecs::error::check_cancelled(token)?;
-        for decision in &mut decisions {
-            decision.segment = segment_map[usize::from(decision.segment)];
-        }
-        probabilities =
-            adapt_coefficients(&decisions, macroblock_width, true, decisions.len(), token)?;
-        crate::codecs::error::check_cancelled(token)?;
-    }
     let header_data = encode_first_partition(
         &decisions,
         macroblock_width,

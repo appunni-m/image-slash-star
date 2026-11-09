@@ -6,6 +6,7 @@ use super::{
     cost::rd_score,
     intra4::{self, Intra4Mode, Intra4Result},
     intra16::{self, Intra16Candidate, Intra16Mode},
+    probability::CoefficientStatistics,
     quant::{SegmentMatrices, libwebp_segment_matrices},
 };
 use crate::codecs::{CodecError, CodecResult};
@@ -29,6 +30,7 @@ const STORED_NONZERO_MASK: u32 = (1 << 3)
 // this outer batch still bounds the remaining intra16/chroma and completed
 // macroblock work without adding a callback to their no-token paths.
 const SELECTION_CHECKPOINT_MACROBLOCKS: usize = 64;
+const MIN_PROBABILITY_REFRESH_MACROBLOCKS: usize = 96;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum LumaDecision {
@@ -142,6 +144,8 @@ pub(super) fn select_frame(
     let macroblock_width = width / 16;
     let macroblock_height = height / 16;
     let macroblock_count = macroblock_width.wrapping_mul(macroblock_height);
+    let probability_refresh_interval =
+        (macroblock_count / 8).max(MIN_PROBABILITY_REFRESH_MACROBLOCKS);
     let header_bit_limit = if method == 2 {
         (256 * 510 * 8 * 1_024_u64)
             .checked_div(u64::try_from(macroblock_count).unwrap_or(u64::MAX))
@@ -167,6 +171,10 @@ pub(super) fn select_frame(
         vec![Intra4Mode::Dc; mode_stride.wrapping_mul(macroblock_height).wrapping_mul(4)];
     let mut top_errors = vec![[[0i8; 2]; 2]; macroblock_width];
     let mut decisions = Vec::with_capacity(macroblock_width.wrapping_mul(macroblock_height));
+    let mut adaptive_coefficients = *coefficient_probabilities;
+    let mut coefficient_statistics =
+        (method >= 3).then(|| CoefficientStatistics::new(macroblock_width));
+    let mut macroblocks_until_probability_refresh = probability_refresh_interval;
     let mut selection_items = 0usize;
 
     for macroblock_y in 0..macroblock_height {
@@ -184,6 +192,15 @@ pub(super) fn select_frame(
             let block_index = macroblock_y
                 .wrapping_mul(macroblock_width)
                 .wrapping_add(macroblock_x);
+            if let Some(statistics) = &coefficient_statistics
+                && macroblocks_until_probability_refresh == 0
+            {
+                adaptive_coefficients = statistics
+                    .probabilities(macroblock_count, true, token)?
+                    .coefficients;
+                macroblocks_until_probability_refresh =
+                    probability_refresh_interval.saturating_add(1);
+            }
             let segment = analysis.macroblocks[block_index].segment;
             let matrix = &matrices[usize::from(segment)];
             let source_y = extract_16(y_plane, width, macroblock_x, macroblock_y);
@@ -259,8 +276,9 @@ pub(super) fn select_frame(
                 matrix.lambda_i16.cast_unsigned(),
                 matrix.texture_lambda.cast_unsigned(),
                 method,
-                coefficient_probabilities,
+                &adaptive_coefficients,
                 trellis,
+                None,
             );
             let intra16_mode_score = if method == 2 {
                 intra16.score
@@ -273,7 +291,7 @@ pub(super) fn select_frame(
                 )
             };
             let intra16_mode = intra16.mode;
-            let luma = if method == 2
+            let mut luma = if method == 2
                 && intra16::flat_border_mode(&source_y, macroblock_y != 0, macroblock_x != 0)
                     .is_some()
             {
@@ -294,8 +312,10 @@ pub(super) fn select_frame(
                         matrix.lambda_mode.cast_unsigned(),
                         matrix.texture_lambda.cast_unsigned(),
                         method,
-                        coefficient_probabilities,
+                        &adaptive_coefficients,
                         trellis,
+                        None,
+                        true,
                         token,
                     )?
                 } else {
@@ -313,8 +333,10 @@ pub(super) fn select_frame(
                         matrix.lambda_mode.cast_unsigned(),
                         matrix.texture_lambda.cast_unsigned(),
                         method,
-                        coefficient_probabilities,
+                        &adaptive_coefficients,
                         trellis,
+                        None,
+                        true,
                     )
                 };
                 if method <= 1 {
@@ -332,6 +354,83 @@ pub(super) fn select_frame(
                     LumaDecision::Intra16(intra16)
                 }
             };
+            // Libwebp's method-5 RD_TRELLIS path quantizes selected modes
+            // afterward; method 6 instead includes trellis in mode search.
+            if method == 5 {
+                match &mut luma {
+                    LumaDecision::Intra16(result) => {
+                        let refined = intra16::select(
+                            &source_y,
+                            &top_y,
+                            &y_left,
+                            y_top_left,
+                            macroblock_y != 0,
+                            macroblock_x != 0,
+                            top_y_nonzero,
+                            left_y_nonzero,
+                            usize::from(bit(top_packed, 24).wrapping_add(left_y2_nonzero)),
+                            matrix,
+                            matrix.lambda_i16.cast_unsigned(),
+                            matrix.texture_lambda.cast_unsigned(),
+                            method,
+                            &adaptive_coefficients,
+                            true,
+                            Some(result.mode),
+                        );
+                        result.y2_levels = refined.y2_levels;
+                        result.y1_levels = refined.y1_levels;
+                        result.reconstructed = refined.reconstructed;
+                        result.nonzero = refined.nonzero;
+                    }
+                    LumaDecision::Intra4(result) => {
+                        let refined = if let Some(token) = token {
+                            intra4::select_macroblock_with_token(
+                                &source_y,
+                                &top_y_i4,
+                                &y_left,
+                                y_top_left,
+                                &top_modes,
+                                &neighboring_left_modes,
+                                top_y_nonzero,
+                                left_y_nonzero,
+                                matrix,
+                                matrix.lambda_i4.cast_unsigned(),
+                                matrix.lambda_mode.cast_unsigned(),
+                                matrix.texture_lambda.cast_unsigned(),
+                                method,
+                                &adaptive_coefficients,
+                                true,
+                                Some(&result.modes),
+                                false,
+                                token,
+                            )?
+                        } else {
+                            intra4::select_macroblock(
+                                &source_y,
+                                &top_y_i4,
+                                &y_left,
+                                y_top_left,
+                                &top_modes,
+                                &neighboring_left_modes,
+                                top_y_nonzero,
+                                left_y_nonzero,
+                                matrix,
+                                matrix.lambda_i4.cast_unsigned(),
+                                matrix.lambda_mode.cast_unsigned(),
+                                matrix.texture_lambda.cast_unsigned(),
+                                method,
+                                &adaptive_coefficients,
+                                true,
+                                Some(&result.modes),
+                                false,
+                            )
+                        };
+                        result.levels = refined.levels;
+                        result.reconstructed = refined.reconstructed;
+                        result.nonzero = refined.nonzero;
+                    }
+                }
+            }
             let (reconstructed_y, luma_d, luma_sd, luma_h, luma_r, luma_score, luma_nz) =
                 match &luma {
                     LumaDecision::Intra4(result) => (
@@ -384,7 +483,7 @@ pub(super) fn select_frame(
                     1 | 2 => chroma::ChromaModeSearch::DistortionOnly,
                     _ => chroma::ChromaModeSearch::RateDistortion,
                 },
-                coefficient_probabilities,
+                &adaptive_coefficients,
             );
             let nonzero = luma_nz | chroma.nonzero;
             decisions.push(MacroblockDecision {
@@ -401,6 +500,11 @@ pub(super) fn select_frame(
                 nonzero,
                 chroma,
             });
+            if let Some(statistics) = &mut coefficient_statistics {
+                statistics.record(&decisions[block_index], true, token)?;
+                macroblocks_until_probability_refresh =
+                    macroblocks_until_probability_refresh.saturating_sub(1);
+            }
 
             let decision = &decisions[decisions.len().saturating_sub(1)];
             for block_y in 0..4 {

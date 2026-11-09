@@ -74,6 +74,8 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_cost_manager_fragment_stream_fixture.py --check
 	$(PYTHON) scripts/generate_webp_cost_manager_deep_fragment_fixture.py --check
 	$(PYTHON) scripts/generate_webp_singleton_copy_group_fixture.py --check
+	$(PYTHON) scripts/generate_webp_zero_coeff_probability_checkpoint_fixture.py --check
+	$(PYTHON) scripts/generate_webp_bool_checkpoint_segmented_fixture.py --check
 	$(PYTHON) scripts/generate_webp_tiny_predictor_grid_fixture.py --check
 	$(PYTHON) scripts/generate_webp_sampling_row_mismatch_fixture.py --check
 	$(PYTHON) scripts/generate_webp_dimension_limit_fixture.py --check
@@ -82,6 +84,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_crunch_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_bool_carry_noise_fixture.py --check
 	$(PYTHON) scripts/generate_webp_bool_checkpoint_noise_fixture.py --check
+	$(PYTHON) scripts/generate_webp_bool_checkpoint_tall_noise_fixture.py --check
 	$(PYTHON) scripts/generate_webp_sampling_copy_checkpoint_fixture.py --check
 	$(PYTHON) scripts/generate_webp_palette_alpha_tail_fixture.py --check
 	$(PYTHON) scripts/generate_webp_alpha_zero_palette_checkpoint_fixture.py --check

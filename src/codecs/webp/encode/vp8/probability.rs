@@ -147,144 +147,199 @@ fn record_block(
     1
 }
 
-trait StatisticsCheckpointControl {
-    fn observe(&mut self) -> CodecResult<()>;
+/// Accumulates coefficient events in macroblock order.
+///
+/// Keeping the neighbor contexts alongside the statistics allows the token
+/// encoder to refresh probabilities periodically without rescanning all prior
+/// macroblocks.
+pub(super) struct CoefficientStatistics {
+    statistics: Statistics,
+    top_y: Vec<[u8; 4]>,
+    top_uv: Vec<[u8; 4]>,
+    top_y2: Vec<u8>,
+    left_y: [u8; 4],
+    left_uv: [u8; 4],
+    left_y2: u8,
+    skipped_macroblocks: usize,
+    token_macroblocks: usize,
 }
 
-struct NoopStatisticsCheckpoint;
-
-impl StatisticsCheckpointControl for NoopStatisticsCheckpoint {
-    #[inline(always)]
-    fn observe(&mut self) -> CodecResult<()> {
-        Ok(())
-    }
-}
-
-struct TokenStatisticsCheckpoint<'a> {
-    token: &'a crate::CancellationToken,
-    macroblock_items: usize,
-}
-
-impl<'a> TokenStatisticsCheckpoint<'a> {
-    fn new(token: &'a crate::CancellationToken) -> Self {
+impl CoefficientStatistics {
+    pub(super) fn new(macroblock_width: usize) -> Self {
         Self {
-            token,
-            macroblock_items: 0,
+            statistics: [[[[0; 11]; 3]; 8]; 4],
+            top_y: vec![[0; 4]; macroblock_width],
+            top_uv: vec![[0; 4]; macroblock_width],
+            top_y2: vec![0; macroblock_width],
+            left_y: [0; 4],
+            left_uv: [0; 4],
+            left_y2: 0,
+            skipped_macroblocks: 0,
+            token_macroblocks: 0,
         }
     }
-}
 
-impl StatisticsCheckpointControl for TokenStatisticsCheckpoint<'_> {
-    #[inline]
-    fn observe(&mut self) -> CodecResult<()> {
-        self.macroblock_items = self.macroblock_items.saturating_add(1);
-        if self
-            .macroblock_items
-            .is_multiple_of(STATISTICS_CHECKPOINT_MACROBLOCKS)
-        {
-            crate::codecs::error::check_cancelled(Some(self.token))?;
+    pub(super) fn record(
+        &mut self,
+        decision: &MacroblockDecision,
+        token_buffer: bool,
+        token: Option<&crate::CancellationToken>,
+    ) -> CodecResult<()> {
+        let x = decision.x;
+        if x == 0 {
+            self.left_y = [0; 4];
+            self.left_uv = [0; 4];
+            self.left_y2 = 0;
         }
-        Ok(())
-    }
-}
+        self.skipped_macroblocks = self
+            .skipped_macroblocks
+            .saturating_add(usize::from(decision.nonzero == 0));
 
-fn collect_statistics_with_checkpoint<C: StatisticsCheckpointControl>(
-    decisions: &[MacroblockDecision],
-    macroblock_width: usize,
-    token_buffer: bool,
-    checkpoint: &mut C,
-) -> CodecResult<(Statistics, usize)> {
-    let mut statistics = [[[[0; 11]; 3]; 8]; 4];
-    let mut top_y = vec![[0u8; 4]; macroblock_width];
-    let mut top_uv = vec![[0u8; 4]; macroblock_width];
-    let mut top_y2 = vec![0u8; macroblock_width];
-    let mut skipped_macroblocks = 0usize;
-
-    for row in decisions.chunks(macroblock_width) {
-        let mut left_y = [0u8; 4];
-        let mut left_uv = [0u8; 4];
-        let mut left_y2 = 0u8;
-        for decision in row {
-            let x = decision.x;
-            skipped_macroblocks =
-                skipped_macroblocks.saturating_add(usize::from(decision.nonzero == 0));
-            match &decision.luma {
-                LumaDecision::Intra16(luma) => {
-                    let nonzero = record_block(
-                        &mut statistics,
-                        &luma.y2_levels,
-                        0,
-                        1,
-                        usize::from(top_y2[x].saturating_add(left_y2)),
-                        token_buffer,
-                    );
-                    top_y2[x] = nonzero;
-                    left_y2 = nonzero;
-                    let top_row = &mut top_y[x];
-                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
-                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
-                            let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
-                            let nonzero = record_block(
-                                &mut statistics,
-                                &luma.y1_levels[block_y.saturating_mul(4).saturating_add(block_x)],
-                                1,
-                                0,
-                                context,
-                                token_buffer,
-                            );
-                            *top_nonzero = nonzero;
-                            *left_nonzero = nonzero;
-                        }
-                    }
-                }
-                LumaDecision::Intra4(luma) => {
-                    let top_row = &mut top_y[x];
-                    for (block_y, left_nonzero) in left_y.iter_mut().enumerate() {
-                        for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
-                            let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
-                            let nonzero = record_block(
-                                &mut statistics,
-                                &luma.levels[block_y.saturating_mul(4).saturating_add(block_x)],
-                                0,
-                                3,
-                                context,
-                                token_buffer,
-                            );
-                            *top_nonzero = nonzero;
-                            *left_nonzero = nonzero;
-                        }
-                    }
-                }
-            }
-
-            for plane in 0usize..2 {
-                for block_y in 0usize..2 {
-                    for block_x in 0usize..2 {
-                        let context_index = plane.saturating_mul(2).saturating_add(block_x);
-                        let left_index = plane.saturating_mul(2).saturating_add(block_y);
-                        let context = usize::from(
-                            top_uv[x][context_index].saturating_add(left_uv[left_index]),
-                        );
+        match &decision.luma {
+            LumaDecision::Intra16(luma) => {
+                let nonzero = record_block(
+                    &mut self.statistics,
+                    &luma.y2_levels,
+                    0,
+                    1,
+                    usize::from(self.top_y2[x].saturating_add(self.left_y2)),
+                    token_buffer,
+                );
+                self.top_y2[x] = nonzero;
+                self.left_y2 = nonzero;
+                let top_row = &mut self.top_y[x];
+                for (block_y, left_nonzero) in self.left_y.iter_mut().enumerate() {
+                    for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
+                        let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
                         let nonzero = record_block(
-                            &mut statistics,
-                            &decision.chroma.levels[plane
-                                .saturating_mul(4)
-                                .saturating_add(block_y.saturating_mul(2))
-                                .saturating_add(block_x)],
+                            &mut self.statistics,
+                            &luma.y1_levels[block_y.saturating_mul(4).saturating_add(block_x)],
+                            1,
                             0,
-                            2,
                             context,
                             token_buffer,
                         );
-                        top_uv[x][context_index] = nonzero;
-                        left_uv[left_index] = nonzero;
+                        *top_nonzero = nonzero;
+                        *left_nonzero = nonzero;
                     }
                 }
             }
-            checkpoint.observe()?;
+            LumaDecision::Intra4(luma) => {
+                let top_row = &mut self.top_y[x];
+                for (block_y, left_nonzero) in self.left_y.iter_mut().enumerate() {
+                    for (block_x, top_nonzero) in top_row.iter_mut().enumerate() {
+                        let context = usize::from(top_nonzero.saturating_add(*left_nonzero));
+                        let nonzero = record_block(
+                            &mut self.statistics,
+                            &luma.levels[block_y.saturating_mul(4).saturating_add(block_x)],
+                            0,
+                            3,
+                            context,
+                            token_buffer,
+                        );
+                        *top_nonzero = nonzero;
+                        *left_nonzero = nonzero;
+                    }
+                }
+            }
         }
+
+        for plane in 0usize..2 {
+            for block_y in 0usize..2 {
+                for block_x in 0usize..2 {
+                    let context_index = plane.saturating_mul(2).saturating_add(block_x);
+                    let left_index = plane.saturating_mul(2).saturating_add(block_y);
+                    let context = usize::from(
+                        self.top_uv[x][context_index].saturating_add(self.left_uv[left_index]),
+                    );
+                    let nonzero = record_block(
+                        &mut self.statistics,
+                        &decision.chroma.levels[plane
+                            .saturating_mul(4)
+                            .saturating_add(block_y.saturating_mul(2))
+                            .saturating_add(block_x)],
+                        0,
+                        2,
+                        context,
+                        token_buffer,
+                    );
+                    self.top_uv[x][context_index] = nonzero;
+                    self.left_uv[left_index] = nonzero;
+                }
+            }
+        }
+
+        if let Some(token) = token {
+            self.token_macroblocks = self.token_macroblocks.saturating_add(1);
+            if self
+                .token_macroblocks
+                .is_multiple_of(STATISTICS_CHECKPOINT_MACROBLOCKS)
+            {
+                crate::codecs::error::check_cancelled(Some(token))?;
+            }
+        }
+        Ok(())
     }
-    Ok((statistics, skipped_macroblocks))
+
+    pub(super) fn probabilities(
+        &self,
+        frame_macroblock_count: usize,
+        token_buffer: bool,
+        token: Option<&crate::CancellationToken>,
+    ) -> CodecResult<AdaptedProbabilities> {
+        let mut coefficients = COEFF_PROBS;
+        let mut updates = [[[[false; 11]; 3]; 8]; 4];
+        let mut probability_items: usize = 0;
+        for coefficient_type in 0..4 {
+            for band in 0..8 {
+                for context in 0..3 {
+                    for node in 0..11 {
+                        let statistic = self.statistics[coefficient_type][band][context][node];
+                        let ones = statistic & 0xffff;
+                        let total = statistic >> 16;
+                        let new_probability = if ones == 0 {
+                            255
+                        } else {
+                            255u32
+                                .saturating_sub(ones.saturating_mul(255).div_euclid(total))
+                                .to_le_bytes()[0]
+                        };
+                        let old_probability = COEFF_PROBS[coefficient_type][band][context][node];
+                        let update_probability =
+                            coefficient_update_probability(coefficient_type, band, context, node);
+                        let branch_cost = |probability: u8| {
+                            u64::from(ones)
+                                .saturating_mul(u64::from(bit_cost(true, probability)))
+                                .saturating_add(
+                                    u64::from(total.saturating_sub(ones))
+                                        .saturating_mul(u64::from(bit_cost(false, probability))),
+                                )
+                        };
+                        let old_cost = branch_cost(old_probability)
+                            .saturating_add(u64::from(bit_cost(false, update_probability)));
+                        let new_cost = branch_cost(new_probability)
+                            .saturating_add(u64::from(bit_cost(true, update_probability)))
+                            .saturating_add(2048);
+                        if old_cost > new_cost {
+                            coefficients[coefficient_type][band][context][node] = new_probability;
+                            updates[coefficient_type][band][context][node] = true;
+                        }
+                        probability_items = probability_items.saturating_add(1);
+                        if probability_items.is_multiple_of(PROBABILITY_CHECKPOINT_NODES) {
+                            crate::codecs::error::check_cancelled(token)?;
+                        }
+                    }
+                }
+            }
+        }
+        let skip_probability = skip_probability(frame_macroblock_count, self.skipped_macroblocks);
+        Ok(AdaptedProbabilities {
+            coefficients,
+            updates,
+            skip_probability,
+            use_skip_probability: !token_buffer && skip_probability < SKIP_PROBABILITY_THRESHOLD,
+        })
+    }
 }
 
 pub(super) fn adapt_coefficients(
@@ -294,76 +349,9 @@ pub(super) fn adapt_coefficients(
     frame_macroblock_count: usize,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<AdaptedProbabilities> {
-    let (statistics, skipped_macroblocks) = if let Some(token) = token {
-        let mut checkpoint = TokenStatisticsCheckpoint::new(token);
-        collect_statistics_with_checkpoint(
-            decisions,
-            macroblock_width,
-            token_buffer,
-            &mut checkpoint,
-        )?
-    } else {
-        collect_statistics_without_token(decisions, macroblock_width, token_buffer)?
-    };
-    let mut coefficients = COEFF_PROBS;
-    let mut updates = [[[[false; 11]; 3]; 8]; 4];
-    let mut probability_items: usize = 0;
-    for coefficient_type in 0..4 {
-        for band in 0..8 {
-            for context in 0..3 {
-                for node in 0..11 {
-                    let statistic = statistics[coefficient_type][band][context][node];
-                    let ones = statistic & 0xffff;
-                    let total = statistic >> 16;
-                    let new_probability = if ones == 0 {
-                        255
-                    } else {
-                        255u32
-                            .saturating_sub(ones.saturating_mul(255).div_euclid(total))
-                            .to_le_bytes()[0]
-                    };
-                    let old_probability = COEFF_PROBS[coefficient_type][band][context][node];
-                    let update_probability =
-                        coefficient_update_probability(coefficient_type, band, context, node);
-                    let branch_cost = |probability: u8| {
-                        u64::from(ones)
-                            .saturating_mul(u64::from(bit_cost(true, probability)))
-                            .saturating_add(
-                                u64::from(total.saturating_sub(ones))
-                                    .saturating_mul(u64::from(bit_cost(false, probability))),
-                            )
-                    };
-                    let old_cost = branch_cost(old_probability)
-                        .saturating_add(u64::from(bit_cost(false, update_probability)));
-                    let new_cost = branch_cost(new_probability)
-                        .saturating_add(u64::from(bit_cost(true, update_probability)))
-                        .saturating_add(2048);
-                    if old_cost > new_cost {
-                        coefficients[coefficient_type][band][context][node] = new_probability;
-                        updates[coefficient_type][band][context][node] = true;
-                    }
-                    probability_items = probability_items.saturating_add(1);
-                    if probability_items.is_multiple_of(PROBABILITY_CHECKPOINT_NODES) {
-                        crate::codecs::error::check_cancelled(token)?;
-                    }
-                }
-            }
-        }
+    let mut statistics = CoefficientStatistics::new(macroblock_width);
+    for decision in decisions {
+        statistics.record(decision, token_buffer, token)?;
     }
-    let skip_probability = skip_probability(frame_macroblock_count, skipped_macroblocks);
-    Ok(AdaptedProbabilities {
-        coefficients,
-        updates,
-        skip_probability,
-        use_skip_probability: !token_buffer && skip_probability < SKIP_PROBABILITY_THRESHOLD,
-    })
-}
-
-fn collect_statistics_without_token(
-    decisions: &[MacroblockDecision],
-    macroblock_width: usize,
-    token_buffer: bool,
-) -> CodecResult<(Statistics, usize)> {
-    let mut checkpoint = NoopStatisticsCheckpoint;
-    collect_statistics_with_checkpoint(decisions, macroblock_width, token_buffer, &mut checkpoint)
+    statistics.probabilities(frame_macroblock_count, token_buffer, token)
 }
