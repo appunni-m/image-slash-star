@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `0bf6203368cc7ad4c6df0c8439262caaf980f9c0c36ede878d1ca4a99c42c7ac`.
+- Active fixture source SHA-256: `c9bed1d13d50c0d342babe69c208b1fc98075fb57201aa7942b72ad7e2e70b10`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,867 (3,202 decode; 665 encode).
+- Active fixture rows: 3,869 (3,202 decode; 667 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 149.
 
@@ -479,7 +479,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | sequence_encode | accepted | F32 | 1 frame | F32 | SingleFrame | — | 3: `tiff:enc_32bit`, `tiff:enc_f32_be_source`, `tiff:enc_f32_be_source_predictor` |
 | TIFF | sequence_encode | accepted | I32 | 1 frame | I32 | SingleFrame | — | 3: `tiff:enc_i32`, `tiff:enc_i32_be_source`, `tiff:enc_i32_be_source_predictor` |
 | TIFF | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `tiff:enc_bilevel` |
-| TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `tiff:enc_16bit` |
+| TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 3: `tiff:enc_16bit`, `tiff:enc_i16_be_deflate_predictor`, `tiff:enc_i16_be_source` |
 | TIFF | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | sequence_encode | accepted | LAB | 1 frame | LAB | SingleFrame | — | 1: `tiff:enc_lab` |
 | TIFF | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 1: `tiff:enc_grayscale_alpha` |
@@ -498,7 +498,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | still_encode | accepted | F32 | 1 frame | F32 | — (still result) | — | 3: `tiff:enc_32bit`, `tiff:enc_f32_be_source`, `tiff:enc_f32_be_source_predictor` |
 | TIFF | still_encode | accepted | I32 | 1 frame | I32 | — (still result) | — | 3: `tiff:enc_i32`, `tiff:enc_i32_be_source`, `tiff:enc_i32_be_source_predictor` |
 | TIFF | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `tiff:enc_bilevel` |
-| TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `tiff:enc_16bit` |
+| TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 3: `tiff:enc_16bit`, `tiff:enc_i16_be_deflate_predictor`, `tiff:enc_i16_be_source` |
 | TIFF | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | still_encode | accepted | LAB | 1 frame | LAB | — (still result) | — | 1: `tiff:enc_lab` |
 | TIFF | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 1: `tiff:enc_grayscale_alpha` |

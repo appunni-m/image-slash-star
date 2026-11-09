@@ -738,7 +738,7 @@
       "path": "src/lib.rs"
     },
     {
-      "guard_count": 55,
+      "guard_count": 56,
       "guards": [
         {
           "index": 1,
@@ -959,6 +959,10 @@
         {
           "index": 55,
           "origin": "independent_implementation"
+        },
+        {
+          "index": 56,
+          "origin": "specification_reference"
         }
       ],
       "path": "tests/coverage_matrix_tests.rs"
