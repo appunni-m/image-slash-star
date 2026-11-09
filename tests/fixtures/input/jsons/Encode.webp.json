@@ -12547,6 +12547,63 @@
       }
     },
     {
+      "id": "enc_lossy_bool_checkpoint_pending_run",
+      "source_asset": "webp_bool_checkpoint_noise_128x192.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "3f8a6f9ff2cb3e89124c7b03836df50426d7d17e78976ee32cb8200cd5273962",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "lossless": false,
+        "quality": 100,
+        "method": 6,
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_bool_checkpoint_noise_128x192.png",
+        "method": "PIL.Image.Image.save",
+        "format": "WEBP",
+        "kwargs": {
+          "quality": 100,
+          "lossless": false,
+          "method": 6
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_lossy_bool_carry_method_0",
       "source_asset": "webp_lossy_bool_carry_noise_128x128.png",
       "source_format": "png",
