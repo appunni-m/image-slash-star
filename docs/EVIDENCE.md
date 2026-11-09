@@ -1,8 +1,30 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,906 total rows: 3,206 decode /
-inspect / verify rows and 700 encode rows. Of those, 3,206 decode rows are
-active and 673 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,908 total rows: 3,206 decode /
+inspect / verify rows and 702 encode rows. Of those, 3,206 decode rows are
+active and 675 encode rows are active; 27 encode rows remain planned.
+
+## ICO source dimension parity — 2026-11-09
+
+For `image-slash-star#9h5w`, the full parity coverage snapshot
+`20261109T090133.287637Z-1797a898ca364af99e0fda666ed44339` passed all 3,881
+active decode and encode rows; 27 planned rows remained unexecuted. Two ICO
+encoder parity cases exercise the public source-size guard with valid requested
+16×16 entries: a 257×129 JPEG source covers the width limit, and a 192×272 PNG
+source covers the height limit. Pillow 12.2.0 encodes and reopens both ICOs;
+the Rust encoder returns the declared `dimensions` error in each case. The
+selected case run passed 2/2 rows.
+
+The parity-only LLVM report records 97,871/142,788 lines (68.5429%),
+20,349/32,114 branches (63.3649%), 5,272/9,180 functions (57.4292%), and
+148,896/221,186 regions (67.3171%). Coverage MCP reports 11,765 unobserved
+branches, concentrated in AVIF AV1 block decoding. Its local query labels this
+run's source as unverified and test attribution as unknown because no managed
+receipt-registration action is connected; the local execution sidecar records
+3,881 passes, zero failures, and no source changes during the run. In ICO
+encoding, the remaining four reported branches are in `directory_header`'s
+defensive invalid-input path, which is precluded by public source-size
+validation. No unit tests or runtime codec changes were added.
 
 ## WebP scalar-mode encoder parity — 2026-11-09
 
@@ -17734,7 +17756,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9bbacec6cae7aadcf3220786cc903a509792211917e9b93da6f88ba2e2dc569e`; matrix `8e9e3cc94a2780489a1c60c83876743534bd25c2c85a4459c2bf5759d328f8be`.
+- Current fixture integrity only: manifest `77122292a2f84da4e4be445698097d6f52dd55989a7f7c6824ab37c7b3cc1075`; matrix `6e20226a53d7c6ae98b15eeb7483deca25df9e50c76a5aee1312e0aa93dfd3a2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -209005,6 +209005,150 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_error_source_width_over_256",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "ICO encoding rejects a 257-pixel-wide source even when the requested entry size is valid",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "rust_expect_error": true,
+          "rust_error_kind": "dimensions",
+          "rust_error_reason": "ICO source width exceeds the 256-pixel entry limit",
+          "status": "active",
+          "source_format": "jpeg",
+          "source_asset": "large.jpg",
+          "source_sha256": "1ba94c668be44599571690517f1a32e059cf6c3e666514664532def5e9686b8f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "dimensions",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
+          "oracle_status": "ok",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_source_width_over_256.bin",
+          "encoded_ref_bytes": 470,
+          "encoded_ref_sha256": "a1905775a2f0c6f747e64339b3ad89e4f4c73aef4b4f98ba55d7a259d623a2e9",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_source_width_over_256.bin",
+          "ref_sha256": "6db2e41fdad8f49bd07ce6663000fa0e002680b76f8fdf7b37c031c2502ef9d3",
+          "ref_bytes": 384,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            8
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_error_source_height_over_256",
+          "type": "encode",
+          "format": "ico",
+          "category": "error",
+          "description": "ICO encoding rejects a 272-pixel-tall source even when the requested entry size is valid",
+          "params": {
+            "sizes": [
+              [
+                16,
+                16
+              ]
+            ]
+          },
+          "rust_expect_error": true,
+          "rust_error_kind": "dimensions",
+          "rust_error_reason": "ICO source height exceeds the 256-pixel entry limit",
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_method0_sampling_boundary_204_macroblocks.png",
+          "source_sha256": "ed366fb0782fb533d08eb853fca3409488179a0d855ff6036b99cda0724b556f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "rust_contract": "defensive_model"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "dimensions",
+              "rust_format": "ICO",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
+          "oracle_status": "ok",
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_source_height_over_256.bin",
+          "encoded_ref_bytes": 631,
+          "encoded_ref_sha256": "726ae791549f4d1b61bd305dcc9eb8057165e4537d9acdfaa57356d2ece6bd15",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_source_height_over_256.bin",
+          "ref_sha256": "1132677d0b673bc5cbc312ff4e370ebfa4fe4baa5a26d5328d0a2277bf7aadda",
+          "ref_bytes": 528,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            11,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "description": "16x16 icon",
           "format": "ico",
           "id": "enc_16x16",
@@ -210103,10 +210247,6 @@
           },
           "source_mode": "F",
           "source_frame_count": 1,
-          "oracle_status": "error",
-          "oracle_error_type": "builtins.OSError",
-          "oracle_error_message": "cannot write mode F as PNG",
-          "oracle_error_kind": "unsupported",
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
@@ -210125,7 +210265,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "cannot write mode F as PNG",
+          "oracle_error_kind": "unsupported"
         }
       ]
     },
@@ -371407,9 +371551,9 @@
     }
   },
   "summary": {
-    "total_rows": 3906,
+    "total_rows": 3908,
     "decode_rows": 3206,
-    "encode_rows": 700,
+    "encode_rows": 702,
     "formats": 8,
     "assets_available": 3202,
     "decode_active": 3206,

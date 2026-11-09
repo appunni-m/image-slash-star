@@ -174,6 +174,146 @@
       }
     },
     {
+      "id": "enc_error_source_width_over_256",
+      "source_asset": "large.jpg",
+      "source_format": "jpeg",
+      "source_mode": "Rgb8",
+      "source_sha256": "1ba94c668be44599571690517f1a32e059cf6c3e666514664532def5e9686b8f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "dimensions",
+          "rust_format": "ICO",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "dimensions",
+      "rust_error_reason": "ICO source width exceeds the 256-pixel entry limit",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/large.jpg",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_error_source_height_over_256",
+      "source_asset": "webp_method0_sampling_boundary_204_macroblocks.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "ed366fb0782fb533d08eb853fca3409488179a0d855ff6036b99cda0724b556f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "dimensions",
+          "rust_format": "ICO",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "params": {
+        "sizes": [
+          [
+            16,
+            16
+          ]
+        ]
+      },
+      "rust_expect_error": true,
+      "rust_error_kind": "dimensions",
+      "rust_error_reason": "ICO source height exceeds the 256-pixel entry limit",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/webp_method0_sampling_boundary_204_macroblocks.png",
+        "method": "PIL.Image.Image.save",
+        "format": "ICO",
+        "kwargs": {
+          "sizes": [
+            [
+              16,
+              16
+            ]
+          ]
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_16x16",
       "source_asset": "16x16.ico",
       "source_format": "ico",
