@@ -8495,6 +8495,12 @@ formats:
       source_asset: gray_alpha.png
       params: {}
       expect_error: true
+    - id: enc_error_palette_alpha_mode
+      description: Pillow cannot write palette indices and per-pixel alpha as BMP
+      source_format: tiff
+      source_asset: palette_alpha.tiff
+      params: {}
+      expect_error: true
     - id: enc_error_truncated_pixels
       description: Pixel buffer shorter than the declared BMP dimensions
       params: {'truncate_pixels': true}
@@ -15030,6 +15036,12 @@ formats:
       description: 32x8 4:2:0 quality-99 speed-0 root PARTITION_SPLIT with two top-row Horizontal16x8 leaves, parsed frame-header qbase 4, skipped left U/V, and coded following TX8x4 U/V DCT_DCT blocks
       test_assets:
       - coverage_h16x8_following_chroma_dct_dct_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_lossy_420_bounded_partition_16x8_01
+      description: 16x8 lossy 4:2:0 AVIF with 8x8 partition bounds, distinct left and right RGB samples, and exact Pillow decode parity
+      test_assets:
+      - coverage_lossy_420_bounded_partition_16x8_01.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: coverage_r32x32_filter_intra_probe_01
