@@ -7605,7 +7605,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "L" | "L8" => Some(img::ImageMode::L8),
         "LA" | "La8" | "PA" => Some(img::ImageMode::La8),
         "RGB" | "Rgb8" => Some(img::ImageMode::Rgb8),
-        "RGBA" | "Rgba8" => Some(img::ImageMode::Rgba8),
+        "RGBA" | "RGBa" | "Rgba8" => Some(img::ImageMode::Rgba8),
         "LAB" => Some(img::ImageMode::Rgb8),
         "CMYK" | "Cmyk8" => Some(img::ImageMode::Cmyk8),
         "I;16" | "I;16B" | "I;16L" | "L16" => Some(img::ImageMode::L16),
