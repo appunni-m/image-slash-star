@@ -44,6 +44,7 @@ help:
 	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
 	@printf "  make coverage-selected COVERAGE_CASES='decode:webp:<id>' Run exact parity/fault cases with an isolated LLVM-Cov target\n"
 	@printf "  make coverage-parity  Run active decode/encode parity rows; report planned rows\n"
+	@printf "  make coverage-matrix  Run active parity and fault-contract rows; report planned rows\n"
 	@printf "  make coverage-exporter-setup Build the optional pinned native exporter (macOS ARM64; Git/CMake/Ninja, network on first setup)\n"
 	@printf "  make coverage-with-exporter Use the verified exporter; COVERAGE_EXPORTER_TARGET=coverage-complete retains strict 100%%\n"
 	@printf "  make package-verify   Build and consume a reproducible package\n"
@@ -456,6 +457,13 @@ coverage-parity:
 	CARGO_TARGET_DIR=$(call coverage_exporter_quote,$(COVERAGE_SELECTED_TARGET_DIR)) \
 		$(PYTHON) scripts/run_selected_coverage.py --all-parity \
 		--toolchain $(call coverage_exporter_quote,$(COVERAGE_TOOLCHAIN)) \
+		$(if $(value SELECTED_COVERAGE_REPORT),--report $(call coverage_exporter_quote,$(value SELECTED_COVERAGE_REPORT)))
+
+.PHONY: coverage-matrix
+coverage-matrix:
+	CARGO_TARGET_DIR=$(call coverage_exporter_quote,$(COVERAGE_SELECTED_TARGET_DIR)) \
+		$(PYTHON) scripts/run_selected_coverage.py --all-matrix \
+		--toolchain $(call coverage_exporter_quote,$(value COVERAGE_TOOLCHAIN)) \
 		$(if $(value SELECTED_COVERAGE_REPORT),--report $(call coverage_exporter_quote,$(value SELECTED_COVERAGE_REPORT)))
 
 .PHONY: coverage-exporter-setup coverage-with-exporter

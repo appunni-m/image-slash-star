@@ -61,6 +61,7 @@ static SELECTOR_ARGUMENTS: OnceLock<Result<ParsedSelectorArguments, String>> = O
 const MATRIX_ROW_SELECTOR_STEM: &str = "__image_slash_star_matrix_row_selector__";
 const MATRIX_ROW_SELECTOR_PREFIX: &str = "__image_slash_star_matrix_row_selector__=";
 const ALL_PARITY_SELECTOR: &str = "__all_parity__";
+const ALL_MATRIX_SELECTOR: &str = "__all_matrix__";
 const AV1_FIXTURE_SELECTOR_STEM: &str = "__image_slash_star_av1_fixture_selector__";
 const AV1_FIXTURE_SELECTOR_PREFIX: &str = "__image_slash_star_av1_fixture_selector__=";
 const RESERVED_SELECTOR_STEM: &str = "__image_slash_star_";
@@ -1191,12 +1192,18 @@ fn resolve_matrix_row_keys(
     }
 
     let select_all_parity = requested_keys.iter().any(|key| key == ALL_PARITY_SELECTOR);
+    let select_all_matrix = requested_keys.iter().any(|key| key == ALL_MATRIX_SELECTOR);
     if select_all_parity && requested_keys.len() != 1 {
         return Err("all-parity selector must be used by itself".to_owned());
     }
+    if select_all_matrix && requested_keys.len() != 1 {
+        return Err("all-matrix selector must be used by itself".to_owned());
+    }
 
     let mut requested = HashSet::new();
-    if select_all_parity {
+    if select_all_matrix {
+        requested.extend(catalog.iter().map(|row| row.key.clone()));
+    } else if select_all_parity {
         requested.extend(
             catalog
                 .iter()
