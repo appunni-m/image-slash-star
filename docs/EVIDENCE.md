@@ -17776,7 +17776,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8207f8ed2db58519853f6a9eed198394a0e8b12c5baf2ef47d163ccbf0baef1e`; matrix `c595a2994d355abf333ad6613dc0a013f45df1496fb8b2efd02e380539a6c2c4`.
+- Current fixture integrity only: manifest `2989fddb7ce5bf9277415f23aa3e2cde4eb348a7512b93b1439241fdca89dfdb`; matrix `f8ce1dccb8417c6719f252891d1631db81f0c72777740f4454db2961627ac14a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23415,28 +23415,60 @@ matched its encoded bytes, re-decoded RGB pixels, and append-only sink output
 (1/1, no panics). It shares the existing WebP `Rgb8`→`Rgb8` pair, so the
 append-only `mode_encode_cases` index remains at 59 entries.
 
-The focused LLVM report is
-`.coverage-mcp/local-evidence/selected/20261109T132403.039301Z-ecc46908ce2e47aaa727cba3da94928e/coverage.json`
+The tall-frame probe first reproduced a method-6 mismatch: Rust emitted 74,856
+bytes versus Pillow's 73,812, with decoded RGB first differing at `(8, 192)`.
+The input pixels matched Pillow. The divergence began at the first coefficient
+probability refresh. Pinned libwebp 1.6.0 refreshes token probabilities before
+macroblock 97 and after each `max(96, macroblock_count / 8) + 1` macroblocks in
+[`VP8EncTokenLoop`](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/frame_enc.c#L3320-L3415).
+The Rust selector had used fixed probabilities for the entire frame. It now
+records coefficient statistics as each macroblock is selected and refreshes
+from the accumulated prefix without rescanning prior blocks. Method 6 also
+uses one trellis frame-selection pass instead of computing and discarding an
+initial non-trellis selection.
+
+For method 5, pinned libwebp chooses modes without trellis, then applies its
+simple final quantizer to those selected modes; method 6 includes trellis in
+mode selection. Rust now performs that method-5 final pass over the chosen
+modes and reuses the macroblock-edge contexts used by libwebp's final pass
+([pinned libwebp source](https://github.com/webmproject/libwebp/blob/v1.6.0/src/enc/quant_enc.c)).
+
+Added active parity rows for methods 3, 4, 5, and 6 on the seeded 128×512 RGB
+noise fixture. Pillow 12.2.0/libwebp 1.6.0 emitted 73,982, 73,982, 73,898, and
+73,812 bytes. Rust matched the exact encoded bytes and re-decoded RGB pixels.
+The fixture PNG SHA-256 is
+`c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a`.
+
+Added a flat 1024×1024 RGB method-3 row for zero-coefficient statistics and the
+1,024-macroblock checkpoint, plus quality-100 method-2 baseline rows for the
+flat and tall fixtures. The smooth/checkerboard 128×512 fixture at method 2,
+qualities 80 and 90, reaches the non-token probability adaptation path,
+including node 10. Its PNG SHA-256 is
+`dee4e35d06dcdb2e8f82b7be8cd1bbef9e6fff60a96898b95e0f3f00fc80c487`. The
+pinned fixture generator is
+`scripts/generate_webp_bool_checkpoint_segmented_fixture.py`.
+
+The final selected run combined those new rows with the existing large method-2
+noise row. All 10/10 active cases passed exact Pillow byte parity and decoded
+pixel parity (50 public encode calls, no panics); the matrix runner also
+checked append-only sink output and prefix preservation for these successful
+encodes.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261109T162006.820773Z-9f37cdb4065b43369f6c9adbc9ff953e/coverage.json`
 (SHA-256
-`5b73b0d6d4773c151491f3e6dcde9967993b48ef68dc9efaf97bd9a95b461db8`); its
-local receipt SHA-256 is
-`db2fb1defb6b6f63ba48ba80e3b8fa80d189747da3e8e25a9d79f07afd6e46f8`. For this
-selected run, the instrumented crate totals were 8,109/142,785 lines,
-746/32,112 branches, 571/9,180 functions, and 12,846/221,185 regions. In
-`src/codecs/webp/encode/vp8/bool_enc.rs`, the report shows 139/139 lines,
-32/34 branches, 9/9 functions, and 209/214 regions; two branch arcs remain
-uncovered. The receipt marks Coverage MCP as not queried and source identity as
-unverified. This selected subset is not aggregate coverage evidence.
+`3827225725fbf780d19f52abb68d56019a87681d6f095208212a600684808002`); local
+receipt SHA-256:
+`109905f0b03844e422b1e8627357eb863ed600db3892236bcc3a8ef3ce73bbe5`. Coverage
+MCP's follow-up branch query found no remaining gaps in
+`src/codecs/webp/encode/vp8/probability.rs` for this selected cohort. The
+instrumented report totals 9,092/142,863 lines, 974/32,126 branches,
+617/9,180 functions, and 14,396/221,254 regions. Coverage MCP marks source
+identity unverified and test attribution unknown; these local selected-case
+figures are not aggregate project coverage.
 
-A separate temporary 128×512 high-entropy probe with the same PRNG seed did
-not meet exact parity: Rust emitted 74,856 bytes versus Pillow's 73,812, and
-decoded RGB first differed at `(8, 192)`. Its source pixels matched Pillow,
-and Rust's token and non-token outputs matched each other. This input was not
-added as a passing matrix row; the larger-frame encoder divergence remains
-unresolved.
-
-The current public evidence matrix contains 3,910 total rows: 3,207 decode /
-inspect / verify rows and 703 encode rows. Of those, 3,207 decode rows and 676
+The current public evidence matrix contains 3,919 total rows: 3,207 decode /
+inspect / verify rows and 712 encode rows. Of those, 3,207 decode rows and 685
 encode rows are active; 27 encode rows remain planned.
 
 ## CIELAB encode identity parity — 2026-11-09

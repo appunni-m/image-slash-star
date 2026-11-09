@@ -9986,6 +9986,51 @@ formats:
       source_format: png
       source_asset: webp_bool_checkpoint_noise_128x192.png
       params: {'lossless': False, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossy_bool_checkpoint_tall_frame
+      description: Tall seeded high-entropy RGB method-6 input covering later VP8 macroblock rows
+      source_format: png
+      source_asset: webp_bool_checkpoint_tall_noise_128x512.png
+      params: {'lossless': False, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossy_token_probability_refresh_method_3
+      description: Tall seeded high-entropy RGB method-3 parity across VP8 coefficient probability refreshes
+      source_format: png
+      source_asset: webp_bool_checkpoint_tall_noise_128x512.png
+      params: {'lossless': False, 'quality': 100, 'method': 3, 'rust_encode_with_token': true}
+    - id: enc_lossy_token_probability_refresh_method_4
+      description: Tall seeded high-entropy RGB method-4 parity across VP8 coefficient probability refreshes
+      source_format: png
+      source_asset: webp_bool_checkpoint_tall_noise_128x512.png
+      params: {'lossless': False, 'quality': 100, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossy_token_probability_refresh_method_5
+      description: Tall seeded high-entropy RGB method-5 parity after selected-mode trellis quantization
+      source_format: png
+      source_asset: webp_bool_checkpoint_tall_noise_128x512.png
+      params: {'lossless': False, 'quality': 100, 'method': 5, 'rust_encode_with_token': true}
+    - id: enc_lossy_zero_coeff_probability_checkpoint_1024
+      description: Flat 1024x1024 RGB parity covering zero coefficient events and the token statistics checkpoint
+      source_format: png
+      source_asset: webp_zero_coeff_probability_checkpoint_1024x1024.png
+      params: {'lossless': False, 'quality': 100, 'method': 3, 'rust_encode_with_token': true}
+    - id: enc_lossy_flat_method_2_q100
+      description: Flat 1024x1024 RGB baseline parity at method 2 and quality 100
+      source_format: png
+      source_asset: webp_zero_coeff_probability_checkpoint_1024x1024.png
+      params: {'lossless': False, 'quality': 100, 'method': 2, 'rust_encode_with_token': true}
+    - id: enc_lossy_tall_noise_method_2_q100
+      description: Tall high-entropy RGB baseline parity at method 2 and quality 100
+      source_format: png
+      source_asset: webp_bool_checkpoint_tall_noise_128x512.png
+      params: {'lossless': False, 'quality': 100, 'method': 2, 'rust_encode_with_token': true}
+    - id: enc_lossy_probability_nonbuffer_segmented_method_2
+      description: Smooth and checkerboard RGB regions exercise method-2 non-token probability adaptation
+      source_format: png
+      source_asset: webp_bool_checkpoint_segmented_smooth_checker_128x512.png
+      params: {'lossless': False, 'quality': 80, 'method': 2, 'rust_encode_with_token': true}
+    - id: enc_lossy_probability_nonbuffer_segmented_method_2_q90
+      description: Higher-quality segmented method-2 parity for large non-token coefficient levels
+      source_format: png
+      source_asset: webp_bool_checkpoint_segmented_smooth_checker_128x512.png
+      params: {'lossless': False, 'quality': 90, 'method': 2, 'rust_encode_with_token': true}
     - id: enc_lossy_bool_carry_method_0
       description: High-entropy RGB token parity at quality 100 and method 0 for VP8 boolean-coder output
       source_format: png

@@ -368146,6 +368146,510 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossy_bool_checkpoint_tall_frame",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Tall seeded high-entropy RGB method-6 input covering later VP8 macroblock rows",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_tall_noise_128x512.png",
+          "source_sha256": "c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_checkpoint_tall_frame.bin",
+          "encoded_ref_bytes": 73812,
+          "encoded_ref_sha256": "d06d80197567f1a1492caa9acb0e57e1042a5f883d9c13b650a1d1f08c200472",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_checkpoint_tall_frame.bin",
+          "ref_sha256": "5939052e247d437b30bbe41f166be4d1d7782813430c1decf8d41e4a657c4981",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_token_probability_refresh_method_3",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Tall seeded high-entropy RGB method-3 parity across VP8 coefficient probability refreshes",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 3,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_tall_noise_128x512.png",
+          "source_sha256": "c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_token_probability_refresh_method_3.bin",
+          "encoded_ref_bytes": 73982,
+          "encoded_ref_sha256": "5977b2f959d7fb688308497fa0a06bce9c76e9a76c1788bde61735cb3b367f29",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_token_probability_refresh_method_3.bin",
+          "ref_sha256": "d827b084021f012adff87c99174987be96f19e05779e0b8595ab703f2dff1480",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_token_probability_refresh_method_4",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Tall seeded high-entropy RGB method-4 parity across VP8 coefficient probability refreshes",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 4,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_tall_noise_128x512.png",
+          "source_sha256": "c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_token_probability_refresh_method_4.bin",
+          "encoded_ref_bytes": 73982,
+          "encoded_ref_sha256": "5977b2f959d7fb688308497fa0a06bce9c76e9a76c1788bde61735cb3b367f29",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_token_probability_refresh_method_4.bin",
+          "ref_sha256": "d827b084021f012adff87c99174987be96f19e05779e0b8595ab703f2dff1480",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_token_probability_refresh_method_5",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Tall seeded high-entropy RGB method-5 parity after selected-mode trellis quantization",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 5,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_tall_noise_128x512.png",
+          "source_sha256": "c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_token_probability_refresh_method_5.bin",
+          "encoded_ref_bytes": 73898,
+          "encoded_ref_sha256": "19109df9ed08bdad046525d5704d6044953550f081c63e87060c20c53afdecb5",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_token_probability_refresh_method_5.bin",
+          "ref_sha256": "5556ed66a897e8aaa3f489127ed008ee7f1cb0542356d1ff3a10a55d88b2f577",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_zero_coeff_probability_checkpoint_1024",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Flat 1024x1024 RGB parity covering zero coefficient events and the token statistics checkpoint",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 3,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_zero_coeff_probability_checkpoint_1024x1024.png",
+          "source_sha256": "61d83f5c2e9728735afcb20e3888a236726e78dbd2b0824824b313d498f21732",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_zero_coeff_probability_checkpoint_1024.bin",
+          "encoded_ref_bytes": 1904,
+          "encoded_ref_sha256": "bdcd680bda20752f157ef11e8ea38648c7b6922c05a055dd372c542bfcef6907",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_zero_coeff_probability_checkpoint_1024.bin",
+          "ref_sha256": "b0100f136fff848063db414aa92266a7f54fc851ec01f5bc7a0ec2550e5c721f",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_flat_method_2_q100",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Flat 1024x1024 RGB baseline parity at method 2 and quality 100",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 2,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_zero_coeff_probability_checkpoint_1024x1024.png",
+          "source_sha256": "61d83f5c2e9728735afcb20e3888a236726e78dbd2b0824824b313d498f21732",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_flat_method_2_q100.bin",
+          "encoded_ref_bytes": 5112,
+          "encoded_ref_sha256": "f4f6aec4b425f6c27bcc8dfd53aac13eecaa663c2ac6f936576306bc89262735",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_flat_method_2_q100.bin",
+          "ref_sha256": "b0100f136fff848063db414aa92266a7f54fc851ec01f5bc7a0ec2550e5c721f",
+          "ref_bytes": 3145728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1024,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_lossy_tall_noise_method_2_q100",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Tall high-entropy RGB baseline parity at method 2 and quality 100",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 2,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_tall_noise_128x512.png",
+          "source_sha256": "c4aba34e29dc463d104c9628e467c7f11415004605d3c7d57028d19103ef8b6a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_tall_noise_method_2_q100.bin",
+          "encoded_ref_bytes": 174300,
+          "encoded_ref_sha256": "36ddb5f81fe1002e89fcbe5819434d48bbfff11420719a4e4f2092948a53605e",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_tall_noise_method_2_q100.bin",
+          "ref_sha256": "57979e08db88cedfbf4a3117a3ea7a722babbe3049bbf1e992cce5bceb9c3e38",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_lossy_probability_nonbuffer_segmented_method_2",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Smooth and checkerboard RGB regions exercise method-2 non-token probability adaptation",
+          "params": {
+            "lossless": false,
+            "quality": 80,
+            "method": 2,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_segmented_smooth_checker_128x512.png",
+          "source_sha256": "dee4e35d06dcdb2e8f82b7be8cd1bbef9e6fff60a96898b95e0f3f00fc80c487",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_probability_nonbuffer_segmented_method_2.bin",
+          "encoded_ref_bytes": 11392,
+          "encoded_ref_sha256": "f0fea0862a99ec86516ef550c7c2c3e74c38164e1d5f4c8b021f36d9903a9e9c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_probability_nonbuffer_segmented_method_2.bin",
+          "ref_sha256": "1cc649b22cc00e7f2aef141ab93184669228918cd18152699de0eb91010cc515",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossy_probability_nonbuffer_segmented_method_2_q90",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Higher-quality segmented method-2 parity for large non-token coefficient levels",
+          "params": {
+            "lossless": false,
+            "quality": 90,
+            "method": 2,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_segmented_smooth_checker_128x512.png",
+          "source_sha256": "dee4e35d06dcdb2e8f82b7be8cd1bbef9e6fff60a96898b95e0f3f00fc80c487",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_probability_nonbuffer_segmented_method_2_q90.bin",
+          "encoded_ref_bytes": 14150,
+          "encoded_ref_sha256": "1425fa742e70835bbebc8988ac95130490f53af116b5e613860ddf6287bee489",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_probability_nonbuffer_segmented_method_2_q90.bin",
+          "ref_sha256": "69a663461c444434b21b6cb437cf66b95421f36782686fb5dd03cadb761ff652",
+          "ref_bytes": 196608,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_bool_carry_method_0",
           "type": "encode",
           "format": "webp",
@@ -371685,9 +372189,9 @@
     }
   },
   "summary": {
-    "total_rows": 3910,
+    "total_rows": 3919,
     "decode_rows": 3207,
-    "encode_rows": 703,
+    "encode_rows": 712,
     "formats": 8,
     "assets_available": 3203,
     "decode_active": 3207,

@@ -303,12 +303,14 @@ pub(super) fn select(
     method: u8,
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
     trellis: bool,
+    fixed_mode: Option<Intra16Mode>,
 ) -> Intra16Candidate {
     let distortion_only = method <= 2;
     let flat_border_mode = distortion_only
         .then(|| flat_border_mode(source, has_top, has_left))
         .flatten();
-    let selected_mode = distortion_only.then(|| {
+    let selected_mode = fixed_mode.or_else(|| {
+        distortion_only.then(|| {
         // The complete intra16 mode set is statically non-empty.
         #[allow(
             clippy::expect_used,
@@ -325,6 +327,7 @@ pub(super) fn select(
                 })
                 .expect("VP8 always has intra16 candidates")
         })
+    })
     });
     // libwebp strengthens distortion while a uniform source and quantized
     // coefficients remain flat. Preserve its mode-order-dependent cutoff.
