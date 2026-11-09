@@ -4,6 +4,46 @@ The current public evidence matrix contains 3,921 total rows: 3,208 decode /
 inspect / verify rows and 713 encode rows. Of those, 3,208 decode rows are
 active and 686 encode rows are active; 27 encode rows remain planned.
 
+## WebP signed I-mode token parity — 2026-11-10
+
+For `image-slash-star#9h5w`, extended active case
+`encode:webp:enc_lossless_i32_signed_clamp` to run the public token-aware WebP
+encoder as well as the ordinary encoder for signed 32-bit TIFF `I` input. The
+selected parity run passed 1/1: both Rust paths matched Pillow's 48-byte output,
+and the decoded result retained exact 257×1 RGB pixels. The runner made five
+public encode calls and observed no panics. The mode-encode index remains at 59
+entries because `I` → `Rgb8` was already represented.
+
+Coverage MCP's focused branch query no longer reports a missing branch in
+`expand_i32_to_rgb` at `src/codecs/webp/encode/mod.rs:1222`. This is local
+selected-case evidence only: Coverage MCP marks the report source unverified
+and test attribution unknown, so it does not establish a repository-wide
+coverage change. Report SHA-256:
+`640f4bfd8a9d77ce1431c7af242e1ce3a4102bfcd47e481869a4d9c73c54a197`; local
+receipt SHA-256:
+`0bf2f1b43423aae4a51671299133d99f7b22da4bc9532e2b5cf83da046c9a5bb`.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261109T230156.077554Z-39daa69e321b4ea598261d917316a1c4/coverage.json`.
+
+The full matrix run passed 4,100/4,100 active parity rows and 206/206 fault
+contracts; 27 planned rows remain unexecuted. Its local LLVM report records
+100,752/142,863 lines (70.5235%), 20,916/32,126 branches (65.1061%),
+5,471/9,180 functions (59.5969%), and 152,980/221,254 regions (69.1423%).
+Coverage MCP comparison reports the `expand_i32_to_rgb` branch as newly
+observed against the prior snapshot, but source/build identity is unverified,
+and the aggregate branch count is unchanged. Treat this as local evidence, not
+a verified project-wide coverage increase. The local receipt records no source
+changes during the run, but the checkout was dirty.
+
+Full report SHA-256:
+`30178374b94d956263146e43e5377f0886e99af11f77a9bf6c38c1ce9462310b`; local
+receipt SHA-256:
+`780b1e599747ca0e34f70282ff693529d78838c2912612453cb5ec274d2b316e`.
+
+Full report:
+`.coverage-mcp/local-evidence/selected/20261109T230549.983972Z-643456c7952c4f0296395cb93ac51c1a/coverage.json`.
+
 ## WebP lossless EXIF metadata without prefix — 2026-11-10
 
 For `image-slash-star#9h5w`, added active parity case
@@ -17848,7 +17888,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e98093a3df74c9c48ee7359ea7ca3d0322f7c739400a13ef2b752bd29a864b36`; matrix `1405af18db0e12aa6ea6feecf1c0003ba9020723c23299fd67c162e16f98b64f`.
+- Current fixture integrity only: manifest `e98093a3df74c9c48ee7359ea7ca3d0322f7c739400a13ef2b752bd29a864b36`; matrix `0eba6ade19d802c45f0305a2009259ef9d111fe31b45912f4f381713a9b2de3b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
