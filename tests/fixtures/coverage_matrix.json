@@ -376342,6 +376342,20 @@
       "case_id": "lossless_rgba_singleton_color_cache",
       "inspect_mode": "Rgba8",
       "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "gif",
+      "case_id": "netscape_loop_split_subblocks",
+      "inspect_mode": "P",
+      "decoded_mode": "Rgb8",
+      "frame_index": 1
+    },
+    {
+      "format": "tiff",
+      "case_id": "multi_page_multipage_mixed",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "L8",
+      "frame_index": 1
     }
   ],
   "mode_encode_cases": [

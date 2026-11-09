@@ -218,6 +218,7 @@ struct ModeDecodeCase {
     case_id: String,
     inspect_mode: String,
     decoded_mode: String,
+    frame_index: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -866,10 +867,14 @@ fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String
     let mut listed_case_ids = HashSet::new();
 
     for case in &matrix.mode_decode_cases {
-        if !listed_case_ids.insert((case.format.as_str(), case.case_id.as_str())) {
+        if !listed_case_ids.insert((
+            case.format.as_str(),
+            case.case_id.as_str(),
+            case.frame_index,
+        )) {
             return Err(format!(
-                "mode decode case index repeats {}:{}",
-                case.format, case.case_id
+                "mode decode case index repeats {}:{} frame {:?}",
+                case.format, case.case_id, case.frame_index
             ));
         }
 
@@ -904,16 +909,51 @@ fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String
                     case.format, case.case_id
                 )
             })?;
-        let decoded_mode = row
-            .decoded_raster_mode
-            .as_deref()
-            .or(row.ref_mode.as_deref())
-            .ok_or_else(|| {
+        let decoded_mode = if let Some(frame_index) = case.frame_index {
+            if row.operations.get("decode_sequence").map(String::as_str) != Some("ok") {
+                return Err(format!(
+                    "mode decode case {}:{} frame {frame_index} has no successful Pillow sequence",
+                    case.format, case.case_id
+                ));
+            }
+            let frame = row
+                .sequence
+                .as_ref()
+                .and_then(|sequence| {
+                    sequence
+                        .frames
+                        .iter()
+                        .find(|frame| frame.index == frame_index)
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "mode decode case {}:{} references missing sequence frame {frame_index}",
+                        case.format, case.case_id
+                    )
+                })?;
+            if frame.pixel_assertion != "exact" {
+                return Err(format!(
+                    "mode decode case {}:{} frame {frame_index} lacks exact Pillow pixel parity",
+                    case.format, case.case_id
+                ));
+            }
+            frame.ref_mode.as_deref().ok_or_else(|| {
                 format!(
-                    "mode decode case {}:{} has no expected transfer mode",
+                    "mode decode case {}:{} frame {frame_index} has no expected transfer mode",
                     case.format, case.case_id
                 )
-            })?;
+            })?
+        } else {
+            row.decoded_raster_mode
+                .as_deref()
+                .or(row.ref_mode.as_deref())
+                .ok_or_else(|| {
+                    format!(
+                        "mode decode case {}:{} has no expected transfer mode",
+                        case.format, case.case_id
+                    )
+                })?
+        };
         if case.inspect_mode != inspect_mode || case.decoded_mode != decoded_mode {
             return Err(format!(
                 "mode decode case {}:{} expects header/transfer modes {:?}/{:?}, but its parity row declares {inspect_mode:?}/{decoded_mode:?}",
@@ -955,6 +995,18 @@ fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String
                 .or(row.ref_mode.as_deref())
                 .ok_or_else(|| format!("active mode row {} has no transfer mode", row.id))?;
             active_pairs.insert((format_name.as_str(), inspect_mode, decoded_mode));
+
+            if row.operations.get("decode_sequence").map(String::as_str) == Some("ok")
+                && let Some(sequence) = row.sequence.as_ref()
+            {
+                for frame in &sequence.frames {
+                    if frame.pixel_assertion == "exact"
+                        && let Some(frame_mode) = frame.ref_mode.as_deref()
+                    {
+                        active_pairs.insert((format_name.as_str(), inspect_mode, frame_mode));
+                    }
+                }
+            }
         }
     }
 
@@ -5572,6 +5624,7 @@ json_object!(ModeDecodeCase {
     case_id,
     inspect_mode,
     decoded_mode,
+    frame_index,
 });
 json_object!(ModeEncodeCase {
     format,

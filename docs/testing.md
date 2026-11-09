@@ -58,7 +58,10 @@ changing codec behavior. Preserve planned and not-applicable outcomes.
 `mode_decode_cases` index, with one active Pillow-backed decode row for each
 format/header-mode/decoded-mode pair. Header and decoded-transfer modes are
 independent expectations and may differ when Pillow reports different modes
-for the source header and pixel transfer. When a decoder adds a new pair,
+for the source header and pixel transfer. A case can set `frame_index` to
+represent a decoded animation or multipage frame; without it, the case uses
+the row's ordinary decoded image. Exact Pillow-backed sequence frame modes
+also contribute to the required pair set. When a decoder adds a new pair,
 append a representative row to that index. The parity harness checks both
 identities independently, that indexed rows remain active, and that every
 successful mode pair is listed.
