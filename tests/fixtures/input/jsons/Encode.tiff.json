@@ -4712,6 +4712,107 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_i16_be_source",
+      "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+      "source_format": "tiff",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "compression": "none"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray16_be_deflate_predictor_contiguous_tiled.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "raw"
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_i16_be_deflate_predictor",
+      "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+      "source_format": "tiff",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "compression": "deflate",
+        "predictor": "horizontal"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/gray16_be_deflate_predictor_contiguous_tiled.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "compression": "tiff_adobe_deflate",
+          "tiffinfo": {
+            "type": "ImageFileDirectory_v2",
+            "tags": {
+              "317": 2
+            }
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }

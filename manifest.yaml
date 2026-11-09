@@ -12218,6 +12218,14 @@ formats:
       description: Pillow accepts but ignores the TIFF byte-order option
       params:
         byte_order: be
+    - id: enc_i16_be_source
+      description: Big-endian Pillow I;16B samples retain pixel parity when encoded as TIFF
+      source_asset: gray16_be_deflate_predictor_contiguous_tiled.tiff
+      params: {'compression': 'none'}
+    - id: enc_i16_be_deflate_predictor
+      description: Big-endian 16-bit samples retain byte and pixel parity through TIFF Deflate prediction
+      source_asset: gray16_be_deflate_predictor_contiguous_tiled.tiff
+      params: {'compression': 'deflate', 'predictor': 'horizontal'}
   ico:
     name: ICO/CUR
     extensions:

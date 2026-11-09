@@ -1,8 +1,32 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,894 total rows: 3,202 decode /
-inspect / verify rows and 692 encode rows. Of those, 3,202 decode rows are
-active and 665 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,896 total rows: 3,202 decode /
+inspect / verify rows and 694 encode rows. Of those, 3,202 decode rows are
+active and 667 encode rows are active; 27 encode rows remain planned.
+
+## Big-endian 16-bit TIFF encoder identity — 2026-11-09
+
+Added two Pillow parity rows for a source decoded as `I;16B`. Uncompressed
+TIFF output now retains the big-endian `MM` header and `I;16B` raster identity;
+Deflate with horizontal prediction matches Pillow's little-endian `II` output
+and normalized `I;16` identity. The encoder converts carrier samples only for
+the raw big-endian path and includes Pillow's single-sample tag on compressed
+16-bit grayscale output. TIFF page sequences with conflicting file-wide byte
+orders return a structured unsupported error, covered by a target-only
+fault-contract row.
+
+All 66 active TIFF encode parity rows passed, including the two new cases.
+Together with one big-endian TIFF decode row and the mixed-byte-order sequence
+contract, the final selected run passed 68/68 cases. `make lint` passed its
+formatting, strict Clippy, release, coverage-cfg, and AVIF-only checks. No unit
+tests were added or run.
+
+The selected report is retained at
+`.coverage-mcp/local-evidence/selected/20261109T015929.647840Z-1c5c4218abe545d68c06482986e4694b/coverage.json`
+(SHA-256 `0fde190b49b1d7e0b20c09e7c2f41185794ec0df28a8c9253831506e3cee7ba1`).
+Coverage MCP was unavailable in this session; both receipts mark source
+identity unverified and test attribution unknown. These are focused local
+parity results, not an aggregate coverage-gain claim.
 
 ## TIFF indexed encoding with no retained palette — 2026-11-08
 

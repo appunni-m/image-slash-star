@@ -2899,6 +2899,128 @@ fn execute_avif_malformed_inspection_parity_contract(
 }
 
 #[cfg(coverage)]
+fn execute_tiff_mixed_sample_byte_order_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "encode_sequence"
+        || row.format != "tiff"
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+        || row.fault.point != "tiff.sequence.mixed_sample_byte_order"
+        || row.fault.contract != "sequence_encode_rejects_mixed_sample_byte_order"
+    {
+        return Err(format!(
+            "{}: invalid TIFF mixed-byte-order contract",
+            row.id
+        ));
+    }
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode
+        || source_key.format != "tiff"
+        || source_key.id != "compression_deflate_be_unsigned16_wraparound_predictor"
+    {
+        return Err(format!(
+            "{}: source_case must identify the active big-endian TIFF parity row",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get("tiff")
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: parity source row is missing", row.id))?;
+    if source.status != "active"
+        || source.oracle_status.as_deref() != Some("ok")
+        || source.ref_mode.as_deref() != Some("I;16B")
+        || source.inspect_source_byte_order.as_deref() != Some("big")
+    {
+        return Err(format!(
+            "{}: source_case must retain active big-endian Pillow decode parity",
+            row.id
+        ));
+    }
+
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images/tiff")
+        .join(asset);
+    let source_bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read parity source: {error}", row.id))?;
+    assert_sha256(
+        &source_bytes,
+        source.asset_sha256.as_deref(),
+        "TIFF mixed-byte-order contract source asset",
+    )?;
+    let big_endian = img::decode(&source_bytes)
+        .map_err(|error| format!("{}: source parity decode failed: {error}", row.id))?
+        .content;
+    if big_endian.mode != img::ImageMode::L16 || big_endian.raster_mode != img::Mode::ImageI16B {
+        return Err(format!(
+            "{}: source no longer decodes as an L16 carrier with I;16B identity",
+            row.id
+        ));
+    }
+
+    let little_endian = img::DecodedImage::with_mode(
+        big_endian.width,
+        big_endian.height,
+        big_endian.pixels.clone(),
+        img::ImageMode::L16,
+    );
+    let rect = img::FrameRect {
+        left: 0,
+        top: 0,
+        width: big_endian.width,
+        height: big_endian.height,
+    };
+    let mut sequence = img::DecodedSequence::from_image(little_endian);
+    sequence.frames.push(img::DecodedFrame::rendered_canvas(
+        big_endian,
+        rect,
+        img::FrameDuration::ZERO,
+        img::FrameDisposal::Unspecified,
+        img::FrameBlend::Unspecified,
+    ));
+    sequence.kind = img::SequenceKind::UntimedPages;
+
+    match img::encode_sequence(
+        &sequence,
+        img::ImageFormat::Tiff,
+        &img::EncodeOptions::for_format(img::ImageFormat::Tiff),
+    ) {
+        Err(img::ImageError::Unsupported {
+            format: Some(img::ImageFormat::Tiff),
+            message,
+            stage: Some(img::ImageErrorStage::SequenceEncode),
+            ..
+        }) if message.contains("one sample byte order") => Ok(()),
+        Err(error) => Err(format!(
+            "{}: mixed sample byte order returned the wrong error: {error:?}",
+            row.id
+        )),
+        Ok(bytes) => Err(format!(
+            "{}: mixed sample byte order unexpectedly encoded {} bytes",
+            row.id,
+            bytes.len()
+        )),
+    }
+}
+
+#[cfg(coverage)]
 fn execute_tiff_inspection_incomplete_chain_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
@@ -3039,6 +3161,9 @@ fn execute_fault_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    if row.fault.point == "tiff.sequence.mixed_sample_byte_order" {
+        return execute_tiff_mixed_sample_byte_order_contract(manifest_dir, matrix, row);
+    }
     if matches!(
         row.fault.point.as_str(),
         "ico.header.reserved_nonzero"

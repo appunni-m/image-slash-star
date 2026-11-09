@@ -326437,6 +326437,16 @@
           },
           "source_mode": "P",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_indexed_missing_palette.bin",
           "encoded_ref_bytes": 18054,
           "encoded_ref_sha256": "7b468806b83f0aee751357001e5a54ec0c18daa40c0aad84f90397b595fb76d9",
@@ -326449,17 +326459,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_pa_invalid_transfer_carrier",
@@ -331038,6 +331038,113 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_i16_be_source",
+          "type": "encode",
+          "format": "tiff",
+          "category": "i16",
+          "description": "Big-endian Pillow I;16B samples retain pixel parity when encoded as TIFF",
+          "params": {
+            "compression": "none"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+          "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_source.bin",
+          "encoded_ref_bytes": 700,
+          "encoded_ref_sha256": "4a8df3a043fb9c2f27b2e022e947ce641d455096b8cff019f7282d6432789176",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_source.bin",
+          "ref_sha256": "b807fa30e961e406d0e3d49ee75c939014982544cdcd9c1cd5210f7eedf44ee6",
+          "ref_bytes": 578,
+          "ref_mode": "I;16B",
+          "ref_size": [
+            17,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_i16_be_deflate_predictor",
+          "type": "encode",
+          "format": "tiff",
+          "category": "i16",
+          "description": "Big-endian 16-bit samples retain byte and pixel parity through TIFF Deflate prediction",
+          "params": {
+            "compression": "deflate",
+            "predictor": "horizontal"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+          "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+          "encoded_ref_bytes": 264,
+          "encoded_ref_sha256": "88b02737ef1b39f6fe7c01e382d673e4f1388a5617592e0a9cc062e617e6036b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+          "ref_sha256": "aedf4544aaf1eb4a2a9c7219a79f158a4b9625be0226f6b4aacebd04603526b6",
+          "ref_bytes": 578,
+          "ref_mode": "I;16",
+          "ref_size": [
+            17,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ]
     },
@@ -370650,9 +370757,9 @@
     }
   },
   "summary": {
-    "total_rows": 3894,
+    "total_rows": 3896,
     "decode_rows": 3202,
-    "encode_rows": 692,
+    "encode_rows": 694,
     "formats": 8,
     "assets_available": 3198,
     "decode_active": 3202,
@@ -374573,6 +374680,25 @@
         "contract": "inspection_rejects_invalid_header"
       },
       "oracle_status": "not_applicable"
+    },
+    {
+      "id": "tiff_sequence_mixed_sample_byte_order_rejected",
+      "type": "fault-contract",
+      "operation": "encode_sequence",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:compression_deflate_be_unsigned16_wraparound_predictor"
+      },
+      "fault": {
+        "point": "tiff.sequence.mixed_sample_byte_order",
+        "contract": "sequence_encode_rejects_mixed_sample_byte_order"
+      },
+      "oracle_status": "not_applicable"
     }
   ],
   "mode_decode_cases": [
@@ -375129,6 +375255,18 @@
       "case_id": "enc_lab",
       "source_mode": "LAB",
       "decoded_mode": "LAB"
+    },
+    {
+      "format": "tiff",
+      "case_id": "enc_i16_be_source",
+      "source_mode": "I;16B",
+      "decoded_mode": "I;16B"
+    },
+    {
+      "format": "tiff",
+      "case_id": "enc_i16_be_deflate_predictor",
+      "source_mode": "I;16B",
+      "decoded_mode": "I;16"
     }
   ]
 }
