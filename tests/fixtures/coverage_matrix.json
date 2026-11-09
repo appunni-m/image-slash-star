@@ -359561,15 +359561,13 @@
               "Rgb16",
               "Rgba16",
               "Rgb32F",
-              "Rgba32F",
-              "F32",
-              "I32"
+              "Rgba32F"
             ],
             "rust_invalid_color_mode": true
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "WebP directly accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, and Cmyk8",
+          "rust_error_reason": "WebP accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, Cmyk8, F32, and I32",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",
@@ -365690,6 +365688,273 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_i16_be",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless WebP clamps big-endian TIFF I;16B transfer samples to RGB",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "be_unsigned16_wraparound_predictor.tiff",
+          "source_sha256": "465f00da37c237c0b94fd6537a6cd2888c1bb1aa88c95821dcda4f0c98bd36a8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_i16_be.bin",
+          "encoded_ref_bytes": 40,
+          "encoded_ref_sha256": "0ae3487a6deb9c6c403699f2b924d7c334d32df8ed903ececd10589002917321",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_i16_be.bin",
+          "ref_sha256": "6657986cd2fb1c0948b84d751f63f44a6238e483bb3f014e98891e05e89db4c5",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_i32_be",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless WebP clamps big-endian signed TIFF I samples to RGB",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "be_signed32_predictor.tiff",
+          "source_sha256": "40e72cc85aaf2f04de4053f5babce1283b568917f554a0e28d5993e23037cd32",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_i32_be.bin",
+          "encoded_ref_bytes": 58,
+          "encoded_ref_sha256": "afa367adfddee95b90f83a97063316a2f4999b1b87804995b55c44f1b59b8098",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_i32_be.bin",
+          "ref_sha256": "91d3096dd1103f07614ca0871d8b7130e9f6468d8cf21b64db07a53a67bf5e84",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_i32_signed_clamp",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless WebP clamps signed 32-bit TIFF grayscale samples to RGB",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "deflate_predictor_checkpoint_257x1_gray32_signed.tiff",
+          "source_sha256": "928e724fcfdb32770f900175aa32756fdbdd736a68c53e43af9f4230ae7a4ad8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_i32_signed_clamp.bin",
+          "encoded_ref_bytes": 48,
+          "encoded_ref_sha256": "011f34e9c4a71326b2284c8fcefe0a425229b50a0ca84d9e961b91c4cb57f8dd",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_i32_signed_clamp.bin",
+          "ref_sha256": "9318cc5c1e015d797a69a785981b292b4e58ffc9cf98dc37744f23fb7955fc5a",
+          "ref_bytes": 771,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            257,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_f32_be",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless WebP converts big-endian TIFF F samples to RGB",
+          "params": {
+            "lossless": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "be_float32_predictor.tiff",
+          "source_sha256": "374b83aeb08009a5e90e00ceeade576d8e543fee6d2f1d59574ac476ad5663ba",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "F",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_f32_be.bin",
+          "encoded_ref_bytes": 34,
+          "encoded_ref_sha256": "73a44fbaa0fcd7ede2e04885ea04321bf0880213a8a3ac5f895f41dd287aed70",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_f32_be.bin",
+          "ref_sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+          "ref_bytes": 24,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            4,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_f32_clamp_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless method-zero WebP checks token-aware float TIFF sample conversion",
+          "params": {
+            "lossless": true,
+            "method": 0,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "float32_deflate_predictor.tiff",
+          "source_sha256": "adb140d3dfce065c387231a9600b866838af3f0fd8bdcd3d364d12c3b19d795a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "F",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_f32_clamp_token.bin",
+          "encoded_ref_bytes": 6194,
+          "encoded_ref_sha256": "048a74b7b65aa4728c7ff5f74a179d948aeb2ff528c1734ab3157373251f7c19",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_f32_clamp_token.bin",
+          "ref_sha256": "01c17d6c9946b66519b4ad2c1e762d82a899a93f9724b905b2c12554729f5d6e",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_bilevel",
           "type": "encode",
           "format": "webp",
@@ -371142,9 +371407,9 @@
     }
   },
   "summary": {
-    "total_rows": 3901,
+    "total_rows": 3906,
     "decode_rows": 3206,
-    "encode_rows": 695,
+    "encode_rows": 700,
     "formats": 8,
     "assets_available": 3202,
     "decode_active": 3206,
@@ -375633,6 +375898,24 @@
       "case_id": "enc_i16_be_deflate_predictor",
       "source_mode": "I;16B",
       "decoded_mode": "I;16"
+    },
+    {
+      "format": "webp",
+      "case_id": "enc_lossless_i16_be",
+      "source_mode": "I;16B",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "webp",
+      "case_id": "enc_lossless_i32_be",
+      "source_mode": "I",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "webp",
+      "case_id": "enc_lossless_f32_be",
+      "source_mode": "F",
+      "decoded_mode": "Rgb8"
     }
   ]
 }
