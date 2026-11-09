@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MATRIX_PATH = Path("tests/fixtures/coverage_matrix.json")
 SELECTOR_PREFIX = "__image_slash_star_matrix_row_selector__="
 ALL_PARITY_SELECTOR = "__all_parity__"
+ALL_MATRIX_SELECTOR = "__all_matrix__"
 RECEIPT_SCHEMA = "image-slash-star.selected-coverage.local-evidence.v1"
 REPORT_DIR = Path(".coverage-mcp/local-evidence/selected")
 
@@ -165,6 +166,24 @@ def load_all_parity_rows(matrix_path: Path = ROOT / MATRIX_PATH) -> list[Selecte
                 cases.append(f"{operation}:{format_name}:{row['id']}")
 
     return load_selected_rows(cases, matrix_path)
+
+
+def load_all_matrix_rows(matrix_path: Path = ROOT / MATRIX_PATH) -> list[SelectedRow]:
+    selected = load_all_parity_rows(matrix_path)
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    fault_rows = matrix.get("fault_contracts", [])
+    if not isinstance(fault_rows, list):
+        raise ValueError("coverage matrix fault_contracts must be an array")
+
+    fault_cases: list[str] = []
+    for row in fault_rows:
+        if not isinstance(row, dict) or not all(
+            isinstance(row.get(field), str) for field in ("format", "id")
+        ):
+            raise ValueError("coverage matrix contains an invalid fault-contract row")
+        fault_cases.append(f"fault-contract:{row['format']}:{row['id']}")
+
+    return [*selected, *load_selected_rows(fault_cases, matrix_path)]
 
 
 def _status(row: dict[str, Any], key: str) -> str:
@@ -547,8 +566,16 @@ def run(
     report: Path,
     *,
     all_parity: bool = False,
+    all_matrix: bool = False,
 ) -> int:
-    selector_cases = [ALL_PARITY_SELECTOR] if all_parity else cases
+    if all_parity and all_matrix:
+        raise ValueError("all-parity and all-matrix selections are mutually exclusive")
+    if all_matrix:
+        selector_cases = [ALL_MATRIX_SELECTOR]
+    elif all_parity:
+        selector_cases = [ALL_PARITY_SELECTOR]
+    else:
+        selector_cases = cases
     report.parent.mkdir(parents=True, exist_ok=True)
     log_path = report.with_suffix(".log")
     receipt_path = report.with_name(f"{report.stem}.local-evidence.json")
@@ -741,6 +768,11 @@ def main() -> None:
         action="store_true",
         help="select the full decode/encode matrix; execute active rows and report planned rows",
     )
+    selection.add_argument(
+        "--all-matrix",
+        action="store_true",
+        help="select all parity and fault-contract rows; execute active rows and report planned rows",
+    )
     parser.add_argument(
         "--toolchain", default="nightly-2026-07-16", help="Rust coverage toolchain"
     )
@@ -748,7 +780,12 @@ def main() -> None:
     args = parser.parse_args()
     try:
         cases = parse_case_list(args.cases) if args.cases is not None else []
-        selected = load_all_parity_rows() if args.all_parity else load_selected_rows(cases)
+        if args.all_matrix:
+            selected = load_all_matrix_rows()
+        elif args.all_parity:
+            selected = load_all_parity_rows()
+        else:
+            selected = load_selected_rows(cases)
         report = _absolute_report_path(args.report)
         exit_code = run(
             args.toolchain,
@@ -756,6 +793,7 @@ def main() -> None:
             selected,
             report,
             all_parity=args.all_parity,
+            all_matrix=args.all_matrix,
         )
     except (OSError, ValueError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
         raise SystemExit(f"selected coverage setup failed: {error}") from error

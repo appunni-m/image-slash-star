@@ -28,6 +28,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
 | Selected coverage | `make coverage-selected COVERAGE_CASES='decode:webp:<id>'` | Runs exact matrix cases and retains the report, command log, and local execution evidence outside `target/` |
 | Parity coverage | `make coverage-parity` | Runs every active decode/encode parity row and reports planned rows without running unit tests or fault-contract rows |
+| Full matrix coverage | `make coverage-matrix` | Runs active decode/encode parity and fault-contract rows, reports planned rows, and does not run ordinary unit tests |
 | Complete coverage | `make coverage-complete` | Requires all four metrics to reach 100% |
 | Package inspection | `make package-verify` | Builds, extracts, and tests the distributable archive |
 | Documentation setup | `make docs-setup` | Creates an isolated environment and installs the hashed lock |
@@ -101,6 +102,12 @@ executed; fault-contract rows and ordinary unit tests are excluded. The command
 also retains its LLVM report, log, and local evidence receipt under
 `.coverage-mcp/local-evidence/selected/`, using the same source and fixture
 identity checks as focused selected coverage.
+
+Use `make coverage-matrix` to include all declared fault-contract rows with the
+decode/encode parity matrix in one retained coverage report. Planned rows remain
+reported as not executed, and ordinary unit tests are not run. Fault-contract
+rows exercise deterministic target-only failures and are reported separately
+from Pillow parity results within the retained evidence.
 
 Full coverage uses `target/cargo-llvm-cov/full`; selected coverage uses
 `target/cargo-llvm-cov/selected`. Each is isolated from ordinary and feature-matrix
