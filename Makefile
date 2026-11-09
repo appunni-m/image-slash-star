@@ -163,6 +163,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_avif_i422_neutral_superres_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_monochrome_mixed_key_fixtures.py --check
 	$(PYTHON) scripts/generate_avif_color_mixed_key_fixtures.py --check
+	$(PYTHON) scripts/generate_avif_lossy_420_bounded_partition_fixture.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
 	$(PYTHON) scripts/generate_webp_hash_chain_window_cutoff_fixture.py --check
