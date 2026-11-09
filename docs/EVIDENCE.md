@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,910 total rows: 3,207 decode /
-inspect / verify rows and 703 encode rows. Of those, 3,207 decode rows are
-active and 676 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,919 total rows: 3,207 decode /
+inspect / verify rows and 712 encode rows. Of those, 3,207 decode rows are
+active and 685 encode rows are active; 27 encode rows remain planned.
 
 ## JPEG multi-scan restart markers without DRI — 2026-11-09
 
