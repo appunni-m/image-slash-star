@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `8e9e3cc94a2780489a1c60c83876743534bd25c2c85a4459c2bf5759d328f8be`.
+- Active fixture source SHA-256: `6e20226a53d7c6ae98b15eeb7483deca25df9e50c76a5aee1312e0aa93dfd3a2`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,879 (3,206 decode; 673 encode).
+- Active fixture rows: 3,881 (3,206 decode; 675 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 150.
+- Active `not_applicable` operation outcomes excluded from evidence groups: 152.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -422,6 +422,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | ICO | sequence_encode | accepted | Rgba8 | 1 frame | Rgba8 | SingleFrame | — | 2: `ico:enc_32bit`, `ico:enc_bmp_rgba` |
 | ICO | sequence_encode | rejected | Cmyk8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 2: `ico:enc_error_cmyk_bmp`, `ico:enc_error_cmyk_png` |
 | ICO | sequence_encode | rejected | F32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `ico:enc_error_float32_mode` |
+| ICO | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | dimensions | 2: `ico:enc_error_source_height_over_256`, `ico:enc_error_source_width_over_256` |
 | ICO | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `ico:enc_error_zero_width_size` |
 | ICO | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `ico:enc_error_retained_sequence_geometry` |
 | ICO | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `ico:enc_png_bilevel` |

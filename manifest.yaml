@@ -12483,6 +12483,22 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: Default ICO encoding inherits the direct PNG mode boundary
+    - id: enc_error_source_width_over_256
+      description: ICO encoding rejects a 257-pixel-wide source even when the requested entry size is valid
+      source_format: jpeg
+      source_asset: large.jpg
+      params: {'sizes': [[16, 16]]}
+      rust_expect_error: true
+      rust_error_kind: dimensions
+      rust_error_reason: ICO source width exceeds the 256-pixel entry limit
+    - id: enc_error_source_height_over_256
+      description: ICO encoding rejects a 272-pixel-tall source even when the requested entry size is valid
+      source_format: png
+      source_asset: webp_method0_sampling_boundary_204_macroblocks.png
+      params: {'sizes': [[16, 16]]}
+      rust_expect_error: true
+      rust_error_kind: dimensions
+      rust_error_reason: ICO source height exceeds the 256-pixel entry limit
     - id: enc_16x16
       description: 16x16 icon
       params: {'sizes': [[16, 16]]}

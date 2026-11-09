@@ -121,6 +121,114 @@
       "rust_error_reason": "Default ICO encoding inherits the direct PNG mode boundary"
     },
     {
+      "id": "enc_error_source_width_over_256",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_source_width_over_256.bin",
+      "ref_bytes": 384,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        16,
+        8
+      ],
+      "ref_sha256": "6db2e41fdad8f49bd07ce6663000fa0e002680b76f8fdf7b37c031c2502ef9d3",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_source_width_over_256.bin",
+      "encoded_ref_bytes": 470,
+      "encoded_ref_sha256": "a1905775a2f0c6f747e64339b3ad89e4f4c73aef4b4f98ba55d7a259d623a2e9",
+      "source_mode": "Rgb8",
+      "source_sha256": "1ba94c668be44599571690517f1a32e059cf6c3e666514664532def5e9686b8f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "dimensions",
+          "rust_format": "ICO",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "dimensions",
+      "rust_error_reason": "ICO source width exceeds the 256-pixel entry limit"
+    },
+    {
+      "id": "enc_error_source_height_over_256",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_error_source_height_over_256.bin",
+      "ref_bytes": 528,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        11,
+        16
+      ],
+      "ref_sha256": "1132677d0b673bc5cbc312ff4e370ebfa4fe4baa5a26d5328d0a2277bf7aadda",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.ico_enc_error_source_height_over_256.bin",
+      "encoded_ref_bytes": 631,
+      "encoded_ref_sha256": "726ae791549f4d1b61bd305dcc9eb8057165e4537d9acdfaa57356d2ece6bd15",
+      "source_mode": "Rgb8",
+      "source_sha256": "ed366fb0782fb533d08eb853fca3409488179a0d855ff6036b99cda0724b556f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_contract": "defensive_model"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "dimensions",
+          "rust_format": "ICO",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "oracle_status": "ok",
+      "rust_expect_error": true,
+      "rust_error_kind": "dimensions",
+      "rust_error_reason": "ICO source height exceeds the 256-pixel entry limit"
+    },
+    {
       "id": "enc_16x16",
       "ref_path": "tests/fixtures/outputs/raws/Encode.ico_enc_16x16.bin",
       "ref_bytes": 768,
