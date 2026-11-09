@@ -8338,6 +8338,27 @@ incremental comparison with the retained full report was incomparable because
 its branch detail did not reconcile with the totals; no aggregate gain is
 claimed.
 
+A selected refresh on 2026-11-09 ran the normal 17x9 Pillow parity row together
+with the six 12-bit I420 alpha fault contracts for sample-count mismatch,
+zero width, nondivisible luma length, zero height, and U/V plane-length
+mismatches. All seven rows passed (one parity row and six target-only fault
+rows; fault rows report `oracle=not_applicable`). Coverage MCP found no missing
+branch groups in `convert_subsampled_420_12bit_alpha` for this selected report.
+The selected instrumented crate totals were 13,998/142,863 lines (9.7982%),
+2,171/32,126 branches (6.7578%), 1,001/9,180 functions (10.9041%), and
+18,863/221,254 regions (8.5255%); these totals describe only the selected
+cohort, not full project coverage. The receipt records revision
+`ea9fea6d7931fc128cb39889198e71eea0ce91a9` and no source or fixture changes
+during execution. Coverage MCP still marks source identity unverified and test
+attribution unknown.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261109T202357.806967Z-1af440b998034a89bdf13a7d2aebffce/coverage.json`
+(SHA-256
+`2d65c2c3f57b898a1c2f2eb8ee07a5189f61451f499f67582b75e0850b942052`; local
+receipt SHA-256
+`6abd183dccfb8055971fa2c25e631d4a9c0f46936527487b49ca7c3a3d4b32ad`).
+
 ## TIFF surplus-strip parity — 2026-10-25
 
 Added active parity row
