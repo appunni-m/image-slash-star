@@ -9981,6 +9981,11 @@ formats:
       source_format: png
       source_asset: webp_lossy_bool_carry_noise_128x128.png
       params: {'lossless': False, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
+    - id: enc_lossy_bool_checkpoint_pending_run
+      description: Taller seeded high-entropy RGB parity case for VP8 token-aware checkpoint carry-byte and pending-run output
+      source_format: png
+      source_asset: webp_bool_checkpoint_noise_128x192.png
+      params: {'lossless': False, 'quality': 100, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_lossy_bool_carry_method_0
       description: High-entropy RGB token parity at quality 100 and method 0 for VP8 boolean-coder output
       source_format: png

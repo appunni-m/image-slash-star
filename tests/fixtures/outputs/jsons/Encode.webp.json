@@ -9569,6 +9569,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_lossy_bool_checkpoint_pending_run",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_checkpoint_pending_run.bin",
+      "ref_bytes": 73728,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        192
+      ],
+      "ref_sha256": "740c13ded721ff3065649f0ededb514b171d1b4a372621941d98c728613e0e9a",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_checkpoint_pending_run.bin",
+      "encoded_ref_bytes": 28376,
+      "encoded_ref_sha256": "c6e19f066cef5d544fa5f851a4eefc957e014f5051e97f8b78f7edf0f6fe4fca",
+      "source_mode": "Rgb8",
+      "source_sha256": "3f8a6f9ff2cb3e89124c7b03836df50426d7d17e78976ee32cb8200cd5273962",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_lossy_bool_carry_method_0",
       "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_carry_method_0.bin",
       "ref_bytes": 49152,

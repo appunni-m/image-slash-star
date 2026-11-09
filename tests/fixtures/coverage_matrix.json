@@ -368090,6 +368090,62 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossy_bool_checkpoint_pending_run",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossy",
+          "description": "Taller seeded high-entropy RGB parity case for VP8 token-aware checkpoint carry-byte and pending-run output",
+          "params": {
+            "lossless": false,
+            "quality": 100,
+            "method": 6,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_bool_checkpoint_noise_128x192.png",
+          "source_sha256": "3f8a6f9ff2cb3e89124c7b03836df50426d7d17e78976ee32cb8200cd5273962",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_bool_checkpoint_pending_run.bin",
+          "encoded_ref_bytes": 28376,
+          "encoded_ref_sha256": "c6e19f066cef5d544fa5f851a4eefc957e014f5051e97f8b78f7edf0f6fe4fca",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossy_bool_checkpoint_pending_run.bin",
+          "ref_sha256": "740c13ded721ff3065649f0ededb514b171d1b4a372621941d98c728613e0e9a",
+          "ref_bytes": 73728,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            192
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
           "id": "enc_lossy_bool_carry_method_0",
           "type": "encode",
           "format": "webp",
@@ -371629,9 +371685,9 @@
     }
   },
   "summary": {
-    "total_rows": 3909,
+    "total_rows": 3910,
     "decode_rows": 3207,
-    "encode_rows": 702,
+    "encode_rows": 703,
     "formats": 8,
     "assets_available": 3203,
     "decode_active": 3207,

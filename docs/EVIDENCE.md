@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,909 total rows: 3,207 decode /
-inspect / verify rows and 702 encode rows. Of those, 3,207 decode rows are
-active and 675 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,910 total rows: 3,207 decode /
+inspect / verify rows and 703 encode rows. Of those, 3,207 decode rows are
+active and 676 encode rows are active; 27 encode rows remain planned.
 
 ## JPEG multi-scan restart markers without DRI — 2026-11-09
 
@@ -17776,7 +17776,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fc7fd5eb04d4f2747eb11828afe65f9fc113d83386ca545f396c4b448028f3fa`; matrix `aae6dc5b7536d43a8d365dbf2d532cfefee9a909da71728a19bdf80ef5b0a9cf`.
+- Current fixture integrity only: manifest `8207f8ed2db58519853f6a9eed198394a0e8b12c5baf2ef47d163ccbf0baef1e`; matrix `c595a2994d355abf333ad6613dc0a013f45df1496fb8b2efd02e380539a6c2c4`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23397,6 +23397,46 @@ aggregate coverage.
 
 The current public evidence matrix contains 3,892 total rows: 3,201 decode /
 inspect / verify rows and 691 encode rows. Of those, 3,201 decode rows and 664
+encode rows are active; 27 encode rows remain planned.
+
+## WebP mode and checkpoint parity — 2026-11-09
+
+The 38 indexed mode-decode rows and 59 indexed mode-encode rows passed in one
+selected run (97/97). Every indexed successful encoder also exercised the
+append-only sink path and matched the Pillow bytes while preserving its
+pre-existing prefix. The nine WebP fault-contract rows passed separately
+(9/9); those target-only outcomes are not Pillow parity.
+
+Added the active parity row
+`encode:webp:enc_lossy_bool_checkpoint_pending_run` for deterministic 128×192
+RGB noise from `scripts/generate_webp_bool_checkpoint_noise_fixture.py`.
+Pillow 12.2.0 with libwebp 1.6.0 emitted the exact 28,376-byte output; Rust
+matched its encoded bytes, re-decoded RGB pixels, and append-only sink output
+(1/1, no panics). It shares the existing WebP `Rgb8`→`Rgb8` pair, so the
+append-only `mode_encode_cases` index remains at 59 entries.
+
+The focused LLVM report is
+`.coverage-mcp/local-evidence/selected/20261109T132403.039301Z-ecc46908ce2e47aaa727cba3da94928e/coverage.json`
+(SHA-256
+`5b73b0d6d4773c151491f3e6dcde9967993b48ef68dc9efaf97bd9a95b461db8`); its
+local receipt SHA-256 is
+`db2fb1defb6b6f63ba48ba80e3b8fa80d189747da3e8e25a9d79f07afd6e46f8`. For this
+selected run, the instrumented crate totals were 8,109/142,785 lines,
+746/32,112 branches, 571/9,180 functions, and 12,846/221,185 regions. In
+`src/codecs/webp/encode/vp8/bool_enc.rs`, the report shows 139/139 lines,
+32/34 branches, 9/9 functions, and 209/214 regions; two branch arcs remain
+uncovered. The receipt marks Coverage MCP as not queried and source identity as
+unverified. This selected subset is not aggregate coverage evidence.
+
+A separate temporary 128×512 high-entropy probe with the same PRNG seed did
+not meet exact parity: Rust emitted 74,856 bytes versus Pillow's 73,812, and
+decoded RGB first differed at `(8, 192)`. Its source pixels matched Pillow,
+and Rust's token and non-token outputs matched each other. This input was not
+added as a passing matrix row; the larger-frame encoder divergence remains
+unresolved.
+
+The current public evidence matrix contains 3,910 total rows: 3,207 decode /
+inspect / verify rows and 703 encode rows. Of those, 3,207 decode rows and 676
 encode rows are active; 27 encode rows remain planned.
 
 ## CIELAB encode identity parity — 2026-11-09
