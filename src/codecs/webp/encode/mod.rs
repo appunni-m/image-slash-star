@@ -622,6 +622,8 @@ fn prepare_pixels<'a>(
             })
         }
         ImageMode::L16 => expand_l16_to_rgb(img, token),
+        ImageMode::I32 => expand_i32_to_rgb(img, token),
+        ImageMode::F32 => expand_f32_to_rgb(img, token),
         ImageMode::La8 => expand_luminance_alpha(img, token),
         ImageMode::Rgb8 => Ok(PreparedPixels {
             bytes: Cow::Borrowed(&img.pixels),
@@ -1168,6 +1170,69 @@ fn webp_riff_size_from_len(encoded_len: usize) -> CodecResult<u32> {
     u32::try_from(encoded_len.saturating_sub(8)).map_err(|_| {
         CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
     })
+}
+
+fn expand_i32_to_rgb(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'static>> {
+    let rgb = expand_32bit_gray_to_rgb(&img.pixels, token, |sample| {
+        let value = i32::from_ne_bytes(*sample);
+        // Clamping proves the integer conversion is within the u8 range.
+        u8::try_from(value.clamp(0, i32::from(u8::MAX))).unwrap_or_default()
+    })?;
+    Ok(PreparedPixels {
+        bytes: Cow::Owned(rgb),
+        color: super::native::ColorType::Rgb8,
+    })
+}
+
+fn expand_f32_to_rgb(
+    img: &DecodedImage,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<PreparedPixels<'static>> {
+    let rgb = expand_32bit_gray_to_rgb(&img.pixels, token, |sample| {
+        let value = f32::from_ne_bytes(*sample);
+        pillow_f32_sample_to_u8(value)
+    })?;
+    Ok(PreparedPixels {
+        bytes: Cow::Owned(rgb),
+        color: super::native::ColorType::Rgb8,
+    })
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Pillow's F-to-RGB conversion truncates and saturates samples; Rust's float cast matches those semantics, including NaN handling."
+)]
+fn pillow_f32_sample_to_u8(value: f32) -> u8 {
+    value as u8
+}
+
+fn expand_32bit_gray_to_rgb(
+    samples: &[u8],
+    token: Option<&crate::CancellationToken>,
+    mut convert_sample: impl FnMut(&[u8; 4]) -> u8,
+) -> CodecResult<Vec<u8>> {
+    // I/F sample bytes use native-order scalar interpretation. The source
+    // descriptor retains TIFF byte order separately from this transfer buffer.
+    let samples = samples.as_chunks::<4>().0;
+    let mut rgb = Vec::with_capacity(samples.len().saturating_mul(3));
+    if let Some(token) = token {
+        let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
+        for sample in samples {
+            let value = convert_sample(sample);
+            rgb.extend_from_slice(&[value; 3]);
+            checkpoint_after_prepare_pixel(&mut pixels_until_checkpoint, token)?;
+        }
+    } else {
+        for sample in samples {
+            let value = convert_sample(sample);
+            rgb.extend_from_slice(&[value; 3]);
+        }
+    }
+    Ok(rgb)
 }
 
 fn expand_l16_to_rgb(

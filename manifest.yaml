@@ -9777,6 +9777,31 @@ formats:
       source_format: png
       source_asset: l16_clamp.png
       params: {'lossless': True}
+    - id: enc_lossless_i16_be
+      description: Lossless WebP clamps big-endian TIFF I;16B transfer samples to RGB
+      source_format: tiff
+      source_asset: be_unsigned16_wraparound_predictor.tiff
+      params: {'lossless': True}
+    - id: enc_lossless_i32_be
+      description: Lossless WebP clamps big-endian signed TIFF I samples to RGB
+      source_format: tiff
+      source_asset: be_signed32_predictor.tiff
+      params: {'lossless': True}
+    - id: enc_lossless_i32_signed_clamp
+      description: Lossless WebP clamps signed 32-bit TIFF grayscale samples to RGB
+      source_format: tiff
+      source_asset: deflate_predictor_checkpoint_257x1_gray32_signed.tiff
+      params: {'lossless': True}
+    - id: enc_lossless_f32_be
+      description: Lossless WebP converts big-endian TIFF F samples to RGB
+      source_format: tiff
+      source_asset: be_float32_predictor.tiff
+      params: {'lossless': True}
+    - id: enc_lossless_f32_clamp_token
+      description: Lossless method-zero WebP checks token-aware float TIFF sample conversion
+      source_format: tiff
+      source_asset: float32_deflate_predictor.tiff
+      params: {'lossless': True, 'method': 0, 'rust_encode_with_token': True}
     - id: enc_lossy_bilevel
       description: Lossy bilevel WebP converted through Pillow's RGB path
       source_format: png
