@@ -366115,7 +366115,8 @@
           "category": "lossless",
           "description": "Lossless WebP clamps signed 32-bit TIFF grayscale samples to RGB",
           "params": {
-            "lossless": true
+            "lossless": true,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "tiff",
