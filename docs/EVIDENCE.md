@@ -1,8 +1,28 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,908 total rows: 3,206 decode /
-inspect / verify rows and 702 encode rows. Of those, 3,206 decode rows are
+The current public evidence matrix contains 3,909 total rows: 3,207 decode /
+inspect / verify rows and 702 encode rows. Of those, 3,207 decode rows are
 active and 675 encode rows are active; 27 encode rows remain planned.
+
+## JPEG multi-scan restart markers without DRI — 2026-11-09
+
+Added `decode:jpeg:baseline_444_multiscan_restart_markers_without_dri` by
+removing only the DRI=1 segment from the pinned two-scan JPEG fixture. Pillow
+12.2.0 accepts the complete JPEG and returns the pinned 16×8 RGB pixels. The
+selected parity run passed 2/2, including the existing single-scan no-DRI case.
+The mode decode index did not need a new entry because JPEG RGB was already
+indexed. `decode.rs` no longer checks `scans.len() == 1` inside the single-scan
+reconstruction helper: public dispatch sends every multi-scan image to the
+multi-scan helper first.
+
+The selected local LLVM report measures 3,458/142,785 lines (2.4218%),
+435/32,112 branches (1.3546%), 246/9,180 functions (2.6797%), and 5,359/221,185
+regions (2.4229%). This selected report is local-only; Coverage MCP was not
+queried, so these totals do not establish repository-wide coverage.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261109T114509.280683Z-607c42b1162749c6ac7d522f62b2e897/coverage.json`
+(SHA-256 `4f9f939883c1b91855a13e79cd3e997d82cf63a3758471a662468614e668c8fb`).
 
 ## ICO source dimension parity — 2026-11-09
 
@@ -17756,7 +17776,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `77122292a2f84da4e4be445698097d6f52dd55989a7f7c6824ab37c7b3cc1075`; matrix `6e20226a53d7c6ae98b15eeb7483deca25df9e50c76a5aee1312e0aa93dfd3a2`.
+- Current fixture integrity only: manifest `fc7fd5eb04d4f2747eb11828afe65f9fc113d83386ca545f396c4b448028f3fa`; matrix `aae6dc5b7536d43a8d365dbf2d532cfefee9a909da71728a19bdf80ef5b0a9cf`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -2123,7 +2123,7 @@ fn validate_sampling_ratios(info: &JpegInfo) -> CodecResult<()> {
     Ok(())
 }
 
-/// Reconstructs a baseline scan after `decode` validates scan component order.
+/// Reconstructs a single-scan baseline image after component-order validation.
 #[cfg_attr(coverage, inline(never))]
 pub(super) fn reconstruct_image(
     info: &JpegInfo,
@@ -2193,10 +2193,7 @@ pub(super) fn reconstruct_image(
     let entropy_end = validated_entropy_end.unwrap_or(info.eoi_pos);
     let mut entropy_segments = known_single_baseline_entropy_segment(info, validated_entropy_end)
         .unwrap_or_else(|| extract_entropy_segments(data, info.entropy_start, entropy_end));
-    if info.entropy_has_restart_markers
-        && info.first_scan_restart_interval == 0
-        && info.scans.len() == 1
-    {
+    if info.entropy_has_restart_markers && info.first_scan_restart_interval == 0 {
         // Pillow stops a baseline scan at its first RST marker when no DRI
         // interval was declared. Later segments have no MCU positions and
         // must not be decoded repeatedly from the start of the image.
