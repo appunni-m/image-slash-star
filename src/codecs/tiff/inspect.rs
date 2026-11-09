@@ -313,6 +313,7 @@ pub(super) enum TiffLayout {
         bits: u8,
     },
     PaletteAlpha8,
+    PaletteIgnored8,
     Cmyk8,
     Ycbcr8,
     YcbcrFull8 {
@@ -372,7 +373,7 @@ impl TiffLayout {
             | Self::YcbcrFull8 { .. }
             | Self::YcbcrSubsampled8 { .. } => ImageMode::Rgb8,
             Self::Rgba8 => ImageMode::Rgba8,
-            Self::Palette { .. } => ImageMode::P8,
+            Self::Palette { .. } | Self::PaletteIgnored8 => ImageMode::P8,
             Self::PaletteAlpha8 => ImageMode::La8,
             Self::Cmyk8 => ImageMode::Cmyk8,
         }
@@ -433,7 +434,10 @@ pub(super) fn layout_and_palette(
         },
         (1, 2, 8) if extra_samples == [2] => TiffLayout::GrayAlpha8,
         (1, 2, 8) if planar == 2 && extra_samples == [0] => TiffLayout::GrayIgnored8,
-        (3, 2, 8) if planar == 1 && extra_samples == [2] => TiffLayout::PaletteAlpha8,
+        // Palette-alpha describes the header identity independently of its
+        // sample storage. The decoder applies Pillow's separate-plane limit.
+        (3, 2, 8) if extra_samples == [2] => TiffLayout::PaletteAlpha8,
+        (3, 2, 8) if planar == 1 && extra_samples == [0] => TiffLayout::PaletteIgnored8,
         (2, 3, 8) => TiffLayout::Rgb8,
         (8, 3, 8)
             if sample_format == 1
@@ -485,7 +489,7 @@ pub(super) fn layout_and_palette(
     };
     let palette_bits = match layout {
         TiffLayout::Palette { bits } => Some(bits),
-        TiffLayout::PaletteAlpha8 => Some(8),
+        TiffLayout::PaletteAlpha8 | TiffLayout::PaletteIgnored8 => Some(8),
         _ => None,
     };
     let palette = if let Some(bits) = palette_bits {

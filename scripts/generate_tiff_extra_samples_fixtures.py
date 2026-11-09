@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Generate complete TIFF inputs for unspecified RGB and grayscale extra samples.
+"""Generate TIFF inputs for extra samples and palette-alpha storage layouts.
 
 The family keeps every stored plane, including ignored trailing samples. Pixel
 references and Pillow's unsupported-layout errors belong to the normal reference
-producer; this generator writes only input bytes and storage declarations.
+producer; this generator writes only input bytes and storage declarations. The
+palette-alpha pair covers contiguous and separate-planar sample storage.
 """
 
 from __future__ import annotations
@@ -66,6 +67,120 @@ def build_palette_alpha_tiff() -> bytes:
         ):
             raise RuntimeError("Pillow emitted unexpected PA TIFF sample or palette tags")
     return data
+
+
+def build_palette_alpha_separate_planar_tiff() -> bytes:
+    """Build separate PA sample planes with valid per-plane strip tables."""
+    width, height = 3, 2
+    palette = palette_alpha_rgb()
+    pixels = PALETTE_ALPHA_PIXELS
+    planes = (pixels[0::2], pixels[1::2])
+    color_map = [
+        palette[index * 3 + channel] << 8
+        for channel in range(3)
+        for index in range(256)
+    ]
+    entries = [
+        (256, 4, [width]),
+        (257, 4, [height]),
+        (258, 3, [8, 8]),
+        (259, 3, [1]),
+        (262, 3, [3]),
+        (273, 4, [0, 0]),
+        (277, 3, [2]),
+        (278, 4, [height]),
+        (279, 4, [len(planes[0]), len(planes[1])]),
+        (284, 3, [2]),
+        (320, 3, color_map),
+        (338, 3, [2]),
+    ]
+    entries.sort()
+
+    cursor = 8 + 2 + 12 * len(entries) + 4
+    buffers = {}
+    for tag, field_type, values in entries:
+        code = "H" if field_type == 3 else "I"
+        packed = struct.pack("<" + code * len(values), *values)
+        if len(packed) > 4:
+            buffers[tag] = (cursor, packed)
+            cursor += len(packed)
+            cursor += cursor % 2
+
+    strip_offsets = []
+    for plane in planes:
+        strip_offsets.append(cursor)
+        cursor += len(plane)
+    offsets_position, _ = buffers[273]
+    buffers[273] = (offsets_position, struct.pack("<II", *strip_offsets))
+
+    output = bytearray(b"II*\0\x08\0\0\0" + struct.pack("<H", len(entries)))
+    for tag, field_type, values in entries:
+        if tag == 273:
+            values = strip_offsets
+        code = "H" if field_type == 3 else "I"
+        packed = struct.pack("<" + code * len(values), *values)
+        value = struct.pack("<I", buffers[tag][0]) if len(packed) > 4 else packed.ljust(4, b"\0")
+        output.extend(struct.pack("<HHI", tag, field_type, len(values)) + value)
+    output.extend(bytes(4))
+    for offset, buffer in sorted(buffers.values()):
+        output.extend(bytes(offset - len(output)))
+        output.extend(buffer)
+    for plane in planes:
+        output.extend(plane)
+
+    data = bytes(output)
+    from PIL import Image
+
+    with Image.open(BytesIO(data)) as image:
+        if image.mode != "PA" or image.size != (width, height) or image.tag_v2.get(284) != 2:
+            raise RuntimeError("Pillow did not retain the separate-planar PA header")
+        image.verify()
+    with Image.open(BytesIO(data)) as image:
+        try:
+            image.load()
+        except ValueError as error:
+            if str(error) != "unknown raw mode for given image mode":
+                raise RuntimeError(f"Pillow PA decode error changed: {error}") from error
+        else:
+            raise RuntimeError("Pillow unexpectedly decoded separate-planar PA samples")
+    return data
+
+
+def build_palette_unspecified_extra_sample_tiff() -> bytes:
+    """Use Pillow's PA TIFF layout with an unspecified second sample."""
+    from PIL import Image
+
+    data = bytearray(build_palette_alpha_tiff())
+    if data[:8] != b"II*\0\x08\0\0\0":
+        raise RuntimeError("Pillow emitted an unexpected classic TIFF header")
+    entry_count = struct.unpack_from("<H", data, 8)[0]
+    extra_sample_entry = None
+    for index in range(entry_count):
+        offset = 10 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", data, offset)
+        if tag == 338:
+            if field_type != 3 or count != 1:
+                raise RuntimeError("Pillow emitted an unexpected ExtraSamples field")
+            extra_sample_entry = offset
+            break
+    if extra_sample_entry is None:
+        raise RuntimeError("Pillow omitted the PA ExtraSamples field")
+    # The single SHORT value is stored inline in the first two value bytes.
+    struct.pack_into("<H", data, extra_sample_entry + 8, 0)
+    result = bytes(data)
+    with Image.open(BytesIO(result)) as image:
+        if image.mode != "P" or image.size != (3, 2):
+            raise RuntimeError("Pillow did not expose unspecified-extra PA TIFF as P")
+        if tuple(image.tag_v2.get(338, ())) != (0,):
+            raise RuntimeError("Pillow did not retain the unspecified ExtraSamples tag")
+        image.verify()
+    with Image.open(BytesIO(result)) as image:
+        image.load()
+        if image.tobytes() != PALETTE_ALPHA_PIXELS[0::2]:
+            raise RuntimeError("Pillow did not ignore the unspecified extra sample")
+        if bytes(image.getpalette("RGB") or b"") != palette_alpha_rgb():
+            raise RuntimeError("Pillow did not retain the indexed RGB palette")
+    return result
 
 
 @dataclass(frozen=True)
@@ -223,6 +338,30 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     else:
         palette_alpha_path.write_bytes(palette_alpha_data)
 
+    separate_palette_alpha_path = directory / "palette_alpha_separate_planar.tiff"
+    separate_palette_alpha_data = build_palette_alpha_separate_planar_tiff()
+    if check:
+        if (
+            not separate_palette_alpha_path.is_file()
+            or separate_palette_alpha_path.read_bytes() != separate_palette_alpha_data
+        ):
+            raise RuntimeError(f"{separate_palette_alpha_path}: separate-planar PA input differs")
+    else:
+        separate_palette_alpha_path.write_bytes(separate_palette_alpha_data)
+
+    unspecified_palette_extra_path = directory / "palette_unspecified_extra_sample.tiff"
+    unspecified_palette_extra_data = build_palette_unspecified_extra_sample_tiff()
+    if check:
+        if (
+            not unspecified_palette_extra_path.is_file()
+            or unspecified_palette_extra_path.read_bytes() != unspecified_palette_extra_data
+        ):
+            raise RuntimeError(
+                f"{unspecified_palette_extra_path}: unspecified palette extra-sample input differs"
+            )
+    else:
+        unspecified_palette_extra_path.write_bytes(unspecified_palette_extra_data)
+
 
 def main() -> None:
     """Expose focused generation and the canonical input byte check."""
@@ -231,9 +370,11 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args()
     generate_fixtures(arguments.output_directory, check=arguments.check)
+    input_count = len(RECIPES) + 3
     print(
         f"{'Checked' if arguments.check else 'Generated'} "
-        f"{len(RECIPES)} complete extra-sample TIFF inputs, including PA"
+        f"{input_count} extra-sample TIFF inputs, including "
+        "contiguous and separate-planar PA plus unspecified palette extras"
     )
 
 

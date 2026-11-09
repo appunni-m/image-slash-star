@@ -250,6 +250,11 @@ fn decode_ifd(
         ycbcr_subsampling: ycbcr_parameters.map(|parameters| parameters.subsampling),
         ycbcr_conversion: ycbcr_parameters.map(|parameters| parameters.conversion),
     })?;
+    if layout == TiffLayout::PaletteAlpha8 && separate_planar {
+        return Err(CodecError::Malformed(
+            "TIFF separate-planar palette-alpha pixels are unsupported".to_owned(),
+        ));
+    }
     if fill_order == 2
         && compression == COMPRESSION_NONE
         && matches!(layout, TiffLayout::Palette { bits: 4 })
@@ -278,7 +283,7 @@ fn decode_ifd(
     let raw_separate_associated_alpha =
         associated_rgba && separate_planar && compression == COMPRESSION_NONE;
     let decoded_planes = match layout {
-        TiffLayout::GrayIgnored8 => 1,
+        TiffLayout::GrayIgnored8 | TiffLayout::PaletteIgnored8 => 1,
         TiffLayout::RgbIgnored8 => 3,
         _ => samples_per_pixel,
     };
@@ -2180,6 +2185,15 @@ fn convert_pixels(
                 image
             }
         }
+        TiffLayout::PaletteIgnored8 => {
+            compact_extra_samples(&mut pixels, width as usize, 2, None)?;
+            let image = DecodedImage::with_mode(width, height, pixels, ImageMode::P8);
+            if let Some(palette) = palette {
+                image.with_palette(palette)
+            } else {
+                image
+            }
+        }
         TiffLayout::PaletteAlpha8 => {
             let image = DecodedImage::with_mode(width, height, pixels, ImageMode::La8);
             if let Some(palette) = palette {
@@ -2444,6 +2458,15 @@ fn convert_pixels_with_token(
         TiffLayout::Palette { bits } => {
             let indices = unpack_indices_with_token(&pixels, width, height, bits, token)?;
             let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
+            if let Some(palette) = palette {
+                image.with_palette(palette)
+            } else {
+                image
+            }
+        }
+        TiffLayout::PaletteIgnored8 => {
+            compact_extra_samples(&mut pixels, width_usize, 2, Some(token))?;
+            let image = DecodedImage::with_mode(width, height, pixels, ImageMode::P8);
             if let Some(palette) = palette {
                 image.with_palette(palette)
             } else {
