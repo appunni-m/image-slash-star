@@ -10617,6 +10617,20 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - palette_unspecified_extra_sample.tiff
+    - id: palette_alpha_short_color_map
+      description: PA header and decoded transfer identity survive when Pillow exposes no palette for a short TIFF ColorMap
+      inspect_raster_mode: PA
+      decoded_raster_mode: PA
+      rust_decode_with_token: true
+      test_assets:
+      - palette_alpha_short_color_map.tiff
+    - id: palette_unspecified_extra_sample_short_color_map
+      description: P identity and ignored extra-sample decoding survive when Pillow exposes no palette for a short TIFF ColorMap
+      inspect_raster_mode: P
+      decoded_raster_mode: P
+      rust_decode_with_token: true
+      test_assets:
+      - palette_unspecified_extra_sample_short_color_map.tiff
     - id: palette_low_depth
       description: Packed 2-bit and 4-bit palette indices
       test_assets:

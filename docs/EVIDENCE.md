@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,899 total rows: 3,204 decode /
-inspect / verify rows and 695 encode rows. Of those, 3,204 decode rows are
+The current public evidence matrix contains 3,901 total rows: 3,206 decode /
+inspect / verify rows and 695 encode rows. Of those, 3,206 decode rows are
 active and 668 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF palette-extra mode identity — 2026-11-09
@@ -31,6 +31,30 @@ repository-wide coverage claim.
 Report:
 `.coverage-mcp/local-evidence/selected/20261109T035617.440441Z-48d4a4b2422f41cb8869af6fda5c812f/coverage.json`
 (SHA-256 `a5012a8c32501582f9438a5dd87aa65493ae6b07b962697637643c901ab66ecba`).
+
+## TIFF short ColorMap palette identity — 2026-11-09
+
+Added `decode:tiff:palette_alpha_short_color_map` and
+`decode:tiff:palette_unspecified_extra_sample_short_color_map`. Pillow accepts
+these complete TIFF files, retains `PA` and `P` sample identities, and returns
+the exact samples while exposing no palette table. The latter also ignores
+the second sample declared with `ExtraSamples=0`. These cases exercise both
+palette-present/absent decisions in ordinary and token-aware decoding without
+changing the decoder implementation.
+
+The selected parity coverage run passed 2/2 rows. Coverage MCP's report leaves
+only the palette-present arms unobserved at `decode.rs:2191`, `2199`, `2470`,
+and `2479`, confirming that both palette-absent arms were reached. The local
+report measures 1,725/142,734 lines (1.2085%), 193/32,112 branches (0.6010%),
+174/9,174 functions (1.8967%), and 2,450/221,113 regions (1.1080%). Coverage
+MCP labels this local report's source identity unverified and test attribution
+unknown; the captured matrix run itself records exactly these two case IDs,
+unchanged source/fixture hashes during execution, and zero failures. These
+selected totals are not a repository-wide coverage claim.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261109T045141.584220Z-f057cbc475184f558b9d92be1f35fa8d/coverage.json`
+(SHA-256 `3508735588798726bcb196fde79f851b48fd270a9b5234198588fb551be5e6eb`).
 
 ## Big-endian 16-bit TIFF encoder identity — 2026-11-09
 
@@ -17685,7 +17709,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `b119d0acd8452aa4aeb2b0f978d04d75040aafed63e3d0a86776ce5147a8f639`; matrix `65df34025cd26abedc5d5e41a3985b1579b041ef4f1c98e3ce1081192094e240`.
+- Current fixture integrity only: manifest `6c9d8f232410e112cb53fe1ea547c7d1a0b1a90c1ef917cf87da4a1a3393b0a8`; matrix `6cf86c5e74318121e046ec898721689e7a4514e2858c35256c9d2d0a2be670fb`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
