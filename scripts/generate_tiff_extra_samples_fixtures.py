@@ -183,6 +183,68 @@ def build_palette_unspecified_extra_sample_tiff() -> bytes:
     return result
 
 
+def with_short_palette_color_map(data: bytes) -> bytes:
+    """Return a TIFF whose one-entry ColorMap is accepted without a palette."""
+    output = bytearray(data)
+    if output[:8] != b"II*\0\x08\0\0\0":
+        raise RuntimeError("Pillow emitted an unexpected classic TIFF header")
+    entry_count = struct.unpack_from("<H", output, 8)[0]
+    for index in range(entry_count):
+        offset = 10 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", output, offset)
+        if tag == 320:
+            if field_type != 3 or count != 768:
+                raise RuntimeError("Pillow emitted an unexpected TIFF ColorMap")
+            # Keep the complete TIFF file and its pixel data, but declare a
+            # ColorMap too short for Pillow to retain as an indexed palette.
+            struct.pack_into("<I", output, offset + 4, 1)
+            return bytes(output)
+    raise RuntimeError("Pillow omitted the TIFF ColorMap")
+
+
+def build_palette_alpha_short_color_map_tiff() -> bytes:
+    """Build Pillow's PA samples with a short ColorMap and no retained table."""
+    result = with_short_palette_color_map(build_palette_alpha_tiff())
+    _verify_short_color_map_palette_tiff(
+        result, expected_mode="PA", expected_pixels=PALETTE_ALPHA_PIXELS, extra_sample=2
+    )
+    return result
+
+
+def build_palette_unspecified_extra_sample_short_color_map_tiff() -> bytes:
+    """Build P samples with an ignored byte and no retained palette table."""
+    result = with_short_palette_color_map(build_palette_unspecified_extra_sample_tiff())
+    _verify_short_color_map_palette_tiff(
+        result,
+        expected_mode="P",
+        expected_pixels=PALETTE_ALPHA_PIXELS[0::2],
+        extra_sample=0,
+    )
+    return result
+
+
+def _verify_short_color_map_palette_tiff(
+    data: bytes, *, expected_mode: str, expected_pixels: bytes, extra_sample: int
+) -> None:
+    """Check Pillow's mode, ignored samples, and absent palette for this input."""
+    from PIL import Image
+
+    with Image.open(BytesIO(data)) as image:
+        if image.mode != expected_mode or image.size != (3, 2):
+            raise RuntimeError("Pillow changed mode or dimensions for a short ColorMap TIFF")
+        if tuple(image.tag_v2.get(338, ())) != (extra_sample,):
+            raise RuntimeError("Pillow changed the short ColorMap TIFF ExtraSamples tag")
+        if bytes(image.getpalette("RGB") or b""):
+            raise RuntimeError("Pillow unexpectedly retained a palette from a short ColorMap")
+        image.verify()
+    with Image.open(BytesIO(data)) as image:
+        image.load()
+        if image.tobytes() != expected_pixels:
+            raise RuntimeError("Pillow changed samples in a short ColorMap TIFF")
+        if bytes(image.getpalette("RGB") or b""):
+            raise RuntimeError("Pillow unexpectedly retained a palette after pixel decoding")
+
+
 @dataclass(frozen=True)
 class Recipe:
     """One complete classic TIFF storage configuration."""
@@ -362,6 +424,24 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     else:
         unspecified_palette_extra_path.write_bytes(unspecified_palette_extra_data)
 
+    short_color_map_fixtures = (
+        (
+            "palette_alpha_short_color_map.tiff",
+            build_palette_alpha_short_color_map_tiff(),
+        ),
+        (
+            "palette_unspecified_extra_sample_short_color_map.tiff",
+            build_palette_unspecified_extra_sample_short_color_map_tiff(),
+        ),
+    )
+    for filename, data in short_color_map_fixtures:
+        destination = directory / filename
+        if check:
+            if not destination.is_file() or destination.read_bytes() != data:
+                raise RuntimeError(f"{destination}: short ColorMap TIFF input differs")
+        else:
+            destination.write_bytes(data)
+
 
 def main() -> None:
     """Expose focused generation and the canonical input byte check."""
@@ -370,11 +450,12 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args()
     generate_fixtures(arguments.output_directory, check=arguments.check)
-    input_count = len(RECIPES) + 3
+    input_count = len(RECIPES) + 5
     print(
         f"{'Checked' if arguments.check else 'Generated'} "
         f"{input_count} extra-sample TIFF inputs, including "
-        "contiguous and separate-planar PA plus unspecified palette extras"
+        "contiguous and separate-planar PA, ignored palette extras, and "
+        "short-ColorMap palette-missing cases"
     )
 
 
