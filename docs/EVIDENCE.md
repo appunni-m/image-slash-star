@@ -1,8 +1,33 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,919 total rows: 3,207 decode /
-inspect / verify rows and 712 encode rows. Of those, 3,207 decode rows are
-active and 685 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,920 total rows: 3,207 decode /
+inspect / verify rows and 713 encode rows. Of those, 3,207 decode rows are
+active and 686 encode rows are active; 27 encode rows remain planned.
+
+## WebP lossless EXIF metadata without prefix — 2026-11-10
+
+For `image-slash-star#9h5w`, added active parity case
+`encode:webp:enc_lossless_exif_unprefixed_metadata_reuse`. It gives the
+lossless WebP metadata-reuse path a valid EXIF TIFF payload without the optional
+`Exif\0\0` prefix, covering the fallback arm in
+`attach_metadata_reusing_output`. Pinned Pillow 12.2.0 and the Rust encoder
+produce the same 74-byte output; re-decoding preserves exact 1×1 RGB pixels.
+
+The selected parity run passed 1/1, with four public encode calls and zero
+panics. Coverage MCP's retained full-parity report had identified the
+unprefixed-payload arm at `src/codecs/webp/encode/mod.rs:949` as uncovered. The
+selected report no longer lists that arm as missing; other branches in the
+metadata-reuse function remain uncovered. Coverage MCP marks this local report
+source identity unverified and test attribution unknown, so this confirms the
+focused branch hit rather than an aggregate coverage change. The report's
+SHA-256 is
+`bd252dfeefda56fadbdab053add8710b4cdc7a6dae7767ad5481307f1a6a37e1`; its local
+receipt SHA-256 is
+`3bb9f9d92f22c97164cb16453102ae99cd7af0af5cb61b1c1bf0dc001aaddc38`.
+Mode case indexes remain at 40 decode entries and 59 encode entries.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261110-webp-exif-unprefixed/coverage.json`.
 
 ## Sequence-frame mode decode parity — 2026-11-09
 
@@ -17802,7 +17827,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2989fddb7ce5bf9277415f23aa3e2cde4eb348a7512b93b1439241fdca89dfdb`; matrix `0660db17d6feaa241a7bba2ea6ee298db04e594807f83f61dec9289e59e2a5f6`.
+- Current fixture integrity only: manifest `e98093a3df74c9c48ee7359ea7ca3d0322f7c739400a13ef2b752bd29a864b36`; matrix `b008b5a10cf286a9cda7572a82d3907206f444d91ffe71563bf3c8bafb37ceb4`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

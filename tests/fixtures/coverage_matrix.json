@@ -368457,6 +368457,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_flat_method_2_q100.bin",
           "encoded_ref_bytes": 5112,
           "encoded_ref_sha256": "f4f6aec4b425f6c27bcc8dfd53aac13eecaa663c2ac6f936576306bc89262735",
@@ -368469,17 +368479,7 @@
             1024
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_tall_noise_method_2_q100",
@@ -368513,6 +368513,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_tall_noise_method_2_q100.bin",
           "encoded_ref_bytes": 174300,
           "encoded_ref_sha256": "36ddb5f81fe1002e89fcbe5819434d48bbfff11420719a4e4f2092948a53605e",
@@ -368525,17 +368535,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_lossy_probability_nonbuffer_segmented_method_2",
@@ -369624,6 +369624,60 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_exif_unprefixed_metadata_reuse",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Lossless VP8L output preserves valid EXIF metadata without an Exif prefix through the reusable-output path",
+          "params": {
+            "lossless": true,
+            "exif_hex": "49492a000800000000000000"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1x1.png",
+          "source_sha256": "611033f4cc0aa9e3348e69eba089499bc6287d57b53832079e64f42564a4e876",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_exif_unprefixed_metadata_reuse.bin",
+          "encoded_ref_bytes": 74,
+          "encoded_ref_sha256": "10418c63af7178aff19eb7b9f6ebe473621543f4e3dadee3e839b3747814cd35",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_exif_unprefixed_metadata_reuse.bin",
+          "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+          "ref_bytes": 3,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "description": "",
@@ -372189,9 +372243,9 @@
     }
   },
   "summary": {
-    "total_rows": 3919,
+    "total_rows": 3920,
     "decode_rows": 3207,
-    "encode_rows": 712,
+    "encode_rows": 713,
     "formats": 8,
     "assets_available": 3203,
     "decode_active": 3207,
