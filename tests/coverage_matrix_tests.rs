@@ -7605,7 +7605,7 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
         "L" | "L8" => Some(img::ImageMode::L8),
         "LA" | "La8" | "PA" => Some(img::ImageMode::La8),
         "RGB" | "Rgb8" => Some(img::ImageMode::Rgb8),
-        "RGBA" | "Rgba8" => Some(img::ImageMode::Rgba8),
+        "RGBA" | "RGBa" | "Rgba8" => Some(img::ImageMode::Rgba8),
         "LAB" => Some(img::ImageMode::Rgb8),
         "CMYK" | "Cmyk8" => Some(img::ImageMode::Cmyk8),
         "I;16" | "I;16B" | "I;16L" | "L16" => Some(img::ImageMode::L16),
@@ -7620,13 +7620,17 @@ fn expected_image_mode(mode: &str) -> Option<img::ImageMode> {
     }
 }
 
-fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> {
+fn expected_raster_mode(
+    mode: &str,
+    format: img::ImageFormat,
+    source: &img::SourceDescriptor,
+) -> Option<img::Mode> {
     Some(match mode {
         "1" => img::Mode::One,
         "P" => img::Mode::ImagePalette8,
         "PA" => img::Mode::ImagePaletteAlpha8,
         "L" | "L8" => img::Mode::ImageLuma8,
-        "LA" | "La8" if matches!(info.source.alpha(), Some(img::SourceAlpha::Premultiplied)) => {
+        "LA" | "La8" if matches!(source.alpha(), Some(img::SourceAlpha::Premultiplied)) => {
             img::Mode::ImageLaPremultiplied8
         }
         "LA" | "La8" => img::Mode::ImageLumaA8,
@@ -7636,8 +7640,8 @@ fn expected_raster_mode(mode: &str, info: &img::ImageInfo) -> Option<img::Mode> 
         "RGBa" => img::Mode::ImageRgbPremultiplied8,
         "CMYK" | "Cmyk8" => img::Mode::ImageCmyk8,
         "I;16B"
-            if info.format == img::ImageFormat::Tiff
-                && info.source.byte_order() == Some(img::SourceByteOrder::Big) =>
+            if format == img::ImageFormat::Tiff
+                && source.byte_order() == Some(img::SourceByteOrder::Big) =>
         {
             img::Mode::ImageI16B
         }
@@ -7804,6 +7808,10 @@ fn assert_encoded_header_raster_identity(
 fn assert_encoded_decoded_transfer_identity(
     bytes: &[u8],
     expected_format: img::ImageFormat,
+    expected_header_mode: img::ImageMode,
+    expected_header_raster_mode: img::Mode,
+    expected_transfer_mode: img::ImageMode,
+    expected_transfer_raster_mode: img::Mode,
     expected_image: &img::DecodedImage,
 ) -> Result<(), String> {
     let encoded = img::EncodedImage::new(Arc::<[u8]>::from(bytes.to_vec()))
@@ -7812,18 +7820,20 @@ fn assert_encoded_decoded_transfer_identity(
         .map_err(|error| format!("borrowed encoded decode construction failed: {error}"))?;
 
     let owned_header_matches = encoded.format() == expected_format
-        && encoded.mode() == expected_image.mode
-        && encoded.raster_mode() == expected_image.raster_mode
-        && encoded.info().raster_mode == expected_image.raster_mode;
+        && encoded.info().format == expected_format
+        && encoded.mode() == expected_header_mode
+        && encoded.info().mode == expected_header_mode
+        && encoded.raster_mode() == expected_header_raster_mode
+        && encoded.info().raster_mode == expected_header_raster_mode;
     let borrowed_header_matches = view.format() == expected_format
-        && view.mode() == expected_image.mode
-        && view.raster_mode() == expected_image.raster_mode
-        && view.info().raster_mode == expected_image.raster_mode;
+        && view.info().format == expected_format
+        && view.mode() == expected_header_mode
+        && view.info().mode == expected_header_mode
+        && view.raster_mode() == expected_header_raster_mode
+        && view.info().raster_mode == expected_header_raster_mode;
     if !owned_header_matches || !borrowed_header_matches {
         return Err(format!(
-            "source header identity differs from decoded transfer: expected={:?}/{:?}, owned={:?}/{:?}, borrowed={:?}/{:?}",
-            expected_image.mode,
-            expected_image.raster_mode,
+            "source header identity differs from Pillow: expected={expected_header_mode:?}/{expected_header_raster_mode:?}, owned={:?}/{:?}, borrowed={:?}/{:?}",
             encoded.mode(),
             encoded.raster_mode(),
             view.mode(),
@@ -7840,13 +7850,17 @@ fn assert_encoded_decoded_transfer_identity(
     if !encoded.is_decoded()
         || owned_decoded.format != expected_format
         || borrowed_decoded.format != expected_format
+        || owned_decoded.content.mode != expected_transfer_mode
+        || borrowed_decoded.content.mode != expected_transfer_mode
+        || owned_decoded.content.raster_mode != expected_transfer_raster_mode
+        || borrowed_decoded.content.raster_mode != expected_transfer_raster_mode
+        || expected_image.mode != expected_transfer_mode
+        || expected_image.raster_mode != expected_transfer_raster_mode
         || &owned_decoded.content != expected_image
         || &borrowed_decoded.content != expected_image
     {
         return Err(format!(
-            "source decode differs from matrix-verified transfer: expected={:?}/{:?}, owned={:?}/{:?}, borrowed={:?}/{:?}, owned_cached={}",
-            expected_image.mode,
-            expected_image.raster_mode,
+            "source decode differs from matrix-verified transfer: expected={expected_transfer_mode:?}/{expected_transfer_raster_mode:?}, owned={:?}/{:?}, borrowed={:?}/{:?}, owned_cached={}",
             owned_decoded.content.mode,
             owned_decoded.content.raster_mode,
             borrowed_decoded.content.mode,
@@ -7872,21 +7886,42 @@ fn assert_encoded_output_identity(
             info.format
         ));
     }
-    let expected_raster_mode =
-        expected_raster_mode(expected_mode_name, &info).ok_or_else(|| {
-            format!("no encoded raster mapping for Pillow mode {expected_mode_name:?}")
-        })?;
-    if info.raster_mode != expected_raster_mode
-        || expected_image.raster_mode != expected_raster_mode
+    let expected_header_mode = expected_image_mode(expected_mode_name).ok_or_else(|| {
+        format!("no encoded header mode mapping for Pillow mode {expected_mode_name:?}")
+    })?;
+    let expected_transfer_mode = expected_image_mode(expected_mode_name).ok_or_else(|| {
+        format!("no encoded transfer mode mapping for Pillow mode {expected_mode_name:?}")
+    })?;
+    let expected_header_raster_mode =
+        expected_raster_mode(expected_mode_name, expected_format, &info.source).ok_or_else(
+            || format!("no encoded raster mapping for Pillow mode {expected_mode_name:?}"),
+        )?;
+    let expected_transfer_raster_mode =
+        expected_raster_mode(expected_mode_name, expected_format, &expected_image.source)
+            .ok_or_else(|| {
+                format!("no encoded transfer raster mapping for Pillow mode {expected_mode_name:?}")
+            })?;
+    if info.mode != expected_header_mode
+        || info.raster_mode != expected_header_raster_mode
+        || expected_image.mode != expected_transfer_mode
+        || expected_image.raster_mode != expected_transfer_raster_mode
     {
         return Err(format!(
-            "encoded header/transfer identity differs from Pillow mode {expected_mode_name:?}: inspected={:?}/{:?}, decoded={:?}/{:?}, expected raster={expected_raster_mode:?}",
+            "encoded header/transfer identity differs from Pillow mode {expected_mode_name:?}: inspected={:?}/{:?}, decoded={:?}/{:?}, expected header={expected_header_mode:?}/{expected_header_raster_mode:?}, expected transfer={expected_transfer_mode:?}/{expected_transfer_raster_mode:?}",
             info.mode, info.raster_mode, expected_image.mode, expected_image.raster_mode,
         ));
     }
 
-    assert_encoded_header_raster_identity(bytes, &info, expected_raster_mode)?;
-    assert_encoded_decoded_transfer_identity(bytes, expected_format, expected_image)
+    assert_encoded_header_raster_identity(bytes, &info, expected_header_raster_mode)?;
+    assert_encoded_decoded_transfer_identity(
+        bytes,
+        expected_format,
+        expected_header_mode,
+        expected_header_raster_mode,
+        expected_transfer_mode,
+        expected_transfer_raster_mode,
+        expected_image,
+    )
 }
 
 fn zero_image_for_mode(
@@ -9647,7 +9682,9 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 };
-                let Some(expected_raster_mode) = expected_raster_mode(mode_name, info) else {
+                let Some(expected_raster_mode) =
+                    expected_raster_mode(mode_name, info.format, &info.source)
+                else {
                     eprintln!(
                         "  FAIL [{}]: no raster identity mapping for header mode {mode_name:?}",
                         row.id
@@ -10293,7 +10330,6 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         continue;
                     }
                 };
-                let expected_mode = row.ref_mode.as_deref().and_then(expected_image_mode);
                 let expected_is_animated = row
                     .ref_is_animated
                     .unwrap_or(row.ref_frame_count.is_some_and(|count| count > 1));
@@ -10370,16 +10406,19 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     .decoded_raster_mode
                     .as_deref()
                     .or(row.ref_mode.as_deref());
-                let expected_inspect_raster_mode =
-                    inspect_raster_mode_name.and_then(|mode| expected_raster_mode(mode, &info));
-                let expected_decoded_raster_mode =
-                    decoded_raster_mode_name.and_then(|mode| expected_raster_mode(mode, &info));
+                let expected_header_mode = inspect_raster_mode_name.and_then(expected_image_mode);
+                let expected_transfer_mode = decoded_raster_mode_name.and_then(expected_image_mode);
+                let expected_inspect_raster_mode = inspect_raster_mode_name
+                    .and_then(|mode| expected_raster_mode(mode, expected_format, &info.source));
+                let expected_decoded_raster_mode = decoded_raster_mode_name
+                    .and_then(|mode| expected_raster_mode(mode, expected_format, &decoded.source));
                 if info.format != expected_format
                     || Some(info.width)
                         != row.ref_size.as_ref().and_then(|size| size.first()).copied()
                     || Some(info.height)
                         != row.ref_size.as_ref().and_then(|size| size.get(1)).copied()
-                    || Some(info.mode) != expected_mode
+                    || Some(info.mode) != expected_header_mode
+                    || Some(decoded.mode) != expected_transfer_mode
                     || (inspect_raster_mode_name.is_some()
                         && expected_inspect_raster_mode.is_none())
                     || (decoded_raster_mode_name.is_some()
@@ -10642,10 +10681,60 @@ fn run_decode_matrix(format_filter: Option<&str>) {
             match assert_pixel_parity(&expected, &decoded)
                 .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
                 .and_then(|()| {
+                    let header_mode_name = row
+                        .inspect_raster_mode
+                        .as_deref()
+                        .or(row.ref_mode.as_deref())
+                        .ok_or_else(|| {
+                            format!("decode row {} has no expected header mode", row.id)
+                        })?;
+                    let transfer_mode_name = row
+                        .decoded_raster_mode
+                        .as_deref()
+                        .or(row.ref_mode.as_deref())
+                        .ok_or_else(|| {
+                            format!("decode row {} has no expected transfer mode", row.id)
+                        })?;
+                    let header_info = img::inspect(&data)
+                        .map_err(|error| format!("source header inspection failed: {error}"))?;
+                    let expected_header_mode = expected_image_mode(header_mode_name)
+                        .ok_or_else(|| format!("unknown header mode {header_mode_name:?}"))?;
+                    let expected_transfer_mode = expected_image_mode(transfer_mode_name)
+                        .ok_or_else(|| format!("unknown transfer mode {transfer_mode_name:?}"))?;
+                    let expected_header_raster_mode = expected_raster_mode(
+                        header_mode_name,
+                        expected_format,
+                        &header_info.source,
+                    )
+                    .ok_or_else(|| {
+                        format!("no raster identity mapping for header mode {header_mode_name:?}")
+                    })?;
+                    let expected_transfer_raster_mode = expected_raster_mode(
+                        transfer_mode_name,
+                        expected_format,
+                        &decoded.source,
+                    )
+                    .ok_or_else(|| {
+                        format!(
+                            "no raster identity mapping for decoded transfer mode {transfer_mode_name:?}"
+                        )
+                    })?;
                     if source_decoded_raster_identities
-                        .insert((fmt_name.to_owned(), decoded.raster_mode))
+                        .insert((
+                            fmt_name.to_owned(),
+                            header_mode_name.to_owned(),
+                            transfer_mode_name.to_owned(),
+                        ))
                     {
-                        assert_encoded_decoded_transfer_identity(&data, expected_format, &decoded)
+                        assert_encoded_decoded_transfer_identity(
+                            &data,
+                            expected_format,
+                            expected_header_mode,
+                            expected_header_raster_mode,
+                            expected_transfer_mode,
+                            expected_transfer_raster_mode,
+                            &decoded,
+                        )
                     } else {
                         Ok(())
                     }
