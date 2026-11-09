@@ -4,6 +4,32 @@ The current public evidence matrix contains 3,919 total rows: 3,207 decode /
 inspect / verify rows and 712 encode rows. Of those, 3,207 decode rows are
 active and 685 encode rows are active; 27 encode rows remain planned.
 
+## Sequence-frame mode decode parity — 2026-11-09
+
+Extended the append-only `mode_decode_cases` index to represent an exact
+sequence frame with `frame_index`. The new entries cover Pillow's `P` header →
+`Rgb8` second-frame transfer in `decode:gif:netscape_loop_split_subblocks`, and
+`Rgb8` header → `L8` second-page transfer in
+`decode:tiff:multi_page_multipage_mixed`. Mode-pair completeness now includes
+every exact Pillow-backed sequence frame, not only each file's first decoded
+image. The index contains 40 entries.
+
+The selected parity run passed both rows (2/2), including exact frame pixels,
+sequence metadata, and frame modes. `cargo fmt --all -- --check` passed; no
+codec implementation changes or unit tests were added.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261109T180744.736818Z-6fd7f340e09746c486e36a0bd6b4cb0a/coverage.json`
+(SHA-256
+`5e0e95258194cea3f22f57fe6196901b7b5fb115cb646e313f4fe441d87878bc`). The
+local receipt SHA-256 is
+`a04ea08b8ec6c6e300b5f19259c9f8741eff5b22cf8a585ccfbf1f2e125a642b`. This
+selected report measures 2,593/142,863 lines (1.8150%), 307/32,126 branches
+(0.9556%), 260/9,180 functions (2.8322%), and 3,819/221,254 regions (1.7261%).
+Coverage MCP was not queried; the local receipt marks source identity
+unverified and test attribution unknown. These selected counts are not
+aggregate project coverage.
+
 ## JPEG multi-scan restart markers without DRI — 2026-11-09
 
 Added `decode:jpeg:baseline_444_multiscan_restart_markers_without_dri` by
