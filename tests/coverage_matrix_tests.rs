@@ -11012,6 +11012,33 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 frame.image.palette = None;
             }
             if let Some(decoded) = decoded_owned.as_mut()
+                && row
+                    .params
+                    .get("second_frame_mode")
+                    .and_then(|value| value.as_str())
+                    == Some("I;16B")
+            {
+                let frame = require_some(
+                    decoded.frames.get_mut(1),
+                    "second-frame byte-order conversion requires a second source frame",
+                );
+                if frame.image.mode != img::ImageMode::L16
+                    || frame.image.raster_mode != img::Mode::ImageI16
+                    || frame.image.pixels.len() % 2 != 0
+                {
+                    eprintln!(
+                        "  FAIL [{}]: I;16B conversion requires a complete little-endian L16 frame",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                for sample in frame.image.pixels.as_chunks_mut::<2>().0 {
+                    sample.swap(0, 1);
+                }
+                frame.image.raster_mode = img::Mode::ImageI16B;
+            }
+            if let Some(decoded) = decoded_owned.as_mut()
                 && row.params.get("oversized_palette").and_then(Value::as_bool) == Some(true)
             {
                 let frame = require_some(

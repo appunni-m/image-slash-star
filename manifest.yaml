@@ -11930,6 +11930,11 @@ formats:
       rust_expect_error: true
       rust_error_kind: unsupported
       rust_error_reason: The current TIFF encoder is still-only and cannot discard sequence geometry
+    - id: enc_error_mixed_sample_byte_order_sequence
+      description: Pillow rejects a TIFF sequence when its second page changes sample byte order
+      source_asset: mixed_sample_byte_order_sequence.tiff
+      params: {'animated': true, 'frames': 2, 'second_frame_mode': 'I;16B', 'compression': 'none'}
+      expect_error: true
     - id: enc_error_public_mode_contract
       description: Unsupported public ImageModes and inconsistent color or LAB transfer states return structured errors without panicking
       source_format: png
@@ -12218,6 +12223,14 @@ formats:
       description: Pillow accepts but ignores the TIFF byte-order option
       params:
         byte_order: be
+    - id: enc_i16_be_source
+      description: Big-endian Pillow I;16B samples retain pixel parity when encoded as TIFF
+      source_asset: gray16_be_deflate_predictor_contiguous_tiled.tiff
+      params: {'compression': 'none'}
+    - id: enc_i16_be_deflate_predictor
+      description: Big-endian 16-bit samples retain byte and pixel parity through TIFF Deflate prediction
+      source_asset: gray16_be_deflate_predictor_contiguous_tiled.tiff
+      params: {'compression': 'deflate', 'predictor': 'horizontal'}
   ico:
     name: ICO/CUR
     extensions:

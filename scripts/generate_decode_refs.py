@@ -178,6 +178,8 @@ def encode_error_kind(row, error):
     """Map a Pillow save failure using its manifest-declared caller input."""
     params = row.get("params", {})
     message = stable_error_message(error)
+    if "IIMM of new page doesn't match IIMM of first page" in message:
+        return "unsupported"
     if "Image size exceeds WebP limit" in message:
         return "dimensions"
     if "source_dimensions" in params:
@@ -760,6 +762,9 @@ def encode_params(fmt, params):
             kwargs["_manifest_animated"] = animated
         if frames is not None:
             kwargs["_manifest_frames"] = frames
+        second_frame_mode = take("second_frame_mode")
+        if second_frame_mode is not None:
+            kwargs["_manifest_second_frame_mode"] = second_frame_mode
         compression = take("compression")
         if compression is not None:
             kwargs["compression"] = {

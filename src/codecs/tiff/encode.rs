@@ -64,6 +64,7 @@ pub(crate) fn encode_sequence_to_sink(
     crate::codecs::error::check_cancelled(token)?;
     sequence.validate().map_err(CodecError::from_image_error)?;
     validate_sequence_semantics(sequence)?;
+    validate_sequence_byte_order(sequence, opts)?;
     if sequence.frames.len() == 1 {
         return encode_to_sink(
             &sequence.frames[0].image,
@@ -128,6 +129,22 @@ struct EncodedPage {
     ifd_offset: usize,
     offset_positions: Vec<usize>,
     next_position: usize,
+    endian: Endian,
+}
+
+fn tiff_endian_for_image(img: &DecodedImage, opts: &TiffEncodeOptions) -> CodecResult<Endian> {
+    match (img.mode, img.raster_mode) {
+        (ImageMode::L16, Mode::ImageI16B)
+            if matches!(opts.compression, None | Some(TiffCompression::Raw)) =>
+        {
+            Ok(Endian::Big)
+        }
+        (ImageMode::L16, Mode::ImageI16B) => Ok(Endian::Little),
+        (_, Mode::ImageI16B) => Err(CodecError::Parameter(
+            "TIFF I;16B raster identity requires a 16-bit grayscale transfer carrier".to_owned(),
+        )),
+        _ => Ok(Endian::Little),
+    }
 }
 
 fn encode_page_with_token(
@@ -140,6 +157,7 @@ fn encode_page_with_token(
     crate::codecs::error::check_cancelled(token)?;
     let width = img.width as usize;
     let height = img.height as usize;
+    let endian = tiff_endian_for_image(img, opts)?;
     let palette_alpha = img.raster_mode == Mode::ImagePaletteAlpha8;
     let lab = img.raster_mode == Mode::ImageLab8;
     if lab && img.mode != ImageMode::Rgb8 {
@@ -176,8 +194,6 @@ fn encode_page_with_token(
             }
         }
     };
-    // Pillow 12.2.0 accepts byte_order but always emits little-endian TIFF.
-    let endian = Endian::Little;
     let compression = match opts.compression.unwrap_or(TiffCompression::Raw) {
         TiffCompression::Raw => COMPRESSION_NONE,
         TiffCompression::Lzw => COMPRESSION_LZW,
@@ -194,6 +210,7 @@ fn encode_page_with_token(
         ));
     }
 
+    let swap_l16_to_big_endian = img.mode == ImageMode::L16 && endian == Endian::Big;
     let mut raw: Cow<'_, [u8]> =
         if predictor == 2 && matches!(compression, COMPRESSION_LZW | COMPRESSION_DEFLATE) {
             Cow::Owned(img.pixels.clone())
@@ -207,6 +224,7 @@ fn encode_page_with_token(
             row_len,
             usize::from(channels),
             bits_per_sample,
+            endian,
             token,
         )?;
     }
@@ -226,6 +244,9 @@ fn encode_page_with_token(
     let has_sample_format = matches!(img.mode, ImageMode::F32 | ImageMode::I32);
     let entry_count = if bits_per_sample == 1 { 8u16 } else { 9u16 }
         .wrapping_add(u16::from(channels > 1))
+        .wrapping_add(u16::from(
+            compression != COMPRESSION_NONE && img.mode == ImageMode::L16,
+        ))
         .wrapping_add(u16::from(extra_sample))
         .wrapping_add(u16::from(predictor == 2))
         .wrapping_add(u16::from(has_sample_format))
@@ -284,6 +305,7 @@ fn encode_page_with_token(
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(match endian {
         Endian::Little => b"II",
+        Endian::Big => b"MM",
     });
     endian.push_u16(&mut output, 42);
     endian.push_u32(&mut output, bounded_u32(ifd_offset));
@@ -329,7 +351,7 @@ fn encode_page_with_token(
     write_short_entry(&mut output, endian, 262, photometric);
     offset_positions.push(output.len().saturating_add(8));
     write_entry(&mut output, endian, 273, 4, 1, bounded_u32(pixel_offset));
-    if channels > 1 {
+    if channels > 1 || (compression != COMPRESSION_NONE && img.mode == ImageMode::L16) {
         write_short_entry(&mut output, endian, 277, channels);
     }
     if compressed_layout {
@@ -378,13 +400,23 @@ fn encode_page_with_token(
     }
     if !compressed_layout {
         output.resize(pixel_offset, 0);
-        output.extend_from_slice(&encoded);
+        if swap_l16_to_big_endian {
+            let (samples, remainder) = img.pixels.as_chunks::<2>();
+            debug_assert!(remainder.is_empty());
+            for sample in samples {
+                output.push(sample[1]);
+                output.push(sample[0]);
+            }
+        } else {
+            output.extend_from_slice(&encoded);
+        }
     }
     Ok(EncodedPage {
         bytes: output,
         ifd_offset,
         offset_positions,
         next_position,
+        endian,
     })
 }
 
@@ -430,6 +462,7 @@ pub fn encode_sequence_with_token(
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
     validate_sequence_semantics(sequence)?;
+    validate_sequence_byte_order(sequence, opts)?;
     if sequence.frames.len() == 1 {
         let encoded = encode_with_token(&sequence.frames[0].image, opts, token)?;
         crate::codecs::error::check_cancelled(token)?;
@@ -453,18 +486,21 @@ pub fn encode_sequence_with_token(
         let base = output.len();
         if let Some(previous) = previous_next_position {
             let next_ifd = bounded_u32(base.wrapping_add(page.ifd_offset));
-            output[previous..previous.saturating_add(4)].copy_from_slice(&next_ifd.to_le_bytes());
+            page.endian
+                .write_u32(&mut output[previous..previous.saturating_add(4)], next_ifd);
         }
         for &position in &page.offset_positions {
-            let local = u32::from_le_bytes([
+            let local = page.endian.read_u32([
                 page.bytes[position],
                 page.bytes[position.saturating_add(1)],
                 page.bytes[position.saturating_add(2)],
                 page.bytes[position.saturating_add(3)],
             ]) as usize;
             let relocated = bounded_u32(base.wrapping_add(local));
-            page.bytes[position..position.saturating_add(4)]
-                .copy_from_slice(&relocated.to_le_bytes());
+            page.endian.write_u32(
+                &mut page.bytes[position..position.saturating_add(4)],
+                relocated,
+            );
         }
         previous_next_position = Some(base.wrapping_add(page.next_position));
         output.extend_from_slice(&page.bytes);
@@ -515,6 +551,24 @@ fn validate_sequence_semantics(sequence: &DecodedSequence) -> CodecResult<()> {
         return Err(CodecError::Unsupported(
             "TIFF sequence canvas must equal the maximum page extent".to_owned(),
         ));
+    }
+    Ok(())
+}
+
+fn validate_sequence_byte_order(
+    sequence: &DecodedSequence,
+    opts: &TiffEncodeOptions,
+) -> CodecResult<()> {
+    let Some(first) = sequence.frames.first() else {
+        return Ok(());
+    };
+    let endian = tiff_endian_for_image(&first.image, opts)?;
+    for frame in &sequence.frames[1..] {
+        if tiff_endian_for_image(&frame.image, opts)? != endian {
+            return Err(CodecError::Unsupported(
+                "TIFF pages must use one sample byte order".to_owned(),
+            ));
+        }
     }
     Ok(())
 }
@@ -572,7 +626,7 @@ fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
             let next_field = page.bytes.get_mut(page.next_position..end).ok_or_else(|| {
                 CodecError::Dimensions("TIFF next-IFD field is outside the page".to_owned())
             })?;
-            next_field.copy_from_slice(&bounded_u32(next_ifd).to_le_bytes());
+            page.endian.write_u32(next_field, bounded_u32(next_ifd));
         }
         for &position in &page.offset_positions {
             let end = position
@@ -581,10 +635,13 @@ fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
             let local = page.bytes.get(position..end).ok_or_else(|| {
                 CodecError::Dimensions("TIFF offset field is outside the page".to_owned())
             })?;
-            let local = u32::from_le_bytes([local[0], local[1], local[2], local[3]]) as usize;
+            let local =
+                page.endian
+                    .read_u32([local[0], local[1], local[2], local[3]]) as usize;
             let relocated = tiff_relocated_offset(base, local)?;
             let relocated_field = &mut page.bytes[position..end];
-            relocated_field.copy_from_slice(&bounded_u32(relocated).to_le_bytes());
+            page.endian
+                .write_u32(relocated_field, bounded_u32(relocated));
         }
         end = tiff_page_end(base, page_len)?;
     }
@@ -655,6 +712,7 @@ fn apply_horizontal_predictor(
     row_len: usize,
     channels: usize,
     bits_per_sample: u16,
+    endian: Endian,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<()> {
     let sample_bytes = usize::from(bits_per_sample / 8);
@@ -665,8 +723,12 @@ fn apply_horizontal_predictor(
             let previous = offset.wrapping_sub(stride);
             let mut borrow = 0u16;
             for byte in 0..sample_bytes {
-                let current_index = offset.wrapping_add(byte);
-                let previous_index = previous.wrapping_add(byte);
+                let byte_index = match endian {
+                    Endian::Little => byte,
+                    Endian::Big => sample_bytes.wrapping_sub(byte).wrapping_sub(1),
+                };
+                let current_index = offset.wrapping_add(byte_index);
+                let previous_index = previous.wrapping_add(byte_index);
                 let value = u16::from(row[current_index]);
                 let subtrahend = u16::from(row[previous_index]).wrapping_add(borrow);
                 row[current_index] = value.wrapping_sub(subtrahend).to_le_bytes()[0];
@@ -906,22 +968,40 @@ impl MsbWriter {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Endian {
     Little,
+    Big,
 }
 
 impl Endian {
     fn push_u16(self, output: &mut Vec<u8>, value: u16) {
         output.extend_from_slice(&match self {
             Self::Little => value.to_le_bytes(),
+            Self::Big => value.to_be_bytes(),
         });
     }
 
     fn push_u32(self, output: &mut Vec<u8>, value: u32) {
         output.extend_from_slice(&match self {
             Self::Little => value.to_le_bytes(),
+            Self::Big => value.to_be_bytes(),
         });
+    }
+
+    fn read_u32(self, bytes: [u8; 4]) -> u32 {
+        match self {
+            Self::Little => u32::from_le_bytes(bytes),
+            Self::Big => u32::from_be_bytes(bytes),
+        }
+    }
+
+    fn write_u32(self, output: &mut [u8], value: u32) {
+        let bytes = match self {
+            Self::Little => value.to_le_bytes(),
+            Self::Big => value.to_be_bytes(),
+        };
+        output.copy_from_slice(&bytes);
     }
 }
 

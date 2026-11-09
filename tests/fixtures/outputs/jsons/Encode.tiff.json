@@ -67,6 +67,56 @@
       "rust_error_reason": "The current TIFF encoder is still-only and cannot discard sequence geometry"
     },
     {
+      "id": "enc_error_mixed_sample_byte_order_sequence",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_sha256": null,
+      "encoded_ref_path": null,
+      "encoded_ref_bytes": null,
+      "encoded_ref_sha256": null,
+      "source_mode": "I;16",
+      "source_sha256": "71ff1a014289b1a9f325a8f87f044f0b82f73decef614c069375ecf41fdfd800",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "IIMM of new page doesn't match IIMM of first page",
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "oracle_status": "error",
+      "error_type": "builtins.RuntimeError",
+      "error_message": "IIMM of new page doesn't match IIMM of first page",
+      "error_kind": "unsupported"
+    },
+    {
       "id": "enc_error_public_mode_contract",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_error_public_mode_contract.bin",
       "ref_bytes": 3,
@@ -3989,6 +4039,86 @@
       "encoded_ref_sha256": "ef09662b8903c8f88902e1a370a00d9eed405fbac47bbb96ab43f856958d959b",
       "source_mode": "Rgb8",
       "source_sha256": "ef09662b8903c8f88902e1a370a00d9eed405fbac47bbb96ab43f856958d959b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_i16_be_source",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_source.bin",
+      "ref_bytes": 578,
+      "ref_mode": "I;16B",
+      "ref_size": [
+        17,
+        17
+      ],
+      "ref_sha256": "b807fa30e961e406d0e3d49ee75c939014982544cdcd9c1cd5210f7eedf44ee6",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_source.bin",
+      "encoded_ref_bytes": 700,
+      "encoded_ref_sha256": "4a8df3a043fb9c2f27b2e022e947ce641d455096b8cff019f7282d6432789176",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_i16_be_deflate_predictor",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+      "ref_bytes": 578,
+      "ref_mode": "I;16",
+      "ref_size": [
+        17,
+        17
+      ],
+      "ref_sha256": "aedf4544aaf1eb4a2a9c7219a79f158a4b9625be0226f6b4aacebd04603526b6",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+      "encoded_ref_bytes": 264,
+      "encoded_ref_sha256": "88b02737ef1b39f6fe7c01e382d673e4f1388a5617592e0a9cc062e617e6036b",
+      "source_mode": "I;16B",
+      "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

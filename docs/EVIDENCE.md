@@ -1,8 +1,36 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,894 total rows: 3,202 decode /
-inspect / verify rows and 692 encode rows. Of those, 3,202 decode rows are
-active and 665 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,897 total rows: 3,202 decode /
+inspect / verify rows and 695 encode rows. Of those, 3,202 decode rows are
+active and 668 encode rows are active; 27 encode rows remain planned.
+
+## Big-endian 16-bit TIFF encoder identity — 2026-11-09
+
+Added two Pillow parity rows for a source decoded as `I;16B`. Uncompressed
+TIFF output now retains the big-endian `MM` header and `I;16B` raster identity;
+Deflate with horizontal prediction matches Pillow's little-endian `II` output
+and normalized `I;16` identity. The encoder converts carrier samples only for
+the raw big-endian path and includes Pillow's single-sample tag on compressed
+16-bit grayscale output. A new manifest-driven parity row covers a two-page
+`I;16` TIFF sequence whose second frame is converted to `I;16B`; Pillow and
+Rust both reject that mixed-byte-order save.
+
+The new focused parity selection passed 1/1:
+`encode:tiff:enc_error_mixed_sample_byte_order_sequence`. The earlier TIFF
+selection at commit `431c3e6` passed 66 encode rows, one big-endian decode row,
+and the now-retired target-only sequence contract (68/68 total). The combined
+selection was not rerun after replacing that contract with the Pillow parity
+row. No unit tests were added.
+
+The current focused report is retained at
+`.coverage-mcp/local-evidence/selected/20261109T023700.826628Z-e73d13e2f2c44d6fa0c060ddbb529cc1/coverage.json`
+(SHA-256 `e477f22c95d3fab74c09f8215f3f5825060019df545be041ca149b2256d22185`).
+Coverage MCP was not queried; this is local selected-case evidence, not an
+aggregate coverage-gain claim. The previous selected report is retained at
+`.coverage-mcp/local-evidence/selected/20261109T015929.647840Z-1c5c4218abe545d68c06482986e4694b/coverage.json`
+(SHA-256 `0fde190b49b1d7e0b20c09e7c2f41185794ec0df28a8c9253831506e3cee7ba1`).
+That earlier receipt marks source identity unverified and test attribution
+unknown.
 
 ## TIFF indexed encoding with no retained palette — 2026-11-08
 
@@ -17629,7 +17657,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4a237bde1972aa29679706fc14f76e2b9c32f92bee3ce3a2d8c264947726741b`; matrix `0bf6203368cc7ad4c6df0c8439262caaf980f9c0c36ede878d1ca4a99c42c7ac`.
+- Current fixture integrity only: manifest `da8aca03a81ad4dcb0f8e7ac471907421e2ab5bc933ee6f07c3939fbab1dac52`; matrix `8637aab5596e99e8a3eaf071b87a226a90cd3e65e95adc27ac58cf2ee9c6b5ce`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

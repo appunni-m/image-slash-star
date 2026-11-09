@@ -10,16 +10,16 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `0bf6203368cc7ad4c6df0c8439262caaf980f9c0c36ede878d1ca4a99c42c7ac`.
+- Active fixture source SHA-256: `8637aab5596e99e8a3eaf071b87a226a90cd3e65e95adc27ac58cf2ee9c6b5ce`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,867 (3,202 decode; 665 encode).
+- Active fixture rows: 3,870 (3,202 decode; 668 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
-- Active `not_applicable` operation outcomes excluded from evidence groups: 149.
+- Active `not_applicable` operation outcomes excluded from evidence groups: 150.
 
 Runtime evidence is present only for `native` and `wasm32-wasip1`; this page makes no runtime claim for `wasm32-unknown-unknown`. The fixture tables below are observed active contracts, not an exhaustive file-format specification or Cartesian mode-acceptance matrix.
 Active fixture evidence in the tables below is `native` / `all features`; it is evidence for the matrix run, not a claim that every target/lane has the same direct fixture coverage.
@@ -479,7 +479,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | sequence_encode | accepted | F32 | 1 frame | F32 | SingleFrame | — | 3: `tiff:enc_32bit`, `tiff:enc_f32_be_source`, `tiff:enc_f32_be_source_predictor` |
 | TIFF | sequence_encode | accepted | I32 | 1 frame | I32 | SingleFrame | — | 3: `tiff:enc_i32`, `tiff:enc_i32_be_source`, `tiff:enc_i32_be_source_predictor` |
 | TIFF | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `tiff:enc_bilevel` |
-| TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `tiff:enc_16bit` |
+| TIFF | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 3: `tiff:enc_16bit`, `tiff:enc_i16_be_deflate_predictor`, `tiff:enc_i16_be_source` |
 | TIFF | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | sequence_encode | accepted | LAB | 1 frame | LAB | SingleFrame | — | 1: `tiff:enc_lab` |
 | TIFF | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 1: `tiff:enc_grayscale_alpha` |
@@ -490,6 +490,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | sequence_encode | accepted | Rgb8 | 3 frames | Rgb8 | UntimedPages | — | 1: `tiff:enc_sequence_three_pages` |
 | TIFF | sequence_encode | accepted | Rgba8 | 1 frame | Rgba8 | SingleFrame | — | 1: `tiff:enc_rgba` |
 | TIFF | sequence_encode | rejected | L1 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_bilevel_predictor` |
+| TIFF | sequence_encode | rejected | L16; second-frame mode: L16 | 2 frames | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_mixed_sample_byte_order_sequence` |
 | TIFF | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 2: `tiff:enc_error_compression_type`, `tiff:enc_error_predictor_range` |
 | TIFF | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_retained_sequence_geometry` |
 | TIFF | sequence_encode | rejected | Rgb8 | 2 frames | — (no Rust output) | — (no result) | unsupported | 8: `tiff:enc_error_sequence_background`, `tiff:enc_error_sequence_blend`, `tiff:enc_error_sequence_canvas`, `tiff:enc_error_sequence_default_image`, `tiff:enc_error_sequence_disposal`, `tiff:enc_error_sequence_duration`, `tiff:enc_error_sequence_interlace`, `tiff:enc_error_sequence_loop` |
@@ -498,7 +499,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | still_encode | accepted | F32 | 1 frame | F32 | — (still result) | — | 3: `tiff:enc_32bit`, `tiff:enc_f32_be_source`, `tiff:enc_f32_be_source_predictor` |
 | TIFF | still_encode | accepted | I32 | 1 frame | I32 | — (still result) | — | 3: `tiff:enc_i32`, `tiff:enc_i32_be_source`, `tiff:enc_i32_be_source_predictor` |
 | TIFF | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `tiff:enc_bilevel` |
-| TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `tiff:enc_16bit` |
+| TIFF | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 3: `tiff:enc_16bit`, `tiff:enc_i16_be_deflate_predictor`, `tiff:enc_i16_be_source` |
 | TIFF | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 7: `tiff:enc_8bit`, `tiff:enc_grayscale`, `tiff:enc_lzw_byte_aligned`, `tiff:enc_lzw_clear_boundary`, `tiff:enc_lzw_solid`, `tiff:enc_lzw_width_boundary`, `tiff:enc_packbits_runs` |
 | TIFF | still_encode | accepted | LAB | 1 frame | LAB | — (still result) | — | 1: `tiff:enc_lab` |
 | TIFF | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 1: `tiff:enc_grayscale_alpha` |

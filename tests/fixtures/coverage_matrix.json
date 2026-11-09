@@ -326232,6 +326232,63 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_error_mixed_sample_byte_order_sequence",
+          "type": "encode",
+          "format": "tiff",
+          "category": "error",
+          "description": "Pillow rejects a TIFF sequence when its second page changes sample byte order",
+          "params": {
+            "animated": true,
+            "frames": 2,
+            "second_frame_mode": "I;16B",
+            "compression": "none"
+          },
+          "expect_error": true,
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "mixed_sample_byte_order_sequence.tiff",
+          "source_sha256": "71ff1a014289b1a9f325a8f87f044f0b82f73decef614c069375ecf41fdfd800",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16",
+          "source_frame_count": 2,
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "IIMM of new page doesn't match IIMM of first page",
+          "oracle_error_kind": "unsupported",
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "not_applicable",
+            "encode_sequence": "error"
+          },
+          "error_contracts": {
+            "encode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "IIMM of new page doesn't match IIMM of first page",
+              "rust_kind": "unsupported",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "enc_error_public_mode_contract",
           "type": "encode",
           "format": "tiff",
@@ -326437,6 +326494,16 @@
           },
           "source_mode": "P",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_indexed_missing_palette.bin",
           "encoded_ref_bytes": 18054,
           "encoded_ref_sha256": "7b468806b83f0aee751357001e5a54ec0c18daa40c0aad84f90397b595fb76d9",
@@ -326449,17 +326516,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_error_pa_invalid_transfer_carrier",
@@ -331035,6 +331092,113 @@
           "ref_size": [
             128,
             128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_i16_be_source",
+          "type": "encode",
+          "format": "tiff",
+          "category": "i16",
+          "description": "Big-endian Pillow I;16B samples retain pixel parity when encoded as TIFF",
+          "params": {
+            "compression": "none"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+          "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_source.bin",
+          "encoded_ref_bytes": 700,
+          "encoded_ref_sha256": "4a8df3a043fb9c2f27b2e022e947ce641d455096b8cff019f7282d6432789176",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_source.bin",
+          "ref_sha256": "b807fa30e961e406d0e3d49ee75c939014982544cdcd9c1cd5210f7eedf44ee6",
+          "ref_bytes": 578,
+          "ref_mode": "I;16B",
+          "ref_size": [
+            17,
+            17
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_i16_be_deflate_predictor",
+          "type": "encode",
+          "format": "tiff",
+          "category": "i16",
+          "description": "Big-endian 16-bit samples retain byte and pixel parity through TIFF Deflate prediction",
+          "params": {
+            "compression": "deflate",
+            "predictor": "horizontal"
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "gray16_be_deflate_predictor_contiguous_tiled.tiff",
+          "source_sha256": "1213db43b4d945aca77e38a30d0fe23690d85098648037ea20af1ab943156337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I;16B",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+          "encoded_ref_bytes": 264,
+          "encoded_ref_sha256": "88b02737ef1b39f6fe7c01e382d673e4f1388a5617592e0a9cc062e617e6036b",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_i16_be_deflate_predictor.bin",
+          "ref_sha256": "aedf4544aaf1eb4a2a9c7219a79f158a4b9625be0226f6b4aacebd04603526b6",
+          "ref_bytes": 578,
+          "ref_mode": "I;16",
+          "ref_size": [
+            17,
+            17
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
@@ -370650,9 +370814,9 @@
     }
   },
   "summary": {
-    "total_rows": 3894,
+    "total_rows": 3897,
     "decode_rows": 3202,
-    "encode_rows": 692,
+    "encode_rows": 695,
     "formats": 8,
     "assets_available": 3198,
     "decode_active": 3202,
@@ -375129,6 +375293,18 @@
       "case_id": "enc_lab",
       "source_mode": "LAB",
       "decoded_mode": "LAB"
+    },
+    {
+      "format": "tiff",
+      "case_id": "enc_i16_be_source",
+      "source_mode": "I;16B",
+      "decoded_mode": "I;16B"
+    },
+    {
+      "format": "tiff",
+      "case_id": "enc_i16_be_deflate_predictor",
+      "source_mode": "I;16B",
+      "decoded_mode": "I;16"
     }
   ]
 }
