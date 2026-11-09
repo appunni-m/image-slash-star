@@ -10603,6 +10603,20 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - palette_alpha.tiff
+    - id: palette_alpha_separate_planar
+      description: Pillow inspects and verifies separate-planar PA headers but rejects pixel decoding
+      inspect_raster_mode: PA
+      rust_decode_with_token: true
+      expect_error: true
+      test_assets:
+      - palette_alpha_separate_planar.tiff
+    - id: palette_unspecified_extra_sample
+      description: Palette indices retain P identity when a contiguous second sample is unspecified and ignored by Pillow
+      inspect_raster_mode: P
+      decoded_raster_mode: P
+      rust_decode_with_token: true
+      test_assets:
+      - palette_unspecified_extra_sample.tiff
     - id: palette_low_depth
       description: Packed 2-bit and 4-bit palette indices
       test_assets:

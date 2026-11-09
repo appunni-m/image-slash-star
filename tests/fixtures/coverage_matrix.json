@@ -297025,6 +297025,172 @@
           "rust_decode_with_token": true
         },
         {
+          "id": "palette_alpha_separate_planar",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Pillow inspects and verifies separate-planar PA headers but rejects pixel decoding",
+          "asset": "palette_alpha_separate_planar.tiff",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "PA",
+          "rust_decode_with_token": true,
+          "asset_sha256": "dbbb1068142c8215a35b37fc75813c5a9bf69c7e4da1f31a332e7093029dece0",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.ValueError",
+          "oracle_error_message": "unknown raw mode for given image mode",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.ValueError",
+              "pillow_message": "unknown raw mode for given image mode",
+              "rust_kind": "malformed",
+              "rust_format": "TIFF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "palette_unspecified_extra_sample",
+          "type": "decode",
+          "format": "tiff",
+          "category": "palette",
+          "description": "Palette indices retain P identity when a contiguous second sample is unspecified and ignored by Pillow",
+          "asset": "palette_unspecified_extra_sample.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "inspect_raster_mode": "P",
+          "decoded_raster_mode": "P",
+          "rust_decode_with_token": true,
+          "asset_sha256": "6e79a3a014b7cfc0bfee0c843597fb0364359e7083b70a6118a0094004ea7c5b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_unspecified_extra_sample_tiff.bin",
+          "ref_sha256": "a3cef909b72a6846276fb40bd5e61d84b8186c34a4034530b41dd657d94c96c4",
+          "ref_bytes": 6,
+          "ref_mode": "P",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_unspecified_extra_sample_tiff.inspect-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "5cbb1d39c8d897e63cc953057a5bf5b1eead5d0decb4580c9e2b1010f1db981a"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.tiff_palette_unspecified_extra_sample_tiff.decoded-palette.rgb.bin",
+            "rgb_bytes": 768,
+            "rgb_sha256": "5cbb1d39c8d897e63cc953057a5bf5b1eead5d0decb4580c9e2b1010f1db981a"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "palette_low_depth",
           "type": "decode",
           "format": "tiff",
@@ -326264,10 +326430,6 @@
           },
           "source_mode": "I;16",
           "source_frame_count": 2,
-          "oracle_status": "error",
-          "oracle_error_type": "builtins.RuntimeError",
-          "oracle_error_message": "IIMM of new page doesn't match IIMM of first page",
-          "oracle_error_kind": "unsupported",
           "assertion_origins": {
             "source": "pillow_fixture",
             "encode": "pillow_fixture",
@@ -326286,7 +326448,11 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "IIMM of new page doesn't match IIMM of first page",
+          "oracle_error_kind": "unsupported"
         },
         {
           "id": "enc_error_public_mode_contract",
@@ -370814,12 +370980,12 @@
     }
   },
   "summary": {
-    "total_rows": 3897,
-    "decode_rows": 3202,
+    "total_rows": 3899,
+    "decode_rows": 3204,
     "encode_rows": 695,
     "formats": 8,
-    "assets_available": 3198,
-    "decode_active": 3202,
+    "assets_available": 3200,
+    "decode_active": 3204,
     "decode_planned": 0,
     "encode_not_wired": 27
   },
