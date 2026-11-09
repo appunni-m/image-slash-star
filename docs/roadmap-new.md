@@ -17,7 +17,7 @@ Coverage MCP marks source identity unverified and test attribution unknown.
 The LLVM percentages below remain the historical managed baseline; they use a
 separate report and denominator.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 292 exact `cfg(coverage)` guards across 37 files.
+The origin verifier passes for 291 exact `cfg(coverage)` guards across 37 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -35,7 +35,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 1405 rows total, 1405 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, 5 active parity cases and 27 explicit planned gaps.
-- Whole matrix: 3,896 rows total, 3,202 active decode rows, 667 active encode rows, 0 planned decode rows, and 27 planned encode rows.
+- Whole matrix: 3,897 rows total, 3,202 active decode rows, 668 active encode rows, 0 planned decode rows, and 27 planned encode rows.
 
 Nine integer-motion mixed-key cases now cover I420/I422/I444 at 8/10/12 bits
 with exact Pillow still/sequence output. The fresh full run passes 139 integration

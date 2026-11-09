@@ -92,6 +92,73 @@
       }
     },
     {
+      "id": "enc_error_mixed_sample_byte_order_sequence",
+      "source_asset": "mixed_sample_byte_order_sequence.tiff",
+      "source_format": "tiff",
+      "source_mode": "I;16",
+      "source_sha256": "71ff1a014289b1a9f325a8f87f044f0b82f73decef614c069375ecf41fdfd800",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "error"
+      },
+      "error_contracts": {
+        "encode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "IIMM of new page doesn't match IIMM of first page",
+          "rust_kind": "unsupported",
+          "rust_format": "TIFF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "second_frame_mode": "I;16B",
+        "compression": "none"
+      },
+      "expect_error": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/mixed_sample_byte_order_sequence.tiff",
+        "method": "PIL.Image.Image.save",
+        "format": "TIFF",
+        "kwargs": {
+          "_manifest_second_frame_mode": "I;16B",
+          "compression": "raw",
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_error_public_mode_contract",
       "source_asset": "1x1.png",
       "source_format": "png",
