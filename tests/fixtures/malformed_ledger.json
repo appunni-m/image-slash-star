@@ -31257,6 +31257,57 @@
         "verify_status": "ok"
       },
       {
+        "asset": "palette_associated_alpha_unsupported.tiff",
+        "class": "error_palette_associated_alpha_extra_sample",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects a palette TIFF declaring associated alpha in ExtraSamples",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "rgb16_deflate_fill_order_2_unsupported.tiff",
         "class": "error_rgb16_deflate_fill_order_2",
         "contracts": {
@@ -40068,23 +40119,23 @@
       "ico": 31,
       "jpeg": 130,
       "png": 81,
-      "tiff": 148,
+      "tiff": 149,
       "webp": 142
     },
     "by_origin": {
       "defensive_model": 6,
       "independent_implementation": 1,
-      "pillow_fixture": 905,
+      "pillow_fixture": 906,
       "specification_reference": 238
     },
     "by_spec_status": {
       "ambiguous": 36,
       "not_the_format": 41,
-      "spec_violation": 547,
+      "spec_violation": 548,
       "tolerated": 1,
       "truncated": 280
     },
-    "classes": 905,
+    "classes": 906,
     "formats": 8
   }
 }

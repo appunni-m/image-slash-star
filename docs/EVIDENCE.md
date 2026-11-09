@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,920 total rows: 3,207 decode /
-inspect / verify rows and 713 encode rows. Of those, 3,207 decode rows are
+The current public evidence matrix contains 3,921 total rows: 3,208 decode /
+inspect / verify rows and 713 encode rows. Of those, 3,208 decode rows are
 active and 686 encode rows are active; 27 encode rows remain planned.
 
 ## WebP lossless EXIF metadata without prefix — 2026-11-10
