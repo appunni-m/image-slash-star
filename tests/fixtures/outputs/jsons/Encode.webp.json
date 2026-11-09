@@ -3606,7 +3606,7 @@
       "oracle_status": "ok",
       "rust_expect_error": true,
       "rust_error_kind": "unsupported",
-      "rust_error_reason": "WebP directly accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, and Cmyk8"
+      "rust_error_reason": "WebP accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, Cmyk8, F32, and I32"
     },
     {
       "id": "enc_lossy_q100",

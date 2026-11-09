@@ -359561,15 +359561,13 @@
               "Rgb16",
               "Rgba16",
               "Rgb32F",
-              "Rgba32F",
-              "F32",
-              "I32"
+              "Rgba32F"
             ],
             "rust_invalid_color_mode": true
           },
           "rust_expect_error": true,
           "rust_error_kind": "unsupported",
-          "rust_error_reason": "WebP directly accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, and Cmyk8",
+          "rust_error_reason": "WebP accepts L1, P8, L8, L16, La8, Rgb8, Rgba8, Cmyk8, F32, and I32",
           "status": "active",
           "source_format": "png",
           "source_asset": "1x1.png",

@@ -11,8 +11,10 @@ and `F` sources. They cover big-endian source metadata, signed 32-bit clamp
 boundaries, float conversion, and the token-aware preparation checkpoint on a
 128×128 float image. WebP converts the scalar transfer samples to grayscale RGB
 using the same native-order sample interpretation and saturating conversion as
-Pillow. The append-only mode encode index now includes `I;16B` → `Rgb8`, `I` →
-`Rgb8`, and `F` → `Rgb8`.
+Pillow. The public-mode error contract now keeps `I` and `F` in the accepted mode
+set and continues checking structured errors for unsupported modes. The
+append-only mode encode index now includes `I;16B` → `Rgb8`, `I` → `Rgb8`, and
+`F` → `Rgb8`.
 
 The focused selected parity run passed 5/5 rows with exact encoded bytes and
 pixel output. `make lint` and `make lint-x86-simd` pass, including the strict
@@ -17732,7 +17734,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `aa942d81d291c25da4279c0933e00f49fa80f07bb3d4cb15fe375980006491b3`; matrix `9bffb8879fdef0be9053257a8638c2b591da12aa12d989d595889ae83132f9b1`.
+- Current fixture integrity only: manifest `9bbacec6cae7aadcf3220786cc903a509792211917e9b93da6f88ba2e2dc569e`; matrix `8e9e3cc94a2780489a1c60c83876743534bd25c2c85a4459c2bf5759d328f8be`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
