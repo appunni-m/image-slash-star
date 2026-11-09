@@ -183,6 +183,36 @@ def build_palette_unspecified_extra_sample_tiff() -> bytes:
     return result
 
 
+def build_palette_associated_alpha_unsupported_tiff() -> bytes:
+    """Build a palette TIFF with associated alpha that Pillow rejects."""
+    from PIL import Image, UnidentifiedImageError
+
+    data = bytearray(build_palette_alpha_tiff())
+    if data[:8] != b"II*\0\x08\0\0\0":
+        raise RuntimeError("Pillow emitted an unexpected classic TIFF header")
+    entry_count = struct.unpack_from("<H", data, 8)[0]
+    for index in range(entry_count):
+        offset = 10 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", data, offset)
+        if tag == 338:
+            if field_type != 3 or count != 1:
+                raise RuntimeError("Pillow emitted an unexpected ExtraSamples field")
+            # TIFF ExtraSamples value 1 declares associated alpha. Pillow
+            # rejects this palette-plus-alpha layout during format detection.
+            struct.pack_into("<H", data, offset + 8, 1)
+            break
+    else:
+        raise RuntimeError("Pillow omitted the PA ExtraSamples field")
+
+    result = bytes(data)
+    try:
+        with Image.open(BytesIO(result)):
+            pass
+    except UnidentifiedImageError:
+        return result
+    raise RuntimeError("Pillow unexpectedly recognized palette TIFF with associated alpha")
+
+
 def with_short_palette_color_map(data: bytes) -> bytes:
     """Return a TIFF whose one-entry ColorMap is accepted without a palette."""
     output = bytearray(data)
@@ -424,6 +454,19 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     else:
         unspecified_palette_extra_path.write_bytes(unspecified_palette_extra_data)
 
+    associated_palette_alpha_path = directory / "palette_associated_alpha_unsupported.tiff"
+    associated_palette_alpha_data = build_palette_associated_alpha_unsupported_tiff()
+    if check:
+        if (
+            not associated_palette_alpha_path.is_file()
+            or associated_palette_alpha_path.read_bytes() != associated_palette_alpha_data
+        ):
+            raise RuntimeError(
+                f"{associated_palette_alpha_path}: associated-alpha palette input differs"
+            )
+    else:
+        associated_palette_alpha_path.write_bytes(associated_palette_alpha_data)
+
     short_color_map_fixtures = (
         (
             "palette_alpha_short_color_map.tiff",
@@ -450,12 +493,12 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args()
     generate_fixtures(arguments.output_directory, check=arguments.check)
-    input_count = len(RECIPES) + 5
+    input_count = len(RECIPES) + 6
     print(
         f"{'Checked' if arguments.check else 'Generated'} "
         f"{input_count} extra-sample TIFF inputs, including "
-        "contiguous and separate-planar PA, ignored palette extras, and "
-        "short-ColorMap palette-missing cases"
+        "contiguous and separate-planar PA, ignored and rejected palette "
+        "extras, and short-ColorMap palette-missing cases"
     )
 
 
