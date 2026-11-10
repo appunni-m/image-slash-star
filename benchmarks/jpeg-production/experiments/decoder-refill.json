@@ -1,12 +1,12 @@
 {
   "schema": "image-slash-star/jpeg-patch-experiment@1",
-  "status": "diagnostic_only_shipping_rust_unchanged",
+  "status": "diagnostic_only_shipping_rust_unchanged_pending_current_source_measurement",
   "operation": "decode",
   "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
   "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
-  "patch_sha256": "c367dc1ff3ab545257dfcac168f58371bcfc8f6d5be4094e0de1458db21d4f7f",
+  "patch_sha256": "eaf49a76681113f1ad856888b8f925ed6ee61bcdc11f9cc88ca593b575d2550f",
   "source_guards": {
-    "src/codecs/jpeg/decode/bit_reader.rs": "41c82b4e21cc1a75230b3ea8e82b2ef71662c7f0cd6ae99264bff2644a96ec87"
+    "src/codecs/jpeg/decode/bit_reader.rs": "a0057a37199f506ad5bdb70ab73f01610687c2d7707d4a2e101c7b31b04416e6"
   },
   "variants": [
     "sse2",
@@ -28,20 +28,20 @@
     "arm64_shipping_code_must_remain_portable": true
   },
   "arm64_screen": {
+    "status": "pending_current_source_remeasurement",
+    "note": "The old zero-context patch landed at stale offsets after FastBitReader changed. Re-measure the digest-guarded patch against the current baseline before use."
+  },
+  "candidate_guards": {
+    "src/codecs/jpeg/decode/bit_reader.rs": "59a47377d6aa0f57977349b0daa2e0ac13078b6e15744c49905d7fc9b883d916"
+  },
+  "patch_format": "Zero-context unified diff bound to exact baseline and candidate file digests.",
+  "superseded_arm64_screen": {
+    "source_guard": "41c82b4e21cc1a75230b3ea8e82b2ef71662c7f0cd6ae99264bff2644a96ec87",
+    "candidate_guard": "c3618ba201329cb31899bea47fad845d832a6202a1ef93be317737b1830e2096",
     "report_sha256": "004aa43f0a83607c7b279e0ed4975a903f24e23bbd44cbcac5bf474c8848d918",
     "selected_parity_report_sha256": "0539645f015f368aeafafb5a01ce1e46aadadbe4f5f8c2c01445b83e1d9608d6",
     "selected_parity_rows": 22,
     "primary_gain_percent": 10.3793072802586,
-    "primary_cohorts_faster": 6,
-    "guard_paired_gain_percent": {
-      "decode-gray-512-422": 9.97781214422973,
-      "decode-rgb-baseline-128": -0.58041435449436,
-      "decode-progressive-long-scan-128": 0.11512155625986
-    },
-    "note": "Local Apple ARM64 A-B-B-A diagnostics only. They do not establish x86 SSE2/AVX2 performance or full-suite parity."
-  },
-  "candidate_guards": {
-    "src/codecs/jpeg/decode/bit_reader.rs": "c3618ba201329cb31899bea47fad845d832a6202a1ef93be317737b1830e2096"
-  },
-  "patch_format": "Zero-context unified diff; exact baseline and compiled candidate file digests are both required."
+    "note": "Historical ARM64 screen for the superseded source and patch guards; not current-source evidence."
+  }
 }
