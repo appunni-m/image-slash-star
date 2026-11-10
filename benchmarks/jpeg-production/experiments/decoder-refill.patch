@@ -1,16 +1,15 @@
-diff --git a/src/codecs/jpeg/decode/bit_reader.rs b/src/codecs/jpeg/decode/bit_reader.rs
-index e56ef4e1f..5126716b2 100644
 --- a/src/codecs/jpeg/decode/bit_reader.rs
 +++ b/src/codecs/jpeg/decode/bit_reader.rs
-@@ -172,0 +173 @@ pub(super) struct FastBitReader<'a> {
+@@ -176 +176,5 @@
+-}
 +    bulk_refill_enabled: bool,
-@@ -178,0 +180,2 @@ pub(super) struct FastBitReader<'a> {
-+const BULK_REFILL_MIN_BYTES: usize = 64 * 1024;
++}
 +
-@@ -184,0 +188 @@ impl<'a> FastBitReader<'a> {
++#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
++const BULK_REFILL_MIN_BYTES: usize = 64 * 1024;
+@@ -187,0 +192 @@
 +            bulk_refill_enabled: end.saturating_sub(start) >= BULK_REFILL_MIN_BYTES,
-@@ -262,0 +267,28 @@ impl<'a> FastBitReader<'a> {
-+    #[inline(always)]
+@@ -272,0 +278,28 @@
 +    fn append_unstuffed_bytes(&mut self, byte_count: usize) -> bool {
 +        let (padding, bit_count) = match byte_count {
 +            6 => (2, 48),
@@ -38,7 +37,8 @@ index e56ef4e1f..5126716b2 100644
 +        true
 +    }
 +
-@@ -265,0 +298,9 @@ impl<'a> FastBitReader<'a> {
++    #[inline(always)]
+@@ -274,0 +308,9 @@
 +            // Small entropy segments do not amortize the byte-scan probe.
 +            if self.bulk_refill_enabled {
 +                if self.bits <= 8 && self.append_unstuffed_bytes(7) {
