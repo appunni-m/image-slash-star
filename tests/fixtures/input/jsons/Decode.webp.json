@@ -4562,6 +4562,62 @@
       ]
     },
     {
+      "id": "animated_animated_vp8l_alpha_hint_without_vp8x_alpha_flag",
+      "asset": "animated_vp8l_alpha_hint_without_vp8x_alpha_flag.webp",
+      "asset_sha256": "160a0be098a45a90bc71aae3074a091c295579ee264ed7afcd1369312f8732ba",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "specification_reference",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "rust_inspect_basic": true,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_vp8l_alpha_hint_without_vp8x_alpha_flag.webp",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_animated_alpha",
       "asset": "animated_alpha.webp",
       "asset_sha256": "f6b693d96ef83fd150ffe71ee826a4063b2a1f28a5d95eb67ad0bd1533e6d069",

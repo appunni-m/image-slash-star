@@ -7225,6 +7225,44 @@ def gen_webp():
         mutate(malformed)
         (d / name).write_bytes(malformed)
 
+    def clear_animated_vp8x_alpha_flag(data):
+        vp8x = data.find(b"VP8X")
+        vp8l = data.find(b"VP8L")
+        if vp8x < 12 or vp8l < 12 or vp8l + 13 > len(data):
+            raise RuntimeError("animated WebP lacks complete VP8X and VP8L headers")
+        has_container_alpha = bool(data[vp8x + 8] & 0x10)
+        has_frame_alpha_hint = bool(data[vp8l + 12] & 0x10)
+        if not has_container_alpha or not has_frame_alpha_hint:
+            raise RuntimeError("animated WebP source must declare alpha in both headers")
+        data[vp8x + 8] &= ~0x10
+
+    write_mutated_webp(
+        "animated_vp8l_alpha_hint_without_vp8x_alpha_flag.webp",
+        "animated_sequence_rgba_keyframes.webp",
+        clear_animated_vp8x_alpha_flag,
+    )
+    alpha_flag_mismatch_path = d / "animated_vp8l_alpha_hint_without_vp8x_alpha_flag.webp"
+    with Image.open(alpha_flag_mismatch_path) as decoded:
+        expected_frames = (sequence_rgba_first, sequence_rgba_second)
+        expected_durations = (17, 33)
+        if decoded.mode != "RGB" or decoded.n_frames != len(expected_frames):
+            raise RuntimeError("Pillow must expose the alpha-flag-mismatch animation as RGB")
+        for index, expected_frame in enumerate(expected_frames):
+            decoded.seek(index)
+            actual_pixels = decoded.tobytes()
+            expected_pixels = expected_frame.convert("RGB").tobytes()
+            actual_duration = decoded.info.get("duration")
+            if (
+                decoded.mode != "RGB"
+                or actual_duration != expected_durations[index]
+                or actual_pixels != expected_pixels
+            ):
+                raise RuntimeError(
+                    "Pillow changed alpha-flag-mismatch animation frame "
+                    f"{index}: mode={decoded.mode}, duration={actual_duration}, "
+                    f"pixels_match={actual_pixels == expected_pixels}"
+                )
+
     icc_source = (d / "icc.webp").read_bytes()
     if hashlib.sha256(icc_source).hexdigest() != (
         "1b1872b2280483eefe2084ac09335d2ab40649204996df6a58bc14d3b3b15219"
