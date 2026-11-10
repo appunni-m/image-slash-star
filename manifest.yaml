@@ -10666,6 +10666,37 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - lab.tiff
+    - id: lab_zero_count_sample_format
+      description: CIELAB TIFF preserves LAB samples when SampleFormat has zero values
+      inspect_raster_mode: LAB
+      decoded_raster_mode: LAB
+      rust_inspect_basic: true
+      rust_decode_with_token: true
+      test_assets:
+      - lab_zero_count_sample_format.tiff
+    - id: error_lab_signed_sample_format
+      description: Pillow rejects CIELAB TIFF with signed integer SampleFormat
+      test_assets:
+      - lab_signed_sample_format.tiff
+      expect_error: true
+    - id: lab_three_unsigned_sample_formats
+      description: CIELAB TIFF retains LAB identity with one unsigned SampleFormat per sample
+      inspect_raster_mode: LAB
+      decoded_raster_mode: LAB
+      rust_inspect_basic: true
+      rust_decode_with_token: true
+      test_assets:
+      - lab_three_unsigned_sample_formats.tiff
+    - id: error_lab_mixed_sample_formats
+      description: Pillow rejects CIELAB TIFF with a non-unsigned sample among its planes
+      test_assets:
+      - lab_mixed_sample_formats.tiff
+      expect_error: true
+    - id: error_lab_extra_sample
+      description: Pillow rejects CIELAB TIFF declaring an unmatched extra sample
+      test_assets:
+      - lab_extra_sample.tiff
+      expect_error: true
     - id: lab_compressed
       description: CIELAB TIFF retains LAB identity and samples with LZW, Deflate, and PackBits compression
       inspect_raster_mode: LAB
@@ -10687,6 +10718,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - palette_alpha.tiff
+    - id: error_palette_associated_alpha_extra_sample
+      description: Pillow rejects a palette TIFF declaring associated alpha in ExtraSamples
+      test_assets:
+      - palette_associated_alpha_unsupported.tiff
+      expect_error: true
     - id: palette_alpha_separate_planar
       description: Pillow inspects and verifies separate-planar PA headers but rejects pixel decoding
       inspect_raster_mode: PA
