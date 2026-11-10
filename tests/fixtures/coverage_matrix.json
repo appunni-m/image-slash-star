@@ -377062,6 +377062,12 @@
       "case_id": "color_indexed_alpha",
       "inspect_mode": "P",
       "decoded_mode": "P"
+    },
+    {
+      "format": "tiff",
+      "case_id": "byte_order_be",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
     }
   ],
   "mode_encode_cases": [
