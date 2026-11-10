@@ -212188,7 +212188,10 @@
             }
           },
           "rust_decode_with_token": true,
-          "rust_decode_sequence_with_work_budget": true
+          "rust_decode_sequence_with_work_budget": true,
+          "rust_decode_with_token_and_policy": true,
+          "rust_decode_sequence_with_token": true,
+          "rust_decode_sequence_with_token_and_policy": true
         },
         {
           "id": "baseline_444_single_scan_trailing_dht_truncated_counts",

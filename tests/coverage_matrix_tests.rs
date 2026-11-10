@@ -263,8 +263,10 @@ struct DecodeRow {
     expect_error: Option<bool>,
     expect_sequence_error: bool,
     rust_decode_with_token: bool,
+    rust_decode_with_token_and_policy: bool,
     rust_decode_with_work_budget: bool,
     rust_decode_sequence_with_token: bool,
+    rust_decode_sequence_with_token_and_policy: bool,
     rust_decode_sequence_with_work_budget: bool,
     rust_inspect_basic: bool,
     rust_decode_with_metadata_limit: Option<u64>,
@@ -5729,9 +5731,13 @@ impl FromJson for DecodeRow {
             expect_error: object.take("expect_error")?,
             expect_sequence_error: object.take_or_default("expect_sequence_error")?,
             rust_decode_with_token: object.take_or_default("rust_decode_with_token")?,
+            rust_decode_with_token_and_policy: object
+                .take_or_default("rust_decode_with_token_and_policy")?,
             rust_decode_with_work_budget: object.take_or_default("rust_decode_with_work_budget")?,
             rust_decode_sequence_with_token: object
                 .take_or_default("rust_decode_sequence_with_token")?,
+            rust_decode_sequence_with_token_and_policy: object
+                .take_or_default("rust_decode_sequence_with_token_and_policy")?,
             rust_decode_sequence_with_work_budget: object
                 .take_or_default("rust_decode_sequence_with_work_budget")?,
             rust_inspect_basic: object.take_or_default("rust_inspect_basic")?,
@@ -10183,6 +10189,45 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         "decode_sequence",
                     )
                     .is_ok();
+                let sequence_token_error = if row.rust_decode_sequence_with_token {
+                    let token = img::CancellationToken::new();
+                    let token_result = img::decode_sequence_with_token(&data, &token);
+                    result_matches_oracle(
+                        &token_result,
+                        "error",
+                        row.oracle_error_kind.as_deref(),
+                        expected_format,
+                    ) && operation_status(&row.operations, "decode_sequence") == Ok("error")
+                        && assert_result_error_contract(
+                            &token_result,
+                            &row.error_contracts,
+                            "decode_sequence",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
+                let sequence_token_policy_error = if row.rust_decode_sequence_with_token_and_policy
+                {
+                    let policy = img::DecodePolicy::default().with_max_pixels(u64::MAX);
+                    let token = img::CancellationToken::new();
+                    let policy_result =
+                        img::decode_sequence_with_token_and_policy(&data, &policy, &token);
+                    result_matches_oracle(
+                        &policy_result,
+                        "error",
+                        row.oracle_error_kind.as_deref(),
+                        expected_format,
+                    ) && operation_status(&row.operations, "decode_sequence") == Ok("error")
+                        && assert_result_error_contract(
+                            &policy_result,
+                            &row.error_contracts,
+                            "decode_sequence",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
                 let sequence_work_budget_error = if row.rust_decode_sequence_with_work_budget {
                     let policy = img::DecodePolicy::default().with_max_work_units(u64::MAX);
                     let policy_result = img::decode_sequence_with_policy(&data, &policy);
@@ -10237,6 +10282,26 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         )
                         && assert_result_error_contract(
                             &token_result,
+                            &row.error_contracts,
+                            "decode",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
+                let token_policy_error = if row.rust_decode_with_token_and_policy {
+                    let policy = img::DecodePolicy::default().with_max_pixels(u64::MAX);
+                    let token = img::CancellationToken::new();
+                    let policy_result = img::decode_with_token_and_policy(&data, &policy, &token);
+                    result_has_status(&policy_result, decode_operation_status)
+                        && result_matches_oracle(
+                            &policy_result,
+                            "error",
+                            row.oracle_error_kind.as_deref(),
+                            expected_format,
+                        )
+                        && assert_result_error_contract(
+                            &policy_result,
                             &row.error_contracts,
                             "decode",
                         )
@@ -10299,8 +10364,11 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 if structured_error
                     && metadata_limited_error
                     && token_aware_error
+                    && token_policy_error
                     && work_budget_error
                     && sequence_rejected
+                    && sequence_token_error
+                    && sequence_token_policy_error
                     && sequence_work_budget_error
                     && source_error_is_stable
                 {
@@ -10309,13 +10377,16 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, work_budget_error={}, sequence_rejected={}, sequence_work_budget_error={}, source_error_is_stable={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, token_policy_error={}, work_budget_error={}, sequence_rejected={}, sequence_token_error={}, sequence_token_policy_error={}, sequence_work_budget_error={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
                         metadata_limited_error,
                         token_aware_error,
+                        token_policy_error,
                         work_budget_error,
                         sequence_rejected,
+                        sequence_token_error,
+                        sequence_token_policy_error,
                         sequence_work_budget_error,
                         source_error_is_stable
                     );

@@ -18092,7 +18092,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e4839fcba9d0d83d9904a778bc0acc94c2e31c5f039bd4b784db9d1b4d977a5b`; matrix `f3b0ec7022d9403ae174c6fba9d556b54575370fb017d5635b0f229a444967b9`.
+- Current fixture integrity only: manifest `32b3d4d8eb847ee715b6eb0adccc100a03469ef430901b72c29e1809edf387f7`; matrix `7b1cde90a268a134e7dc85217f235de23e8f5ec0c02133308eb4863705b08f78`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
