@@ -82,6 +82,14 @@ that no successful mode pair is omitted. Every indexed encode case also checks
 its encoded header and decoded-transfer identity, even when other cases in the
 same format share the internal raster mode.
 
+Successful encode rows also exercise append-only sink delivery. The harness
+starts with a sentinel prefix and leaves `OutputSink::checkpoint()` at its
+default `None`; it checks that the prefix remains intact, appended bytes match
+both the Pillow byte reference and the in-memory encoder, and the reported
+byte count equals the appended length. One-frame TIFF rows use the sequence
+sink API; other one-frame rows use the still-image API, and multi-frame rows
+use the sequence API.
+
 Some oracle outputs are checked in because clean CI source checkouts consume
 them. They are reproducible through maintained generators, but regeneration
 requires the exact source assets and pinned oracle. In particular, AV1's index
