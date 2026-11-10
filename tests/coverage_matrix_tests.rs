@@ -10968,9 +10968,14 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
         .join("images");
     let mut asset_cache: HashMap<PathBuf, Vec<u8>> = HashMap::new();
     let mut decoded_cache: HashMap<PathBuf, Arc<img::DecodedSequence>> = HashMap::new();
-    // Encoded-output lifecycle checks decode twice more (owned and borrowed),
-    // so run one representative for each observable raster mode per format.
+    // Encoded-output lifecycle checks decode twice more (owned and borrowed).
+    // Check one representative per raster mode and every indexed mode pair.
     let mut encoded_raster_identities = HashSet::new();
+    let mode_encode_case_ids: HashSet<(&str, &str)> = matrix
+        .mode_encode_cases
+        .iter()
+        .map(|case| (case.format.as_str(), case.case_id.as_str()))
+        .collect();
 
     for (fmt_name, fmt_data) in &matrix.formats {
         if format_filter.is_some_and(|filter| filter != fmt_name) {
@@ -12315,7 +12320,11 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             Ok(()) => {
                                 let raster_identity_key =
                                     (fmt_name.to_owned(), redecoded.raster_mode);
-                                if !encoded_raster_identities.contains(&raster_identity_key) {
+                                let indexed_mode_case = mode_encode_case_ids
+                                    .contains(&(fmt_name.as_str(), row.id.as_str()));
+                                if indexed_mode_case
+                                    || !encoded_raster_identities.contains(&raster_identity_key)
+                                {
                                     let Some(expected_mode_name) = row.ref_mode.as_deref() else {
                                         eprintln!(
                                             "  FAIL [{}]: active encode row has no decoded mode reference",
