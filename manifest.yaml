@@ -8768,6 +8768,7 @@ formats:
       test_assets:
       - animated.webp
       - animated_sequence_rgba_keyframes.webp
+      - animated_vp8l_alpha_hint_without_vp8x_alpha_flag.webp
       - animated_alpha.webp
       - animated_alpha_origin_partial.webp
       - animated_alpha_holes_partial_background.webp

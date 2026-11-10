@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,929 total rows: 3,214 decode /
-inspect / verify rows and 715 encode rows. Of those, 3,214 decode rows are
+The current public evidence matrix contains 3,930 total rows: 3,215 decode /
+inspect / verify rows and 715 encode rows. Of those, 3,215 decode rows are
 active and 688 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
@@ -45,6 +45,30 @@ receipt SHA-256:
 
 Full report:
 `.coverage-mcp/local-evidence/selected/20261110T000200.834727Z-48aad626c926404dbdb92819486bbd00/coverage.json`.
+
+## WebP animated VP8L alpha-hint mode parity — 2026-11-10
+
+For `image-slash-star#y81n` and `image-slash-star#dgby`, added
+`decode:webp:animated_animated_vp8l_alpha_hint_without_vp8x_alpha_flag`.
+It clears the animation's VP8X alpha flag while preserving alpha-bearing VP8L
+frames. Pinned Pillow accepts the stream as RGB and returns both exact frames,
+pixel data, and frame durations. The focused parity run passed 1/1. Appended
+frame-indexed mode-decode entries for both frames; the index now contains 51
+cases.
+
+Coverage MCP comparison against the retained full report found one newly
+observed branch arm at `src/codecs/webp/native/lossless.rs:155`, where an
+alpha-bearing VP8L frame enters the RGB animation path. This is a focused local
+observation: source/build identity and test attribution are unverified, so it
+does not prove an aggregate coverage increase. The selected LLVM report records
+1,824/142,865 lines, 195/32,126 branches, 176/9,182 functions, and
+2,513/221,250 regions. Report SHA-256:
+`7c82b4836a6493dd2b9fcd08a3614304a9c1b1f822adc21b57e9abe810b1d3d4`; local
+receipt SHA-256:
+`8e172d97b20f450234dc8fc0c36e91c408b23b4abd6672a70623cf713a295de0`.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261110T084306.932359Z-3139debbf6ad408babae26fc6100894c/coverage.json`.
 
 ## WebP signed I-mode token parity — 2026-11-10
 
@@ -17931,7 +17955,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `cd87004e7d1832b7ae18992840bf7b3dbf4724a0c9b64903e0a28a903d1ce54e`; matrix `a4152b1103a9fde58f08c07e1a9916e0783a4821720e02a0b23e79a1958b2599`.
+- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `5b10d8c2d0c90d5063aeadcca8a588676387b7cec216e22e43c9ef8f0ed6f464`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
