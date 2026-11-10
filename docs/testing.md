@@ -74,7 +74,9 @@ The matrix also keeps an append-only `mode_encode_cases` index with one active
 Pillow-reference-backed encoder row for each format/source-mode/decoded-mode
 pair. When an encoder adds a new pair, append a representative row; the parity
 harness checks that each listed case retains its byte and pixel references and
-that no successful mode pair is omitted.
+that no successful mode pair is omitted. Every indexed encode case also checks
+its encoded header and decoded-transfer identity, even when other cases in the
+same format share the internal raster mode.
 
 Some oracle outputs are checked in because clean CI source checkouts consume
 them. They are reproducible through maintained generators, but regeneration
