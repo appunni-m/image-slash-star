@@ -377389,6 +377389,18 @@
       "case_id": "ycck_h2v2_even_upsample_edges_18x10",
       "inspect_mode": "CMYK",
       "decoded_mode": "CMYK"
+    },
+    {
+      "format": "avif",
+      "case_id": "animated_lossy_inter_422_qindex0_mode_select_64x64",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "avif",
+      "case_id": "animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
     }
   ],
   "mode_encode_cases": [
