@@ -377050,6 +377050,12 @@
       "case_id": "extra_samples_zero_rgbx_contiguous_strips_raw",
       "inspect_mode": "Rgb8",
       "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "palette_alpha_short_color_map",
+      "inspect_mode": "PA",
+      "decoded_mode": "PA"
     }
   ],
   "mode_encode_cases": [
