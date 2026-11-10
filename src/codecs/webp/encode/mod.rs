@@ -862,6 +862,11 @@ fn finish_riff(mut output: Vec<u8>, output_len: usize) -> CodecResult<Vec<u8>> {
     Ok(output)
 }
 
+// Pillow omits empty WebP metadata chunks, including prefix-only EXIF values.
+fn nonempty_metadata(payload: Option<&[u8]>) -> Option<&[u8]> {
+    payload.filter(|payload| !payload.is_empty())
+}
+
 fn attach_metadata(
     encoded: Vec<u8>,
     width: u32,
@@ -871,15 +876,19 @@ fn attach_metadata(
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<Vec<u8>> {
     crate::codecs::error::check_cancelled(token)?;
-    let icc = opts.icc.as_deref();
-    let exif = opts.exif.as_deref();
-    let xmp = opts.xmp.as_deref();
+    let icc = nonempty_metadata(opts.icc.as_deref());
+    let exif = nonempty_metadata(
+        opts.exif
+            .as_deref()
+            .map(|payload| payload.strip_prefix(b"Exif\0\0").unwrap_or(payload)),
+    );
+    let xmp = nonempty_metadata(opts.xmp.as_deref());
     if icc.is_none() && exif.is_none() && xmp.is_none() {
         crate::codecs::error::check_cancelled(token)?;
         return Ok(encoded);
     }
     if token.is_none() {
-        return attach_metadata_reusing_output(encoded, width, height, alpha, opts);
+        return attach_metadata_reusing_output(encoded, width, height, alpha, icc, exif, xmp);
     }
     // Both internal encoders return a complete RIFF header. Lossy alpha output
     // additionally begins with the fixed 18-byte VP8X chunk constructed by
@@ -918,7 +927,6 @@ fn attach_metadata(
     }
     extend_with_output_checkpoint(&mut output, encoded_chunks, token)?;
     if let Some(payload) = exif {
-        let payload = payload.strip_prefix(b"Exif\0\0").unwrap_or(payload);
         write_chunk(&mut output, b"EXIF", payload, token)?;
         crate::codecs::error::check_cancelled(token)?;
     }
@@ -940,14 +948,10 @@ fn attach_metadata_reusing_output(
     width: u32,
     height: u32,
     alpha: bool,
-    opts: &WebPEncodeOptions,
+    icc: Option<&[u8]>,
+    exif: Option<&[u8]>,
+    xmp: Option<&[u8]>,
 ) -> CodecResult<Vec<u8>> {
-    let icc = opts.icc.as_deref();
-    let exif = opts
-        .exif
-        .as_deref()
-        .map(|payload| payload.strip_prefix(b"Exif\0\0").unwrap_or(payload));
-    let xmp = opts.xmp.as_deref();
     let existing_start = if encoded.get(12..16) == Some(b"VP8X") && encoded.len() >= 30 {
         30
     } else {
@@ -975,7 +979,7 @@ fn attach_metadata_reusing_output(
     if icc.is_some() {
         flags |= 1u8.wrapping_shl(5);
     }
-    if opts.exif.is_some() {
+    if exif.is_some() {
         flags |= 1u8.wrapping_shl(3);
     }
     if xmp.is_some() {

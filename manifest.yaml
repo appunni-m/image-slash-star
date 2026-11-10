@@ -10106,6 +10106,11 @@ formats:
       source_format: png
       source_asset: 1x1.png
       params: {'lossless': True, 'exif_hex': '49492a000800000000000000'}
+    - id: enc_lossless_empty_metadata_omitted
+      description: Empty ICC, EXIF, and XMP metadata are omitted from lossless WebP output as Pillow does
+      source_format: png
+      source_asset: 1x1.png
+      params: {'lossless': True, 'icc_hex': '', 'exif_hex': '457869660000', 'xmp_hex': '', 'rust_encode_with_token': True}
     - id: enc_xmp
       description:
       params: {'xmp_hex': '3c783a786d706d6574612f3e', 'rust_encode_with_token': true}
