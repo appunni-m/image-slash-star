@@ -8671,6 +8671,7 @@ fn assert_sequence_reference_parity(
                 expected_frame.index
             ));
         }
+        assert_sequence_frame_mode_identity(row_id, expected_frame, actual_frame, expected_format)?;
         if !is_assertion_origin(&expected_frame.duration_origin)
             || !is_assertion_origin(&expected_frame.source_origin)
         {
@@ -8805,6 +8806,58 @@ fn assert_sequence_reference_parity(
         } else {
             assert_sequence_frame_pixels(manifest_dir, row_id, expected_frame, actual_frame)?;
         }
+    }
+    Ok(())
+}
+
+fn assert_sequence_frame_mode_identity(
+    row_id: &str,
+    expected: &FrameParityRef,
+    actual: &img::DecodedFrame,
+    format: img::ImageFormat,
+) -> Result<(), String> {
+    if expected.pixel_assertion != "exact" {
+        return Ok(());
+    }
+
+    let reference_mode_name = expected
+        .ref_mode
+        .as_deref()
+        .ok_or_else(|| format!("frame {} exact pixels lack a mode", expected.index))?;
+    // Full-canvas GIF references may be RGB even though DecodedFrame retains
+    // indexed source samples; the GIF-specific parity path checks that RGB
+    // rendering separately.
+    let expected_mode_name =
+        if format == img::ImageFormat::Gif && matches!(reference_mode_name, "RGB" | "Rgb8") {
+            "P"
+        } else {
+            reference_mode_name
+        };
+    let expected_mode = expected_image_mode(expected_mode_name).ok_or_else(|| {
+        format!(
+            "frame {} has unknown mode {expected_mode_name:?}",
+            expected.index
+        )
+    })?;
+    let expected_raster_mode =
+        expected_raster_mode(expected_mode_name, format, &actual.image.source).ok_or_else(
+            || {
+                format!(
+                    "frame {} has no raster identity mapping for mode {expected_mode_name:?}",
+                    expected.index
+                )
+            },
+        )?;
+
+    if actual.image.mode != expected_mode || actual.image.raster_mode != expected_raster_mode {
+        return Err(format!(
+            "{row_id} frame {} decoded transfer identity differs: actual {:?}/{:?}, expected {:?}/{:?}",
+            expected.index,
+            actual.image.mode,
+            actual.image.raster_mode,
+            expected_mode,
+            expected_raster_mode,
+        ));
     }
     Ok(())
 }
@@ -10780,9 +10833,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         transfer_mode_name.to_owned(),
                     ));
                     let indexed_mode_case = matrix.mode_decode_cases.iter().any(|case| {
-                        case.format.as_str() == fmt_name
-                            && case.case_id == row.id.as_str()
-                            && case.frame_index.is_none()
+                        case.format.as_str() == fmt_name && case.case_id == row.id.as_str()
                     });
                     if first_mode_pair || indexed_mode_case {
                         assert_encoded_header_raster_identity(
