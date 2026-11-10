@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,926 total rows: 3,213 decode /
-inspect / verify rows and 713 encode rows. Of those, 3,213 decode rows are
-active and 686 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,928 total rows: 3,214 decode /
+inspect / verify rows and 714 encode rows. Of those, 3,214 decode rows are
+active and 687 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
 
@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `e1c0661efc236dcdc99527ee47d82408e66f5ce28b6f414dbfe4b6363a29e781`.
+- Current fixture integrity only: manifest `9e4773a906586d4f71b30fe7e1f0033ac34b0f21c1bbc063362a143b7ed5fa82`; matrix `3f9cdcfb321f73a1e574d2ac5eed04b270350440bd4b740884983fb81e2881ab`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23738,3 +23738,35 @@ records 4,252/142,863 lines, 525/32,126 branches, 366/9,180 functions, and
 6,387/221,254 regions. Coverage MCP was not queried; source identity is
 unverified and test attribution unknown, so these are focused local figures,
 not an aggregate coverage claim.
+
+## WebP empty metadata encoding parity — 2026-11-10
+
+Added `enc_lossless_empty_metadata_omitted` for empty ICC and XMP payloads and
+an EXIF value containing only Pillow's optional `Exif\0\0` prefix. Pillow
+12.2.0 omits all three chunks and emits the 36-byte lossless WebP reference;
+before the fix, the Rust encoder emitted 78 bytes. The encoder now strips the
+optional EXIF prefix before filtering empty payloads, then returns the original
+codec output directly when no metadata remains. This keeps the token-aware and
+buffer-reuse paths consistent without adding payload copies.
+
+The focused six-row parity selection passed, including the new case, both
+existing prefixed/unprefixed EXIF reuse cases, and token-aware ICC, EXIF, and
+XMP cases. All 28 public encode calls completed without a panic. The complete
+parity matrix then passed 3,214/3,214 active decode rows and 687/687 active
+encode rows; 27 planned AVIF encode rows were not executed. The run selected
+3,928 rows and executed 3,901; fault-contract rows are not part of this matrix
+run.
+
+The full-run LLVM report is
+`.coverage-mcp/local-evidence/selected/20261110T070603.401257Z-89a55fda0edf4011a4c2fc6c832f2d64/coverage.json`
+(SHA-256
+`d1dd53e340c9eaf34e9f28db84b0da84c145f6af430758681ce44104b89f24fb`). It
+records 97,950/142,865 lines (68.5612%), 20,369/32,126 branches (63.4035%),
+5,274/9,182 functions (57.4385%), and 148,965/221,250 regions (67.3288%). Its
+local receipt SHA-256 is
+`cc40a1f048a3f6372ea4da17b62c8e0e7c0b32d6a119ec73ff81b34d60749200`.
+Coverage MCP marks source identity unverified and test attribution unknown;
+these local measurements do not establish verified aggregate project
+coverage. The queried helper had no reportable missing groups. Broader WebP,
+TIFF, and JPEG source gaps remain visible in the report and are not treated as
+reachable through valid public parity inputs without a concrete case.
