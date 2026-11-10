@@ -3564,6 +3564,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "webp.metadata.invalid_webp_signature": {
             "metadata_measure_rejects_invalid_webp_signature"
         },
+        "webp.metadata.short_vp8x_header": {
+            "encode_truncated_vp8x_rejected_then_retry_matches_reference"
+        },
         "webp.inspect.invalid_riff_signature": {
             "inspection_rejects_invalid_riff_signature"
         },
@@ -3959,7 +3962,10 @@ def sync_fault_contract_rows(manifest, matrix):
                 if row["format"] != "webp":
                     raise RuntimeError(f"{case_id}: unsupported encode fault-contract format")
                 expected_source_operation = (
-                    "encode" if point.startswith("webp.riff_sink.") else "decode"
+                    "encode"
+                    if point.startswith("webp.riff_sink.")
+                    or point == "webp.metadata.short_vp8x_header"
+                    else "decode"
                 )
                 if source_operation != expected_source_operation:
                     raise RuntimeError(
@@ -3967,6 +3973,10 @@ def sync_fault_contract_rows(manifest, matrix):
                     )
                 if point == "webp.hash_chain.index_overflow":
                     valid_encode_contract = contract == "encode_invalid_dimensions_then_retry_succeeds"
+                elif point == "webp.metadata.short_vp8x_header":
+                    valid_encode_contract = (
+                        contract == "encode_truncated_vp8x_rejected_then_retry_matches_reference"
+                    )
                 else:
                     valid_encode_contract = (
                         point.startswith("webp.riff_sink.")

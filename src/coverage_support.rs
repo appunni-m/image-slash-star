@@ -212,6 +212,8 @@ pub enum CoverageFaultPoint {
     ApngSequenceCounterExhaustion,
     /// Model an oversized WebP hash-chain index during coverage builds.
     WebpHashChainIndexOverflow,
+    /// Truncate a WebP VP8X container before metadata insertion.
+    WebpMetadataVp8xHeaderTooShort,
     /// Shorten a valid WebP RIFF output before sink header validation.
     WebpRiffHeaderTooShort,
     /// Corrupt the RIFF signature before WebP sink header validation.

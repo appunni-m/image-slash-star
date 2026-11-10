@@ -128,6 +128,12 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "webp_metadata_truncated_vp8x_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:webp:webp_metadata_truncated_vp8x_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "webp_inspect_riff_signature_contract",
       "category": "structured-diagnostics",
       "selector": "fault-contract:webp:webp_inspect_riff_signature_contract",
