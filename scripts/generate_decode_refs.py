@@ -467,6 +467,14 @@ def sync_decode_rows(manifest, matrix, target_format=None):
                     row["rust_decode_with_work_budget"] = True
                 else:
                     row.pop("rust_decode_with_work_budget", None)
+                for field in (
+                    "rust_decode_sequence_with_token",
+                    "rust_decode_sequence_with_work_budget",
+                ):
+                    if case.get(field):
+                        row[field] = True
+                    else:
+                        row.pop(field, None)
                 if case.get("avif_mdcv") is None:
                     row.pop("avif_mdcv", None)
                 else:

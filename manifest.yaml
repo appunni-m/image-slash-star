@@ -2975,6 +2975,8 @@ formats:
     edge_cases:
     - id: subsampling_444
       description: 4:4:4 chroma subsampling (no subsampling)
+      rust_decode_sequence_with_token: true
+      rust_decode_sequence_with_work_budget: true
       test_assets:
       - baseline_444.jpg
     - id: baseline_444_unused_custom_ac_table
@@ -7071,6 +7073,8 @@ formats:
       - apng_static.png
     - id: apng_animated
       description: APNG with multiple frames
+      rust_decode_sequence_with_token: true
+      rust_decode_sequence_with_work_budget: true
       test_assets:
       - apng_animated.png
     - id: apng_gray16_partial_frame

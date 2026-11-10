@@ -32,6 +32,33 @@ Selected report:
 local receipt SHA-256 is
 `fe061f064b629c5594b1291ddde890e021804ea0021c11f817a640f67cc15d05`.
 
+## JPEG and PNG sequence-option decoder parity — 2026-11-10
+
+For `image-slash-star#dgby`, enabled the public token-aware and work-budget
+sequence decode operations on the existing JPEG `subsampling_444` and PNG
+`apng_animated` parity rows. The JPEG case covers sequence fallback when no
+sequence codec is available; the APNG case exercises the incremental sequence
+codec. Both paths compare format, sequence validity, and exact reference
+pixels; still-image fallback also checks decoded transfer and raster identity.
+The selected parity run passed 2/2 rows, covering all four option/case pairs.
+
+Coverage MCP comparison with the retained full report observed four branch
+coordinates in `decode_sequence_token_format_with_mode` that were absent from
+the selected cases' previous measurement, with no remaining queried branch
+group. Coverage MCP marked the comparison limited because source/build identity
+is unverified. The selected report records 4,092/142,880 lines, 551/32,132
+branches, 315/9,183 functions, and 5,998/221,268 regions. These are selected
+run totals, not an aggregate project coverage claim. The accompanying receipt
+is local evidence and is not a Coverage MCP source/build receipt. No ordinary
+unit tests or decoder implementation changes were added.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110T184641.825120Z-5b3f7eef216349f8bf2a58ae25738bc4/coverage.json`
+(SHA-256
+`3801ec85846f3bd2651fe6b02af964d6bda10ceb71083393448fb822b327ad8c`). Its
+local receipt SHA-256 is
+`05123d713b023a552d2b123b923ae05adcb65e33120e19e44c50ed89e8a302f3`.
+
 ## JPEG YCCK mode identity and CMYK encode parity — 2026-11-10
 
 Appended `decode:jpeg:ycck_h2v2_even_upsample_edges_18x10` to the
@@ -18039,7 +18066,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `703cbec30909546917a5d4a811d2805778d2f8ee05cf6d1889ad93a99ed7e9ec`; matrix `7e12119df99c6d7202e62129f16757c3f7087359aefc86b3297b1f0ce425592b`.
+- Current fixture integrity only: manifest `4db11710adecc099f9b789d023e7b285f138ae3dcc7b28c85e257fee6dcc6bfc`; matrix `17b1c4b719b611ed26319f912ea1666dc75797d512a7cc152a6a866dc663dfa9`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

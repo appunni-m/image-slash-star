@@ -210352,7 +210352,9 @@
           "decoded_source_byte_order_origin": null,
           "decoded_source_color": null,
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": null,
+          "rust_decode_sequence_with_work_budget": true,
+          "rust_decode_sequence_with_token": true
         },
         {
           "id": "baseline_444_unused_custom_ac_table",
@@ -279619,7 +279621,9 @@
             "icc_profile_present": false
           },
           "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null
+          "rust_decode_with_metadata_limit": null,
+          "rust_decode_sequence_with_token": true,
+          "rust_decode_sequence_with_work_budget": true
         },
         {
           "id": "apng_gray16_partial_frame",

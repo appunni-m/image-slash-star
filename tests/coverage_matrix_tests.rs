@@ -264,6 +264,8 @@ struct DecodeRow {
     expect_sequence_error: bool,
     rust_decode_with_token: bool,
     rust_decode_with_work_budget: bool,
+    rust_decode_sequence_with_token: bool,
+    rust_decode_sequence_with_work_budget: bool,
     rust_inspect_basic: bool,
     rust_decode_with_metadata_limit: Option<u64>,
     rust_expect_sequence_error: bool,
@@ -5728,6 +5730,10 @@ impl FromJson for DecodeRow {
             expect_sequence_error: object.take_or_default("expect_sequence_error")?,
             rust_decode_with_token: object.take_or_default("rust_decode_with_token")?,
             rust_decode_with_work_budget: object.take_or_default("rust_decode_with_work_budget")?,
+            rust_decode_sequence_with_token: object
+                .take_or_default("rust_decode_sequence_with_token")?,
+            rust_decode_sequence_with_work_budget: object
+                .take_or_default("rust_decode_sequence_with_work_budget")?,
             rust_inspect_basic: object.take_or_default("rust_inspect_basic")?,
             rust_decode_with_metadata_limit: object.take("rust_decode_with_metadata_limit")?,
             rust_expect_sequence_error: object.take_or_default("rust_expect_sequence_error")?,
@@ -10865,7 +10871,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
             }
 
             match assert_pixel_parity(&expected, &decoded)
-                .and_then(|()| assert_sequence_parity(manifest_dir, row, &data))
+                .and_then(|()| assert_sequence_parity(manifest_dir, row, &data, &expected))
                 .and_then(|()| {
                     let header_mode_name = row
                         .inspect_raster_mode
@@ -19734,8 +19740,41 @@ fn assert_frame_request_parity(row: &DecodeRow, data: &[u8]) -> Result<(), Strin
     Ok(())
 }
 
-fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+fn assert_sequence_parity(
+    manifest_dir: &Path,
+    row: &DecodeRow,
+    data: &[u8],
+    expected_image: &PixelParityRef,
+) -> Result<(), String> {
     assert_sequence_base(manifest_dir, row, data)?;
+    if row.rust_decode_sequence_with_token {
+        let token = img::CancellationToken::new();
+        let decoded = img::decode_sequence_with_token(data, &token)
+            .map_err(|error| format!("token-aware sequence decode failed: {error}"))?;
+        assert_sequence_operation_parity(
+            manifest_dir,
+            row,
+            expected_image,
+            decoded.format,
+            &decoded.content,
+            data,
+            "token-aware",
+        )?;
+    }
+    if row.rust_decode_sequence_with_work_budget {
+        let policy = img::DecodePolicy::default().with_max_work_units(u64::MAX);
+        let decoded = img::decode_sequence_with_policy(data, &policy)
+            .map_err(|error| format!("work-budget sequence decode failed: {error}"))?;
+        assert_sequence_operation_parity(
+            manifest_dir,
+            row,
+            expected_image,
+            decoded.format,
+            &decoded.content,
+            data,
+            "work-budget",
+        )?;
+    }
     if row.format == "avif" && row.id == "animated_sequence_still_major_brand" {
         let expected_image = img::decode(data)
             .map_err(|error| format!("Pillow-matched AVIF still decode failed: {error}"))?;
@@ -19810,6 +19849,70 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
                 "APNG metadata limit returned the wrong structured error: {error:?}"
             ));
         }
+    }
+    Ok(())
+}
+
+fn assert_sequence_operation_parity(
+    manifest_dir: &Path,
+    row: &DecodeRow,
+    expected_image: &PixelParityRef,
+    actual_format: img::ImageFormat,
+    actual: &img::DecodedSequence,
+    data: &[u8],
+    operation: &str,
+) -> Result<(), String> {
+    let expected_format = format_from_name(&row.format)
+        .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+    if actual_format != expected_format {
+        return Err(format!(
+            "{operation} sequence format mismatch: actual {actual_format:?}, expected {expected_format:?}"
+        ));
+    }
+    actual
+        .validate()
+        .map_err(|error| format!("{operation} sequence validation failed: {error}"))?;
+
+    if let Some(expected) = row.sequence.as_ref() {
+        return assert_sequence_reference_parity(
+            manifest_dir,
+            &row.id,
+            expected,
+            actual,
+            expected_format,
+            data,
+        )
+        .map_err(|message| format!("{operation} sequence parity: {message}"));
+    }
+
+    let [frame] = actual.frames.as_slice() else {
+        return Err(format!(
+            "{operation} still-image sequence produced {} frames instead of one",
+            actual.frames.len()
+        ));
+    };
+    assert_pixel_parity(expected_image, &frame.image)
+        .map_err(|message| format!("{operation} sequence pixels: {message}"))?;
+    let transfer_mode_name = row
+        .decoded_raster_mode
+        .as_deref()
+        .or(row.ref_mode.as_deref())
+        .ok_or_else(|| format!("{} has no expected decoded transfer mode", row.id))?;
+    let expected_transfer_mode = expected_image_mode(transfer_mode_name)
+        .ok_or_else(|| format!("unknown transfer mode {transfer_mode_name:?}"))?;
+    let expected_transfer_raster_mode =
+        expected_raster_mode(transfer_mode_name, expected_format, &frame.image.source)
+            .ok_or_else(|| format!("no transfer raster mapping for {transfer_mode_name:?}"))?;
+    if frame.image.mode != expected_transfer_mode
+        || frame.image.raster_mode != expected_transfer_raster_mode
+    {
+        return Err(format!(
+            "{operation} sequence transfer identity differs: actual {:?}/{:?}, expected {:?}/{:?}",
+            frame.image.mode,
+            frame.image.raster_mode,
+            expected_transfer_mode,
+            expected_transfer_raster_mode,
+        ));
     }
     Ok(())
 }
