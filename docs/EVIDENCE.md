@@ -1,8 +1,50 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,921 total rows: 3,208 decode /
-inspect / verify rows and 713 encode rows. Of those, 3,208 decode rows are
+The current public evidence matrix contains 3,926 total rows: 3,213 decode /
+inspect / verify rows and 713 encode rows. Of those, 3,213 decode rows are
 active and 686 encode rows are active; 27 encode rows remain planned.
+
+## TIFF CIELAB SampleFormat parity — 2026-11-10
+
+For `image-slash-star#y81n` and `image-slash-star#dgby`, added five active TIFF
+decode rows around CIELAB `SampleFormat` and `ExtraSamples`: zero-count, signed,
+three explicit unsigned values, mixed signedness, and an unmatched extra sample.
+The three Pillow-accepted inputs preserve exact `LAB` header and decoded
+transfer identity; the other three reject with the same public malformed-input
+outcome. The focused parity run passed 6/6 rows, including the existing `lab`
+baseline. The mode-decode index remains at 40 because `LAB` → `LAB` was already
+represented. Restored the existing palette associated-alpha error row to the
+manifest after matrix regeneration showed that the row had been present only in
+the generated matrix.
+
+Coverage MCP reports no missing branch at
+`src/codecs/tiff/inspect.rs:443-446` in this six-case local measurement. The
+measurement is source-unverified with unknown test attribution, so this is
+focused branch evidence rather than a verified repository-wide coverage
+increase. Report SHA-256:
+`7626d1b9bcea67190c63d5293f4bae3ebf57be2ff6500cb317f1992f8886501c`; local
+receipt SHA-256:
+`993466b8136a5864a692c0704193e5f21712ebb75554d36739b7cd6832859b7c`.
+
+Report:
+`.coverage-mcp/local-evidence/selected/20261109T235936.686964Z-fbbb0ad80a5446f28fbffbc60782ccc5/coverage.json`.
+
+The complete matrix then passed 3,899/3,899 active decode/encode parity rows
+and 206/206 fault contracts (4,105 active selections including fault
+contracts); 27 planned encode rows remain unexecuted. Its LLVM report records
+100,752/142,863 lines (70.5235%), 20,920/32,126 branches (65.1186%),
+5,471/9,180 functions (59.5969%), and 152,980/221,254 regions (69.1423%).
+Coverage MCP comparison reports four newly observed branches in
+`layout_and_palette` at lines 443–445 and no missing branches at lines 443–446;
+one separate branch remains at line 440. The report source and test attribution
+are unverified, so these are local measurements rather than a confirmed
+project-wide coverage increase. Full report SHA-256:
+`c29b68d6eaa6b51be15eb1c95f1682783f08aa883f91edf6d190e3cd5596b8e1`; local
+receipt SHA-256:
+`354d7b001237a9acc8198cffaa657b2ee7d2d8b99860efcd878e24308a11d367`.
+
+Full report:
+`.coverage-mcp/local-evidence/selected/20261110T000200.834727Z-48aad626c926404dbdb92819486bbd00/coverage.json`.
 
 ## WebP signed I-mode token parity — 2026-11-10
 
@@ -26,8 +68,9 @@ receipt SHA-256:
 Report:
 `.coverage-mcp/local-evidence/selected/20261109T230156.077554Z-39daa69e321b4ea598261d917316a1c4/coverage.json`.
 
-The full matrix run passed 4,100/4,100 active parity rows and 206/206 fault
-contracts; 27 planned rows remain unexecuted. Its local LLVM report records
+The full matrix run passed 3,894/3,894 active decode/encode parity rows and
+206/206 fault contracts (4,100 active selections including fault contracts);
+27 planned encode rows remain unexecuted. Its local LLVM report records
 100,752/142,863 lines (70.5235%), 20,916/32,126 branches (65.1061%),
 5,471/9,180 functions (59.5969%), and 152,980/221,254 regions (69.1423%).
 Coverage MCP comparison reports the `expand_i32_to_rgb` branch as newly
@@ -17888,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e98093a3df74c9c48ee7359ea7ca3d0322f7c739400a13ef2b752bd29a864b36`; matrix `0eba6ade19d802c45f0305a2009259ef9d111fe31b45912f4f381713a9b2de3b`.
+- Current fixture integrity only: manifest `1c96ffb58f1da9c485a7ecdf0903311b35603967f6c572ee3d77e0ab4b190ddf`; matrix `a8fe53fe696b89076f74d1b044045f374f2e4cef4497773be12682c7c67e246e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
