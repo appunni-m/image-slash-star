@@ -377068,6 +377068,30 @@
       "case_id": "byte_order_be",
       "inspect_mode": "Rgb8",
       "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "bmp",
+      "case_id": "depth_8",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "png",
+      "case_id": "depth_2",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "rgba",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "webp",
+      "case_id": "lossless_vp8l",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
     }
   ],
   "mode_encode_cases": [
