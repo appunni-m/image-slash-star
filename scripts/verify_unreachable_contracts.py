@@ -1209,6 +1209,15 @@ FAULT_CONTRACTS = {
         "contract": "metadata_measure_rejects_invalid_webp_signature",
         "operation": "decode",
     },
+    "webp_metadata_truncated_vp8x_rejected": {
+        "format": "webp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:webp:webp_metadata_truncated_vp8x_rejected",
+        "source_case": "encode:webp:enc_lossy_alpha_exif",
+        "point": "webp.metadata.short_vp8x_header",
+        "contract": "encode_truncated_vp8x_rejected_then_retry_matches_reference",
+        "operation": "encode",
+    },
     "webp_inspect_riff_signature_contract": {
         "format": "webp",
         "category": "structured-diagnostics",
