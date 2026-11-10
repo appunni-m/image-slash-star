@@ -377056,6 +377056,12 @@
       "case_id": "palette_alpha_short_color_map",
       "inspect_mode": "PA",
       "decoded_mode": "PA"
+    },
+    {
+      "format": "png",
+      "case_id": "color_indexed_alpha",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
     }
   ],
   "mode_encode_cases": [
