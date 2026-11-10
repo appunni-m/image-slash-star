@@ -377383,6 +377383,12 @@
       "case_id": "high_bitdepth_still_12bit_420_alpha_odd_edge_17x9",
       "inspect_mode": "Rgba8",
       "decoded_mode": "Rgba8"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "ycck_h2v2_even_upsample_edges_18x10",
+      "inspect_mode": "CMYK",
+      "decoded_mode": "CMYK"
     }
   ],
   "mode_encode_cases": [

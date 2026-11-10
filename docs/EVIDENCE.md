@@ -32,6 +32,34 @@ Selected report:
 local receipt SHA-256 is
 `fe061f064b629c5594b1291ddde890e021804ea0021c11f817a640f67cc15d05`.
 
+## JPEG YCCK mode identity and CMYK encode parity — 2026-11-10
+
+Appended `decode:jpeg:ycck_h2v2_even_upsample_edges_18x10` to the
+append-only `mode_decode_cases` index, which now contains 53 entries. This
+18×10 YCCK input exercises the even-edge 4:2:0 interpolation layout separately
+from the existing odd-edge YCCK representative; the index checks the CMYK
+header and decoded transfer identities independently before exact pixel parity.
+
+The focused parity run passed 2/2 rows. The YCCK decode matched all 720 Pillow
+reference bytes. The prioritized existing encoding row
+`encode:jpeg:enc_cmyk_subsampling_420_odd_edges` emitted 544 bytes and
+re-decoded to exact 13×9 CMYK pixels. The encode-mode pair remains represented
+by its existing unique index entry. Fixture integrity, capability documentation,
+and matrix-hash receipts pass after regeneration.
+
+Coverage MCP was queried against the selected report. It marks source identity
+unverified and test attribution unknown, so the result is not an aggregate
+coverage claim. The remaining YCCK and row-upsampling gaps point to
+`cfg(coverage)` malformed-buffer fault hooks; no additional public-input case
+was inferred from those hooks. No ordinary unit tests or codec implementation
+changes were added.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110T110012.212196Z-a5e3784124ac4bf280a4fe8cae2b54ca/coverage.json`
+(SHA-256 `53197dcfca5b14ccecf7c8bcdcf62d20f1a924dcb448bd78986c241ac9e738e7`);
+its local receipt SHA-256 is
+`72d1a778a0733903ec85ae4ef7cd7de47879390cbfe048352906e3cc9939dee4`.
+
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
 
 For `image-slash-star#y81n` and `image-slash-star#dgby`, added five active TIFF
@@ -17983,7 +18011,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `ba3d84ad3824629760b68970a605b53ff2460bbfa18037e85d6005fae3a217c8`.
+- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `988814dd8acf5ce5c48f85bb5c982945d1a4253212fc611e56c098324e112a73`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
