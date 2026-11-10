@@ -10183,6 +10183,24 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         "decode_sequence",
                     )
                     .is_ok();
+                let sequence_work_budget_error = if row.rust_decode_sequence_with_work_budget {
+                    let policy = img::DecodePolicy::default().with_max_work_units(u64::MAX);
+                    let policy_result = img::decode_sequence_with_policy(&data, &policy);
+                    result_matches_oracle(
+                        &policy_result,
+                        "error",
+                        row.oracle_error_kind.as_deref(),
+                        expected_format,
+                    ) && operation_status(&row.operations, "decode_sequence") == Ok("error")
+                        && assert_result_error_contract(
+                            &policy_result,
+                            &row.error_contracts,
+                            "decode_sequence",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
                 let structured_error = result_matches_oracle(
                     &decoded,
                     "error",
@@ -10283,6 +10301,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     && token_aware_error
                     && work_budget_error
                     && sequence_rejected
+                    && sequence_work_budget_error
                     && source_error_is_stable
                 {
                     matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
@@ -10290,13 +10309,14 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, work_budget_error={}, sequence_rejected={}, source_error_is_stable={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, work_budget_error={}, sequence_rejected={}, sequence_work_budget_error={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
                         metadata_limited_error,
                         token_aware_error,
                         work_budget_error,
                         sequence_rejected,
+                        sequence_work_budget_error,
                         source_error_is_stable
                     );
                     failed += 1;

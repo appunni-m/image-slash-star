@@ -3091,6 +3091,8 @@ formats:
       test_assets:
       - baseline_444_single_scan_reserved_jpg0.jpg
       expect_error: true
+      rust_decode_with_token: true
+      rust_decode_sequence_with_work_budget: true
     - id: baseline_444_single_scan_trailing_dht_truncated_counts
       description: Baseline 4:4:4 JPEG has truncated Huffman symbol counts in its trailing DHT segment
       test_assets:

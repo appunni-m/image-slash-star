@@ -212186,7 +212186,9 @@
               "rust_message": "non_empty",
               "origin": "pillow_fixture"
             }
-          }
+          },
+          "rust_decode_with_token": true,
+          "rust_decode_sequence_with_work_budget": true
         },
         {
           "id": "baseline_444_single_scan_trailing_dht_truncated_counts",
