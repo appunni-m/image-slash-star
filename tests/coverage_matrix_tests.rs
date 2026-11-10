@@ -8257,6 +8257,30 @@ fn assert_pixel_parity(
     ))
 }
 
+fn assert_token_decode_parity(
+    expected_format: img::ImageFormat,
+    expected_pixels: &PixelParityRef,
+    ordinary: &img::DecodedImage,
+    actual_format: img::ImageFormat,
+    actual: &img::DecodedImage,
+    operation: &str,
+) -> Result<(), String> {
+    if actual_format != expected_format {
+        return Err(format!(
+            "{operation} format mismatch: actual {actual_format:?}, expected {expected_format:?}"
+        ));
+    }
+    assert_pixel_parity(expected_pixels, actual)
+        .map_err(|message| format!("{operation} Pillow parity: {message}"))?;
+    if actual != ordinary {
+        return Err(format!(
+            "{operation} transfer identity {:?}/{:?} differs from ordinary {:?}/{:?}",
+            actual.mode, actual.raster_mode, ordinary.mode, ordinary.raster_mode
+        ));
+    }
+    Ok(())
+}
+
 fn expected_frame_disposal(value: &str) -> Result<img::FrameDisposal, String> {
     match value {
         "unspecified" => Ok(img::FrameDisposal::Unspecified),
@@ -10709,6 +10733,15 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 failed += 1;
                 continue;
             }
+            let indexed_mode_case = matrix
+                .mode_decode_cases
+                .iter()
+                .any(|case| case.format.as_str() == fmt_name && case.case_id == row.id.as_str());
+            let indexed_mode_frame_case = matrix.mode_decode_cases.iter().any(|case| {
+                case.format.as_str() == fmt_name
+                    && case.case_id == row.id.as_str()
+                    && case.frame_index.is_some()
+            });
             let Some(expected) = load_pixel_reference(
                 manifest_dir,
                 &row.id,
@@ -10733,7 +10766,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
 
-            if row.rust_decode_with_token {
+            if row.rust_decode_with_token || indexed_mode_case {
                 let token = img::CancellationToken::new();
                 let token_decoded = match img::decode_with_token(&data, &token) {
                     Ok(decoded) => decoded,
@@ -10743,16 +10776,44 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         continue;
                     }
                 };
-                if token_decoded.format != expected_format {
-                    eprintln!(
-                        "  FAIL [{}]: token-aware format {:?} differs from {:?}",
-                        row.id, token_decoded.format, expected_format
-                    );
+                if let Err(message) = assert_token_decode_parity(
+                    expected_format,
+                    &expected,
+                    &decoded,
+                    token_decoded.format,
+                    &token_decoded.content,
+                    "token-aware",
+                ) {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_pixel_parity(&expected, &token_decoded.content) {
-                    eprintln!("  FAIL [{}]: token-aware decode: {message}", row.id);
+            }
+
+            if indexed_mode_case {
+                let maximum_pixels = u64::from(decoded.width) * u64::from(decoded.height);
+                let policy = img::DecodePolicy::default().with_max_pixels(maximum_pixels);
+                let token = img::CancellationToken::new();
+                let bounded = match img::decode_with_token_and_policy(&data, &policy, &token) {
+                    Ok(decoded) => decoded,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware max-pixel decode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_token_decode_parity(
+                    expected_format,
+                    &expected,
+                    &decoded,
+                    bounded.format,
+                    &bounded.content,
+                    "token-aware max-pixel",
+                ) {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
                     failed += 1;
                     continue;
                 }
@@ -10895,7 +10956,15 @@ fn run_decode_matrix(format_filter: Option<&str>) {
             }
 
             match assert_pixel_parity(&expected, &decoded)
-                .and_then(|()| assert_sequence_parity(manifest_dir, row, &data, &expected))
+                .and_then(|()| {
+                    assert_sequence_parity(
+                        manifest_dir,
+                        row,
+                        &data,
+                        &expected,
+                        indexed_mode_frame_case,
+                    )
+                })
                 .and_then(|()| {
                     let header_mode_name = row
                         .inspect_raster_mode
@@ -10940,9 +11009,6 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                         header_mode_name.to_owned(),
                         transfer_mode_name.to_owned(),
                     ));
-                    let indexed_mode_case = matrix.mode_decode_cases.iter().any(|case| {
-                        case.format.as_str() == fmt_name && case.case_id == row.id.as_str()
-                    });
                     if first_mode_pair || indexed_mode_case {
                         assert_encoded_header_raster_identity(
                             &data,
@@ -19850,9 +19916,10 @@ fn assert_sequence_parity(
     row: &DecodeRow,
     data: &[u8],
     expected_image: &PixelParityRef,
+    indexed_mode_frame_case: bool,
 ) -> Result<(), String> {
     assert_sequence_base(manifest_dir, row, data)?;
-    if row.rust_decode_sequence_with_token {
+    if row.rust_decode_sequence_with_token || indexed_mode_frame_case {
         let token = img::CancellationToken::new();
         let decoded = img::decode_sequence_with_token(data, &token)
             .map_err(|error| format!("token-aware sequence decode failed: {error}"))?;
@@ -19866,7 +19933,7 @@ fn assert_sequence_parity(
             "token-aware",
         )?;
     }
-    if row.rust_decode_sequence_with_work_budget {
+    if row.rust_decode_sequence_with_work_budget || indexed_mode_frame_case {
         let policy = img::DecodePolicy::default().with_max_work_units(u64::MAX);
         let decoded = img::decode_sequence_with_policy(data, &policy)
             .map_err(|error| format!("work-budget sequence decode failed: {error}"))?;
@@ -19878,6 +19945,31 @@ fn assert_sequence_parity(
             &decoded.content,
             data,
             "work-budget",
+        )?;
+    }
+    if indexed_mode_frame_case {
+        let sequence = row
+            .sequence
+            .as_ref()
+            .ok_or("mode-indexed frame case has no Pillow sequence reference")?;
+        let [width, height] = sequence.canvas_size.as_slice() else {
+            return Err("mode-indexed sequence canvas must have two dimensions".to_owned());
+        };
+        let maximum_pixels = u64::from(*width)
+            .checked_mul(u64::from(*height))
+            .ok_or("mode-indexed sequence canvas pixel limit overflows u64")?;
+        let policy = img::DecodePolicy::default().with_max_pixels(maximum_pixels);
+        let token = img::CancellationToken::new();
+        let decoded = img::decode_sequence_with_token_and_policy(data, &policy, &token)
+            .map_err(|error| format!("token-aware max-pixel sequence decode failed: {error}"))?;
+        assert_sequence_operation_parity(
+            manifest_dir,
+            row,
+            expected_image,
+            decoded.format,
+            &decoded.content,
+            data,
+            "token-aware max-pixel",
         )?;
     }
     if row.format == "avif" && row.id == "animated_sequence_still_major_brand" {

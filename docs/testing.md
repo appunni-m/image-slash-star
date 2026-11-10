@@ -66,12 +66,13 @@ decoded image. Exact Pillow-backed sequence frame modes also contribute to the
 required pair set. When a decoder adds a new pair or a carrier alias needs an
 explicit row, append it to that index. The parity harness checks both
 identities independently, that indexed rows remain active, and that every
-successful mode pair is listed. Every indexed decode row also exercises
-owned and borrowed encoded-source header inspection before decode, then checks
-the materialized transfer against the exact Pillow pixels and metadata.
-Exact sequence-frame parity checks each frame's decoded transfer mode and
-raster identity. GIF frame references can be rendered RGB while the public
-sequence retains indexed source samples; the harness checks the retained
+successful mode pair is listed. Every indexed decode row reruns token-aware
+still decode and its max-pixel token-policy path. Both must preserve the exact
+Pillow result and ordinary transfer identity, alongside owned and borrowed
+encoded-source header inspection. Indexed sequence-frame cases rerun token-aware,
+work-budget, and max-pixel token-policy sequence decode, checking every exact
+frame's decoded transfer mode and raster identity. GIF frame references can be
+rendered RGB while the public sequence retains indexed source samples; the harness checks the retained
 indexed identity and compares the separately rendered RGB pixels exactly.
 
 The matrix also keeps an append-only `mode_encode_cases` index with one active
