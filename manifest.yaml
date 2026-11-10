@@ -9796,6 +9796,11 @@ formats:
       source_format: tiff
       source_asset: deflate_predictor_checkpoint_257x1_gray32_signed.tiff
       params: {'lossless': True}
+    - id: enc_lossless_i32_signed_clamp_token
+      description: Token-aware lossless WebP clamps signed 32-bit TIFF grayscale samples to RGB
+      source_format: tiff
+      source_asset: deflate_predictor_checkpoint_257x1_gray32_signed.tiff
+      params: {'lossless': True, 'rust_encode_with_token': True}
     - id: enc_lossless_f32_be
       description: Lossless WebP converts big-endian TIFF F samples to RGB
       source_format: tiff

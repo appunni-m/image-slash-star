@@ -1,8 +1,8 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,928 total rows: 3,214 decode /
-inspect / verify rows and 714 encode rows. Of those, 3,214 decode rows are
-active and 687 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,929 total rows: 3,214 decode /
+inspect / verify rows and 715 encode rows. Of those, 3,214 decode rows are
+active and 688 encode rows are active; 27 encode rows remain planned.
 
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
 
@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `9e4773a906586d4f71b30fe7e1f0033ac34b0f21c1bbc063362a143b7ed5fa82`; matrix `3f9cdcfb321f73a1e574d2ac5eed04b270350440bd4b740884983fb81e2881ab`.
+- Current fixture integrity only: manifest `cd87004e7d1832b7ae18992840bf7b3dbf4724a0c9b64903e0a28a903d1ce54e`; matrix `a4152b1103a9fde58f08c07e1a9916e0783a4821720e02a0b23e79a1958b2599`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23770,3 +23770,30 @@ these local measurements do not establish verified aggregate project
 coverage. The queried helper had no reportable missing groups. Broader WebP,
 TIFF, and JPEG source gaps remain visible in the report and are not treated as
 reachable through valid public parity inputs without a concrete case.
+
+## WebP token-aware I32 mode parity — 2026-11-10
+
+Added `enc_lossless_i32_signed_clamp_token` using the existing signed 32-bit
+grayscale TIFF input, alongside its ordinary encode parity row. The new row
+calls the public token-aware encoder with a fresh token and checks the exact
+48-byte Pillow output plus the decoded 257×1 RGB pixels. Its focused parity
+selection passed (1/1); all five public encode calls completed without a
+panic.
+
+Coverage MCP's full-report branch gap at
+`src/codecs/webp/encode/mod.rs:1226` was the token-present arm of the I32
+conversion specialization. The selected report and comparison record that
+arm as newly observed; the helper's I32 branch is no longer listed as missing
+in the selected report. This does not cover the cancellation-error edge at the
+checkpoint call. The comparison is limited local evidence because Coverage
+MCP marks source identity unverified and test attribution unknown.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110T074723.739599Z-7c9825cc5a744104b596916aac646077/coverage.json`
+(SHA-256
+`f7d80ae4fb9c3b81985d1f026e8f53543a1ea81d611c751116650e7b28d33a32`). Its
+local receipt SHA-256 is
+`a2e3410ac70f581268bd63889bc4063e037a238b97c5684a785073a35dda1c9c`.
+Coverage MCP comparison against the prior full report found one newly
+observed branch arm at line 1226; it explicitly labels the comparison limited
+and the source/build identity unverified.
