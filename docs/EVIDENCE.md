@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `03e8175d11c0752fe277307e516520c9d13a0b0fb6c0bf93e0cc7a882d88a401`.
+- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `e1c0661efc236dcdc99527ee47d82408e66f5ce28b6f414dbfe4b6363a29e781`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23719,4 +23719,22 @@ Selected LLVM report:
 records 1,658/142,863 lines, 169/32,126 branches, 172/9,180 functions, and
 2,327/221,254 regions. Coverage MCP was not queried; source identity is
 unverified and test attribution unknown, so this is selected local evidence,
+not an aggregate coverage claim.
+
+## Cross-format decode mode representatives — 2026-11-10
+
+Appended four public parity representatives to the mode-decode index:
+8-bit indexed BMP, packed 2-bit grayscale PNG expanded to `L8`, straight-alpha
+RGBA TIFF, and lossless RGB WebP. Their public mode pairs are respectively
+`P`→`P`, `L8`→`L8`, `Rgba8`→`Rgba8`, and `Rgb8`→`Rgb8`. All four selected
+rows passed exact Pillow pixel parity and the indexed header/decoded-transfer
+identity checks. The append-only mode-decode index now contains 49 cases.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261110T054515.053263Z-3ef98d6a2c9b4911bb640f2c5f010a8c/coverage.json`
+(SHA-256
+`3a1ee14a11c4c839649826ec76001a4cf00f37dd594824abdc909b746b56b75d`). It
+records 4,252/142,863 lines, 525/32,126 branches, 366/9,180 functions, and
+6,387/221,254 regions. Coverage MCP was not queried; source identity is
+unverified and test attribution unknown, so these are focused local figures,
 not an aggregate coverage claim.
