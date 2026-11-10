@@ -1,8 +1,8 @@
 {
   "schema": "image-slash-star/jpeg-patch-experiment@1",
-  "status": "diagnostic_only_shipping_rust_unchanged_pending_current_source_measurement",
+  "status": "rejected_native_x86_gate_shipping_rust_unchanged",
   "operation": "decode",
-  "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
+  "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting. The measured candidate was rejected because it regressed SSE2 and missed the AVX2 gain threshold.",
   "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
   "patch_sha256": "eaf49a76681113f1ad856888b8f925ed6ee61bcdc11f9cc88ca593b575d2550f",
   "source_guards": {
@@ -28,8 +28,53 @@
     "arm64_shipping_code_must_remain_portable": true
   },
   "arm64_screen": {
-    "status": "pending_current_source_remeasurement",
-    "note": "The old zero-context patch landed at stale offsets after FastBitReader changed. Re-measure the digest-guarded patch against the current baseline before use."
+    "status": "completed_current_source",
+    "report": ".coverage-mcp/local-evidence/performance-ci/decoder-refill-arm64-rebound/summary.json",
+    "report_sha256": "2b29f82ece1ca8af519192f33bf1365f7efbdd1a5696baee78f9cad148655f62",
+    "baseline_revision": "3317ebd4ea036bb6202c2e51d1698d0c2f4b402c",
+    "candidate_patch_producer_revision": "3527f6fffcff7df8fa92cd195ebe600648510cee",
+    "candidate_source_sha256": "59a47377d6aa0f57977349b0daa2e0ac13078b6e15744c49905d7fc9b883d916",
+    "primary_gain_percent": 2.387965909931511,
+    "primary_cohorts_faster": 6,
+    "guard_paired_gain_percent": {
+      "decode-gray-512-422": 2.6567384792707927,
+      "decode-rgb-baseline-128": -0.330470353337331,
+      "decode-progressive-long-scan-128": 0.4485315773186338
+    },
+    "exact_output_bytes_match": true,
+    "note": "Apple arm64 diagnostic only; the native x86 gate is authoritative for this candidate."
+  },
+  "x86_screen": {
+    "status": "completed_rejected",
+    "run_id": 42841841708,
+    "artifact_id": 13776269241,
+    "artifact_url": "https://github.com/appunni-m/image-slash-star/actions/runs/42841841708/artifacts/13776269241",
+    "artifact_sha256": "9cb641f0e92cc6e7fab1a15214fb084551f6282394a3bcc8916e4df83bf409fe",
+    "summary_sha256": "e75ecca2895514a305e0c035123b2a3fc7adf046224c8571aaebaf5e02fec6fa",
+    "producer_revision": "5b8e150779361e55181b06bb6e1a9ca329668efe",
+    "baseline_revision": "79f67bc8ffd11dd99d30e76529f7c9711e5326d7",
+    "plan_sha256": "64974ae6201758b95b697829fde0c63c0e26b7bcbd5338356ac5c9fa1d6ea262",
+    "candidate_source_sha256": "59c48e692a0c908cc3814cee275367585c2c0bbe2491eb6abddf6fd48a23f194",
+    "variants": {
+      "sse2": {
+        "primary_paired_gain_percent": -1.3183859741316972,
+        "primary_cohorts": 6,
+        "primary_cohorts_faster": 0,
+        "minimum_guard_paired_gain_percent": -1.2290442944149493,
+        "performance_gate_passed": false
+      },
+      "avx2": {
+        "primary_paired_gain_percent": 2.0927463528945145,
+        "primary_cohorts": 6,
+        "primary_cohorts_faster": 6,
+        "minimum_guard_paired_gain_percent": -1.022819717284329,
+        "performance_gate_passed": false
+      }
+    },
+    "outputs_byte_identical": true,
+    "native_performance_gate_passed": false,
+    "adoption": "reject",
+    "note": "SSE2 regressed and AVX2 gain was below the required 3%; no decoder optimization is adopted."
   },
   "candidate_guards": {
     "src/codecs/jpeg/decode/bit_reader.rs": "59a47377d6aa0f57977349b0daa2e0ac13078b6e15744c49905d7fc9b883d916"
@@ -43,5 +88,21 @@
     "selected_parity_rows": 22,
     "primary_gain_percent": 10.3793072802586,
     "note": "Historical ARM64 screen for the superseded source and patch guards; not current-source evidence."
+  },
+  "parity_screen": {
+    "status": "passed",
+    "selectors": [
+      "decode:jpeg:grayscale_sampling_420_512x512",
+      "decode:jpeg:grayscale_sampling_422_512x512",
+      "decode:jpeg:jpeg_rgb_128x128_baseline",
+      "decode:jpeg:progressive_ac_refinement_long_scan"
+    ],
+    "active_rows_passed": 4,
+    "coverage_report": ".coverage-mcp/local-evidence/selected/20261110T150536.710211Z-9f7e5c2b2b6b4a18a71aca50132e452d/coverage.json",
+    "coverage_report_sha256": "d5a1af7da83be88366b78d7b6cafda3f4461b0740c015c2eeff63d93ce1ccc32",
+    "receipt_sha256": "a20b4805fea88b82c1d472f257edc1e078b6fd9eed3178f36c78a8060382f6dd",
+    "coverage_mcp_source": "unverified",
+    "coverage_mcp_test_attribution": "unknown",
+    "note": "The four selected Pillow parity rows passed on the candidate source; this selected report is not aggregate coverage."
   }
 }
