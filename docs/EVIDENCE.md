@@ -4,6 +4,34 @@ The current public evidence matrix contains 3,930 total rows: 3,215 decode /
 inspect / verify rows and 715 encode rows. Of those, 3,215 decode rows are
 active and 688 encode rows are active; 27 encode rows remain planned.
 
+## AVIF 12-bit 4:2:0 alpha mode identity parity — 2026-11-10
+
+Appended `decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9` to
+the append-only `mode_decode_cases` index, which now contains 52 entries. Its
+`Rgba8` header and transfer pair was already represented by another AVIF
+layout; this separate 17×9, 12-bit 4:2:0 auxiliary-alpha input covers odd
+right and bottom chroma edges in the specialized reconstruction path. The
+indexed row checks owned and borrowed header identity independently from the
+decoded transfer identity, then compares all 612 decoded bytes with the exact
+Pillow reference.
+
+The focused parity run passed 1/1 row. Coverage MCP was queried against the
+selected report and reports 13,929/142,865 lines, 2,158/32,126 branches,
+992/9,182 functions, and 18,786/221,250 regions. Its source identity is
+unverified and test attribution is unknown, so these are selected-run totals,
+not an aggregate coverage increase. The query lists six missing invalid-shape
+arms in `convert_subsampled_420_12bit_alpha`; the retained full-matrix report
+has the same source hash for `src/codecs/avif/decode.rs` and records those
+shape-error arms as observed by the existing fault-contract rows. No ordinary
+unit tests or codec implementation changes were added.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110-avif-12bit-420-alpha-mode/coverage.json`
+(SHA-256
+`d2cb74598515f8feab756a77c46f6ba72b037c690c4c11934c1da5c8838d0296`). Its
+local receipt SHA-256 is
+`fe061f064b629c5594b1291ddde890e021804ea0021c11f817a640f67cc15d05`.
+
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
 
 For `image-slash-star#y81n` and `image-slash-star#dgby`, added five active TIFF
@@ -17955,7 +17983,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `5b10d8c2d0c90d5063aeadcca8a588676387b7cec216e22e43c9ef8f0ed6f464`.
+- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `ba3d84ad3824629760b68970a605b53ff2460bbfa18037e85d6005fae3a217c8`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
