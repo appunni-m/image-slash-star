@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `f8b71a08f05b129a38ffb98a018bb253fea784edd4f494bbd2c9df83e8c55389`.
+- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `03e8175d11c0752fe277307e516520c9d13a0b0fb6c0bf93e0cc7a882d88a401`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23702,3 +23702,21 @@ reports unvisited branches in the TIFF, PNG, and BMP encoder functions for this
 narrow cohort; those observations are not evidence that the other branches are
 unreachable. The selected report is
 `.coverage-mcp/local-evidence/selected/20261110T015121.528652Z-6f3d28b22d144bbcaf97e0e635257025/coverage.json`. Its totals are 2,212/142,863 lines, 237/32,126 branches, 207/9,180 functions, and 3,020/221,254 regions. Source identity is unverified and test attribution unknown, so these totals describe this selected run only.
+
+## TIFF big-endian mode identity parity — 2026-11-10
+
+Appended `decode:tiff:byte_order_be` to the mode-decode index. Together with
+the existing little-endian row, it keeps both TIFF byte-order layouts
+represented for the same public `Rgb8` header and decoded-transfer pair. The
+focused parity run passed 1/1 row, including exact 49,152-byte Pillow pixel
+parity and the indexed owned/borrowed header and decoded-transfer identity
+checks. The mode-decode index now contains 45 cases.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261110T050954.701380Z-0dda224f222b46dbb3612e0f18fa0ec9/coverage.json`
+(SHA-256
+`48bd7a1a7f403921473619f4275886f6014c0daca901b43dbbc2a36985a1dfcb`). It
+records 1,658/142,863 lines, 169/32,126 branches, 172/9,180 functions, and
+2,327/221,254 regions. Coverage MCP was not queried; source identity is
+unverified and test attribution unknown, so this is selected local evidence,
+not an aggregate coverage claim.
