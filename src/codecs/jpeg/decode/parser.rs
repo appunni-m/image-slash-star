@@ -743,11 +743,17 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         // Pillow decodes a complete single-scan baseline image
                         // before considering an oversized trailing APP or COM
                         // payload.
-                        if let Ok(scan_end) = usize::try_from(marker_offset)
-                            && let Ok(eoi_pos) = find_eoi(data, scan_end)
-                        {
-                            consumed_len = eoi_pos.saturating_add(2);
-                            break eoi_pos;
+                        match find_eoi(data, marker_start) {
+                            Ok(eoi_pos) => {
+                                consumed_len = eoi_pos.saturating_add(2);
+                                break eoi_pos;
+                            }
+                            Err(_) => {
+                                // Pillow also decodes a complete baseline scan
+                                // when this oversized trailing marker reaches EOF
+                                // without a terminal EOI marker.
+                                break marker_start;
+                            }
                         }
                     }
                     return Err(CodecError::NeedMore {

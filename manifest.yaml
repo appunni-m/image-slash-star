@@ -3035,6 +3035,13 @@ formats:
       description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan APP1 length extends past EOI
       test_assets:
       - baseline_444_single_scan_app1_oversized_length.jpg
+    - id: baseline_444_single_scan_app1_oversized_length_no_eoi
+      description: Baseline 4:4:4 JPEG decodes its complete scan when a post-scan APP1 length extends past EOF and EOI is absent
+      rust_decode_with_token: true
+      rust_decode_sequence_with_token: true
+      rust_decode_sequence_with_work_budget: true
+      test_assets:
+      - baseline_444_single_scan_app1_oversized_length_no_eoi.jpg
     - id: baseline_444_single_scan_dht_oversized_length
       description: Baseline 4:4:4 JPEG keeps its decoded pixels when a post-scan DHT length extends past EOI
       test_assets:

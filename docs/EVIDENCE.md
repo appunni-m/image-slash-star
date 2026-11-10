@@ -1,7 +1,7 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,930 total rows: 3,215 decode /
-inspect / verify rows and 715 encode rows. Of those, 3,215 decode rows are
+The current public evidence matrix contains 3,931 total rows: 3,216 decode /
+inspect / verify rows and 715 encode rows. Of those, 3,216 decode rows are
 active and 688 encode rows are active; 27 encode rows remain planned.
 
 ## AVIF 12-bit 4:2:0 alpha mode identity parity — 2026-11-10
@@ -18092,7 +18092,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `32b3d4d8eb847ee715b6eb0adccc100a03469ef430901b72c29e1809edf387f7`; matrix `7b1cde90a268a134e7dc85217f235de23e8f5ec0c02133308eb4863705b08f78`.
+- Current fixture integrity only: manifest `8bb78d0d600df5f1ed0995e0a6b0188541dc9206c9d2c1b5d6f0bd1c2dc8cb0b`; matrix `1c29d82efb3ae4d63edf78cba3dea1f79ddbf7f1df402b3e661fa420f61c9a70`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23978,3 +23978,35 @@ Selected report:
 `.coverage-mcp/local-evidence/selected/20261110T175107.472724Z-b51d860aadc24206944c4ef83daeb9cb/coverage.json`
 (SHA-256
 `78c47d199f6249faaa913544890d63612a33b77374feb97d189fd593e3583a4c`).
+
+## JPEG oversized trailing APP1 without EOI parity — 2026-11-11
+
+Added `decode:jpeg:baseline_444_single_scan_app1_oversized_length_no_eoi`, a
+variant of the pinned baseline 4:4:4 fixture with its terminal EOI removed.
+Pillow 12.2.0 decodes its complete 8×8 RGB scan. The Rust parser now stops at
+the oversized trailing APP1 marker when no EOI is present and leaves the
+completed entropy scan available to the decoder; existing EOI handling is
+unchanged. The fixture SHA-256 is
+`32d94f32fb02847aae56bc1915b12820466de025aecfabe8e254e8034f837d26`, and its
+192-byte Pillow pixel reference SHA-256 is
+`7382706a9ecb0f6acae26e7c1c9a9be0e9471233c1a0c0da48d08a458115be2f`.
+
+The focused public parity selection passed 6/6 rows: the new no-EOI APP1
+case, the existing oversized APP1, COM, and DHT cases, the trailing-DHT
+no-EOI case, and the multi-scan COM rejection guard. The no-EOI case also
+exercised token-aware decode, sequence decode, and sequence work-budget paths.
+No unit tests were added.
+
+Coverage MCP queries against the selected report returned no missing branch
+groups at `parse_jpeg` lines 746 or 751. The report has 357/32,128 branches
+observed overall; source identity is unverified and test attribution unknown.
+The coordinate comparison to the previous full report could not establish a
+verified gain, so these figures are selected local evidence rather than an
+aggregate coverage claim.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110T233248.149443Z-3d8fd0fd6b1740d3b6251ce7b2dada1a/coverage.json`
+(SHA-256
+`d3314cb0f3f214cbd08ecd6e73c2035108a4d7b5eb30537dad788e79c8c9ef07`). Its
+local receipt SHA-256 is
+`9afa136901cb641b93a77f59553b1ae687c716ea1e31d4352fa85fd0f9c3ee34`.

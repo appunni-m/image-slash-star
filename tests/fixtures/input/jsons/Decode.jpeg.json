@@ -793,6 +793,58 @@
       ]
     },
     {
+      "id": "baseline_444_single_scan_app1_oversized_length_no_eoi",
+      "asset": "baseline_444_single_scan_app1_oversized_length_no_eoi.jpg",
+      "asset_sha256": "32d94f32fb02847aae56bc1915b12820466de025aecfabe8e254e8034f837d26",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444_single_scan_app1_oversized_length_no_eoi.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "baseline_444_single_scan_dht_oversized_length",
       "asset": "baseline_444_single_scan_dht_oversized_length.jpg",
       "asset_sha256": "3a948d8d4900f6b30d6cfef147dbe7a1a84b02ff8e628fb728e79b74d9576211",
