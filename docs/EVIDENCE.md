@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1c96ffb58f1da9c485a7ecdf0903311b35603967f6c572ee3d77e0ab4b190ddf`; matrix `a8fe53fe696b89076f74d1b044045f374f2e4cef4497773be12682c7c67e246e`.
+- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `1b4dc0677928361cfe1194645778468be250ebacfd3b689c83190ae9dc139e4f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23647,4 +23647,35 @@ measurement.
 
 The current public evidence matrix contains 3,892 total rows: 3,201 decode /
 inspect / verify rows and 691 encode rows. Of those, 3,201 decode rows and 664
+encode rows are active; 27 encode rows remain planned.
+
+## TIFF palette extra-sample parity — 2026-11-10
+
+Added an active error parity row for a separate-planar palette TIFF whose
+second sample is marked unspecified. The fixture is derived from the existing
+separate-planar PA sample and changes only its `ExtraSamples` value; Pillow
+rejects the resulting TIFF during open. The focused five-row cohort passed:
+palette alpha, associated-alpha rejection, separate-planar PA rejection,
+contiguous unspecified-extra P decoding, and separate-planar unspecified-extra
+rejection (5/5).
+
+Coverage MCP reports no remaining branch gaps at
+`src/codecs/tiff/inspect.rs:440` for this cohort. The selected LLVM report is
+`.coverage-mcp/local-evidence/selected/20261110T004909.866076Z-67585ef43c0c414f8888f93165dabe01/coverage.json`;
+MCP marks source identity unverified and test attribution unknown, so this is
+targeted local evidence and not an aggregate coverage claim.
+
+The subsequent full parity matrix passed 3,214/3,214 active decode rows,
+686/686 active encode rows, and 206/206 fault contracts; 27 planned encode
+rows were not executed. Its LLVM report is
+`.coverage-mcp/local-evidence/selected/20261110T005206.216445Z-05e07e499362481bbed69ec9a3f6b3a4/coverage.json`
+(SHA-256
+`02623f12c47f1888013b64e2395fb8ebe6b9dabe81ebbabd50ae900492a81ec0`). Coverage
+MCP found no remaining branch gaps at TIFF inspect line 440 in this report;
+the report records 20,921/32,126 branches. Its source identity remains
+unverified and test attribution unknown, so it does not establish verified
+aggregate project coverage.
+
+The current public evidence matrix contains 3,927 total rows: 3,214 decode /
+inspect / verify rows and 713 encode rows. Of those, 3,214 decode rows and 686
 encode rows are active; 27 encode rows remain planned.
