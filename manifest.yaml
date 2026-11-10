@@ -10737,6 +10737,11 @@ formats:
       rust_decode_with_token: true
       test_assets:
       - palette_unspecified_extra_sample.tiff
+    - id: error_palette_unspecified_extra_sample_separate_planar
+      description: Pillow rejects separate-planar palette TIFF with an unspecified extra sample
+      test_assets:
+      - palette_unspecified_extra_sample_separate_planar.tiff
+      expect_error: true
     - id: palette_alpha_short_color_map
       description: PA header and decoded transfer identity survive when Pillow exposes no palette for a short TIFF ColorMap
       inspect_raster_mode: PA

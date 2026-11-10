@@ -183,6 +183,39 @@ def build_palette_unspecified_extra_sample_tiff() -> bytes:
     return result
 
 
+def build_palette_unspecified_extra_sample_separate_planar_tiff() -> bytes:
+    """Make separate-planar palette storage with an unspecified extra sample."""
+    from PIL import Image, UnidentifiedImageError
+
+    data = bytearray(build_palette_alpha_separate_planar_tiff())
+    if data[:8] != b"II*\0\x08\0\0\0":
+        raise RuntimeError("the separate-planar PA source has an unexpected TIFF header")
+
+    entry_count = struct.unpack_from("<H", data, 8)[0]
+    for index in range(entry_count):
+        offset = 10 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", data, offset)
+        if tag == 338:
+            if (
+                field_type != 3
+                or count != 1
+                or struct.unpack_from("<H", data, offset + 8)[0] != 2
+            ):
+                raise RuntimeError("the separate-planar PA ExtraSamples field changed")
+            struct.pack_into("<H", data, offset + 8, 0)
+            break
+    else:
+        raise RuntimeError("the separate-planar PA TIFF omitted ExtraSamples")
+
+    result = bytes(data)
+    try:
+        with Image.open(BytesIO(result)):
+            pass
+    except UnidentifiedImageError:
+        return result
+    raise RuntimeError("Pillow unexpectedly recognized separate-planar palette extras")
+
+
 def build_palette_associated_alpha_unsupported_tiff() -> bytes:
     """Build a palette TIFF with associated alpha that Pillow rejects."""
     from PIL import Image, UnidentifiedImageError
@@ -441,6 +474,24 @@ def generate_fixtures(directory: Path = DEFAULT_DIRECTORY, *, check: bool = Fals
     else:
         separate_palette_alpha_path.write_bytes(separate_palette_alpha_data)
 
+    separate_unspecified_palette_path = (
+        directory / "palette_unspecified_extra_sample_separate_planar.tiff"
+    )
+    separate_unspecified_palette_data = (
+        build_palette_unspecified_extra_sample_separate_planar_tiff()
+    )
+    if check:
+        if (
+            not separate_unspecified_palette_path.is_file()
+            or separate_unspecified_palette_path.read_bytes()
+            != separate_unspecified_palette_data
+        ):
+            raise RuntimeError(
+                f"{separate_unspecified_palette_path}: separate unspecified palette input differs"
+            )
+    else:
+        separate_unspecified_palette_path.write_bytes(separate_unspecified_palette_data)
+
     unspecified_palette_extra_path = directory / "palette_unspecified_extra_sample.tiff"
     unspecified_palette_extra_data = build_palette_unspecified_extra_sample_tiff()
     if check:
@@ -493,7 +544,7 @@ def main() -> None:
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args()
     generate_fixtures(arguments.output_directory, check=arguments.check)
-    input_count = len(RECIPES) + 6
+    input_count = len(RECIPES) + 7
     print(
         f"{'Checked' if arguments.check else 'Generated'} "
         f"{input_count} extra-sample TIFF inputs, including "

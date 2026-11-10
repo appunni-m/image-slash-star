@@ -31461,6 +31461,57 @@
         "verify_status": "error"
       },
       {
+        "asset": "palette_unspecified_extra_sample_separate_planar.tiff",
+        "class": "error_palette_unspecified_extra_sample_separate_planar",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Pillow rejects separate-planar palette TIFF with an unspecified extra sample",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "sequence_error_message": null,
+        "sequence_error_type": null,
+        "sequence_status": null,
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
         "asset": "rgb16_deflate_fill_order_2_unsupported.tiff",
         "class": "error_rgb16_deflate_fill_order_2",
         "contracts": {
@@ -40272,23 +40323,23 @@
       "ico": 31,
       "jpeg": 130,
       "png": 81,
-      "tiff": 152,
+      "tiff": 153,
       "webp": 142
     },
     "by_origin": {
       "defensive_model": 6,
       "independent_implementation": 1,
-      "pillow_fixture": 909,
+      "pillow_fixture": 910,
       "specification_reference": 238
     },
     "by_spec_status": {
       "ambiguous": 36,
       "not_the_format": 41,
-      "spec_violation": 551,
+      "spec_violation": 552,
       "tolerated": 1,
       "truncated": 280
     },
-    "classes": 909,
+    "classes": 910,
     "formats": 8
   }
 }
