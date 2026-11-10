@@ -203248,7 +203248,8 @@
             "animated": true,
             "frames": 2,
             "color_table": "local",
-            "rust_encode_sequence_with_token": true
+            "rust_encode_sequence_with_token": true,
+            "rust_encode_sequence_to_sink_with_token": true
           },
           "status": "active",
           "source_format": "webp",
@@ -261423,7 +261424,9 @@
             "quality": 85,
             "subsampling": "420",
             "progressive": true,
-            "restart_interval": 1
+            "restart_interval": 1,
+            "rust_encode_to_sink_with_token": true,
+            "rust_encode_sequence_to_sink_with_token": true
           },
           "status": "active",
           "source_format": "jpeg",

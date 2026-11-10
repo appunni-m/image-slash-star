@@ -6165,7 +6165,7 @@ formats:
       source_asset: baseline_cmyk.jpg
     - id: enc_cmyk_subsampling_420_progressive_restart_rows
       description: Progressive CMYK 4:2:0 updates restart intervals for interleaved and component scans
-      params: {'color': 'cmyk', 'quality': 85, 'subsampling': '420', 'progressive': true, 'restart_interval': 1}
+      params: {'color': 'cmyk', 'quality': 85, 'subsampling': '420', 'progressive': true, 'restart_interval': 1, 'rust_encode_to_sink_with_token': true, 'rust_encode_sequence_to_sink_with_token': true}
       source_asset: baseline_cmyk.jpg
     - id: enc_cmyk_subsampling_422_odd_edges
       description: Odd 13x9 CMYK 4:2:2 replicates the last input column before filtering
@@ -8092,7 +8092,7 @@ formats:
       description: Two-frame lossless RGB animation with 256 colors per frame exercises the token-aware full-palette coalescing boundary
       source_format: webp
       source_asset: animated_rgb_full_palette.webp
-      params: {animated: true, frames: 2, color_table: local, rust_encode_sequence_with_token: true}
+      params: {animated: true, frames: 2, color_table: local, rust_encode_sequence_with_token: true, rust_encode_sequence_to_sink_with_token: true}
     - id: enc_animated_non_centisecond_delays
       description: GIF frame delays truncate WebP's 17 ms and 33 ms source durations to Pillow's 10 ms and 30 ms centisecond values
       source_format: webp

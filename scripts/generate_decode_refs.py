@@ -556,6 +556,8 @@ def encode_params(fmt, params):
         "rust_pa_palette_alpha_table",
         "rust_encode_with_token",
         "rust_encode_sequence_with_token",
+        "rust_encode_to_sink_with_token",
+        "rust_encode_sequence_to_sink_with_token",
         "rust_redecode_error_kind",
         "encoded_only",
         "sequence_canvas_padding",

@@ -8154,6 +8154,30 @@ fn assert_encoded_byte_parity(expected: &[u8], actual: &[u8]) -> Result<(), Stri
     Ok(())
 }
 
+fn assert_append_only_sink_parity(
+    prefix: &[u8],
+    sink_bytes: &[u8],
+    prefix_len: usize,
+    written: usize,
+    expected_pillow: &[u8],
+    expected_rust: &[u8],
+) -> Result<(), String> {
+    if !sink_bytes.starts_with(prefix) || sink_bytes.len() < prefix_len {
+        return Err("append-only sink changed its pre-existing prefix".to_owned());
+    }
+    let appended = &sink_bytes[prefix_len..];
+    if written != appended.len() {
+        return Err(format!(
+            "sink reported {written} appended bytes but wrote {}",
+            appended.len()
+        ));
+    }
+    assert_encoded_byte_parity(expected_pillow, appended)
+        .map_err(|message| format!("sink and Pillow reference: {message}"))?;
+    assert_encoded_byte_parity(expected_rust, appended)
+        .map_err(|message| format!("regular and sink encoders: {message}"))
+}
+
 fn assert_pixel_parity(
     expected: &PixelParityRef,
     actual: &img::DecodedImage,
@@ -12212,32 +12236,113 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         continue;
                     }
                 };
-                if !sink.bytes.starts_with(APPEND_ONLY_SINK_PREFIX) || sink.bytes.len() < prefix_len
-                {
-                    eprintln!(
-                        "  FAIL [{}]: append-only sink changed its pre-existing prefix",
-                        row.id
-                    );
+                if let Err(message) = assert_append_only_sink_parity(
+                    APPEND_ONLY_SINK_PREFIX,
+                    &sink.bytes,
+                    prefix_len,
+                    written,
+                    &expected_encoded,
+                    &encoded,
+                ) {
+                    eprintln!("  FAIL [{}]: {message}", row.id);
                     failed += 1;
                     continue;
                 }
-                let appended = &sink.bytes[prefix_len..];
-                if written != appended.len() {
-                    eprintln!(
-                        "  FAIL [{}]: sink reported {written} appended bytes but wrote {}",
-                        row.id,
-                        appended.len()
-                    );
+            }
+            let token_still_sink_parity_requested = row
+                .params
+                .get("rust_encode_to_sink_with_token")
+                .and_then(Value::as_bool)
+                == Some(true);
+            if token_still_sink_parity_requested {
+                let image = require_some(
+                    decoded.first_image(),
+                    "token-aware still sink parity requires a first frame",
+                );
+                let options = require_ok(opts.as_ref(), "token-aware still sink options");
+                let token = img::CancellationToken::new();
+                let mut sink = AppendOnlySink {
+                    bytes: APPEND_ONLY_SINK_PREFIX.to_vec(),
+                };
+                let prefix_len = sink.bytes.len();
+                let Some(sink_result) = run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:token-still-sink-parity", row.id),
+                    || img::encode_to_sink_with_token(image, format, options, &token, &mut sink),
+                ) else {
+                    failed += 1;
+                    continue;
+                };
+                let written = match sink_result {
+                    Ok(written) => written,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware still sink encode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_append_only_sink_parity(
+                    APPEND_ONLY_SINK_PREFIX,
+                    &sink.bytes,
+                    prefix_len,
+                    written,
+                    &expected_encoded,
+                    &encoded,
+                ) {
+                    eprintln!("  FAIL [{}]: token-aware still sink: {message}", row.id);
                     failed += 1;
                     continue;
                 }
-                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, appended) {
-                    eprintln!("  FAIL [{}]: sink and Pillow reference: {message}", row.id);
+            }
+            let token_sequence_sink_parity_requested = row
+                .params
+                .get("rust_encode_sequence_to_sink_with_token")
+                .and_then(Value::as_bool)
+                == Some(true);
+            if token_sequence_sink_parity_requested {
+                let options = require_ok(opts.as_ref(), "token-aware sequence sink options");
+                let token = img::CancellationToken::new();
+                let mut sink = AppendOnlySink {
+                    bytes: APPEND_ONLY_SINK_PREFIX.to_vec(),
+                };
+                let prefix_len = sink.bytes.len();
+                let Some(sink_result) = run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:token-sequence-sink-parity", row.id),
+                    || {
+                        img::encode_sequence_to_sink_with_token(
+                            decoded, format, options, &token, &mut sink,
+                        )
+                    },
+                ) else {
                     failed += 1;
                     continue;
-                }
-                if let Err(message) = assert_encoded_byte_parity(&encoded, appended) {
-                    eprintln!("  FAIL [{}]: regular and sink encoders: {message}", row.id);
+                };
+                let written = match sink_result {
+                    Ok(written) => written,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware sequence sink encode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_append_only_sink_parity(
+                    APPEND_ONLY_SINK_PREFIX,
+                    &sink.bytes,
+                    prefix_len,
+                    written,
+                    &expected_encoded,
+                    &encoded,
+                ) {
+                    eprintln!("  FAIL [{}]: token-aware sequence sink: {message}", row.id);
                     failed += 1;
                     continue;
                 }

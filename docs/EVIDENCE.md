@@ -59,6 +59,32 @@ Selected report:
 local receipt SHA-256 is
 `05123d713b023a552d2b123b923ae05adcb65e33120e19e44c50ed89e8a302f3`.
 
+## JPEG and GIF token-aware append-only sink parity — 2026-11-10
+
+For `image-slash-star#9h5w`, extended two existing encoding parity rows through
+token-aware append-only sinks. The JPEG progressive 4:2:0 restart case checks
+still-image and one-frame sequence sink delivery; the animated GIF case checks
+two-frame sequence sink delivery. Each call preserves the existing sink prefix,
+reports the exact appended length, and matches both Pillow's encoded-byte
+reference and the ordinary Rust encoder. The focused run passed 2/2 rows with
+12 counted public encode calls and no panics.
+
+Coverage MCP comparison with the retained full report observed two branch
+coordinates in `encode_sequence_to_sink_with_token`, covering JPEG dispatch
+and its typed JPEG options. The comparison is limited because source/build
+identity is unverified and test attribution is unknown. The selected report
+records 8,032/142,880 lines, 1,077/32,132 branches, 582/9,183 functions, and
+12,246/221,268 regions. These are selected-run totals, not an aggregate project
+coverage claim. No ordinary unit tests or codec implementation changes were
+added.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110T193453.903506Z-14a596dd251b4131a79de76c391f66d8/coverage.json`
+(SHA-256
+`ac885f241917b01430869ae7bcab9209d5bb233402c8b13a55998aff37e52373`). Its
+local receipt SHA-256 is
+`73b2d44d71ffee139d1888d5ccf7669c84080e44172d4f32838d86c98ebe9479`.
+
 ## JPEG YCCK mode identity and CMYK encode parity — 2026-11-10
 
 Appended `decode:jpeg:ycck_h2v2_even_upsample_edges_18x10` to the
@@ -18066,7 +18092,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `4db11710adecc099f9b789d023e7b285f138ae3dcc7b28c85e257fee6dcc6bfc`; matrix `17b1c4b719b611ed26319f912ea1666dc75797d512a7cc152a6a866dc663dfa9`.
+- Current fixture integrity only: manifest `94dca258889a621ec7c1a8428399a68285d8abe862b0363d7ec4d49efd3651ac`; matrix `716eb18b0ea48f2f7bb90937b8c1b9dd907ad6148f729b63a0a5ed171b0988d2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

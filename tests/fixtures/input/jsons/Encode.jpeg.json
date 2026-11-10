@@ -3440,7 +3440,9 @@
         "quality": 85,
         "subsampling": "420",
         "progressive": true,
-        "restart_interval": 1
+        "restart_interval": 1,
+        "rust_encode_to_sink_with_token": true,
+        "rust_encode_sequence_to_sink_with_token": true
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/jpeg/baseline_cmyk.jpg",
