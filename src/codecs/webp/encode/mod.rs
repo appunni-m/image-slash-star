@@ -183,6 +183,18 @@ fn corrupt_riff_header_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
     encoded
 }
 
+#[cfg(coverage)]
+fn truncate_vp8x_header_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
+    use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
+
+    if take_fault_point(CoverageFaultPoint::WebpMetadataVp8xHeaderTooShort)
+        && encoded.get(12..16) == Some(b"VP8X")
+    {
+        encoded.truncate(29);
+    }
+    encoded
+}
+
 fn write_riff_to_sink(
     encoded: &[u8],
     token: Option<&crate::CancellationToken>,
@@ -888,6 +900,8 @@ fn attach_metadata(
         return Ok(encoded);
     }
     if token.is_none() {
+        #[cfg(coverage)]
+        let encoded = truncate_vp8x_header_for_coverage(encoded);
         return attach_metadata_reusing_output(encoded, width, height, alpha, icc, exif, xmp);
     }
     // Both internal encoders return a complete RIFF header. Lossy alpha output
@@ -952,8 +966,14 @@ fn attach_metadata_reusing_output(
     exif: Option<&[u8]>,
     xmp: Option<&[u8]>,
 ) -> CodecResult<Vec<u8>> {
-    let existing_start = if encoded.get(12..16) == Some(b"VP8X") && encoded.len() >= 30 {
+    let is_extended_container = encoded.get(12..16) == Some(b"VP8X");
+    let has_complete_extended_header = encoded.len() >= 30;
+    let existing_start = if is_extended_container && has_complete_extended_header {
         30
+    } else if is_extended_container {
+        return Err(CodecError::Malformed(
+            "WebP encoded VP8X header is truncated".to_owned(),
+        ));
     } else {
         12
     };

@@ -1973,30 +1973,42 @@ fn execute_bmp_encode_dimension_limit_contract(
 }
 
 #[cfg(coverage)]
-fn execute_webp_riff_header_contract(
+fn execute_webp_encode_header_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    let (fault_point, expected_error_message) = match row.fault.point.as_str() {
+    let (fault_point, expected_error_message, expected_contract) = match row.fault.point.as_str() {
         "webp.riff_sink.short_header" => (
             img::CoverageFaultPoint::WebpRiffHeaderTooShort,
             "encode: WebP encoder produced an invalid RIFF header",
+            "encode_invalid_riff_header_then_retry_matches_reference",
         ),
         "webp.riff_sink.riff_signature_mismatch" => (
             img::CoverageFaultPoint::WebpRiffSignatureMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
+            "encode_invalid_riff_header_then_retry_matches_reference",
         ),
         "webp.riff_sink.webp_form_type_mismatch" => (
             img::CoverageFaultPoint::WebpRiffFormTypeMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
+            "encode_invalid_riff_header_then_retry_matches_reference",
         ),
         "webp.riff_sink.declared_size_mismatch" => (
             img::CoverageFaultPoint::WebpRiffDeclaredSizeMismatch,
             "encode: WebP encoder produced an inconsistent RIFF size",
+            "encode_invalid_riff_header_then_retry_matches_reference",
+        ),
+        "webp.metadata.short_vp8x_header" => (
+            img::CoverageFaultPoint::WebpMetadataVp8xHeaderTooShort,
+            "encode: WebP encoded VP8X header is truncated",
+            "encode_truncated_vp8x_rejected_then_retry_matches_reference",
         ),
         _ => {
-            return Err(format!("{}: unknown WebP RIFF sink fault point", row.id));
+            return Err(format!(
+                "{}: unknown WebP encode header fault point",
+                row.id
+            ));
         }
     };
     if row.row_type != "fault-contract"
@@ -2006,10 +2018,10 @@ fn execute_webp_riff_header_contract(
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
         || row.requirements.as_slice() != ["structured-diagnostics"]
-        || row.fault.contract != "encode_invalid_riff_header_then_retry_matches_reference"
+        || row.fault.contract != expected_contract
     {
         return Err(format!(
-            "{}: invalid WebP RIFF sink validation contract",
+            "{}: invalid WebP encode header validation contract",
             row.id
         ));
     }
@@ -2058,9 +2070,53 @@ fn execute_webp_riff_header_contract(
     assert_sha256(
         &bytes,
         source.source_sha256.as_deref(),
-        "WebP RIFF sink source asset",
+        "WebP encode source asset",
     )?;
-    let expected_pixels = load_pixel_reference(
+    let source_decode = matrix
+        .formats
+        .get(source_format)
+        .and_then(|format| {
+            format.decode.iter().find(|candidate| {
+                candidate.asset.as_deref() == Some(asset)
+                    && candidate.status == "active"
+                    && candidate.operations.get("decode").map(String::as_str) == Some("ok")
+                    && candidate
+                        .assertion_origins
+                        .get("decode")
+                        .map(String::as_str)
+                        == Some("pillow_fixture")
+            })
+        })
+        .ok_or_else(|| {
+            format!(
+                "{}: source input has no active Pillow decode parity row",
+                row.id
+            )
+        })?;
+    let source_pixels = load_pixel_reference(
+        manifest_dir,
+        &source_decode.id,
+        source_decode.ref_path.as_deref(),
+        "Decode",
+        source_format,
+        asset,
+        (
+            source_decode.ref_size.as_deref(),
+            source_decode.ref_mode.as_deref(),
+        ),
+    )
+    .ok_or_else(|| format!("{}: source Pillow decode reference is missing", row.id))?;
+    assert_sha256(
+        &source_pixels.bytes,
+        source_decode.ref_sha256.as_deref(),
+        "WebP encode source Pillow pixels",
+    )?;
+    let decoded = img::decode(&bytes)
+        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
+    assert_pixel_parity(&source_pixels, &decoded.content)
+        .map_err(|error| format!("{}: source pixels differ from Pillow: {error}", row.id))?;
+
+    let expected_encoded_pixels = load_pixel_reference(
         manifest_dir,
         &source.id,
         source.ref_path.as_deref(),
@@ -2072,16 +2128,12 @@ fn execute_webp_riff_header_contract(
             Some(source.source_mode.as_str()),
         ),
     )
-    .ok_or_else(|| format!("{}: source Pillow pixel reference is missing", row.id))?;
+    .ok_or_else(|| format!("{}: Pillow encoded-pixel reference is missing", row.id))?;
     assert_sha256(
-        &expected_pixels.bytes,
+        &expected_encoded_pixels.bytes,
         source.ref_sha256.as_deref(),
-        "WebP RIFF sink source Pillow pixels",
+        "WebP encode Pillow decoded output pixels",
     )?;
-    let decoded = img::decode(&bytes)
-        .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
-    assert_pixel_parity(&expected_pixels, &decoded.content)
-        .map_err(|error| format!("{}: source pixels differ from Pillow: {error}", row.id))?;
 
     let legacy_options = legacy_encode_options("webp", &source.params)?;
     let options =
@@ -2177,7 +2229,7 @@ fn execute_webp_riff_header_contract(
         .map_err(|error| format!("{}: retry differs from a fresh encode: {error}", row.id))?;
     let retry_decoded = img::decode(&retry_sink)
         .map_err(|error| format!("{}: retry output did not decode: {error:?}", row.id))?;
-    assert_pixel_parity(&expected_pixels, &retry_decoded.content)
+    assert_pixel_parity(&expected_encoded_pixels, &retry_decoded.content)
         .map_err(|error| format!("{}: retry pixels differ from Pillow: {error}", row.id))?;
     Ok(())
 }
@@ -3148,7 +3200,10 @@ fn execute_fault_contract(
         return execute_inspect_signature_contract(manifest_dir, matrix, row);
     }
     if row.fault.point.starts_with("webp.riff_sink.") {
-        return execute_webp_riff_header_contract(manifest_dir, matrix, row);
+        return execute_webp_encode_header_contract(manifest_dir, matrix, row);
+    }
+    if row.fault.point == "webp.metadata.short_vp8x_header" {
+        return execute_webp_encode_header_contract(manifest_dir, matrix, row);
     }
     if row.fault.point == "webp.hash_chain.index_overflow" {
         return execute_webp_hash_chain_index_overflow_contract(manifest_dir, matrix, row);

@@ -376991,6 +376991,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "webp_metadata_truncated_vp8x_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "webp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:webp:enc_lossy_alpha_exif"
+      },
+      "fault": {
+        "point": "webp.metadata.short_vp8x_header",
+        "contract": "encode_truncated_vp8x_rejected_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "ico_reserved_header_nonzero_rejected",
       "type": "fault-contract",
       "operation": "decode",

@@ -18005,13 +18005,41 @@ during this selection. Coverage MCP returned `Transport closed`; this is local
 selected evidence only and makes no aggregate coverage claim. No Rust unit
 tests were added.
 
+## WebP truncated VP8X metadata fault contract — 2026-11-10
+
+Added target-only fault contract
+`fault-contract:webp:webp_metadata_truncated_vp8x_rejected`. Its coverage-only
+hook truncates an encoded VP8X container to 29 bytes before metadata insertion;
+the public encoder must return a structured `Malformed` error without changing
+the caller's sink. A clean retry is checked against the pinned Pillow encoded
+bytes and decoded pixels. Source PNG pixels are independently checked against
+the matching PNG decode parity fixture, so the lossy WebP output reference is
+not mistaken for the original input pixels.
+
+The focused coverage run passed the fault contract and two existing parity
+rows, `enc_lossy_alpha_exif` and `enc_lossless_exif_metadata_reuse` (3/3 rows).
+Coverage MCP observed both outcomes of the VP8X identification predicate
+(6/3), both outcomes of the 30-byte header-size predicate (5/1), and both
+outcomes of the follow-up extended-container predicate (1/3). The selected
+report still lists uncovered ICC and XMP insertion arms and the EXIF-absent
+arm in this helper; this cohort does not exercise those metadata combinations.
+
+Selected LLVM report:
+`.coverage-mcp/local-evidence/selected/20261110T133841.363917Z-dcfdb117c150415fa43e685a91a68905/coverage.json`
+(SHA-256
+`9ed6b9f1fd279e97fc8cc282f9915d3d37e783807be37dd6ea22e4285d609a8f`). Its
+local receipt SHA-256 is
+`a4068ade41a47d5a7c4ec97219b1559cfb87b3cdf26f56c80ec290a8fb3319ec`.
+Coverage MCP marks source identity unverified and test attribution unknown;
+these are focused local observations, not an aggregate coverage claim.
+
 <!-- current-claim-ledger:begin -->
 Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `999a2fec4a1283192dc7d0e12f78d772f028d0dd666acbb9bdaa144860114292`.
+- Current fixture integrity only: manifest `17cffdec20c69be4065055ebab7aa96738dde2f5f8e7e57ca5d4d8afa99400d6`; matrix `f6a01a001d0f383ed9a3a2ff87631644ef29c2a70b83a780d71021e51f02344c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
