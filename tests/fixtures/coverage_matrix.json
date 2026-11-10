@@ -377377,6 +377377,12 @@
       "inspect_mode": "Rgb8",
       "decoded_mode": "Rgb8",
       "frame_index": 1
+    },
+    {
+      "format": "avif",
+      "case_id": "high_bitdepth_still_12bit_420_alpha_odd_edge_17x9",
+      "inspect_mode": "Rgba8",
+      "decoded_mode": "Rgba8"
     }
   ],
   "mode_encode_cases": [

@@ -4,6 +4,34 @@ The current public evidence matrix contains 3,930 total rows: 3,215 decode /
 inspect / verify rows and 715 encode rows. Of those, 3,215 decode rows are
 active and 688 encode rows are active; 27 encode rows remain planned.
 
+## AVIF 12-bit 4:2:0 alpha mode identity parity — 2026-11-10
+
+Appended `decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9` to
+the append-only `mode_decode_cases` index, which now contains 52 entries. Its
+`Rgba8` header and transfer pair was already represented by another AVIF
+layout; this separate 17×9, 12-bit 4:2:0 auxiliary-alpha input covers odd
+right and bottom chroma edges in the specialized reconstruction path. The
+indexed row checks owned and borrowed header identity independently from the
+decoded transfer identity, then compares all 612 decoded bytes with the exact
+Pillow reference.
+
+The focused parity run passed 1/1 row. Coverage MCP was queried against the
+selected report and reports 13,929/142,865 lines, 2,158/32,126 branches,
+992/9,182 functions, and 18,786/221,250 regions. Its source identity is
+unverified and test attribution is unknown, so these are selected-run totals,
+not an aggregate coverage increase. The query lists six missing invalid-shape
+arms in `convert_subsampled_420_12bit_alpha`; the retained full-matrix report
+has the same source hash for `src/codecs/avif/decode.rs` and records those
+shape-error arms as observed by the existing fault-contract rows. No ordinary
+unit tests or codec implementation changes were added.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261110-avif-12bit-420-alpha-mode/coverage.json`
+(SHA-256
+`d2cb74598515f8feab756a77c46f6ba72b037c690c4c11934c1da5c8838d0296`). Its
+local receipt SHA-256 is
+`fe061f064b629c5594b1291ddde890e021804ea0021c11f817a640f67cc15d05`.
+
 ## TIFF CIELAB SampleFormat parity — 2026-11-10
 
 For `image-slash-star#y81n` and `image-slash-star#dgby`, added five active TIFF
