@@ -263,6 +263,7 @@ struct DecodeRow {
     expect_error: Option<bool>,
     expect_sequence_error: bool,
     rust_decode_with_token: bool,
+    rust_decode_with_work_budget: bool,
     rust_inspect_basic: bool,
     rust_decode_with_metadata_limit: Option<u64>,
     rust_expect_sequence_error: bool,
@@ -5726,6 +5727,7 @@ impl FromJson for DecodeRow {
             expect_error: object.take("expect_error")?,
             expect_sequence_error: object.take_or_default("expect_sequence_error")?,
             rust_decode_with_token: object.take_or_default("rust_decode_with_token")?,
+            rust_decode_with_work_budget: object.take_or_default("rust_decode_with_work_budget")?,
             rust_inspect_basic: object.take_or_default("rust_inspect_basic")?,
             rust_decode_with_metadata_limit: object.take("rust_decode_with_metadata_limit")?,
             rust_expect_sequence_error: object.take_or_default("rust_expect_sequence_error")?,
@@ -10170,6 +10172,25 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 } else {
                     true
                 };
+                let work_budget_error = if row.rust_decode_with_work_budget {
+                    let policy = img::DecodePolicy::default().with_max_work_units(u64::MAX);
+                    let policy_result = img::decode_with_policy(&data, &policy);
+                    result_has_status(&policy_result, decode_operation_status)
+                        && result_matches_oracle(
+                            &policy_result,
+                            "error",
+                            row.oracle_error_kind.as_deref(),
+                            expected_format,
+                        )
+                        && assert_result_error_contract(
+                            &policy_result,
+                            &row.error_contracts,
+                            "decode",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
                 let source_error_is_stable =
                     match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
                         Err(error) => {
@@ -10206,6 +10227,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 if structured_error
                     && metadata_limited_error
                     && token_aware_error
+                    && work_budget_error
                     && sequence_rejected
                     && source_error_is_stable
                 {
@@ -10214,11 +10236,12 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, sequence_rejected={}, source_error_is_stable={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, work_budget_error={}, sequence_rejected={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
                         metadata_limited_error,
                         token_aware_error,
+                        work_budget_error,
                         sequence_rejected,
                         source_error_is_stable
                     );

@@ -6988,11 +6988,12 @@ formats:
       - zlib_preset_dictionary.png
       expect_error: true
     - id: error_token_aware_reserved_deflate_distance
-      description: Token-aware PNG decode rejects a reserved DEFLATE distance symbol
+      description: PNG token and work-budget decode reject a reserved DEFLATE distance symbol
       test_assets:
       - zlib_reserved_distance_symbol.png
       expect_error: true
       rust_decode_with_token: true
+      rust_decode_with_work_budget: true
     - id: error_malformed_iccp_fields
       description: iCCP chunks without the required separator or compression method are rejected
       test_assets:

@@ -27240,7 +27240,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "Token-aware PNG decode rejects a reserved DEFLATE distance symbol",
+        "description": "PNG token and work-budget decode reject a reserved DEFLATE distance symbol",
         "inspect_status": "ok",
         "origins": [
           "pillow_fixture"
