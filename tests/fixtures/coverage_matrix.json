@@ -377038,6 +377038,18 @@
       "inspect_mode": "Rgb8",
       "decoded_mode": "L8",
       "frame_index": 1
+    },
+    {
+      "format": "tiff",
+      "case_id": "ycbcr",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "tiff",
+      "case_id": "extra_samples_zero_rgbx_contiguous_strips_raw",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
     }
   ],
   "mode_encode_cases": [

@@ -55,16 +55,20 @@ chosen to match the Rust output. Add the corresponding public input when
 changing codec behavior. Preserve planned and not-applicable outcomes.
 
 `tests/fixtures/coverage_matrix.json` also keeps an append-only
-`mode_decode_cases` index, with one active Pillow-backed decode row for each
-format/header-mode/decoded-mode pair. Header and decoded-transfer modes are
-independent expectations and may differ when Pillow reports different modes
-for the source header and pixel transfer. A case can set `frame_index` to
-represent a decoded animation or multipage frame; without it, the case uses
-the row's ordinary decoded image. Exact Pillow-backed sequence frame modes
-also contribute to the required pair set. When a decoder adds a new pair,
-append a representative row to that index. The parity harness checks both
+`mode_decode_cases` index, with at least one active Pillow-backed decode row
+for each format/header-mode/decoded-mode pair. Add extra representative rows
+when distinct source layouts normalize to the same public mode pair, such as
+RGB-carrier TIFF layouts. Header and decoded-transfer modes are independent
+expectations and may differ when Pillow reports different modes for the source
+header and pixel transfer. A case can set `frame_index` to represent a decoded
+animation or multipage frame; without it, the case uses the row's ordinary
+decoded image. Exact Pillow-backed sequence frame modes also contribute to the
+required pair set. When a decoder adds a new pair or a carrier alias needs an
+explicit row, append it to that index. The parity harness checks both
 identities independently, that indexed rows remain active, and that every
-successful mode pair is listed.
+successful mode pair is listed. Every indexed still-image row also exercises
+owned and borrowed encoded-source header inspection before decode, then checks
+the materialized transfer against the exact Pillow pixels and metadata.
 
 The matrix also keeps an append-only `mode_encode_cases` index with one active
 Pillow-reference-backed encoder row for each format/source-mode/decoded-mode

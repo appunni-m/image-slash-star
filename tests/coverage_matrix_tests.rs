@@ -961,16 +961,11 @@ fn validate_mode_decode_case_index(matrix: &CoverageMatrix) -> Result<(), String
             ));
         }
 
-        if !listed_pairs.insert((
+        listed_pairs.insert((
             case.format.as_str(),
             case.inspect_mode.as_str(),
             case.decoded_mode.as_str(),
-        )) {
-            return Err(format!(
-                "mode decode case index repeats format/modes {}:{:?}/{:?}",
-                case.format, case.inspect_mode, case.decoded_mode
-            ));
-        }
+        ));
     }
 
     let mut active_pairs = HashSet::new();
@@ -10779,13 +10774,22 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                             "no raster identity mapping for decoded transfer mode {transfer_mode_name:?}"
                         )
                     })?;
-                    if source_decoded_raster_identities
-                        .insert((
-                            fmt_name.to_owned(),
-                            header_mode_name.to_owned(),
-                            transfer_mode_name.to_owned(),
-                        ))
-                    {
+                    let first_mode_pair = source_decoded_raster_identities.insert((
+                        fmt_name.to_owned(),
+                        header_mode_name.to_owned(),
+                        transfer_mode_name.to_owned(),
+                    ));
+                    let indexed_mode_case = matrix.mode_decode_cases.iter().any(|case| {
+                        case.format.as_str() == fmt_name
+                            && case.case_id == row.id.as_str()
+                            && case.frame_index.is_none()
+                    });
+                    if first_mode_pair || indexed_mode_case {
+                        assert_encoded_header_raster_identity(
+                            &data,
+                            &header_info,
+                            expected_header_raster_mode,
+                        )?;
                         assert_encoded_decoded_transfer_identity(
                             &data,
                             expected_format,

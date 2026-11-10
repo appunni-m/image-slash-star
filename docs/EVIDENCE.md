@@ -23679,3 +23679,26 @@ aggregate project coverage.
 The current public evidence matrix contains 3,927 total rows: 3,214 decode /
 inspect / verify rows and 713 encode rows. Of those, 3,214 decode rows and 686
 encode rows are active; 27 encode rows remain planned.
+
+## TIFF carrier-mode identity parity — 2026-11-10
+
+Appended explicit mode-decode representatives for `decode:tiff:ycbcr` and
+`decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw`. Pillow reports
+both source layouts as RGB, and both cases retain exact decoded pixel parity.
+The mode index now permits multiple fixtures for the same public mode pair so
+distinct carrier layouts remain represented. Every indexed still-image row
+now checks owned and borrowed encoded-source header identity before loading,
+then checks the decoded transfer identity and exact Pillow image.
+
+The focused selection passed both rows (2/2). Its Coverage MCP report is
+`.coverage-mcp/local-evidence/selected/20261110T014748.340237Z-19fa993e84f440deb096cc67ac844713/coverage.json`. The two-row report totals are 1,734/142,863 lines, 191/32,126 branches, 175/9,180 functions, and 2,468/221,254 regions. Coverage MCP marks source identity unverified and test attribution unknown, so this result is focused evidence and not an aggregate coverage claim. `cargo fmt --check`, strict all-target/all-feature Clippy, and `git diff --check` passed.
+
+## PA encoder parity audit — 2026-11-10
+
+The selected PA encoder cohort passed all three active rows: TIFF produced the
+Pillow-matching 1,706-byte output and re-decoded to exact 3×2 PA samples; PNG
+and BMP returned their Pillow-compatible PA rejection. Coverage MCP still
+reports unvisited branches in the TIFF, PNG, and BMP encoder functions for this
+narrow cohort; those observations are not evidence that the other branches are
+unreachable. The selected report is
+`.coverage-mcp/local-evidence/selected/20261110T015121.528652Z-6f3d28b22d144bbcaf97e0e635257025/coverage.json`. Its totals are 2,212/142,863 lines, 237/32,126 branches, 207/9,180 functions, and 3,020/221,254 regions. Source identity is unverified and test attribution unknown, so these totals describe this selected run only.
