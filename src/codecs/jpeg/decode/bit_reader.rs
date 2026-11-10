@@ -173,7 +173,11 @@ pub(super) struct FastBitReader<'a> {
     buf: u64,
     bits: u32,
     insufficient_data: bool,
+    bulk_refill_enabled: bool,
 }
+
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+const BULK_REFILL_MIN_BYTES: usize = 64 * 1024;
 
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 impl<'a> FastBitReader<'a> {
@@ -185,6 +189,7 @@ impl<'a> FastBitReader<'a> {
             buf: 0,
             bits: 0,
             insufficient_data: false,
+            bulk_refill_enabled: end.saturating_sub(start) >= BULK_REFILL_MIN_BYTES,
         }
     }
 
@@ -270,8 +275,45 @@ impl<'a> FastBitReader<'a> {
     }
 
     #[inline(always)]
+    fn append_unstuffed_bytes(&mut self, byte_count: usize) -> bool {
+        let (padding, bit_count) = match byte_count {
+            6 => (2, 48),
+            7 => (1, 56),
+            _ => return false,
+        };
+        let Some(end) = self.pos.checked_add(byte_count) else {
+            return false;
+        };
+        if end > self.end {
+            return false;
+        }
+        let Some(bytes) = self.data.get(self.pos..end) else {
+            return false;
+        };
+        if bytes.contains(&0xFF) {
+            return false;
+        }
+
+        let mut padded = [0_u8; 8];
+        padded[padding..].copy_from_slice(bytes);
+        self.buf = self.buf.wrapping_shl(bit_count) | u64::from_be_bytes(padded);
+        self.pos = end;
+        self.bits = self.bits.wrapping_add(bit_count);
+        true
+    }
+
+    #[inline(always)]
     pub(super) fn fill(&mut self, nbits: u32) {
         while self.bits < MIN_GET_BITS {
+            // Small entropy segments do not amortize the byte-scan probe.
+            if self.bulk_refill_enabled {
+                if self.bits <= 8 && self.append_unstuffed_bytes(7) {
+                    continue;
+                }
+                if self.bits <= 16 && self.append_unstuffed_bytes(6) {
+                    continue;
+                }
+            }
             let Some(byte) = self.read_entropy_byte() else {
                 if nbits > self.bits {
                     let missing = MIN_GET_BITS.wrapping_sub(self.bits);

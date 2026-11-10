@@ -1,6 +1,6 @@
 {
   "schema": "image-slash-star/jpeg-patch-experiment@1",
-  "status": "diagnostic_only_shipping_rust_unchanged_pending_current_source_measurement",
+  "status": "candidate_validated_locally_pending_sse2_avx2_measurement",
   "operation": "decode",
   "hypothesis": "Batch append 6 or 7 contiguous unstuffed entropy bytes into the existing 64-bit JPEG reservoir for long entropy segments. Retain the byte-at-a-time path for stuffed bytes and short segments; native SSE2 and AVX2 measurements decide whether the portable change is worth adopting.",
   "patch": "benchmarks/jpeg-production/experiments/decoder-refill.patch",
@@ -28,8 +28,21 @@
     "arm64_shipping_code_must_remain_portable": true
   },
   "arm64_screen": {
-    "status": "pending_current_source_remeasurement",
-    "note": "The old zero-context patch landed at stale offsets after FastBitReader changed. Re-measure the digest-guarded patch against the current baseline before use."
+    "status": "completed_current_source",
+    "report": ".coverage-mcp/local-evidence/performance-ci/decoder-refill-arm64-rebound/summary.json",
+    "report_sha256": "2b29f82ece1ca8af519192f33bf1365f7efbdd1a5696baee78f9cad148655f62",
+    "baseline_revision": "3317ebd4ea036bb6202c2e51d1698d0c2f4b402c",
+    "candidate_patch_producer_revision": "3527f6fffcff7df8fa92cd195ebe600648510cee",
+    "candidate_source_sha256": "59a47377d6aa0f57977349b0daa2e0ac13078b6e15744c49905d7fc9b883d916",
+    "primary_gain_percent": 2.387965909931511,
+    "primary_cohorts_faster": 6,
+    "guard_paired_gain_percent": {
+      "decode-gray-512-422": 2.6567384792707927,
+      "decode-rgb-baseline-128": -0.330470353337331,
+      "decode-progressive-long-scan-128": 0.4485315773186338
+    },
+    "exact_output_bytes_match": true,
+    "note": "Apple arm64 diagnostic only; SSE2/AVX2 evidence remains pending."
   },
   "candidate_guards": {
     "src/codecs/jpeg/decode/bit_reader.rs": "59a47377d6aa0f57977349b0daa2e0ac13078b6e15744c49905d7fc9b883d916"
@@ -43,5 +56,21 @@
     "selected_parity_rows": 22,
     "primary_gain_percent": 10.3793072802586,
     "note": "Historical ARM64 screen for the superseded source and patch guards; not current-source evidence."
+  },
+  "parity_screen": {
+    "status": "passed",
+    "selectors": [
+      "decode:jpeg:grayscale_sampling_420_512x512",
+      "decode:jpeg:grayscale_sampling_422_512x512",
+      "decode:jpeg:jpeg_rgb_128x128_baseline",
+      "decode:jpeg:progressive_ac_refinement_long_scan"
+    ],
+    "active_rows_passed": 4,
+    "coverage_report": ".coverage-mcp/local-evidence/selected/20261110T150536.710211Z-9f7e5c2b2b6b4a18a71aca50132e452d/coverage.json",
+    "coverage_report_sha256": "d5a1af7da83be88366b78d7b6cafda3f4461b0740c015c2eeff63d93ce1ccc32",
+    "receipt_sha256": "a20b4805fea88b82c1d472f257edc1e078b6fd9eed3178f36c78a8060382f6dd",
+    "coverage_mcp_source": "unverified",
+    "coverage_mcp_test_attribution": "unknown",
+    "note": "The four selected Pillow parity rows pass on the candidate source; this selected report is not aggregate coverage."
   }
 }
