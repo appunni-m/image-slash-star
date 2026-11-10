@@ -17931,7 +17931,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `1b4dc0677928361cfe1194645778468be250ebacfd3b689c83190ae9dc139e4f`.
+- Current fixture integrity only: manifest `ecd3b1f0f33e44b186c479f314bb2ccddda5be3aab27661b83d106d34e9a5659`; matrix `9dae3f4e4c5f83eac643dce3e30fd3532b524451bb7d107ace7f2550ea88b7be`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -23679,3 +23679,26 @@ aggregate project coverage.
 The current public evidence matrix contains 3,927 total rows: 3,214 decode /
 inspect / verify rows and 713 encode rows. Of those, 3,214 decode rows and 686
 encode rows are active; 27 encode rows remain planned.
+
+## TIFF carrier-mode identity parity — 2026-11-10
+
+Appended explicit mode-decode representatives for `decode:tiff:ycbcr` and
+`decode:tiff:extra_samples_zero_rgbx_contiguous_strips_raw`. Pillow reports
+both source layouts as RGB, and both cases retain exact decoded pixel parity.
+The mode index now permits multiple fixtures for the same public mode pair so
+distinct carrier layouts remain represented. Every indexed still-image row
+now checks owned and borrowed encoded-source header identity before loading,
+then checks the decoded transfer identity and exact Pillow image.
+
+The focused selection passed both rows (2/2). Its Coverage MCP report is
+`.coverage-mcp/local-evidence/selected/20261110T014748.340237Z-19fa993e84f440deb096cc67ac844713/coverage.json`. The two-row report totals are 1,734/142,863 lines, 191/32,126 branches, 175/9,180 functions, and 2,468/221,254 regions. Coverage MCP marks source identity unverified and test attribution unknown, so this result is focused evidence and not an aggregate coverage claim. `cargo fmt --check`, strict all-target/all-feature Clippy, and `git diff --check` passed.
+
+## PA encoder parity audit — 2026-11-10
+
+The selected PA encoder cohort passed all three active rows: TIFF produced the
+Pillow-matching 1,706-byte output and re-decoded to exact 3×2 PA samples; PNG
+and BMP returned their Pillow-compatible PA rejection. Coverage MCP still
+reports unvisited branches in the TIFF, PNG, and BMP encoder functions for this
+narrow cohort; those observations are not evidence that the other branches are
+unreachable. The selected report is
+`.coverage-mcp/local-evidence/selected/20261110T015121.528652Z-6f3d28b22d144bbcaf97e0e635257025/coverage.json`. Its totals are 2,212/142,863 lines, 237/32,126 branches, 207/9,180 functions, and 3,020/221,254 regions. Source identity is unverified and test attribution unknown, so these totals describe this selected run only.
