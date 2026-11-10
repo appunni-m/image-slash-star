@@ -366696,6 +366696,60 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_lossless_i32_signed_clamp_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware lossless WebP clamps signed 32-bit TIFF grayscale samples to RGB",
+          "params": {
+            "lossless": true,
+            "rust_encode_with_token": true
+          },
+          "status": "active",
+          "source_format": "tiff",
+          "source_asset": "deflate_predictor_checkpoint_257x1_gray32_signed.tiff",
+          "source_sha256": "928e724fcfdb32770f900175aa32756fdbdd736a68c53e43af9f4230ae7a4ad8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "I",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_i32_signed_clamp_token.bin",
+          "encoded_ref_bytes": 48,
+          "encoded_ref_sha256": "011f34e9c4a71326b2284c8fcefe0a425229b50a0ca84d9e961b91c4cb57f8dd",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_i32_signed_clamp_token.bin",
+          "ref_sha256": "9318cc5c1e015d797a69a785981b292b4e58ffc9cf98dc37744f23fb7955fc5a",
+          "ref_bytes": 771,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            257,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_lossless_f32_be",
           "type": "encode",
           "format": "webp",
@@ -370339,6 +370393,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_empty_metadata_omitted.bin",
           "encoded_ref_bytes": 36,
           "encoded_ref_sha256": "2ba71b370c7499004a84cd8945c0deb0290f0f89e5ee8956314410384fcd8be6",
@@ -370351,17 +370415,7 @@
             1
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -372927,9 +372981,9 @@
     }
   },
   "summary": {
-    "total_rows": 3928,
+    "total_rows": 3929,
     "decode_rows": 3214,
-    "encode_rows": 714,
+    "encode_rows": 715,
     "formats": 8,
     "assets_available": 3210,
     "decode_active": 3214,

@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `3f9cdcfb321f73a1e574d2ac5eed04b270350440bd4b740884983fb81e2881ab`.
+- Active fixture source SHA-256: `a4152b1103a9fde58f08c07e1a9916e0783a4821720e02a0b23e79a1958b2599`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 3,901 (3,214 decode; 687 encode).
+- Active fixture rows: 3,902 (3,214 decode; 688 encode).
 - Planned fixture rows excluded: 27 (0 decode; 27 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 152.
 
@@ -513,7 +513,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | TIFF | still_encode | rejected | Rgb8; invalid-mode witness: La16, Rgb16, Rgba16, Rgb32F, Rgba32F | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `tiff:enc_error_public_mode_contract` |
 | WEBP | sequence_encode | accepted | Cmyk8 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_cmyk`, `webp:enc_lossless_cmyk_token`, `webp:enc_lossy_cmyk` |
 | WEBP | sequence_encode | accepted | F32 | 1 frame | Rgb8 | SingleFrame | — | 2: `webp:enc_lossless_f32_be`, `webp:enc_lossless_f32_clamp_token` |
-| WEBP | sequence_encode | accepted | I32 | 1 frame | Rgb8 | SingleFrame | — | 2: `webp:enc_lossless_i32_be`, `webp:enc_lossless_i32_signed_clamp` |
+| WEBP | sequence_encode | accepted | I32 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_i32_be`, `webp:enc_lossless_i32_signed_clamp`, `webp:enc_lossless_i32_signed_clamp_token` |
 | WEBP | sequence_encode | accepted | L1 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_bilevel`, `webp:enc_lossless_bilevel_token`, `webp:enc_lossy_bilevel` |
 | WEBP | sequence_encode | accepted | L16 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_i16_be`, `webp:enc_lossless_l16`, `webp:enc_lossy_l16` |
 | WEBP | sequence_encode | accepted | L8 | 1 frame | Rgb8 | SingleFrame | — | 3: `webp:enc_lossless_grayscale`, `webp:enc_lossy_grayscale`, `webp:enc_lossy_quality_80_method_2_header_budget_noise_gray_4096x3072` |
@@ -535,7 +535,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | WEBP | sequence_encode | rejected | Rgba8; sequence-frame mode: La16 | 2 frames | — (no Rust output) | — (no result) | unsupported | 1: `webp:enc_error_sequence_frame_mode` |
 | WEBP | still_encode | accepted | Cmyk8 | 1 frame | Rgb8 | — (still result) | — | 3: `webp:enc_lossless_cmyk`, `webp:enc_lossless_cmyk_token`, `webp:enc_lossy_cmyk` |
 | WEBP | still_encode | accepted | F32 | 1 frame | Rgb8 | — (still result) | — | 2: `webp:enc_lossless_f32_be`, `webp:enc_lossless_f32_clamp_token` |
-| WEBP | still_encode | accepted | I32 | 1 frame | Rgb8 | — (still result) | — | 2: `webp:enc_lossless_i32_be`, `webp:enc_lossless_i32_signed_clamp` |
+| WEBP | still_encode | accepted | I32 | 1 frame | Rgb8 | — (still result) | — | 3: `webp:enc_lossless_i32_be`, `webp:enc_lossless_i32_signed_clamp`, `webp:enc_lossless_i32_signed_clamp_token` |
 | WEBP | still_encode | accepted | L1 | 1 frame | Rgb8 | — (still result) | — | 3: `webp:enc_lossless_bilevel`, `webp:enc_lossless_bilevel_token`, `webp:enc_lossy_bilevel` |
 | WEBP | still_encode | accepted | L16 | 1 frame | Rgb8 | — (still result) | — | 3: `webp:enc_lossless_i16_be`, `webp:enc_lossless_l16`, `webp:enc_lossy_l16` |
 | WEBP | still_encode | accepted | L8 | 1 frame | Rgb8 | — (still result) | — | 3: `webp:enc_lossless_grayscale`, `webp:enc_lossy_grayscale`, `webp:enc_lossy_quality_80_method_2_header_budget_noise_gray_4096x3072` |
