@@ -369980,6 +369980,16 @@
           },
           "source_mode": "Rgb8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossy_sns_strength_method_3_q50.bin",
           "encoded_ref_bytes": 9092,
           "encoded_ref_sha256": "c94415a4064905fca53fd24dcb126255be4fbbbd3fb63816aba6459a32edb370",
@@ -369992,17 +370002,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "description": "",
@@ -371569,6 +371569,63 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_lossless_method_6_tiled_noise_token",
+          "type": "encode",
+          "format": "webp",
+          "category": "lossless",
+          "description": "Token-aware method-six lossless encoding of a repeated high-entropy 128\u00d7128 RGB tile across a 128\u00d71024 image",
+          "params": {
+            "lossless": true,
+            "quality": 80,
+            "method": 6,
+            "rust_encode_with_token": true,
+            "rust_encode_to_sink_with_token": true
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "webp_lossless_cost_manager_tiled_noise_128x1024.png",
+          "source_sha256": "d5bd376e0d5badf64d0e47ca1e7c41422ad8f7d59bc6f4af72ce526557a7c67e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "Rgb8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.webp_enc_lossless_method_6_tiled_noise_token.bin",
+          "encoded_ref_bytes": 49376,
+          "encoded_ref_sha256": "f38438faa3b514605a613207f9bae9db1d2e0d46a45eb3b2802c47689a2e488d",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.webp_enc_lossless_method_6_tiled_noise_token.bin",
+          "ref_sha256": "30c9b27c4c3fd7f2d7371019bce0ff38b1583de3540508102d594db55c9e09b7",
+          "ref_bytes": 393216,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            1024
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         },
         {
           "id": "enc_lossless_checker",
@@ -373543,9 +373600,9 @@
     }
   },
   "summary": {
-    "total_rows": 3933,
+    "total_rows": 3934,
     "decode_rows": 3217,
-    "encode_rows": 716,
+    "encode_rows": 717,
     "formats": 8,
     "assets_available": 3213,
     "decode_active": 3217,
