@@ -3690,6 +3690,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "webp.riff_sink.declared_size_mismatch": {
             "encode_invalid_riff_header_then_retry_matches_reference"
         },
+        "jpeg.sink.second_soi_marker": {
+            "encode_second_soi_marker_then_retry_matches_reference"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3982,6 +3985,12 @@ def sync_fault_contract_rows(manifest, matrix):
                     point == "bmp.encode.height_over_signed_limit"
                     and contract == "encode_dimensions_error"
                     and source_operation == "decode"
+                )
+            elif row["format"] == "jpeg":
+                valid_encode_contract = (
+                    point == "jpeg.sink.second_soi_marker"
+                    and contract == "encode_second_soi_marker_then_retry_matches_reference"
+                    and source_operation == "encode"
                 )
             else:
                 if row["format"] != "webp":

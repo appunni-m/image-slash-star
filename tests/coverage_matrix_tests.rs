@@ -1979,47 +1979,74 @@ fn execute_bmp_encode_dimension_limit_contract(
 }
 
 #[cfg(coverage)]
-fn execute_webp_encode_header_contract(
+fn execute_encode_sink_fault_contract(
     manifest_dir: &Path,
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
-    let (fault_point, expected_error_message, expected_contract) = match row.fault.point.as_str() {
+    let (
+        format_name,
+        format,
+        fault_point,
+        expected_error_message,
+        expected_contract,
+        expected_partial_output,
+    ) = match row.fault.point.as_str() {
+        "jpeg.sink.second_soi_marker" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkSecondSoiMarker,
+            "encode: JPEG encoder emitted a second SOI marker",
+            "encode_second_soi_marker_then_retry_matches_reference",
+            &[0xff, 0xd8][..],
+        ),
         "webp.riff_sink.short_header" => (
+            "webp",
+            img::ImageFormat::WebP,
             img::CoverageFaultPoint::WebpRiffHeaderTooShort,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
+            &[][..],
         ),
         "webp.riff_sink.riff_signature_mismatch" => (
+            "webp",
+            img::ImageFormat::WebP,
             img::CoverageFaultPoint::WebpRiffSignatureMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
+            &[][..],
         ),
         "webp.riff_sink.webp_form_type_mismatch" => (
+            "webp",
+            img::ImageFormat::WebP,
             img::CoverageFaultPoint::WebpRiffFormTypeMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
+            &[][..],
         ),
         "webp.riff_sink.declared_size_mismatch" => (
+            "webp",
+            img::ImageFormat::WebP,
             img::CoverageFaultPoint::WebpRiffDeclaredSizeMismatch,
             "encode: WebP encoder produced an inconsistent RIFF size",
             "encode_invalid_riff_header_then_retry_matches_reference",
+            &[][..],
         ),
         "webp.metadata.short_vp8x_header" => (
+            "webp",
+            img::ImageFormat::WebP,
             img::CoverageFaultPoint::WebpMetadataVp8xHeaderTooShort,
             "encode: WebP encoded VP8X header is truncated",
             "encode_truncated_vp8x_rejected_then_retry_matches_reference",
+            &[][..],
         ),
         _ => {
-            return Err(format!(
-                "{}: unknown WebP encode header fault point",
-                row.id
-            ));
+            return Err(format!("{}: unknown encoder sink fault point", row.id));
         }
     };
     if row.row_type != "fault-contract"
         || row.operation != "encode"
-        || row.format != "webp"
+        || row.format != format_name
         || row.status != "active"
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
@@ -2027,7 +2054,7 @@ fn execute_webp_encode_header_contract(
         || row.fault.contract != expected_contract
     {
         return Err(format!(
-            "{}: invalid WebP encode header validation contract",
+            "{}: invalid {format_name} encode sink validation contract",
             row.id
         ));
     }
@@ -2035,7 +2062,7 @@ fn execute_webp_encode_header_contract(
     let source_key = parse_matrix_row_key(&row.input.source_case)?;
     if source_key.operation != MatrixOperation::Encode || source_key.format != row.format {
         return Err(format!(
-            "{}: source_case must identify a WebP encode parity row",
+            "{}: source_case must identify a same-format encode parity row",
             row.id
         ));
     }
@@ -2076,7 +2103,7 @@ fn execute_webp_encode_header_contract(
     assert_sha256(
         &bytes,
         source.source_sha256.as_deref(),
-        "WebP encode source asset",
+        "encode source asset",
     )?;
     let source_decode = matrix
         .formats
@@ -2115,7 +2142,7 @@ fn execute_webp_encode_header_contract(
     assert_sha256(
         &source_pixels.bytes,
         source_decode.ref_sha256.as_deref(),
-        "WebP encode source Pillow pixels",
+        "encode source Pillow pixels",
     )?;
     let decoded = img::decode(&bytes)
         .map_err(|error| format!("{}: source decode failed: {error:?}", row.id))?;
@@ -2138,13 +2165,17 @@ fn execute_webp_encode_header_contract(
     assert_sha256(
         &expected_encoded_pixels.bytes,
         source.ref_sha256.as_deref(),
-        "WebP encode Pillow decoded output pixels",
+        "Pillow encoded-pixel reference",
     )?;
 
-    let legacy_options = legacy_encode_options("webp", &source.params)?;
+    let legacy_options = legacy_encode_options(format_name, &source.params)?;
     let options =
-        img::EncodeOptions::try_from_legacy_pairs(img::ImageFormat::WebP, &legacy_options)
-            .map_err(|error| format!("{}: WebP encode options are invalid: {error}", row.id))?;
+        img::EncodeOptions::try_from_legacy_pairs(format, &legacy_options).map_err(|error| {
+            format!(
+                "{}: {format_name} encode options are invalid: {error}",
+                row.id
+            )
+        })?;
     let encoded_ref_path = source
         .encoded_ref_path
         .as_deref()
@@ -2164,27 +2195,25 @@ fn execute_webp_encode_header_contract(
     assert_sha256(
         &expected_encoded,
         source.encoded_ref_sha256.as_deref(),
-        "WebP RIFF sink Pillow encoded bytes",
+        "Pillow encoded-byte reference",
     )?;
 
-    let mut injected_sink = vec![0x53, 0x4b];
-    let original_sink = injected_sink.clone();
+    let mut injected_sink = AppendOnlySink {
+        bytes: APPEND_ONLY_SINK_PREFIX.to_vec(),
+    };
+    let mut expected_sink = injected_sink.bytes.clone();
+    expected_sink.extend_from_slice(expected_partial_output);
     let injected = img::__coverage_with_fault_point(fault_point, || {
-        img::encode_to_sink(
-            &decoded.content,
-            img::ImageFormat::WebP,
-            &options,
-            &mut injected_sink,
-        )
+        img::encode_to_sink(&decoded.content, format, &options, &mut injected_sink)
     });
     match injected {
         Err(img::ImageError::Malformed {
-            format: img::ImageFormat::WebP,
+            format: actual_format,
             message,
             stage: Some(img::ImageErrorStage::StillEncode),
             offset: None,
             identity: None,
-        }) if message == expected_error_message => {}
+        }) if actual_format == format && message == expected_error_message => {}
         Err(error) => {
             return Err(format!(
                 "{}: injected sink encode returned the wrong public error: {error:?}",
@@ -2193,26 +2222,21 @@ fn execute_webp_encode_header_contract(
         }
         Ok(_) => {
             return Err(format!(
-                "{}: injected WebP sink encode unexpectedly succeeded",
+                "{}: injected {format_name} sink encode unexpectedly succeeded",
                 row.id
             ));
         }
     }
-    if injected_sink != original_sink {
+    if injected_sink.bytes != expected_sink {
         return Err(format!(
-            "{}: malformed RIFF output changed the caller sink",
-            row.id
+            "{}: failed {format_name} delivery left sink bytes {:?}, expected {:?}",
+            row.id, injected_sink.bytes, expected_sink
         ));
     }
 
     let mut retry_sink = Vec::new();
-    let retry_written = img::encode_to_sink(
-        &decoded.content,
-        img::ImageFormat::WebP,
-        &options,
-        &mut retry_sink,
-    )
-    .map_err(|error| format!("{}: uninjected sink retry failed: {error:?}", row.id))?;
+    let retry_written = img::encode_to_sink(&decoded.content, format, &options, &mut retry_sink)
+        .map_err(|error| format!("{}: uninjected sink retry failed: {error:?}", row.id))?;
     if retry_written != retry_sink.len() {
         return Err(format!(
             "{}: sink retry reported {retry_written} bytes but wrote {}",
@@ -2224,13 +2248,8 @@ fn execute_webp_encode_header_contract(
         .map_err(|error| format!("{}: retry differs from Pillow: {error}", row.id))?;
 
     let mut fresh_sink = Vec::new();
-    img::encode_to_sink(
-        &decoded.content,
-        img::ImageFormat::WebP,
-        &options,
-        &mut fresh_sink,
-    )
-    .map_err(|error| format!("{}: fresh sink encode failed: {error:?}", row.id))?;
+    img::encode_to_sink(&decoded.content, format, &options, &mut fresh_sink)
+        .map_err(|error| format!("{}: fresh sink encode failed: {error:?}", row.id))?;
     assert_encoded_byte_parity(&fresh_sink, &retry_sink)
         .map_err(|error| format!("{}: retry differs from a fresh encode: {error}", row.id))?;
     let retry_decoded = img::decode(&retry_sink)
@@ -3205,11 +3224,11 @@ fn execute_fault_contract(
     ) {
         return execute_inspect_signature_contract(manifest_dir, matrix, row);
     }
-    if row.fault.point.starts_with("webp.riff_sink.") {
-        return execute_webp_encode_header_contract(manifest_dir, matrix, row);
-    }
-    if row.fault.point == "webp.metadata.short_vp8x_header" {
-        return execute_webp_encode_header_contract(manifest_dir, matrix, row);
+    if row.fault.point.starts_with("webp.riff_sink.")
+        || row.fault.point == "webp.metadata.short_vp8x_header"
+        || row.fault.point.starts_with("jpeg.sink.")
+    {
+        return execute_encode_sink_fault_contract(manifest_dir, matrix, row);
     }
     if row.fault.point == "webp.hash_chain.index_overflow" {
         return execute_webp_hash_chain_index_overflow_contract(manifest_dir, matrix, row);

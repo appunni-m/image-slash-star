@@ -1272,6 +1272,12 @@
       "category": "structured-diagnostics",
       "selector": "fault-contract:webp:webp_riff_declared_size_mismatch_rejected",
       "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_duplicate_soi_marker_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_duplicate_soi_marker_rejected",
+      "test": "test_fault_contract_matrix"
     }
   ],
   "categories": [

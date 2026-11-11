@@ -226,6 +226,8 @@ pub enum CoverageFaultPoint {
     WebpRiffFormTypeMismatch,
     /// Corrupt the declared RIFF size before WebP sink header validation.
     WebpRiffDeclaredSizeMismatch,
+    /// Insert a duplicate SOI marker after the JPEG sink writes its first marker.
+    JpegSinkSecondSoiMarker,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.
