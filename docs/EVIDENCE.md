@@ -4,6 +4,29 @@ The current public evidence matrix contains 3,935 total rows: 3,218 decode /
 inspect / verify rows and 717 encode rows. Of those, 3,218 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
 
+## TIFF RGBX token decode and inspection fault parity — 2026-11-12
+
+For `image-slash-star#y81n` and `image-slash-star#dgby`, enabled public
+token-aware decoding on the existing 257×1 TIFF RGBX ignored-sample parity
+row. Its 1,028 stored bytes cross the compaction checkpoint inside a row; the
+selected run passed exact 771-byte RGB output parity and retained `Rgb8`
+identity. The same selection passed five existing TIFF inspection and
+ignored-sample fault contracts (6/6 selections total).
+
+Coverage MCP reports no missing branch groups in `compact_extra_samples` for
+this focused report. Comparison with the retained full-parity report is
+incomparable because its branch detail differs from the reported totals, so
+this is focused local coverage evidence rather than an aggregate coverage
+claim. The selected report marks source identity unverified and test
+attribution unknown. No codec code or image assets changed.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261112-tiff-rgbx-token-and-fault-parity-retry/coverage.json`
+(SHA-256
+`1e4d439de78cb0f4b0f78e36144bea773757de5f5bdac1dc428ba546c68228e4`). Its
+local receipt SHA-256 is
+`f2c0d55b0bcf3591bd1603723709292628e284f3f543f0d4b55558363cb41df8`.
+
 ## JPEG append-only sink marker and terminal-state parity — 2026-11-11
 
 For `image-slash-star#9h5w`, added nine target-only JPEG sink fault-contract
