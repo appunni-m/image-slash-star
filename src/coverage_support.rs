@@ -228,6 +228,8 @@ pub enum CoverageFaultPoint {
     WebpRiffDeclaredSizeMismatch,
     /// Insert a duplicate SOI marker after the JPEG sink writes its first marker.
     JpegSinkSecondSoiMarker,
+    /// Corrupt the JPEG SOI prefix before the sink validates the first marker.
+    JpegSinkInvalidInitialMarkerPrefix,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.

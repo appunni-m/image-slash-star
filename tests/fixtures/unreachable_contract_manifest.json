@@ -1278,6 +1278,12 @@
       "category": "structured-diagnostics",
       "selector": "fault-contract:jpeg:jpeg_duplicate_soi_marker_rejected",
       "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_invalid_initial_marker_prefix_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_invalid_initial_marker_prefix_rejected",
+      "test": "test_fault_contract_matrix"
     }
   ],
   "categories": [

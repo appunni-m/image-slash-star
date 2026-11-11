@@ -1138,15 +1138,19 @@ pub(crate) fn encode_to_sink(
         .check_output_len(encoded.len(), ImageFormat::Jpeg, operation)
         .map_err(CodecError::from_image_error)?;
     #[cfg(coverage)]
-    let encoded = insert_second_soi_for_coverage(encoded);
+    let encoded = mutate_jpeg_output_for_coverage(encoded);
     write_jpeg_to_sink(&encoded, token, sink)
 }
 
 #[cfg(coverage)]
-fn insert_second_soi_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
+fn mutate_jpeg_output_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
     use crate::coverage_support::{CoverageFaultPoint, take_fault_point};
 
-    if take_fault_point(CoverageFaultPoint::JpegSinkSecondSoiMarker)
+    if take_fault_point(CoverageFaultPoint::JpegSinkInvalidInitialMarkerPrefix)
+        && encoded.starts_with(&[0xff, 0xd8])
+    {
+        encoded[0] = 0;
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkSecondSoiMarker)
         && encoded.starts_with(&[0xff, 0xd8])
     {
         encoded.insert(2, 0xd8);
