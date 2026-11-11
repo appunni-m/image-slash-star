@@ -3036,6 +3036,34 @@ fault_contracts:
       point: jpeg.sink.invalid_initial_marker_prefix
       contract: encode_invalid_marker_prefix_then_retry_matches_reference
     oracle_status: not_applicable
+  - id: jpeg_missing_initial_marker_code_rejected
+    type: fault-contract
+    operation: encode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: encode:jpeg:enc_q75
+    fault:
+      point: jpeg.sink.missing_initial_marker_code
+      contract: encode_missing_initial_marker_code_then_retry_matches_reference
+    oracle_status: not_applicable
+  - id: jpeg_stuffed_byte_outside_entropy_rejected
+    type: fault-contract
+    operation: encode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: encode:jpeg:enc_q75
+    fault:
+      point: jpeg.sink.stuffed_byte_outside_entropy
+      contract: encode_stuffed_byte_outside_entropy_then_retry_matches_reference
+    oracle_status: not_applicable
   - id: jpeg_invalid_initial_marker_code_rejected
     type: fault-contract
     operation: encode

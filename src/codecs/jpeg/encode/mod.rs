@@ -1150,6 +1150,10 @@ fn mutate_jpeg_output_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
         && encoded.starts_with(&[0xff, 0xd8])
     {
         encoded[0] = 0;
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkMissingInitialMarkerCode) {
+        encoded = vec![0xff];
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkStuffedByteOutsideEntropy) {
+        encoded = vec![0xff, 0x00];
     } else if take_fault_point(CoverageFaultPoint::JpegSinkInvalidInitialMarkerCode)
         && encoded.starts_with(&[0xff, 0xd8])
     {

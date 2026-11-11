@@ -230,6 +230,10 @@ pub enum CoverageFaultPoint {
     JpegSinkSecondSoiMarker,
     /// Corrupt the JPEG SOI prefix before the sink validates the first marker.
     JpegSinkInvalidInitialMarkerPrefix,
+    /// Remove the first JPEG marker code before sink validation.
+    JpegSinkMissingInitialMarkerCode,
+    /// Present a stuffed byte where the sink expects an initial marker code.
+    JpegSinkStuffedByteOutsideEntropy,
     /// Change the first JPEG marker code before the sink validates the SOI.
     JpegSinkInvalidInitialMarkerCode,
     /// Add a fill byte to the initial JPEG SOI marker before sink validation.
