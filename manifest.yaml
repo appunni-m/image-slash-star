@@ -4863,6 +4863,10 @@ formats:
       description: Baseline grayscale JPEG using eleven-bit DC and AC codes through the Huffman fallback
       test_assets:
       - long_huffman_code_slow_path.jpg
+    - id: long_huffman_code_continuation
+      description: Baseline grayscale JPEG whose twelve-bit DC and AC codes continue beyond the initial Huffman lookup
+      test_assets:
+      - long_huffman_code_continuation.jpg
     - id: empty_dc_huffman_table
       description: Pillow recovers a zero symbol from an empty JPEG DC Huffman table
       test_assets:

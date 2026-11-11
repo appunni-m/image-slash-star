@@ -1,8 +1,26 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,934 total rows: 3,217 decode /
-inspect / verify rows and 717 encode rows. Of those, 3,217 decode rows are
+The current public evidence matrix contains 3,935 total rows: 3,218 decode /
+inspect / verify rows and 717 encode rows. Of those, 3,218 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
+
+## JPEG Huffman continuation parity — 2026-11-11
+
+Added `decode:jpeg:long_huffman_code_continuation`, a valid one-block grayscale
+JPEG whose 12-bit DC and AC codes require the fast decoder to continue beyond
+its initial 11-bit Huffman read. The selected Pillow parity row passed with all
+64 `L8` pixels matching. In the local AArch64 LLVM report,
+`HuffTable::decode_slow_fast`'s continuation condition at
+`src/codecs/jpeg/decode/huffman.rs:408` took both outcomes (12 true, 12 false).
+The existing 11-bit row reaches the slow-path lookup but did not take this
+continuation branch on the same target.
+
+This is selected local evidence, not an aggregate coverage claim. Coverage MCP
+was not queried in this session. The report is based on revision
+`76cc21d2e266426574e77b524626c062ba66463e`; its local receipt is retained with
+the report under `.coverage-mcp/local-evidence/selected/20261111T-huffman-continuation/`.
+Report SHA-256: `876adc803db92170f0b4f2f871d8762ad8e862df4790bbe883870f6a450c8a48`;
+receipt SHA-256: `f1d786cd62e0d0d71159d806ef25b9aacfc2e5a8c81abacf8167e1351a346dec`.
 
 ## JPEG Huffman error-contract parity — 2026-11-11
 
@@ -18215,7 +18233,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fbd7994cd687a11e65eec9104c6ba6be5ae174977aee110d345b0c105948daf2`; matrix `cd1ee9ef81e5ab83947198226c62e6f6045f0c8c6ee9410395cf2136cd4dc7c5`.
+- Current fixture integrity only: manifest `a02de12f526ebfcba2912b78ccb05f004f77c1f70a30502de226d89f3143bd88`; matrix `b51e88fccca12062bcaa75a973fdc76b212c19f91d7f58335efbba5c82e546be`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
