@@ -1286,6 +1286,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_missing_initial_marker_code_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_missing_initial_marker_code_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_stuffed_byte_outside_entropy_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_stuffed_byte_outside_entropy_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "jpeg_invalid_initial_marker_code_rejected",
       "category": "structured-diagnostics",
       "selector": "fault-contract:jpeg:jpeg_invalid_initial_marker_code_rejected",

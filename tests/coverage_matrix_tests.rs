@@ -2005,6 +2005,22 @@ fn execute_encode_sink_fault_contract(
             "encode_invalid_marker_prefix_then_retry_matches_reference",
             ExpectedPartialOutput::Exact(&[]),
         ),
+        "jpeg.sink.missing_initial_marker_code" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkMissingInitialMarkerCode,
+            "encode: JPEG marker is missing its code",
+            "encode_missing_initial_marker_code_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[]),
+        ),
+        "jpeg.sink.stuffed_byte_outside_entropy" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkStuffedByteOutsideEntropy,
+            "encode: JPEG stuffed byte appeared outside entropy data",
+            "encode_stuffed_byte_outside_entropy_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[]),
+        ),
         "jpeg.sink.invalid_initial_marker_code" => (
             "jpeg",
             img::ImageFormat::Jpeg,
