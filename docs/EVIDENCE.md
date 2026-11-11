@@ -1,8 +1,33 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,933 total rows: 3,217 decode /
-inspect / verify rows and 716 encode rows. Of those, 3,217 decode rows are
-active and 689 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,934 total rows: 3,217 decode /
+inspect / verify rows and 717 encode rows. Of those, 3,217 decode rows are
+active and 690 encode rows are active; 27 encode rows remain planned.
+
+## WebP lossless method-six token and sink parity — 2026-11-11
+
+The active parity row `encode:webp:enc_lossless_method_6_tiled_noise_token`
+encodes a deterministic 128×1024 RGB image made from eight repeats of a pinned
+128×128 noise tile. It checks Pillow 12.2.0 encoded bytes and decoded pixels,
+including the token-aware encoder and append-only sink path. The selected run
+passed 1/1 row, produced 49,376 encoded bytes, matched all decoded pixels,
+made six public encode calls, and observed zero panics.
+
+This is encoder stress and parity evidence for `image-slash-star#9h5w`; it did
+not increase the observed branch count in `src/codecs/webp/native/encoder/backward_refs.rs`.
+The 500-entry cost-manager fallback stayed false after 1,020 and 680 insertion
+attempts at its two checked sites, so this row does not close that branch gap.
+Sixteen- and thirty-two-repeat probes also passed parity without reaching the
+fallback and took longer, so the retained fixture uses eight repeats.
+The retained LLVM report is local evidence only: Coverage MCP was not queried,
+source identity is unverified, and test attribution is unknown.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T052625.786070Z-b2d38ea9adba4886bd05b4b26641aa6a/coverage.json`
+(SHA-256
+`b3a1f49845a6f508b671b08e6560226068cc3926829853d9f56bc72b4df59c06`). Its
+local receipt SHA-256 is
+`4cda522035242aa9fc1906fdb6f1aa5fab92313b15739e037ce58f4fbb61103f`.
 
 ## WebP lossy method-3 SNS strength parity — 2026-11-11
 
@@ -18136,7 +18161,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `3d0fa73aa21a216af19a74c6a67a86d0344701e40556639360e8263a22b6202a`; matrix `d83d90f7bd3cbfef08555d6af9c29a0a9b94802401392907c0068bbfe94231d3`.
+- Current fixture integrity only: manifest `27bdf88806b544a277f6f1388270d8637aba0c943dc7867da0013af4e236f079`; matrix `3488b5212172f5da24b6c7b4854078a473f074dc1afff0120c6f817ecab32b3d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

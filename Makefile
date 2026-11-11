@@ -83,6 +83,7 @@ verify-fixture-integrity:
 	$(PYTHON) scripts/generate_webp_alpha_effort_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_crunch_fixtures.py --check
 	$(PYTHON) scripts/generate_webp_bool_carry_noise_fixture.py --check
+	$(PYTHON) scripts/generate_webp_lossless_cost_manager_fixture.py --check
 	$(PYTHON) scripts/generate_webp_bool_checkpoint_noise_fixture.py --check
 	$(PYTHON) scripts/generate_webp_bool_checkpoint_tall_noise_fixture.py --check
 	$(PYTHON) scripts/generate_webp_sampling_copy_checkpoint_fixture.py --check

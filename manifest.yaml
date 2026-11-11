@@ -10199,6 +10199,11 @@ formats:
       source_format: webp
       source_asset: lossless_noise.webp
       params: {'lossless': True}
+    - id: enc_lossless_method_6_tiled_noise_token
+      description: Token-aware method-six lossless encoding of a repeated high-entropy 128×128 RGB tile across a 128×1024 image
+      source_format: png
+      source_asset: webp_lossless_cost_manager_tiled_noise_128x1024.png
+      params: {'lossless': True, 'quality': 80, 'method': 6, 'rust_encode_with_token': true, 'rust_encode_to_sink_with_token': true}
     - id: enc_lossless_checker
       description: Re-encode a repeated lossless checker pattern
       source_format: webp
