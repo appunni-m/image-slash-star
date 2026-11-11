@@ -4,6 +4,34 @@ The current public evidence matrix contains 3,931 total rows: 3,216 decode /
 inspect / verify rows and 715 encode rows. Of those, 3,216 decode rows are
 active and 688 encode rows are active; 27 encode rows remain planned.
 
+## JPEG trailing DHT partial-length parity — 2026-11-11
+
+Selected the twelve active baseline 4:4:4 rows for valid, missing, partial,
+truncated, and oversized post-scan DHT/metadata tails. This includes the
+existing `baseline_444_single_scan_dht_missing_length` and
+`baseline_444_single_scan_dht_partial_length` cases: both preserve the complete
+8×8 RGB scan when the trailing DHT ends with no EOI and has zero or one length
+byte. All twelve rows passed exact Pillow pixel/error parity.
+
+Coverage MCP reports no remaining branch group at
+`src/codecs/jpeg/decode/parser.rs:546`; the selected input set observes both
+complete and incomplete trailing DHT length fields. It still reports the
+`checked_add` overflow outcome at the next condition as unobserved. The marker
+length is a `u16` and its position is inside a valid slice, so that overflow is
+not reachable through a public input and does not warrant a parity row. The
+selected report records 2,831/142,880 lines, 369/32,128 branches, 235/9,183
+functions, and 4,025/221,266 regions. Coverage MCP marks source identity
+unverified and test attribution unknown; these are selected-run totals, not an
+aggregate coverage claim. The accompanying receipt is local evidence, not a
+Coverage MCP source/build receipt.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T004831.265337Z-9e06b707c43441e1a56fafd9b604c00b/coverage.json`
+(SHA-256
+`14e6c06b9b21975dde1c42f23c11b66eac548d1f81c5e756081ac9cd2ed8cb25`). Its
+local receipt SHA-256 is
+`2a8174d2909f541c210e45eaa992599684eec6c02368e802ea23c51f4e22c4b4`.
+
 ## AVIF 12-bit 4:2:0 alpha mode identity parity — 2026-11-10
 
 Appended `decode:avif:high_bitdepth_still_12bit_420_alpha_odd_edge_17x9` to
