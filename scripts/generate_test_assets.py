@@ -3047,8 +3047,12 @@ def gen_jpeg():
     generate_huffman_defaults(OUT, check=False)
     from generate_jpeg_long_huffman_fixture import (
         generate_fixture as generate_long_huffman,
+        generate_continuation_fixture as generate_long_huffman_continuation,
     )
     d.joinpath("long_huffman_code_slow_path.jpg").write_bytes(generate_long_huffman())
+    d.joinpath("long_huffman_code_continuation.jpg").write_bytes(
+        generate_long_huffman_continuation()
+    )
     from generate_jpeg_unused_custom_dc_chroma_table_fixture import (
         generate_fixture as generate_custom_dc_chroma,
         verify_pillow_reference as verify_custom_dc_chroma,
