@@ -377884,6 +377884,18 @@
       "case_id": "baseline_444_single_scan_dht_missing_length",
       "inspect_mode": "Rgb8",
       "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "progressive_ycck_subsampled_17x9",
+      "inspect_mode": "CMYK",
+      "decoded_mode": "CMYK"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "long_huffman_code_slow_path",
+      "inspect_mode": "L8",
+      "decoded_mode": "L8"
     }
   ],
   "mode_encode_cases": [

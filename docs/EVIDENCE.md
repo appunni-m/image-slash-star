@@ -29,6 +29,37 @@ Selected report:
 local receipt SHA-256 is
 `4cda522035242aa9fc1906fdb6f1aa5fab92313b15739e037ce58f4fbb61103f`.
 
+## JPEG progressive YCCK and long Huffman mode parity — 2026-11-11
+
+Appended `decode:jpeg:progressive_ycck_subsampled_17x9` and
+`decode:jpeg:long_huffman_code_slow_path` to the append-only
+`mode_decode_cases` index, which now contains 58 rows across all eight decode
+formats. The progressive YCCK case adds a progressive CMYK layout; the
+grayscale case uses eleven-bit DC and AC Huffman codes to reach the decoder's
+slow fallback. The indexed rows check owned and borrowed header identity,
+decoded-transfer identity, token-aware decode, max-pixel policy, and exact
+Pillow pixels.
+
+The focused run passed 2/2 rows: 612 exact CMYK bytes for progressive YCCK and
+64 exact L8 bytes for the long-code case. Coverage MCP's selected-report query
+found no missing branch group in JPEG's fast-reader Huffman fallback at
+`src/codecs/jpeg/decode/huffman.rs:371`. The separate checked dequantization
+overflow fallback in progressive JPEG remains unobserved in this selection;
+the parser bounds coefficients to `i16` and quantizers to `u16`, making that
+overflow unreachable from an accepted JPEG input. No unit tests or runtime
+codec changes were added.
+
+The selected LLVM report contains 3,017/142,891 lines, 382/32,132 branches,
+247/9,185 functions, and 4,543/221,283 regions for this two-row subset. These
+are not aggregate coverage totals: Coverage MCP marks source identity
+unverified and test attribution unknown. Report SHA-256:
+`a46e4716fd044c1e915b8b49f859348cbed7ed9b1e7f86bb8799d8e360d0f7bd`; local
+receipt SHA-256:
+`4da3e37af1cef5fe656fe82989b67efd1ecd35d14cbe7e972a0ec4059b6bcc80`.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T071142.720348Z-00c2643339cf45d9a7043a657cf90912/coverage.json`.
+
 ## WebP lossy method-3 SNS strength parity — 2026-11-11
 
 The WebP VP8 encoder now uses zero SNS strength for methods below 4 and the
@@ -18161,7 +18192,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `27bdf88806b544a277f6f1388270d8637aba0c943dc7867da0013af4e236f079`; matrix `cb953f39c729124ff6fc90d4c480a1e8f9c695ba1ccff7961bdafa71b335efd1`.
+- Current fixture integrity only: manifest `27bdf88806b544a277f6f1388270d8637aba0c943dc7867da0013af4e236f079`; matrix `eedaf41429ecae773b1527110423c1c70464d84275835f72dc9efb1409ad2d86`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
