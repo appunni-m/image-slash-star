@@ -6916,10 +6916,10 @@
       "decode_active": 3216,
       "decode_planned": 0,
       "decode_rows": 3216,
-      "encode_active": 688,
+      "encode_active": 689,
       "encode_planned": 27,
-      "encode_rows": 715,
-      "total_rows": 3931
+      "encode_rows": 716,
+      "total_rows": 3932
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

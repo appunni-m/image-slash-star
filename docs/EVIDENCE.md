@@ -1,8 +1,24 @@
 # Versioned compatibility evidence
 
-The current public evidence matrix contains 3,931 total rows: 3,216 decode /
-inspect / verify rows and 715 encode rows. Of those, 3,216 decode rows are
-active and 688 encode rows are active; 27 encode rows remain planned.
+The current public evidence matrix contains 3,932 total rows: 3,216 decode /
+inspect / verify rows and 716 encode rows. Of those, 3,216 decode rows are
+active and 689 encode rows are active; 27 encode rows remain planned.
+
+## WebP lossy method-3 SNS strength parity — 2026-11-11
+
+The WebP VP8 encoder now uses zero SNS strength for methods below 4 and the
+libwebp default strength of 50 for methods 4 and above. The new active parity
+row `encode:webp:enc_lossy_sns_strength_method_3_q50` checks exact Pillow 12.2.0
+encoded bytes and decoded pixels at quality 50, including token-aware encoding
+and the append-only sink path. The shared encode runner also checks that the
+sink preserves its existing prefix and reports the exact appended byte count.
+
+Selected parity passed 4/4 rows: the GIF and TIFF header/transfer-mode edge
+cases, the new WebP method-3 case, and the existing WebP method-5 trellis case.
+The local Coverage MCP report for that selected run is
+`.coverage-mcp/local-evidence/selected/20261111T023804.203107Z-e1aa38b8da0042a9909aed1e363e8a7f/coverage.json`;
+its WebP VP8 query reports 1,118 covered branches of 32,130 for this selected
+subset. This local selection is not a whole-repository coverage result.
 
 ## JPEG trailing DHT partial-length parity — 2026-11-11
 
@@ -18120,7 +18136,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8bb78d0d600df5f1ed0995e0a6b0188541dc9206c9d2c1b5d6f0bd1c2dc8cb0b`; matrix `1c29d82efb3ae4d63edf78cba3dea1f79ddbf7f1df402b3e661fa420f61c9a70`.
+- Current fixture integrity only: manifest `693e8713499dd529a2fac1215c36f564fcbbc4a313da2003c5e7a7914bbe02ff`; matrix `0823c50839d5c82f681ca3e95916bf06069119a7bf6811438d1e456412d1944a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
