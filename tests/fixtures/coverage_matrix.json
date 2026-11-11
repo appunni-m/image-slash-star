@@ -376501,6 +376501,44 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "jpeg_huffman_scalar_initial_bits_unavailable",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_444_multiscan_late_dht_after_default_scan"
+      },
+      "fault": {
+        "point": "jpeg.huffman.initial_bits_unavailable",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_huffman_scalar_missing_symbol",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:baseline_444_multiscan_late_dht_after_default_scan"
+      },
+      "fault": {
+        "point": "jpeg.huffman.missing_symbol",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "jpeg_ycck_output_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",
