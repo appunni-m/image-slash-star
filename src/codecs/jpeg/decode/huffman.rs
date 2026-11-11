@@ -326,7 +326,17 @@ impl HuffTable {
         // IJG: int l = min_bits; CHECK_BIT_BUFFER(*state, l, return -1);
         //      code = GET_BITS(l);
         let min = min_bits.max(1);
-        if !br.ensure(min) {
+        #[cfg(coverage)]
+        let has_min_bits = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegHuffmanInitialBitsUnavailable,
+        ) {
+            false
+        } else {
+            br.ensure(min)
+        };
+        #[cfg(not(coverage))]
+        let has_min_bits = br.ensure(min);
+        if !has_min_bits {
             return Err(CodecError::Malformed(
                 "truncated JPEG Huffman code".to_owned(),
             ));
@@ -357,6 +367,14 @@ impl HuffTable {
 
         // IJG: return htbl->pub->huffval[code + htbl->valoffset[l]];
         let idx = wrapping_usize(code.saturating_add(self.valoffset[l]));
+        #[cfg(coverage)]
+        let idx = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegHuffmanMissingSymbol,
+        ) {
+            self.values.len()
+        } else {
+            idx
+        };
         if idx < self.values.len() {
             Ok(self.values[idx])
         } else {
@@ -370,7 +388,17 @@ impl HuffTable {
     #[inline(always)]
     fn decode_slow_fast(&self, br: &mut FastBitReader, min_bits: u32) -> CodecResult<u8> {
         let min = min_bits.max(1);
-        if !br.ensure(min) {
+        #[cfg(coverage)]
+        let has_min_bits = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegHuffmanInitialBitsUnavailable,
+        ) {
+            false
+        } else {
+            br.ensure(min)
+        };
+        #[cfg(not(coverage))]
+        let has_min_bits = br.ensure(min);
+        if !has_min_bits {
             return Err(CodecError::Malformed(
                 "truncated JPEG Huffman code".to_owned(),
             ));
@@ -396,6 +424,14 @@ impl HuffTable {
             };
         }
         let index = wrapping_usize(code.saturating_add(self.valoffset[length]));
+        #[cfg(coverage)]
+        let index = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::JpegHuffmanMissingSymbol,
+        ) {
+            self.values.len()
+        } else {
+            index
+        };
         self.values.get(index).copied().ok_or_else(|| {
             CodecError::Malformed("JPEG Huffman code references a missing symbol".to_owned())
         })

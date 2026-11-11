@@ -4131,6 +4131,18 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("jpeg.huffman.initial_bits_unavailable", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegHuffmanInitialBitsUnavailable,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.huffman.missing_symbol", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegHuffmanMissingSymbol,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("jpeg.upsample.h1v2_empty_geometry", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::JpegH1v2UpsampleEmptyGeometry,
                 false,
@@ -4632,6 +4644,12 @@ fn execute_fault_contract(
         "jpeg.baseline.huffman_table_slot_reservation" => {
             Some("decode: unable to allocate JPEG Huffman table slots")
         }
+        "jpeg.huffman.initial_bits_unavailable" => {
+            Some("decode: baseline block: truncated JPEG Huffman code")
+        }
+        "jpeg.huffman.missing_symbol" => {
+            Some("decode: baseline block: JPEG Huffman code references a missing symbol")
+        }
         "jpeg.upsample.h1v2_plane_reservation" => {
             Some("decode: unable to allocate JPEG upsampled component")
         }
@@ -4868,6 +4886,8 @@ fn execute_fault_contract(
                 | "av1.motion.reference_mv_geometry_guard_sweep"
                 | "jpeg.ycck.component_plane_count_mismatch"
                 | "jpeg.ycck.component_height_missing"
+                | "jpeg.huffman.initial_bits_unavailable"
+                | "jpeg.huffman.missing_symbol"
                 | "jpeg.ycck.component_stride_too_short"
                 | "jpeg.ycck.component_height_too_short"
                 | "jpeg.ycck.component_plane_samples_too_short"

@@ -4,6 +4,30 @@ The current public evidence matrix contains 3,934 total rows: 3,217 decode /
 inspect / verify rows and 717 encode rows. Of those, 3,217 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
 
+## JPEG Huffman error-contract parity — 2026-11-11
+
+Added two active fault-contract rows sourced from the active Pillow parity
+case `decode:jpeg:long_huffman_code_slow_path`. They inject insufficient
+initial bits and a missing Huffman symbol through the coverage-only hook,
+assert each public malformed-decode diagnostic, then retry without injection
+and compare against a fresh uninjected Rust decode. The source parity row
+independently checks exact Pillow pixels. The hooks are compiled out of
+production builds. The selected run passed 2/2 fault-contract rows.
+
+Coverage MCP's query of `HuffTable::decode_slow_fast` found no remaining
+branch group at the initial-bit error check (`huffman.rs:401`) or missing-symbol
+error (`huffman.rs:435`). Other slow-path branches remain unobserved: the
+continuation loop and invalid-empty-table handling. Coverage MCP marks this
+selected report's source identity unverified and test attribution unknown; it is
+not an aggregate coverage claim.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T085221.489681Z-627815489c264fc5bacf1a0e401f2924/coverage.json`
+(SHA-256
+`46a362d208c2cec4ae6ce515c8d2b0b3669731f702698d643f65a439349cae19`). Its
+local receipt SHA-256 is
+`792e4cb969dd4062c3748ff9bf1a7acd3875dd1afe1c65f578af7c0bb3473177`.
+
 ## WebP lossless method-six token and sink parity — 2026-11-11
 
 The active parity row `encode:webp:enc_lossless_method_6_tiled_noise_token`

@@ -150,6 +150,10 @@ pub enum CoverageFaultPoint {
     JpegFastReaderEntropyEndAfterEoi,
     /// Reject the JPEG baseline fast path when the indexed EOI marker differs.
     JpegFastReaderEoiMarkerMismatch,
+    /// Force the initial JPEG Huffman bit request to report insufficient data.
+    JpegHuffmanInitialBitsUnavailable,
+    /// Force a valid JPEG Huffman code to resolve to a missing symbol.
+    JpegHuffmanMissingSymbol,
     /// Reject the JPEG baseline fast path when trailing marker parsing misses EOI.
     JpegFastReaderTrailingMarkerPositionMismatch,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
