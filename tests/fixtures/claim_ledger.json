@@ -7,7 +7,7 @@
   },
   "fixture_manifests": {
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
-    "coverage_origins": "59acd78aabd4bccc64fddc4299ae2fa3b9c6fb72e229ddfca4291989162ca49b",
+    "coverage_origins": "7d3b60fab2eac4c00b9976c91aab9ac0a8ad35ddf55abaa7cf191123f306e321",
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
@@ -15,16 +15,16 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "905d3f49d8f363130cc73fb17fa488d1a8e5b81b054dc01d40986b351b1a106c",
+    "roadmap": "e85a1230d4ab3d113ba814e3d40c63e5df8fd4df8cb44b8cde979f74e9d1debb",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
     "unreachable_contract": "f6e3110c23fce8e4ee3de1794748699167bc799892022ffbef0b425c3681b70a",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "fac10c6af23d0ea941d298a199aa0a592c0b9f1a12a9b9e96be3e9bea63b3136"
+    "webp_property_map": "284bc8d16e4681322489fbba47dce0fc8fcfa29bf1f332a3a2caca5a28ec0c84"
   },
   "format_version": 2,
   "manifest_sha256": "27bdf88806b544a277f6f1388270d8637aba0c943dc7867da0013af4e236f079",
-  "matrix_sha256": "eedaf41429ecae773b1527110423c1c70464d84275835f72dc9efb1409ad2d86",
+  "matrix_sha256": "ec22705fc84b2d44a5be379f276c72098e764cf35a09eb5a95d8615100830e06",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"
