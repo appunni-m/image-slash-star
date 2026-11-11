@@ -1806,6 +1806,15 @@ FAULT_CONTRACTS = {
         "contract": "encode_second_soi_marker_then_retry_matches_reference",
         "operation": "encode",
     },
+    "jpeg_invalid_initial_marker_prefix_rejected": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_invalid_initial_marker_prefix_rejected",
+        "source_case": "encode:jpeg:enc_q75",
+        "point": "jpeg.sink.invalid_initial_marker_prefix",
+        "contract": "encode_invalid_marker_prefix_then_retry_matches_reference",
+        "operation": "encode",
+    },
 }
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),

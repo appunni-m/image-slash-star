@@ -3693,6 +3693,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.sink.second_soi_marker": {
             "encode_second_soi_marker_then_retry_matches_reference"
         },
+        "jpeg.sink.invalid_initial_marker_prefix": {
+            "encode_invalid_marker_prefix_then_retry_matches_reference"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3988,8 +3991,11 @@ def sync_fault_contract_rows(manifest, matrix):
                 )
             elif row["format"] == "jpeg":
                 valid_encode_contract = (
-                    point == "jpeg.sink.second_soi_marker"
-                    and contract == "encode_second_soi_marker_then_retry_matches_reference"
+                    {
+                        "jpeg.sink.second_soi_marker": "encode_second_soi_marker_then_retry_matches_reference",
+                        "jpeg.sink.invalid_initial_marker_prefix": "encode_invalid_marker_prefix_then_retry_matches_reference",
+                    }.get(point)
+                    == contract
                     and source_operation == "encode"
                 )
             else:

@@ -1992,6 +1992,14 @@ fn execute_encode_sink_fault_contract(
         expected_contract,
         expected_partial_output,
     ) = match row.fault.point.as_str() {
+        "jpeg.sink.invalid_initial_marker_prefix" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkInvalidInitialMarkerPrefix,
+            "encode: JPEG marker does not begin with 0xff",
+            "encode_invalid_marker_prefix_then_retry_matches_reference",
+            &[][..],
+        ),
         "jpeg.sink.second_soi_marker" => (
             "jpeg",
             img::ImageFormat::Jpeg,

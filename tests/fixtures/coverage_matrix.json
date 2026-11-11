@@ -377733,6 +377733,25 @@
         "contract": "encode_second_soi_marker_then_retry_matches_reference"
       },
       "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_invalid_initial_marker_prefix_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.invalid_initial_marker_prefix",
+        "contract": "encode_invalid_marker_prefix_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
     }
   ],
   "mode_decode_cases": [
