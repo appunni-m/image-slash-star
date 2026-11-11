@@ -1797,6 +1797,15 @@ FAULT_CONTRACTS = {
         "contract": "encode_invalid_riff_header_then_retry_matches_reference",
         "operation": "encode",
     },
+    "jpeg_duplicate_soi_marker_rejected": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_duplicate_soi_marker_rejected",
+        "source_case": "encode:jpeg:enc_q75",
+        "point": "jpeg.sink.second_soi_marker",
+        "contract": "encode_second_soi_marker_then_retry_matches_reference",
+        "operation": "encode",
+    },
 }
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),
