@@ -346,7 +346,7 @@ fn parse_bits(bits: &mut BitReader<'_, '_, '_>) -> Av1Result<SequenceHeader> {
     };
     let separate_uv_delta_q = !monochrome && bits.bit()?;
     let film_grain_present = bits.bit()?;
-    bits.trailing_bits()?;
+    bits.sequence_header_trailing_bits()?;
 
     Ok(SequenceHeader {
         profile,

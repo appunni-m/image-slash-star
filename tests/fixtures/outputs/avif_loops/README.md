@@ -88,6 +88,10 @@ temporal unit and changes only the allowed decoder-buffer delay from zero to
 one. It adds a false buffer-removal flag to each coded frame header. Its five
 exact Pillow RGB frames and 33 ms timings match `animated.avif`; pinned native
 libavif reports repetition count zero (one total play).
+The missing-trailing-marker companion clears only the first AV1 sequence-header
+trailing marker bit. Pinned Pillow and libavif decode the same five exact RGB
+frames at 33 ms and report repetition count zero; its observation is collected
+by `scripts/generate_avif_loop_refs.py --only animated_sequence_header_missing_trailing_marker`.
 The initial-display-delay companion enables the display model and uses the
 maximum valid delay of 10. Pillow and pinned native libavif preserve all five
 exact RGB frames at 33 ms and report one total play.

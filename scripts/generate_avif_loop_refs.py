@@ -294,6 +294,10 @@ FIXTURES = {
         "animated_decoder_model_parameters_change.avif",
         "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396",
     ),
+    "animated_sequence_header_missing_trailing_marker": (
+        "animated_sequence_header_missing_trailing_marker.avif",
+        "f916d9d4a310dc2f808e3465e8ae075e70e45a72be1ee84d2c2715fe6f76e2fd",
+    ),
     "animated_sequence_header_cicp_mismatch_nclx": (
         "animated_sequence_header_cicp_mismatch_nclx.avif",
         "74a0a8f8725cc7b44232c4e970859be1ace37ad1898f80da38dd5cc98b7ed628",
