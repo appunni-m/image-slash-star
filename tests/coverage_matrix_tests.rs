@@ -1984,6 +1984,11 @@ fn execute_encode_sink_fault_contract(
     matrix: &CoverageMatrix,
     row: &FaultContractRow,
 ) -> Result<(), String> {
+    enum ExpectedPartialOutput {
+        Exact(&'static [u8]),
+        EncodedReference,
+    }
+
     let (
         format_name,
         format,
@@ -1998,7 +2003,23 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::JpegSinkInvalidInitialMarkerPrefix,
             "encode: JPEG marker does not begin with 0xff",
             "encode_invalid_marker_prefix_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
+        ),
+        "jpeg.sink.invalid_initial_marker_code" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkInvalidInitialMarkerCode,
+            "encode: JPEG encoder produced an invalid SOI marker",
+            "encode_invalid_initial_marker_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[]),
+        ),
+        "jpeg.sink.initial_marker_fill_byte" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkInitialMarkerFillByte,
+            "encode: JPEG encoder produced an invalid SOI marker",
+            "encode_invalid_initial_marker_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[]),
         ),
         "jpeg.sink.second_soi_marker" => (
             "jpeg",
@@ -2006,7 +2027,49 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::JpegSinkSecondSoiMarker,
             "encode: JPEG encoder emitted a second SOI marker",
             "encode_second_soi_marker_then_retry_matches_reference",
-            &[0xff, 0xd8][..],
+            ExpectedPartialOutput::Exact(&[0xff, 0xd8]),
+        ),
+        "jpeg.sink.no_scan_marker" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkNoScanMarker,
+            "encode: JPEG encoder produced no scan marker",
+            "encode_missing_scan_marker_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[0xff, 0xd8, 0xff, 0xdb, 0x00, 0x02]),
+        ),
+        "jpeg.sink.unterminated_scan" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkUnterminatedScan,
+            "encode: JPEG encoder scan has no terminating marker",
+            "encode_unterminated_scan_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[0xff, 0xd8, 0xff, 0xda, 0x00, 0x02]),
+        ),
+        "jpeg.sink.missing_eoi_after_scan" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkMissingEoiAfterScan,
+            "encode: JPEG encoder produced trailing bytes after EOI",
+            "encode_missing_eoi_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[
+                0xff, 0xd8, 0xff, 0xda, 0x00, 0x02, 0xff, 0xdb, 0x00, 0x02,
+            ]),
+        ),
+        "jpeg.sink.trailing_byte_after_eoi" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkTrailingByteAfterEoi,
+            "encode: JPEG encoder produced trailing bytes after EOI",
+            "encode_trailing_byte_after_eoi_then_retry_matches_reference",
+            ExpectedPartialOutput::EncodedReference,
+        ),
+        "jpeg.sink.unexpected_standalone_marker" => (
+            "jpeg",
+            img::ImageFormat::Jpeg,
+            img::CoverageFaultPoint::JpegSinkUnexpectedStandaloneMarker,
+            "encode: JPEG encoder emitted an unexpected standalone marker",
+            "encode_unexpected_standalone_marker_then_retry_matches_reference",
+            ExpectedPartialOutput::Exact(&[0xff, 0xd8]),
         ),
         "webp.riff_sink.short_header" => (
             "webp",
@@ -2014,7 +2077,7 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::WebpRiffHeaderTooShort,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
         ),
         "webp.riff_sink.riff_signature_mismatch" => (
             "webp",
@@ -2022,7 +2085,7 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::WebpRiffSignatureMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
         ),
         "webp.riff_sink.webp_form_type_mismatch" => (
             "webp",
@@ -2030,7 +2093,7 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::WebpRiffFormTypeMismatch,
             "encode: WebP encoder produced an invalid RIFF header",
             "encode_invalid_riff_header_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
         ),
         "webp.riff_sink.declared_size_mismatch" => (
             "webp",
@@ -2038,7 +2101,7 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::WebpRiffDeclaredSizeMismatch,
             "encode: WebP encoder produced an inconsistent RIFF size",
             "encode_invalid_riff_header_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
         ),
         "webp.metadata.short_vp8x_header" => (
             "webp",
@@ -2046,7 +2109,7 @@ fn execute_encode_sink_fault_contract(
             img::CoverageFaultPoint::WebpMetadataVp8xHeaderTooShort,
             "encode: WebP encoded VP8X header is truncated",
             "encode_truncated_vp8x_rejected_then_retry_matches_reference",
-            &[][..],
+            ExpectedPartialOutput::Exact(&[]),
         ),
         _ => {
             return Err(format!("{}: unknown encoder sink fault point", row.id));
@@ -2210,7 +2273,12 @@ fn execute_encode_sink_fault_contract(
         bytes: APPEND_ONLY_SINK_PREFIX.to_vec(),
     };
     let mut expected_sink = injected_sink.bytes.clone();
-    expected_sink.extend_from_slice(expected_partial_output);
+    match expected_partial_output {
+        ExpectedPartialOutput::Exact(bytes) => expected_sink.extend_from_slice(bytes),
+        ExpectedPartialOutput::EncodedReference => {
+            expected_sink.extend_from_slice(&expected_encoded)
+        }
+    }
     let injected = img::__coverage_with_fault_point(fault_point, || {
         img::encode_to_sink(&decoded.content, format, &options, &mut injected_sink)
     });

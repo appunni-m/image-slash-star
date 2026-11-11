@@ -377752,6 +377752,139 @@
         "contract": "encode_invalid_marker_prefix_then_retry_matches_reference"
       },
       "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_invalid_initial_marker_code_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.invalid_initial_marker_code",
+        "contract": "encode_invalid_initial_marker_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_initial_marker_fill_byte_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.initial_marker_fill_byte",
+        "contract": "encode_invalid_initial_marker_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_sink_no_scan_marker_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.no_scan_marker",
+        "contract": "encode_missing_scan_marker_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_sink_unterminated_scan_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.unterminated_scan",
+        "contract": "encode_unterminated_scan_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_sink_missing_eoi_after_scan_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.missing_eoi_after_scan",
+        "contract": "encode_missing_eoi_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_sink_trailing_byte_after_eoi_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.trailing_byte_after_eoi",
+        "contract": "encode_trailing_byte_after_eoi_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_unexpected_standalone_marker_rejected",
+      "type": "fault-contract",
+      "operation": "encode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "encode:jpeg:enc_q75"
+      },
+      "fault": {
+        "point": "jpeg.sink.unexpected_standalone_marker",
+        "contract": "encode_unexpected_standalone_marker_then_retry_matches_reference"
+      },
+      "oracle_status": "not_applicable"
     }
   ],
   "mode_decode_cases": [

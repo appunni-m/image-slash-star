@@ -1284,6 +1284,48 @@
       "category": "structured-diagnostics",
       "selector": "fault-contract:jpeg:jpeg_invalid_initial_marker_prefix_rejected",
       "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_invalid_initial_marker_code_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_invalid_initial_marker_code_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_initial_marker_fill_byte_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_initial_marker_fill_byte_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_sink_no_scan_marker_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_sink_no_scan_marker_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_sink_unterminated_scan_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_sink_unterminated_scan_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_sink_missing_eoi_after_scan_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_sink_missing_eoi_after_scan_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_sink_trailing_byte_after_eoi_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_sink_trailing_byte_after_eoi_rejected",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_unexpected_standalone_marker_rejected",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_unexpected_standalone_marker_rejected",
+      "test": "test_fault_contract_matrix"
     }
   ],
   "categories": [

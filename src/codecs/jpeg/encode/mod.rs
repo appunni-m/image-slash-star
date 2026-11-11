@@ -1150,11 +1150,29 @@ fn mutate_jpeg_output_for_coverage(mut encoded: Vec<u8>) -> Vec<u8> {
         && encoded.starts_with(&[0xff, 0xd8])
     {
         encoded[0] = 0;
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkInvalidInitialMarkerCode)
+        && encoded.starts_with(&[0xff, 0xd8])
+    {
+        encoded[1] = 0xd9;
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkInitialMarkerFillByte)
+        && encoded.starts_with(&[0xff, 0xd8])
+    {
+        encoded.insert(1, 0xff);
     } else if take_fault_point(CoverageFaultPoint::JpegSinkSecondSoiMarker)
         && encoded.starts_with(&[0xff, 0xd8])
     {
         encoded.insert(2, 0xd8);
         encoded.insert(2, 0xff);
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkNoScanMarker) {
+        encoded = vec![0xff, 0xd8, 0xff, 0xdb, 0x00, 0x02];
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkUnterminatedScan) {
+        encoded = vec![0xff, 0xd8, 0xff, 0xda, 0x00, 0x02];
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkMissingEoiAfterScan) {
+        encoded = vec![0xff, 0xd8, 0xff, 0xda, 0x00, 0x02, 0xff, 0xdb, 0x00, 0x02];
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkTrailingByteAfterEoi) {
+        encoded.push(0);
+    } else if take_fault_point(CoverageFaultPoint::JpegSinkUnexpectedStandaloneMarker) {
+        encoded = vec![0xff, 0xd8, 0xff, 0x01];
     }
     encoded
 }
