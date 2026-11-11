@@ -377878,6 +377878,12 @@
       "case_id": "animated_lossy_inter_422_b8x4_qindex0_mode_select_64x64",
       "inspect_mode": "Rgb8",
       "decoded_mode": "Rgb8"
+    },
+    {
+      "format": "jpeg",
+      "case_id": "baseline_444_single_scan_dht_missing_length",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8"
     }
   ],
   "mode_encode_cases": [
