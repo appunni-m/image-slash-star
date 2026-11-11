@@ -376385,6 +376385,44 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "jpeg_huffman_initial_bits_unavailable",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:long_huffman_code_slow_path"
+      },
+      "fault": {
+        "point": "jpeg.huffman.initial_bits_unavailable",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "jpeg_huffman_missing_symbol",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "jpeg",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:jpeg:long_huffman_code_slow_path"
+      },
+      "fault": {
+        "point": "jpeg.huffman.missing_symbol",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "jpeg_ycck_output_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",
@@ -376779,44 +376817,6 @@
       },
       "fault": {
         "point": "jpeg.upsample.row_destination_height_overflow",
-        "contract": "decode_error_then_retry_succeeds"
-      },
-      "oracle_status": "not_applicable"
-    },
-    {
-      "id": "jpeg_huffman_initial_bits_unavailable",
-      "type": "fault-contract",
-      "operation": "decode",
-      "format": "jpeg",
-      "status": "active",
-      "requirements": [
-        "structured-diagnostics"
-      ],
-      "verification": "fault-contract",
-      "input": {
-        "source_case": "decode:jpeg:long_huffman_code_slow_path"
-      },
-      "fault": {
-        "point": "jpeg.huffman.initial_bits_unavailable",
-        "contract": "decode_error_then_retry_succeeds"
-      },
-      "oracle_status": "not_applicable"
-    },
-    {
-      "id": "jpeg_huffman_missing_symbol",
-      "type": "fault-contract",
-      "operation": "decode",
-      "format": "jpeg",
-      "status": "active",
-      "requirements": [
-        "structured-diagnostics"
-      ],
-      "verification": "fault-contract",
-      "input": {
-        "source_case": "decode:jpeg:long_huffman_code_slow_path"
-      },
-      "fault": {
-        "point": "jpeg.huffman.missing_symbol",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

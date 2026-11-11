@@ -722,6 +722,18 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "jpeg_huffman_initial_bits_unavailable",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_huffman_initial_bits_unavailable",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_huffman_missing_symbol",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_huffman_missing_symbol",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "jpeg_ycck_output_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:jpeg:jpeg_ycck_output_reservation_failure",
