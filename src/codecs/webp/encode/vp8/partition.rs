@@ -9,7 +9,7 @@ use super::{
     intra16::Intra16Mode,
     mode_probability::INTRA4_MODE_PROBABILITIES,
     probability::AdaptedProbabilities,
-    quant::libwebp_segment_matrices,
+    quant::{DEFAULT_SNS_STRENGTH, libwebp_segment_matrices},
     tokenize::coefficient_update_probability,
 };
 use crate::codecs::CodecResult;
@@ -419,6 +419,7 @@ fn adjusted_frame_params<P: PartitionCheckpointControl>(
                 params.segments[segment].quantizer,
                 params.chroma_dc_delta,
                 params.chroma_ac_delta,
+                DEFAULT_SNS_STRENGTH,
             );
             let only_y2_nonzero = luma.nonzero & 0x0100_ffff == 0x0100_0000;
             let minimum_distortion = 20u32.saturating_mul(u32::from(matrices.y1.q[0]));
@@ -437,6 +438,7 @@ fn adjusted_frame_params<P: PartitionCheckpointControl>(
             params.segments[segment].quantizer,
             params.chroma_dc_delta,
             params.chroma_ac_delta,
+            DEFAULT_SNS_STRENGTH,
         );
         let delta = u32::from(maximum_edge)
             .saturating_mul(u32::from(matrices.y2.q[1]))

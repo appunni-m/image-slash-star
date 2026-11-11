@@ -7,7 +7,7 @@ use super::{
     intra4::{self, Intra4Mode, Intra4Result},
     intra16::{self, Intra16Candidate, Intra16Mode},
     probability::CoefficientStatistics,
-    quant::{SegmentMatrices, libwebp_segment_matrices},
+    quant::{DEFAULT_SNS_STRENGTH, SegmentMatrices, libwebp_segment_matrices},
 };
 use crate::codecs::{CodecError, CodecResult};
 
@@ -155,11 +155,13 @@ pub(super) fn select_frame(
     };
     let chroma_stride = width / 2;
     let params = segment_params(analysis, quality);
+    let sns_strength = if method >= 4 { DEFAULT_SNS_STRENGTH } else { 0 };
     let matrices: [SegmentMatrices; 4] = std::array::from_fn(|segment| {
         libwebp_segment_matrices(
             params.segments[segment].quantizer,
             params.chroma_dc_delta,
             params.chroma_ac_delta,
+            sns_strength,
         )
     });
     let mut y_top = vec![127; width];

@@ -10078,6 +10078,11 @@ formats:
       source_format: png
       source_asset: webp_lossy_bool_carry_noise_128x128.png
       params: {'lossless': False, 'quality': 100, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossy_sns_strength_method_3_q50
+      description: High-entropy RGB parity covers method-3 zero-SNS texture lambda at quality 50
+      source_format: png
+      source_asset: webp_lossy_bool_carry_noise_128x128.png
+      params: {'lossless': False, 'quality': 50, 'method': 3, 'rust_encode_with_token': true, 'rust_encode_to_sink_with_token': true}
     - id: enc_lossless_alpha
       description:
       source_format: png

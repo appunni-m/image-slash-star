@@ -12,6 +12,8 @@ use super::{
 };
 use crate::codecs::CodecResult;
 
+pub(super) const DEFAULT_SNS_STRENGTH: i32 = 50;
+
 // ── VP8 quantization step tables ──
 //
 // These are the exact tables from libvpx 1.15.2
@@ -121,6 +123,7 @@ pub(super) fn libwebp_segment_matrices(
     quantizer: u8,
     chroma_dc_delta: i8,
     chroma_ac_delta: i8,
+    sns_strength: i32,
 ) -> SegmentMatrices {
     let quantizer = usize::from(quantizer);
     let (y1, q_i4) = expand_matrix(Y_DC_QUANT[quantizer], Y_AC_QUANT[quantizer], 0);
@@ -155,7 +158,7 @@ pub(super) fn libwebp_segment_matrices(
             .wrapping_shr(6)
             .max(1),
         lambda_mode: q_i4.wrapping_mul(q_i4).wrapping_shr(7).max(1),
-        texture_lambda: 50_i32.wrapping_mul(q_i4).wrapping_shr(5).max(1),
+        texture_lambda: sns_strength.wrapping_mul(q_i4).wrapping_shr(5).max(1),
         lambda_trellis_i4: 7_i32
             .wrapping_mul(q_i4)
             .wrapping_mul(q_i4)
