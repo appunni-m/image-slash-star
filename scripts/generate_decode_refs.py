@@ -3696,6 +3696,27 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.sink.invalid_initial_marker_prefix": {
             "encode_invalid_marker_prefix_then_retry_matches_reference"
         },
+        "jpeg.sink.invalid_initial_marker_code": {
+            "encode_invalid_initial_marker_then_retry_matches_reference"
+        },
+        "jpeg.sink.initial_marker_fill_byte": {
+            "encode_invalid_initial_marker_then_retry_matches_reference"
+        },
+        "jpeg.sink.no_scan_marker": {
+            "encode_missing_scan_marker_then_retry_matches_reference"
+        },
+        "jpeg.sink.unterminated_scan": {
+            "encode_unterminated_scan_then_retry_matches_reference"
+        },
+        "jpeg.sink.missing_eoi_after_scan": {
+            "encode_missing_eoi_then_retry_matches_reference"
+        },
+        "jpeg.sink.trailing_byte_after_eoi": {
+            "encode_trailing_byte_after_eoi_then_retry_matches_reference"
+        },
+        "jpeg.sink.unexpected_standalone_marker": {
+            "encode_unexpected_standalone_marker_then_retry_matches_reference"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -3994,6 +4015,13 @@ def sync_fault_contract_rows(manifest, matrix):
                     {
                         "jpeg.sink.second_soi_marker": "encode_second_soi_marker_then_retry_matches_reference",
                         "jpeg.sink.invalid_initial_marker_prefix": "encode_invalid_marker_prefix_then_retry_matches_reference",
+                        "jpeg.sink.invalid_initial_marker_code": "encode_invalid_initial_marker_then_retry_matches_reference",
+                        "jpeg.sink.initial_marker_fill_byte": "encode_invalid_initial_marker_then_retry_matches_reference",
+                        "jpeg.sink.no_scan_marker": "encode_missing_scan_marker_then_retry_matches_reference",
+                        "jpeg.sink.unterminated_scan": "encode_unterminated_scan_then_retry_matches_reference",
+                        "jpeg.sink.missing_eoi_after_scan": "encode_missing_eoi_then_retry_matches_reference",
+                        "jpeg.sink.trailing_byte_after_eoi": "encode_trailing_byte_after_eoi_then_retry_matches_reference",
+                        "jpeg.sink.unexpected_standalone_marker": "encode_unexpected_standalone_marker_then_retry_matches_reference",
                     }.get(point)
                     == contract
                     and source_operation == "encode"

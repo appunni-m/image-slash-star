@@ -230,6 +230,20 @@ pub enum CoverageFaultPoint {
     JpegSinkSecondSoiMarker,
     /// Corrupt the JPEG SOI prefix before the sink validates the first marker.
     JpegSinkInvalidInitialMarkerPrefix,
+    /// Change the first JPEG marker code before the sink validates the SOI.
+    JpegSinkInvalidInitialMarkerCode,
+    /// Add a fill byte to the initial JPEG SOI marker before sink validation.
+    JpegSinkInitialMarkerFillByte,
+    /// Remove the JPEG scan marker before the sink validates encoded output.
+    JpegSinkNoScanMarker,
+    /// End JPEG output after the scan header without a terminating marker.
+    JpegSinkUnterminatedScan,
+    /// Replace the JPEG scan and EOI with a marker segment lacking an EOI.
+    JpegSinkMissingEoiAfterScan,
+    /// Append a byte after EOI before the JPEG sink validates output.
+    JpegSinkTrailingByteAfterEoi,
+    /// Insert an unexpected standalone marker after the JPEG SOI.
+    JpegSinkUnexpectedStandaloneMarker,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force TIFF RGB16 conversion output reservation to fail.
