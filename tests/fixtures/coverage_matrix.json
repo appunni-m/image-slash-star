@@ -287039,7 +287039,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng quick matcher boundaries",
           "params": {
-            "compression": 1
+            "compression": 1,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287092,7 +287093,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng fast matcher boundaries",
           "params": {
-            "compression": 2
+            "compression": 2,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287145,7 +287147,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng early matcher boundaries",
           "params": {
-            "compression": 3
+            "compression": 3,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287198,7 +287201,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng medium matcher boundaries",
           "params": {
-            "compression": 4
+            "compression": 4,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287251,7 +287255,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng lookahead matcher boundaries",
           "params": {
-            "compression": 5
+            "compression": 5,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287304,7 +287309,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng medium matcher boundaries",
           "params": {
-            "compression": 6
+            "compression": 6,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287357,7 +287363,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng slow matcher boundaries",
           "params": {
-            "compression": 7
+            "compression": 7,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287410,7 +287417,8 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng maximum slow matcher boundaries",
           "params": {
-            "compression": 8
+            "compression": 8,
+            "rust_encode_with_token": true
           },
           "status": "active",
           "source_format": "png",
@@ -287463,7 +287471,9 @@
           "category": "compress",
           "description": "Alternating repeated and noisy rows exercising zlib-ng filtered matcher boundaries",
           "params": {
-            "compression": 9
+            "compression": 9,
+            "rust_encode_with_token": true,
+            "rust_encode_to_sink_with_token": true
           },
           "status": "active",
           "source_format": "png",

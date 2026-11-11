@@ -4,6 +4,34 @@ The current public evidence matrix contains 3,935 total rows: 3,218 decode /
 inspect / verify rows and 717 encode rows. Of those, 3,218 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
 
+## PNG token-aware Deflate matcher and sink parity — 2026-11-11
+
+Extended the active PNG compression-boundary rows for levels 1–9 to also run
+the cancellation-aware public encoder against their existing Pillow byte and
+pixel references. The level 9 row additionally exercises the token-aware
+append-only sink with the sentinel prefix. All nine selected rows passed exact
+encoded-byte and re-decoded pixel parity; the token sink preserved the prefix
+and matched both the Pillow reference and in-memory output. The run made 46
+public encode calls and observed no panics. No production Rust source or image
+assets changed.
+
+Coverage MCP's pre-change branch query showed unobserved outcomes in the
+cancellation-aware `SlowMatcher` and level 9 matcher paths and dynamic Huffman
+tree emission. Queries against the selected report returned no remaining
+branch groups at `zlib_ng.rs:595`, `:1452`, `:1552`, `:2464`, or `:2564`.
+Coverage MCP marks the selected report source as unverified and test attribution
+unknown. Its incremental comparison with the full-matrix baseline was
+incomparable because the baseline detail did not match its reported totals, so
+this is targeted branch evidence rather than an aggregate coverage-gain claim.
+The selected AArch64 report records 578 of 32,140 branch observations, and its
+local receipt records no source or fixture changes during the run.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T-zlib-token-boundary-parity/coverage.json`
+(SHA-256 `703ae4f1defcf29cd05e95a7d08742f12c0757b61adcea909b7f93571e9a9524`).
+Its local receipt SHA-256 is
+`e0eef852a19cdeb946420d9a56c56fa54fc3dbc377d5eeb8af44211a2841a2d2`.
+
 ## JPEG Huffman continuation parity — 2026-11-11
 
 Added `decode:jpeg:long_huffman_code_continuation`, a valid one-block grayscale
@@ -18258,7 +18286,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `09ea9830ea5cd195af656b639ac42c4a2694e2e2dfe15aece81da4e8f57c3085`; matrix `c444fd9d6179e5c040f496e0e5bdf2f402ebed2e7f295d07b5d439d3e3977c20`.
+- Current fixture integrity only: manifest `09ea9830ea5cd195af656b639ac42c4a2694e2e2dfe15aece81da4e8f57c3085`; matrix `03510d17d9c99ecb2de816bbbe7658a7cb81d5bac44312ac2dbdf365051831f7`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
