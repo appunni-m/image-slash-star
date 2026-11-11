@@ -3468,6 +3468,12 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.baseline.huffman_table_slot_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "jpeg.huffman.initial_bits_unavailable": {
+            "decode_error_then_retry_succeeds"
+        },
+        "jpeg.huffman.missing_symbol": {
+            "decode_error_then_retry_succeeds"
+        },
         "jpeg.upsample.h1v2_plane_reservation": {
             "decode_error_then_retry_succeeds"
         },

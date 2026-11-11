@@ -543,8 +543,29 @@
       "path": "src/codecs/jpeg/decode/decode.rs"
     },
     {
-      "guard_count": 1,
-      "origin": "defensive_model",
+      "guard_count": 5,
+      "guards": [
+        {
+          "index": 1,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 2,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 3,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 4,
+          "origin": "defensive_model"
+        },
+        {
+          "index": 5,
+          "origin": "defensive_model"
+        }
+      ],
       "path": "src/codecs/jpeg/decode/huffman.rs"
     },
     {
