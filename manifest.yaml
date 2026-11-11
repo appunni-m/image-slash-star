@@ -11681,6 +11681,7 @@ formats:
       - extra_samples_zero_rgbx_row_256_contiguous_strips_raw.tiff
     - id: extra_samples_zero_rgbx_row_257_contiguous_strips_raw
       description: One complete raw RGB row with an ignored fourth sample crosses the 1024 stored-byte boundary within the row
+      rust_decode_with_token: true
       test_assets:
       - extra_samples_zero_rgbx_row_257_contiguous_strips_raw.tiff
     - id: extra_samples_zero_rgbx_contiguous_strips_raw

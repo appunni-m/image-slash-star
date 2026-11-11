@@ -311272,7 +311272,8 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
-          "error_contracts": {}
+          "error_contracts": {},
+          "rust_decode_with_token": true
         },
         {
           "id": "extra_samples_zero_rgbx_contiguous_strips_raw",

@@ -4,6 +4,29 @@ The current public evidence matrix contains 3,935 total rows: 3,218 decode /
 inspect / verify rows and 717 encode rows. Of those, 3,218 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
 
+## TIFF RGBX token decode and inspection fault parity — 2026-11-12
+
+For `image-slash-star#y81n` and `image-slash-star#dgby`, enabled public
+token-aware decoding on the existing 257×1 TIFF RGBX ignored-sample parity
+row. Its 1,028 stored bytes cross the compaction checkpoint inside a row; the
+selected run passed exact 771-byte RGB output parity and retained `Rgb8`
+identity. The same selection passed five existing TIFF inspection and
+ignored-sample fault contracts (6/6 selections total).
+
+Coverage MCP reports no missing branch groups in `compact_extra_samples` for
+this focused report. Comparison with the retained full-parity report is
+incomparable because its branch detail differs from the reported totals, so
+this is focused local coverage evidence rather than an aggregate coverage
+claim. The selected report marks source identity unverified and test
+attribution unknown. No codec code or image assets changed.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261112-tiff-rgbx-token-and-fault-parity-retry/coverage.json`
+(SHA-256
+`1e4d439de78cb0f4b0f78e36144bea773757de5f5bdac1dc428ba546c68228e4`). Its
+local receipt SHA-256 is
+`f2c0d55b0bcf3591bd1603723709292628e284f3f543f0d4b55558363cb41df8`.
+
 ## JPEG append-only sink marker and terminal-state parity — 2026-11-11
 
 For `image-slash-star#9h5w`, added nine target-only JPEG sink fault-contract
@@ -18378,7 +18401,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `45f030f170e9a6cf703b65f886b19b33663c61cce1e39287cef3069ac8b70eb5`; matrix `3926c093ca1e5767a077b755a7837c5bce07b907193dfa2044b0b83e99659d21`.
+- Current fixture integrity only: manifest `e9153a9579baeaa24e086801de1e71bea1cba48983dc849afa013aae90038b4a`; matrix `5d6c1aefe0906c58da4274b2f76371320ada7f04e8b27a05bc4d9e6d133d03cc`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
