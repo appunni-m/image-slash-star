@@ -4,6 +4,31 @@ The current public evidence matrix contains 3,935 total rows: 3,218 decode /
 inspect / verify rows and 717 encode rows. Of those, 3,218 decode rows are
 active and 690 encode rows are active; 27 encode rows remain planned.
 
+## Incremental sequence-prefix decoding parity — 2026-11-11
+
+For `image-slash-star#y81n` and `image-slash-star#dgby`, added public
+`decode_sequence_prefix` parity to one existing Pillow-backed row for each of
+the eight formats. The shared assertion checks the format, reference-backed
+sequence output, exact first-frame pixels, and decoded transfer identity. Five
+sequence-frame identity entries were appended to `mode_decode_cases`, which
+now contains 63 cases. No production codec code or image assets changed.
+
+The selected run passed 8/8 rows with no failures or planned selections.
+Coverage MCP reports no missing branch groups in
+`decode_sequence_prefix_format` for this selected report. The report records
+4,203 of 32,140 branch observations; source identity is unverified and test
+attribution is unknown. Its incremental comparison with the retained full
+report is incomparable because baseline branch detail does not match the
+reported totals, so this is focused branch evidence rather than an aggregate
+coverage-gain claim. The local receipt predates the Coverage MCP query and is
+not a Coverage MCP source/build receipt.
+
+Selected report:
+`.coverage-mcp/local-evidence/selected/20261111T-sequence-prefix-format-parity/coverage.json`
+(SHA-256 `7c7c8fb1f30d45caf784dae6de84e508fae76d5c459981781e203f3771711517`).
+Its local receipt SHA-256 is
+`46eee4d8f721a3fb99eb816f5788e9af442f9afd20b3dfe90ff7d1a5dc4ca644`.
+
 ## PNG token-aware Deflate matcher and sink parity — 2026-11-11
 
 Extended the active PNG compression-boundary rows for levels 1–9 to also run
@@ -18286,7 +18311,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `09ea9830ea5cd195af656b639ac42c4a2694e2e2dfe15aece81da4e8f57c3085`; matrix `03510d17d9c99ecb2de816bbbe7658a7cb81d5bac44312ac2dbdf365051831f7`.
+- Current fixture integrity only: manifest `09ea9830ea5cd195af656b639ac42c4a2694e2e2dfe15aece81da4e8f57c3085`; matrix `224ba667b1f2290d3458305ecd5070ce75b694811ce8d207f4b0bbe1b6d5b748`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

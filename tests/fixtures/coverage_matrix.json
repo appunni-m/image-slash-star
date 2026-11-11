@@ -85286,6 +85286,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "ref_bit_depth": 8,
           "ref_bit_depth_origin": "independent_implementation",
@@ -175784,6 +175785,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
@@ -190156,6 +190158,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "sequence": {
             "canvas_size": [
@@ -203733,6 +203736,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
@@ -210596,6 +210600,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
@@ -279954,6 +279959,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "sequence": {
             "canvas_size": [
@@ -321336,6 +321342,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "sequence": {
             "canvas_size": [
@@ -339604,6 +339611,7 @@
             "decode": "ok",
             "decode_sequence": "ok"
           },
+          "rust_decode_sequence_prefix": true,
           "error_contracts": {},
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
@@ -378060,6 +378068,40 @@
       "case_id": "long_huffman_code_slow_path",
       "inspect_mode": "L8",
       "decoded_mode": "L8"
+    },
+    {
+      "format": "avif",
+      "case_id": "animated_error_resilient",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8",
+      "frame_index": 0
+    },
+    {
+      "format": "gif",
+      "case_id": "animated_gif",
+      "inspect_mode": "P",
+      "decoded_mode": "P"
+    },
+    {
+      "format": "png",
+      "case_id": "apng_animated",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8",
+      "frame_index": 0
+    },
+    {
+      "format": "tiff",
+      "case_id": "multi_page",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8",
+      "frame_index": 0
+    },
+    {
+      "format": "webp",
+      "case_id": "animated",
+      "inspect_mode": "Rgb8",
+      "decoded_mode": "Rgb8",
+      "frame_index": 0
     }
   ],
   "mode_encode_cases": [

@@ -266,6 +266,7 @@ struct DecodeRow {
     rust_decode_with_token_and_policy: bool,
     rust_decode_with_work_budget: bool,
     rust_decode_sequence_with_token: bool,
+    rust_decode_sequence_prefix: bool,
     rust_decode_sequence_with_token_and_policy: bool,
     rust_decode_sequence_with_work_budget: bool,
     rust_inspect_basic: bool,
@@ -5756,6 +5757,7 @@ impl FromJson for DecodeRow {
             rust_decode_with_work_budget: object.take_or_default("rust_decode_with_work_budget")?,
             rust_decode_sequence_with_token: object
                 .take_or_default("rust_decode_sequence_with_token")?,
+            rust_decode_sequence_prefix: object.take_or_default("rust_decode_sequence_prefix")?,
             rust_decode_sequence_with_token_and_policy: object
                 .take_or_default("rust_decode_sequence_with_token_and_policy")?,
             rust_decode_sequence_with_work_budget: object
@@ -20030,6 +20032,9 @@ fn assert_sequence_parity(
     indexed_mode_frame_case: bool,
 ) -> Result<(), String> {
     assert_sequence_base(manifest_dir, row, data)?;
+    if row.rust_decode_sequence_prefix {
+        assert_sequence_prefix_parity(manifest_dir, row, expected_image, data)?;
+    }
     if row.rust_decode_sequence_with_token || indexed_mode_frame_case {
         let token = img::CancellationToken::new();
         let decoded = img::decode_sequence_with_token(data, &token)
@@ -20158,6 +20163,62 @@ fn assert_sequence_parity(
             ));
         }
     }
+    Ok(())
+}
+
+fn assert_sequence_prefix_parity(
+    manifest_dir: &Path,
+    row: &DecodeRow,
+    expected_image: &PixelParityRef,
+    data: &[u8],
+) -> Result<(), String> {
+    let decoded = img::decode_sequence_prefix(data)
+        .map_err(|error| format!("incremental sequence decode failed: {error}"))?;
+    assert_sequence_operation_parity(
+        manifest_dir,
+        row,
+        expected_image,
+        decoded.format,
+        &decoded.content,
+        data,
+        "incremental-prefix",
+    )?;
+
+    let first_frame = decoded
+        .content
+        .frames
+        .first()
+        .ok_or_else(|| "incremental sequence decode returned no first frame".to_owned())?;
+    assert_pixel_parity(expected_image, &first_frame.image)
+        .map_err(|message| format!("incremental-prefix first-frame pixels: {message}"))?;
+
+    let transfer_mode_name = row
+        .decoded_raster_mode
+        .as_deref()
+        .or(row.ref_mode.as_deref())
+        .ok_or_else(|| format!("{} has no expected decoded transfer mode", row.id))?;
+    let expected_format = format_from_name(&row.format)
+        .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+    let expected_transfer_mode = expected_image_mode(transfer_mode_name)
+        .ok_or_else(|| format!("unknown transfer mode {transfer_mode_name:?}"))?;
+    let expected_transfer_raster_mode = expected_raster_mode(
+        transfer_mode_name,
+        expected_format,
+        &first_frame.image.source,
+    )
+    .ok_or_else(|| format!("no transfer raster mapping for {transfer_mode_name:?}"))?;
+    if first_frame.image.mode != expected_transfer_mode
+        || first_frame.image.raster_mode != expected_transfer_raster_mode
+    {
+        return Err(format!(
+            "incremental-prefix first-frame transfer identity differs: actual {:?}/{:?}, expected {:?}/{:?}",
+            first_frame.image.mode,
+            first_frame.image.raster_mode,
+            expected_transfer_mode,
+            expected_transfer_raster_mode,
+        ));
+    }
+
     Ok(())
 }
 
