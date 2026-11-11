@@ -252,7 +252,19 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
     // ✅ VERIFIED: AV1 specification section 5.3.4 / dav1d 1.5.3
     // src/obu.c:48-69.
     pub(super) fn trailing_bits(&mut self) -> Av1Result<()> {
-        if !self.bit()? {
+        self.validate_trailing_bits::<true>()
+    }
+
+    /// Read sequence-header padding using the pinned decoder's marker policy.
+    /// Pillow/libavif accepts a missing sequence-header marker bit, but still
+    /// requires any remaining alignment bits to be zero.
+    pub(super) fn sequence_header_trailing_bits(&mut self) -> Av1Result<()> {
+        self.validate_trailing_bits::<false>()
+    }
+
+    fn validate_trailing_bits<const REQUIRE_MARKER: bool>(&mut self) -> Av1Result<()> {
+        let marker = self.bit()?;
+        if REQUIRE_MARKER && !marker {
             return Err(malformed("AV1 trailing marker bit is not set"));
         }
         while self.position < self.end {

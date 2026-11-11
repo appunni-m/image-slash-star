@@ -2624,13 +2624,36 @@
       "case_names": [
         "animated_lossy_inter_420_b16x8_clipped_height_16x15_q70"
       ]
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "bf014d9a09c675e837468b5c1d4ba95b72f03a967896850b8b15249615d8501a",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "case_names": [
+        "animated_sequence_header_missing_trailing_marker"
+      ]
     }
   ],
   "artifacts": [
     {
       "path": "README.md",
-      "bytes": 47811,
-      "sha256": "fa6f0d513b6a44924a3baa3e7cf3f27271766c3fe9c701169ee044ad574b5cc0"
+      "bytes": 48145,
+      "sha256": "610977baba7f9c121fd2e8fa6b269f008280bbad2d8d32461acb0622a04e71a8"
     },
     {
       "path": "inputs/alpha_loop_disagreement.avif",
@@ -4591,6 +4614,11 @@
       "path": "inputs/animated_sequence_header_cicp_mismatch_nclx.avif",
       "bytes": 3359,
       "sha256": "74a0a8f8725cc7b44232c4e970859be1ace37ad1898f80da38dd5cc98b7ed628"
+    },
+    {
+      "path": "inputs/animated_sequence_header_missing_trailing_marker.avif",
+      "bytes": 1279,
+      "sha256": "f916d9d4a310dc2f808e3465e8ae075e70e45a72be1ee84d2c2715fe6f76e2fd"
     },
     {
       "path": "inputs/animated_sequence_only_interstitial_meta_before_moov.avif",
@@ -10838,6 +10866,31 @@
       "sha256": "411f7788b73d06b68c545fccced0d5e9e6ee667037e1d198547213d48917d24b"
     },
     {
+      "path": "pixels/animated_sequence_header_missing_trailing_marker/frame_0.bin",
+      "bytes": 67500,
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "path": "pixels/animated_sequence_header_missing_trailing_marker/frame_1.bin",
+      "bytes": 67500,
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "path": "pixels/animated_sequence_header_missing_trailing_marker/frame_2.bin",
+      "bytes": 67500,
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "path": "pixels/animated_sequence_header_missing_trailing_marker/frame_3.bin",
+      "bytes": 67500,
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "path": "pixels/animated_sequence_header_missing_trailing_marker/frame_4.bin",
+      "bytes": 67500,
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
       "path": "pixels/animated_sequence_only_interstitial_meta_before_moov/frame_0.bin",
       "bytes": 67500,
       "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
@@ -15162,6 +15215,88 @@
       "repeat_equal": true,
       "source": "animated_decoder_model_parameters_change",
       "source_sha256": "9191549ae1373fc31e093a36d9ff2d88525f4219378c7b7ba1ecb6b74cec8396"
+    },
+    {
+      "input_bytes": 1279,
+      "input_path": "inputs/animated_sequence_header_missing_trailing_marker.avif",
+      "input_sha256": "f916d9d4a310dc2f808e3465e8ae075e70e45a72be1ee84d2c2715fe6f76e2fd",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "animated_sequence_header_missing_trailing_marker",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "observer_binary_sha256": "bf014d9a09c675e837468b5c1d4ba95b72f03a967896850b8b15249615d8501a",
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "animated_sequence_header_missing_trailing_marker",
+      "source_sha256": "f916d9d4a310dc2f808e3465e8ae075e70e45a72be1ee84d2c2715fe6f76e2fd"
     },
     {
       "input_bytes": 1239,

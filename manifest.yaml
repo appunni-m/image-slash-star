@@ -16312,6 +16312,12 @@ formats:
       - animated_decoder_model_parameters_change.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_sequence_header_missing_trailing_marker
+      description: Five-frame AVIF clears only the first AV1 sequence-header trailing marker bit; Pillow/libavif accepts it and preserves exact frame pixels
+      test_assets:
+      - animated_sequence_header_missing_trailing_marker.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_timing_without_decoder_model
       description: Five-frame AVIF sequence header has timing information without decoder-model parameters
       test_assets:

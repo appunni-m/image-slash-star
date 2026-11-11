@@ -388,6 +388,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_lossy_qmatrix_fixture.py --check
 	$(PYTHON) scripts/generate_avif_equal_width_superres.py --chroma 420-actual-no-restoration --check
 	$(PYTHON) scripts/generate_avif_temporal_mv_range_fixture.py --check
+	$(PYTHON) scripts/generate_avif_sequence_header_marker_zero.py --check
 	$(PYTHON) scripts/generate_avif_inter_422_vertical_split_fixture.py --check
 	$(PYTHON) scripts/generate_avif_skip_mode_enabled_fixture.py --check
 	$(PYTHON) scripts/generate_avif_inter_422_small_partitions_fixture.py --check
@@ -397,6 +398,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_avif_inter_422_qindex0_mode_select.py --variant b8x4 --check
 	$(PYTHON) scripts/generate_avif_inter_422_compound_direct_grid_fixture.py --check
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
+	$(PYTHON) scripts/verify_avif_loop_evidence.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py
 
 .PHONY: lint
